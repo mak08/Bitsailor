@@ -1,0 +1,104 @@
+<!doctype html>
+
+<!--
+	Useful CSS reference:
+	https://www.w3schools.com/css/css_rwd_grid.asp
+	https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Flexible_Box_Layout/Using_CSS_flexible_boxes
+  -->
+
+<html lang="de">
+
+  <head>
+    <meta charset="utf-8">
+
+  	<title>VirtualHelm</title>
+	<meta name="description" content="Web UI">
+  	<meta name="author" content="Michael Kappert">
+
+  	<link rel="stylesheet" href="css/style.css?v=1.0">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCP2gFKu91VHqqPiNKnhXKZNSInqcMrFXQ"></script>
+
+    <script src="js/colors.js"></script>
+    <script src="js/script.js"></script>
+	<script>
+	  $( document ).ready( setUp );
+	</script>
+	
+  </head>
+
+  <body>
+
+    <div class="row" style="color: #ffffff; background-color:#505056">
+      <div class="col-3" style="font-size: 120%">VirtualHelm</div>
+      <div class="col-7"></div>
+      <div class="col-2" style="font-size: 70%">
+		<p>Datenbasis: <label id="lb_data_source"></label></p> 
+        <p style="font-size: 90%"><label id="lb_data_spec"></label></p>
+      </div>
+    </div>
+
+	<div class="row">
+	  <div class="col-2">
+        <div class="cell">
+          <input id="ir_index" type = "range" min="0" max="78" step="1" value="0" onchange="onRedrawWind()"/>
+          <button id="bt_dec6" type="button">-6</button>
+          <button id="bt_dec" type="button">-1</button>
+          <button id="bt_inc" type="button">+1</button>
+          <button id="bt_inc6" type="button">+6</button>
+        </div>
+        <div class="cell" style="font-size: 80%">
+          <label id="lb_index"></label>
+        </div>
+		
+      </div>
+      <div class="col-10" style="height:820px;">
+        <div id="googleMap" style="position:absolute; width:1104px; height:804px; border:solid 2px black; border-radius:4px;">
+		</div>
+		<div id="player_area" style="position:absolute; width:1104px; height:804px;  border: 2px solid #505056; background:none; pointer-events:none; ">
+		  <canvas id="map_canvas" style="background:none;pointer-events:none; border: 0px solid green; " width="1100px" height="800px"></canvas>
+		</div>
+		<div id="mapMenu" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:140px; height:90px; display:none;">
+			<button id="bt_setstart" style="width:130px; text-align:left;" onclick="setRoute('start');">Set Start</button>
+			<button id="bt_setdest"  style="width:130px; text-align:left;" onclick="setRoute('dest');">Set Destination</button>
+		</div>
+      </div>
+    </div>
+    <div class="row" style="color: #ffffff; background-color:#505056">
+      <div class="col-2" style="font-size:80%">
+	<div class="cell">
+        Stand: <label id="lb_modelrun"></label>
+	</div>
+
+      </div>
+      <div class="col-8">
+		<div class="cell" style="font-size:80%">
+		  Windskala 
+		  <div class="colorbox" style="background-color:#0080ff;"> 0</div>
+          <div class="colorbox" style="background-color:#00ffff;"> 1</div>
+          <div class="colorbox" style="background-color:#00ffa0;"> 2</div>
+          <div class="colorbox" style="background-color:#00cc00;"> 3</div>
+          <div class="colorbox" style="background-color:#a0ff00;"> 4</div>
+          <div class="colorbox" style="background-color:#ffff00;"> 5</div>
+		  <div class="colorbox" style="background-color:#ffc000;"> 6</div>
+          <div class="colorbox" style="background-color:#ff8000;"> 7</div>
+          <div class="colorbox" style="background-color:#ff0000;"> 8</div>
+          <div class="colorbox" style="background-color:#f00080;"> 9</div>
+          <div class="colorbox" style="background-color:#d020ff;">10</div>
+          <div class="colorbox" style="background-color:#8020ff;">11</div>
+          <div class="colorbox" style="background-color:#0020ff;">12</div>
+		  Beaufort
+		</div>
+      </div>
+      <div class="col-2" style="font-size: 70%">
+		<div class="cell">
+		  &copy Michael Kappert 2017
+		</div>
+		<div class="cell">
+		  <a href="https://github.com/mak08/PolarCL" target="_blank">powered by PolarCL</a>
+		</div>
+	  </div>
+    </div>
+  </body>
+
+</html>

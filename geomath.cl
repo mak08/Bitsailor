@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-27 22:50:30>
+;;; Last Modified <michael 2017-08-29 23:45:17>
 
 (in-package :virtualhelm)
 
@@ -59,7 +59,8 @@
   (* 360 (/ x (* 2 pi))))
 
 (defun rad (x)
-  (* (* 2 pi) (/ x 360)))
+  (declare (double-float x))
+  (* (* 2d0 pi) (/ x 360d0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Navigation
@@ -99,6 +100,25 @@
            (- omega)
            omega)))))
                      
+(defun add-distance-exact (pos distance alpha)
+  ;; Exact calculation on the spherical Earth
+  (let ((lat (latlng-lat pos))
+        (lon (latlng-lng pos)))
+    (declare (double-float lat lon distance alpha))
+    (let* ((d (/ distance +radius+))
+           (a (* alpha +pi/180+))
+           (sin-a (sin a))
+           (sin-d (sin d))
+           (lat-r (* lat +pi/180+)) 
+           (lon-r (* lon +pi/180+))
+           (lat-new-r (asin (+ (* (sin lat-r) (cos d))
+                               (* (cos lat-r) sin-d (cos a)))))
+           (lon-new-r (+ lon-r
+                         (asin (/ (* sin-a sin-d)
+                                  (cos lat-new-r))))))
+      (make-latlng :lat (/ lat-new-r +pi/180+)
+                   :lng (/ lon-new-r +pi/180+)))))
+
 (defun add-distance-exact! (pos distance alpha)
   ;; Exact calculation on the spherical Earth
   (let ((lat (latlng-lat pos))
@@ -108,8 +128,8 @@
            (a (* alpha +pi/180+))
            (sin-a (sin a))
            (sin-d (sin d))
-           (lat-r (* lat +pi/180+)) // phi
-           (lon-r (* lon +pi/180+)) // lambda
+           (lat-r (* lat +pi/180+))
+           (lon-r (* lon +pi/180+))
            (lat-new-r (asin (+ (* (sin lat-r) (cos d))
                                (* (cos lat-r) sin-d (cos a)))))
            (lon-new-r (+ lon-r

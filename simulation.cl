@@ -1,13 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-29 00:00:48>
+;;; Last Modified <michael 2017-08-29 23:54:54>
 
 (in-package :virtualhelm)
 
 ;;; time in seconds
 (defconstant +5min+ (* 5 60))
 (defconstant +10min+ (* 10 60))
+(defconstant +20min+ (* 20 60))
 (defconstant +30min+ (* 30 60))
 (defconstant +60min+ (* 60 60))
 (defconstant +3h+ (* 3 60 60))
@@ -18,16 +19,22 @@
 ;;; A routing stores the start and destination of the route as well as
 ;;; routing parameters 
 
+(defvar +FEHMARN+
+  (make-latlng :lat 54.434403d0 :lng 11.361632d0))
+
+(defvar +YSTAD+
+  (make-latlng :lat 55.391123d0 :lng 13.792635d0))
+        
 (defstruct routing
-  start
-  dest
+  (start +fehmarn+)
+  (dest +ystad+)
   twapath
   route
-  (fan 40)
+  (fan 30)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax +12h+)
-  (stepsize +5min+))
+  (stepmax +30min+)
+  (stepsize +10min+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -36,9 +43,14 @@
 
 (defstruct routepoint
   position
+  heading
+  twa
+  speed
+  sail
+  is-land
+  predecessor
   destination-angle
-  destination-distance
-  predecessor)
+  destination-distance)
 
 (defun get-route (routing)
   (let
@@ -48,36 +60,58 @@
        (start-pos (routing-start routing))
        (dest-pos (routing-dest routing)))
 
-    (dm-to-grib! start-pos)
-    (dm-to-grib! dest-pos)
+    (gm-to-grib! start-pos)
+    (gm-to-grib! dest-pos)
 
-    (do* ((step 0 (1+ step))
-          ;; The initial isochrone is just the start point.
-          (isochrone (list (make-routepoint :position start-pos))
+    (do* (
+          ;; Iteration stops when stepmax seconds have elapsed
+          (stepsum 0 (+ stepsum step-size))
+          ;; The initial isochrone is just the start point, heading towards destination
+          (isochrone (list (make-routepoint :position start-pos
+                                            :heading (course-angle start-pos dest-pos)))
                      next-isochrone)
+          ;; The next isochrone - in addition we need all hourly isochrones (tbd)
+
+          (next-isochrone)
           ;; Advance the simulation time after each iteration
-          (step-time (now) (adjust-timestamp steptime (:offset :sec step-size)))
+          (step-time (now) (adjust-timestamp step-time (:offset :sec step-size)))
           ;; Get wind data for simulation time
           (forecast (get-forecast forecast-bundle step-time)
                     (get-forecast forecast-bundle step-time)))
         
         ;; When the maximum number of iterations is reached, construct the best path
         ;; from the most advanced point's predecessor chain.
-        ((>= step (routing-stepmax routing))
+        ((>= stepsum (routing-stepmax routing))
          (construct-route next-isochrone))
-
+      (log2:info "Isochrone: ~a points" (length isochrone))
       ;; Iterate over each point in the current isochrone
-      (dolist (point isochrone)
-        (let ()
-          (multiple-value-bind (speed heading)
-              (twa-boatspeed forecast latlng twa)
-            (add-distance-exact! latlng (* speed step-time) heading)))))))
+      (map nil
+           (lambda (routepoint)
+             (let ((left (- (routepoint-heading routepoint) (routing-fan routing)))
+                   (right (+ (routepoint-heading routepoint) (routing-fan routing)))
+                   (successors (make-array (1+ (* (routing-fan routing) 2)))))
+               (loop
+                  :for heading :from left :to right
+                  :for k :from 0
+                  :do (multiple-value-bind (speed angle sail)
+                          (heading-boatspeed forecast (routepoint-position routepoint) heading)
+                        (let ((new-pos (add-distance-exact (routepoint-position routepoint) (* speed step-size) angle)))
+                          (setf (aref successors k)
+                                (make-routepoint :position new-pos
+                                                 :heading heading
+                                                 :twa angle
+                                                 :speed speed
+                                                 :sail sail
+                                                 :is-land (test-point (latlng-lat new-pos) (latlng-lng new-pos))
+                                                 :predecessor routepoint
+                                                 :destination-angle (course-angle new-pos dest-pos)
+                                                 :destination-distance (course-distance new-pos dest-pos))))))
+               (setf next-isochrone
+                     (concatenate 'vector next-isochrone successors))))
+           isochrone))))
 
 (defun construct-route (isochrone)
-  ())
-
-  
-  
+  isochrone)
 
 (defun get-twa-path (routing
                      &key 
@@ -89,8 +123,8 @@
          (step-time (routing-stepsize routing))
          (startpos (routing-start routing))
          (destpos (routing-dest routing)))
-    (when (< (latlng-lng startpos) 0) (incf (latlng-lng startpos) 360))
-    (when (< (latlng-lng destpos) 0) (incf (latlng-lng destpos) 360))
+    (gm-to-grib! startpos)
+    (gm-to-grib! destpos)
     (let* ((heading (course-angle startpos destpos))
            (curpos (copy-latlng startpos))
            (wind-dir (get-wind-forecast (get-forecast forecast-bundle start-time) startpos))

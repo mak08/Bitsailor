@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-28 20:55:31>
+;;; Last Modified <michael 2017-08-29 22:02:45>
 
 (in-package :virtualhelm)
 
@@ -19,6 +19,7 @@
 ;;; setRoute
 
 (defun |setRoute| (location request response &key |pointType| |lat| |lng|)
+  (declare (ignore location))
   (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
   (let* ((session-cookie
           (get-cookie request "SessionID"))
@@ -73,6 +74,7 @@
 ;; Returns (0d0, -1d0) for unavailable values.
 ;; Does not work if date line is in longitude range.
 (defun |getWind| (location request response &key (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5"))
+  (declare (ignore location request))
   (handler-case
       (let ((*read-default-float-format* 'double-float))
         (let* (;; Recalculate offset based on forecast file age
@@ -114,6 +116,7 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
+#|
 (defun |getTWAPath| (location request response &key |offset| |lat| |lon| |heading| |time|)
   (setf (http-body response)
         (with-output-to-string (s)
@@ -125,6 +128,7 @@
                                         :lng (coerce (read-from-string |lon|) 'double-float)) 
                            (read-from-string |time|)
                            +10min+)))))))
+|#
 
 ;; This must be done in the config file.
 ;; polarcl:reset deletes registered function,

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-29 23:54:54>
+;;; Last Modified <michael 2017-08-30 23:58:02>
 
 (in-package :virtualhelm)
 
@@ -30,7 +30,8 @@
   (dest +ystad+)
   twapath
   route
-  (fan 30)
+  (fan 45)
+  (angle-increment 7)
   (sectors 81)
   (points-per-sector 5)
   (stepmax +30min+)
@@ -53,12 +54,14 @@
   destination-distance)
 
 (defun get-route (routing)
-  (let
+  (let*
       ((forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
                             (get-forecast-bundle 'constant-wind-bundle)))
        (step-size (routing-stepsize routing))
+       (angle-increment (routing-angle-increment routing))
        (start-pos (routing-start routing))
-       (dest-pos (routing-dest routing)))
+       (dest-pos (routing-dest routing))
+       (dest-bearing (course-angle start-pos dest-pos)))
 
     (gm-to-grib! start-pos)
     (gm-to-grib! dest-pos)
@@ -68,7 +71,8 @@
           (stepsum 0 (+ stepsum step-size))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone (list (make-routepoint :position start-pos
-                                            :heading (course-angle start-pos dest-pos)))
+                                            :heading dest-bearing
+                                            :destination-distance (course-distance start-pos dest-pos)))
                      next-isochrone)
           ;; The next isochrone - in addition we need all hourly isochrones (tbd)
 
@@ -87,27 +91,28 @@
       ;; Iterate over each point in the current isochrone
       (map nil
            (lambda (routepoint)
-             (let ((left (- (routepoint-heading routepoint) (routing-fan routing)))
-                   (right (+ (routepoint-heading routepoint) (routing-fan routing)))
-                   (successors (make-array (1+ (* (routing-fan routing) 2)))))
+             (let ((left (- dest-bearing (routing-fan routing)))
+                   (right (+ dest-bearing (routing-fan routing)))
+                   (successors (make-array (1+ (truncate (* (routing-fan routing) 2) angle-increment)))))
                (loop
-                  :for heading :from left :to right
+                  :for heading :from left :to right :by angle-increment
                   :for k :from 0
                   :do (multiple-value-bind (speed angle sail)
                           (heading-boatspeed forecast (routepoint-position routepoint) heading)
-                        (let ((new-pos (add-distance-exact (routepoint-position routepoint) (* speed step-size) angle)))
+                        (let ((new-pos (add-distance-exact (routepoint-position routepoint) (* speed step-size) heading)))
                           (setf (aref successors k)
                                 (make-routepoint :position new-pos
                                                  :heading heading
                                                  :twa angle
                                                  :speed speed
                                                  :sail sail
-                                                 :is-land (test-point (latlng-lat new-pos) (latlng-lng new-pos))
+                                                 :is-land nil ;; compute this after wake pruning
                                                  :predecessor routepoint
                                                  :destination-angle (course-angle new-pos dest-pos)
                                                  :destination-distance (course-distance new-pos dest-pos))))))
+               (setf successors (sort successors #'< :key #'routepoint-destination-distance))
                (setf next-isochrone
-                     (concatenate 'vector next-isochrone successors))))
+                     (merge 'vector next-isochrone successors #'< :key #'routepoint-destination-distance))))
            isochrone))))
 
 (defun construct-route (isochrone)

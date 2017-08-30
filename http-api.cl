@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-29 22:02:45>
+;;; Last Modified <michael 2017-08-30 23:56:40>
 
 (in-package :virtualhelm)
 
@@ -59,7 +59,29 @@
       (setf (http-body response)
             (with-output-to-string (s)
               (json s session))))))
-  
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; getRoute
+
+(defun |getRoute| (location request response)
+  (declare (ignore location))
+  (let* ((routing (make-routing :stepmax +30MIN+))
+         (isochrone (get-route routing)))
+    (setf (http-body response)
+          (with-output-to-string (s)
+            (json s (extract-tracks isochrone))))))
+
+
+(defun extract-tracks (isochrone)
+  (loop
+     :for point :across isochrone
+     :for k :from 0
+     :collect (do ((p point (routepoint-predecessor p))
+                   (v (list)))
+                  ((null p)
+                   v)
+                (push (routepoint-position p) v))))
+         
 (defun make-session-id ()
   (create-uuid))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-24 20:22:50>
+;;; Last Modified <michael 2017-08-30 22:51:26>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -14,6 +14,7 @@
         "BABEL")
   (:export "getWind"
            "setRoute"
+           "getRoute"
            "getWindAtPosition"
            "START-GRIB-UPDATES"
            "FORMAT-TIMESPEC-DATEHH"))

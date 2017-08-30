@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-24 20:08:18>
+;;; Last Modified <michael 2017-08-30 22:10:36>
 
 (in-package :virtualhelm)
 
@@ -39,11 +39,11 @@
        (error "Layer not found or no index"))))))  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; TEST-POINT
+;; IS-LAND
 ;;  Return TRUE iff (lat. lon) is on land
 
 (let ((point (ogr-g-create-geometry wkbPoint)))
-  (defun test-point (lat lon)
+  (defun is-land (lat lon)
     (ogr-g-set-point-2d point 0 lon lat)
     (ogr-l-set-spatial-filter *map* point)
     (ogr-l-reset-reading *map*)
@@ -54,7 +54,7 @@
                   (found (ogr-g-contains polygon point)))
              (ogr-f-destroy feature)
              (when found 
-               (return-from test-point t)))))
+               (return-from is-land t)))))
   (values nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -106,6 +106,30 @@ function setRoute (point) {
 	});
 }
 
+function getRoute () {
+	var mapMenu=$("#mapMenu")[0];
+	var windowEvent = window.event;
+	mapMenu.style.display = "none";
+	var that = this;
+	$.ajax({ 
+		url: "/function/vh:getRoute",
+		dataType: 'json'
+	}).done( function(data) {
+		for ( var i = 0; i < data.length; i++ ) {
+			var track = new google.maps.Polyline({
+				geodesic: true,
+				strokeColor: '#FF0000',
+				strokeOpacity: 1.0,
+				strokeWeight: 2
+			});
+			track.setPath(data[i]);
+			track.setMap(googleMap);
+		}
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);
+	});
+}
+
 function onAdjustIndex (event) {
 	var source = event.target.id;
 	if (source == "bt_dec6") 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2017-08-27 00:06:06>
+;;; Last Modified <michael 2017-08-30 22:51:06>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -58,6 +58,7 @@
 
 (register-function 'vh:|getWind|)
 (register-function 'vh:|setRoute|)
+(register-function 'vh:|getRoute|)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

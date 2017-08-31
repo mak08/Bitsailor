@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-30 23:56:40>
+;;; Last Modified <michael 2017-08-31 23:34:30>
 
 (in-package :virtualhelm)
 
@@ -12,21 +12,16 @@
 
 (defstruct session
   (session-id (make-session-id))
-  (route (make-routing))
+  (routing (make-routing))
   (direction ""))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; setRoute
 
-(defun |setRoute| (location request response &key |pointType| |lat| |lng|)
-  (declare (ignore location))
-  (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
+
+(defun find-or-create-session (request response)
   (let* ((session-cookie
           (get-cookie request "SessionID"))
          (session-id)
-         (session)
-         (lat (coerce (read-from-string |lat|) 'double-float))
-         (lng (coerce (read-from-string |lng|) 'double-float)))
+         (session))
     (cond (session-cookie
            (setf session-id (cookie-value session-cookie))
            (let ((stored-session (gethash session-id *session-ht*)))
@@ -44,14 +39,25 @@
            (setf session (setf (gethash session-id *session-ht*)
                                (make-session :session-id session-id)))
            (log2:info "Session created for new SessionID ~a." session-id)))
+    session))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; setRoute
+
+(defun |setRoute| (location request response &key |pointType| |lat| |lng|)
+  (declare (ignore location))
+  (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
+  (let* ((session (find-or-create-session request response))
+         (lat (coerce (read-from-string |lat|) 'double-float))
+         (lng (coerce (read-from-string |lng|) 'double-float)))
     (log2:trace "Session: ~a, Request: ~a" session request)
-    (let ((routing (session-route session)))
+    (let ((routing (session-routing session)))
       (cond
         ((string= |pointType| "start")
          (setf (routing-start routing) (make-latlng :lat lat :lng lng)))
         ((string= |pointType| "dest")
          (setf (routing-dest routing) (make-latlng :lat lat :lng lng))))
-      (let ((path (get-twa-path (session-route session))))
+      (let ((path (get-twa-path (session-routing session))))
         (setf (routing-twapath routing) path))
       (setf (session-direction session)
             (round (course-angle (routing-start routing)
@@ -65,7 +71,8 @@
 
 (defun |getRoute| (location request response)
   (declare (ignore location))
-  (let* ((routing (make-routing :stepmax +30MIN+))
+  (let* ((session (find-or-create-session request response))
+         (routing (session-routing session))
          (isochrone (get-route routing)))
     (setf (http-body response)
           (with-output-to-string (s)

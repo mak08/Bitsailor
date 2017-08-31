@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-30 23:58:02>
+;;; Last Modified <michael 2017-09-01 00:08:24>
 
 (in-package :virtualhelm)
 
@@ -34,7 +34,7 @@
   (angle-increment 7)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax +30min+)
+  (stepmax (* +60min+ 12))
   (stepsize +10min+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,7 +66,8 @@
     (gm-to-grib! start-pos)
     (gm-to-grib! dest-pos)
 
-    (do* (
+    (do* ( ;; Iteration stops when destination was reached
+          (reached nil)
           ;; Iteration stops when stepmax seconds have elapsed
           (stepsum 0 (+ stepsum step-size))
           ;; The initial isochrone is just the start point, heading towards destination
@@ -85,7 +86,8 @@
         
         ;; When the maximum number of iterations is reached, construct the best path
         ;; from the most advanced point's predecessor chain.
-        ((>= stepsum (routing-stepmax routing))
+        ((or reached
+             (>= stepsum (routing-stepmax routing)))
          (construct-route next-isochrone))
       (log2:info "Isochrone: ~a points" (length isochrone))
       ;; Iterate over each point in the current isochrone
@@ -99,7 +101,11 @@
                   :for k :from 0
                   :do (multiple-value-bind (speed angle sail)
                           (heading-boatspeed forecast (routepoint-position routepoint) heading)
-                        (let ((new-pos (add-distance-exact (routepoint-position routepoint) (* speed step-size) heading)))
+                        (let*
+                            ((new-pos (add-distance-exact (routepoint-position routepoint)
+                                                          (* speed step-size)
+                                                          heading))
+                             (dtf (course-distance new-pos dest-pos)))
                           (setf (aref successors k)
                                 (make-routepoint :position new-pos
                                                  :heading heading
@@ -109,12 +115,44 @@
                                                  :is-land nil ;; compute this after wake pruning
                                                  :predecessor routepoint
                                                  :destination-angle (course-angle new-pos dest-pos)
-                                                 :destination-distance (course-distance new-pos dest-pos))))))
+                                                 :destination-distance dtf))
+                          (when (< dtf 1000)
+                            (setf reached t)))))
                (setf successors (sort successors #'< :key #'routepoint-destination-distance))
                (setf next-isochrone
                      (merge 'vector next-isochrone successors #'< :key #'routepoint-destination-distance))))
-           isochrone))))
+           isochrone)
+      (setf next-isochrone (filter-isochrone next-isochrone)))))
 
+(defun filter-isochrone (isochrone)
+  (loop
+     :for p1 :across isochrone
+     :do (when p1
+           ;; It is not quite correct to skip covered points
+           ;; because coveredness is computed w.r.t. the point's heading and thus is not transitive.
+           (loop
+              :for p2 :across isochrone
+              :for k :from 0
+              :do (when (and p2
+                             (not (eq p1 p2))
+                             (covers p1 p2))
+                    (setf (aref isochrone k) nil)))))
+  (let ((result (loop
+                   :for p :across isochrone
+                   :when (and p
+                              #+()(not (is-land (latlng-lat (routepoint-position p))
+                                            (latlng-lng (routepoint-position p)))))
+                   :collect p)))
+    (make-array (length result) :initial-contents result)))
+
+(defun covers (p1 p2)
+  (or (< (course-distance (routepoint-position p2)
+                            (routepoint-position p1))
+         500)
+      (let ((angle (course-angle (routepoint-position p2)
+                                 (routepoint-position p1))))
+        (< (abs (- angle (routepoint-heading p1))) 40))))
+           
 (defun construct-route (isochrone)
   isochrone)
 

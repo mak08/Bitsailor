@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-28 23:28:59>
+;;; Last Modified <michael 2017-09-01 01:18:35>
 
 (in-package :virtualhelm)
 
@@ -9,8 +9,17 @@
 ;;; Data structures
 
 ;; TODO: A latlng should only be used to represent Google Maps coordinates.
-(defstruct latlng lat lng)
+(defstruct latlng lat lng latr% lngr%)
 
+(defun latlng-latr (latlng)
+  (or (latlng-latr% latlng)
+      (setf (latlng-latr% latlng)
+            (rad (latlng-lat latlng)))))
+
+(defun latlng-lngr (latlng)
+  (or (latlng-lngr% latlng)
+      (setf (latlng-lngr% latlng)
+            (rad (latlng-lng latlng)))))
 
 (defstruct dms (degrees 0) (minutes 0) (seconds 0))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-29 23:45:17>
+;;; Last Modified <michael 2017-09-01 01:54:47>
 
 (in-package :virtualhelm)
 
@@ -70,35 +70,36 @@
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
 (defun course-distance (origin target)
-  (let ((lat1 (rad (latlng-lat origin)))
-        (lon1 (rad (latlng-lng origin)))
-        (lat2 (rad (latlng-lat target)))
-        (lon2 (rad (latlng-lng target))))
+  (let ((lat1 (latlng-latr origin))
+        (lon1 (latlng-lngr origin))
+        (lat2 (latlng-latr target))
+        (lon2 (latlng-lngr target)))
+    (declare (double-float lat1 lon1 lat2 lon2))
     (* +radius+
        (acos (+ (* (sin lat1) (sin lat2))
                 (* (cos lat1) (cos lat2) (cos (- lon2 lon1))))))))
 
-(defun course-angle (origin target)
-  (let ((dist (course-distance origin target)))
-    (when (eql dist 0d0)
-      (error "Distance is zero between ~a and ~a" origin target))
-    (let* ((e (/ dist +radius+))
-           (lat1 (rad (latlng-lat origin)))
-           (lat2 (rad (latlng-lat target)))
-           (lon1 (rad (latlng-lng origin)))
-           (lon2 (rad (latlng-lng target)))
-           (cos-omega
-            (/ (- (sin lat2) (* (sin lat1) (cos e)))
-               (* (cos lat1) (sin e))))
-           (omega
-            (acos cos-omega))
-           (delta
-            (- lon2 lon1)))
-      (deg
-       (if (or (< delta 0)
-               (> delta 180))
-           (- omega)
-           omega)))))
+(defun course-angle (origin target &optional (dist (course-distance origin target)))
+  (when (eql dist 0d0)
+    (error "Distance is zero between ~a and ~a" origin target))
+  (let* ((e (/ dist +radius+))
+         (lat1 (latlng-latr origin))
+         (lat2 (latlng-latr target))
+         (lon1 (latlng-lngr origin))
+         (lon2 (latlng-lngr target))
+         (cos-omega
+          (/ (- (sin lat2) (* (sin lat1) (cos e)))
+             (* (cos lat1) (sin e))))
+         (omega
+          (acos cos-omega))
+         (delta
+          (- lon2 lon1)))
+    ;; (declare (double-float lat1 lon1 lat2 lon2 cos-omega omega delta))
+    (deg
+     (if (or (< delta 0)
+             (> delta 180))
+         (- omega)
+         omega))))
                      
 (defun add-distance-exact (pos distance alpha)
   ;; Exact calculation on the spherical Earth

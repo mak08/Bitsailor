@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-01 00:08:24>
+;;; Last Modified <michael 2017-09-01 01:54:19>
 
 (in-package :virtualhelm)
 
@@ -31,10 +31,10 @@
   twapath
   route
   (fan 45)
-  (angle-increment 7)
+  (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax (* +60min+ 12))
+  (stepmax (* +60min+ 3))
   (stepsize +10min+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -70,6 +70,7 @@
           (reached nil)
           ;; Iteration stops when stepmax seconds have elapsed
           (stepsum 0 (+ stepsum step-size))
+          (stepnum 0 (1+ stepnum))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone (list (make-routepoint :position start-pos
                                             :heading dest-bearing
@@ -89,7 +90,7 @@
         ((or reached
              (>= stepsum (routing-stepmax routing)))
          (construct-route next-isochrone))
-      (log2:info "Isochrone: ~a points" (length isochrone))
+      (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time (length isochrone))
       ;; Iterate over each point in the current isochrone
       (map nil
            (lambda (routepoint)
@@ -116,8 +117,10 @@
                                                  :predecessor routepoint
                                                  :destination-angle (course-angle new-pos dest-pos)
                                                  :destination-distance dtf))
-                          (when (< dtf 1000)
-                            (setf reached t)))))
+                          (when (< dtf 5000)
+                            (unless reached
+                              (log2:info "Reached destination at ~a" step-time)
+                              (setf reached t))))))
                (setf successors (sort successors #'< :key #'routepoint-destination-distance))
                (setf next-isochrone
                      (merge 'vector next-isochrone successors #'< :key #'routepoint-destination-distance))))
@@ -146,12 +149,13 @@
     (make-array (length result) :initial-contents result)))
 
 (defun covers (p1 p2)
-  (or (< (course-distance (routepoint-position p2)
-                            (routepoint-position p1))
-         500)
-      (let ((angle (course-angle (routepoint-position p2)
-                                 (routepoint-position p1))))
-        (< (abs (- angle (routepoint-heading p1))) 40))))
+  (let ((dist (course-distance (routepoint-position p2)
+                               (routepoint-position p1))))
+    (or (< dist 500)
+        (let ((angle (course-angle (routepoint-position p2)
+                                   (routepoint-position p1)
+                                   dist)))
+          (< (abs (- angle (routepoint-heading p1))) 40)))))
            
 (defun construct-route (isochrone)
   isochrone)

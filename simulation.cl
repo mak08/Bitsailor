@@ -1,7 +1,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-01 23:19:22>
+;;; Last Modified <michael 2017-09-02 00:44:19>
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
+;;; Todo: User setting
+;;; - land check [on]|off
+;;; - long-step-threshold 3h|[6h]|12h|24h (?)
+;;; - long-step-value 30min|[60min]
+;;; - fan 25..85
+;;; - display isochrones [on]|off
+;;; - display tracks on|[off]
+;;; - sail change penalty [10%]
+;;; - tack/gybe penalty [10%]
 
 (in-package :virtualhelm)
 
@@ -12,6 +24,7 @@
 (defconstant +30min+ (* 30 60))
 (defconstant +60min+ (* 60 60))
 (defconstant +3h+ (* 3 60 60))
+(defconstant +6h+ (* 6 60 60))
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
 
@@ -30,12 +43,12 @@
   (dest +ystad+)
   twapath
   route
-  (fan 45)
+  (fan 75)
   (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax (* +60min+ 12))
-  (stepsize +5min+))
+  (stepmax +24h+)
+  (stepsize +30min+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -60,7 +73,8 @@
        (step-size (routing-stepsize routing))
        (angle-increment (routing-angle-increment routing))
        (start-pos (routing-start routing))
-       (dest-pos (routing-dest routing)))
+       (dest-pos (routing-dest routing))
+       (isochrones nil))
 
     (gm-to-grib! start-pos)
     (gm-to-grib! dest-pos)
@@ -93,15 +107,15 @@
         ;; from the most advanced point's predecessor chain.
         ((or reached
              (>= stepsum (routing-stepmax routing)))
-         (construct-route isochrone))
+         (values (construct-route isochrone)
+                 isochrones))
       (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time (length isochrone))
       ;; Iterate over each point in the current isochrone
       (map nil
            (lambda (routepoint)
              (let* ((dest-bearing (round (course-angle (routepoint-position routepoint) dest-pos)))
                     (left (- dest-bearing (routing-fan routing)))
-                    (right (+ dest-bearing (routing-fan routing)))
-                    (successors (make-array (1+ (truncate (* (routing-fan routing) 2) angle-increment)))))
+                    (right (+ dest-bearing (routing-fan routing))))
                (loop
                   :for heading :from left :to right :by angle-increment
                   :for k :from 0
@@ -127,8 +141,13 @@
                             (unless reached
                               (log2:info "Reached destination at ~a" step-time)
                               (setf reached t))))))))
-           isochrone))))
-
+           isochrone)
+      (multiple-value-bind (q r) (truncate stepsum 60)
+        (when (zerop r)
+          (push (map 'vector #'routepoint-position
+                     (sort isochrone #'< :key #'routepoint-destination-angle))
+                isochrones))))))
+      
 (defun filter-isochrone (isochrone)
   (setf isochrone (sort isochrone #'< :key #'routepoint-destination-distance))
   (loop
@@ -158,7 +177,7 @@
         (let ((angle (course-angle (routepoint-position p2)
                                    (routepoint-position p1)
                                    dist)))
-          (< (abs (- angle (routepoint-destination-angle p1))) 40)))))
+          (< (abs (- angle (routepoint-destination-angle p1))) 35)))))
            
 (defun construct-route (isochrone)
   isochrone)

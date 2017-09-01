@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-31 23:34:30>
+;;; Last Modified <michael 2017-09-02 00:41:59>
 
 (in-package :virtualhelm)
 
@@ -72,11 +72,13 @@
 (defun |getRoute| (location request response)
   (declare (ignore location))
   (let* ((session (find-or-create-session request response))
-         (routing (session-routing session))
-         (isochrone (get-route routing)))
-    (setf (http-body response)
-          (with-output-to-string (s)
-            (json s (extract-tracks isochrone))))))
+         (routing (session-routing session)))
+    (multiple-value-bind (tracks isochrones)
+        (get-route routing)
+      (setf (http-body response)
+            (with-output-to-string (s)
+              (json s (append isochrones
+                              (extract-tracks tracks))))))))
 
 
 (defun extract-tracks (isochrone)

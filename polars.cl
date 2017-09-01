@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-08-27 00:20:18>
+;;; Last Modified <michael 2017-09-01 21:56:59>
 
 (in-package :virtualhelm)
 
@@ -42,7 +42,9 @@
      :with imax = 0
      :with vmax = 0
      :for i :below 7
-     :for v = (get-boat-speed angle wind-speed (aref *polars* i))
+     :for v = (get-boat-speed (polars-angle angle)
+                              wind-speed
+                              (aref *polars* i))
      :do (when (>= v vmax)
            (setf imax i
                  vmax v))

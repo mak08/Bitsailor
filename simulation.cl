@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-01 01:54:19>
+;;; Last Modified <michael 2017-09-01 23:19:22>
 
 (in-package :virtualhelm)
 
@@ -34,8 +34,8 @@
   (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax (* +60min+ 3))
-  (stepsize +10min+))
+  (stepmax (* +60min+ 12))
+  (stepsize +5min+))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -60,8 +60,7 @@
        (step-size (routing-stepsize routing))
        (angle-increment (routing-angle-increment routing))
        (start-pos (routing-start routing))
-       (dest-pos (routing-dest routing))
-       (dest-bearing (course-angle start-pos dest-pos)))
+       (dest-pos (routing-dest routing)))
 
     (gm-to-grib! start-pos)
     (gm-to-grib! dest-pos)
@@ -69,18 +68,23 @@
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           ;; Iteration stops when stepmax seconds have elapsed
-          (stepsum 0 (+ stepsum step-size))
-          (stepnum 0 (1+ stepnum))
+          (stepsum 0
+                   (+ stepsum step-size))
+          (stepnum 0
+                   (1+ stepnum))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone (list (make-routepoint :position start-pos
-                                            :heading dest-bearing
+                                            :heading  (round (course-angle start-pos dest-pos))
                                             :destination-distance (course-distance start-pos dest-pos)))
-                     next-isochrone)
+                     (filter-isochrone next-isochrone))
           ;; The next isochrone - in addition we need all hourly isochrones (tbd)
-
-          (next-isochrone)
+          (successors-per-point (1+ (truncate (* (routing-fan routing) 2) angle-increment)))
+          (next-isochrone (make-array (* successors-per-point (length isochrone)))
+                          (make-array (* successors-per-point (length isochrone))))
+          (index 0 0)
           ;; Advance the simulation time after each iteration
-          (step-time (now) (adjust-timestamp step-time (:offset :sec step-size)))
+          (step-time (now)
+                     (adjust-timestamp step-time (:offset :sec step-size)))
           ;; Get wind data for simulation time
           (forecast (get-forecast forecast-bundle step-time)
                     (get-forecast forecast-bundle step-time)))
@@ -89,14 +93,15 @@
         ;; from the most advanced point's predecessor chain.
         ((or reached
              (>= stepsum (routing-stepmax routing)))
-         (construct-route next-isochrone))
+         (construct-route isochrone))
       (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time (length isochrone))
       ;; Iterate over each point in the current isochrone
       (map nil
            (lambda (routepoint)
-             (let ((left (- dest-bearing (routing-fan routing)))
-                   (right (+ dest-bearing (routing-fan routing)))
-                   (successors (make-array (1+ (truncate (* (routing-fan routing) 2) angle-increment)))))
+             (let* ((dest-bearing (round (course-angle (routepoint-position routepoint) dest-pos)))
+                    (left (- dest-bearing (routing-fan routing)))
+                    (right (+ dest-bearing (routing-fan routing)))
+                    (successors (make-array (1+ (truncate (* (routing-fan routing) 2) angle-increment)))))
                (loop
                   :for heading :from left :to right :by angle-increment
                   :for k :from 0
@@ -105,9 +110,9 @@
                         (let*
                             ((new-pos (add-distance-exact (routepoint-position routepoint)
                                                           (* speed step-size)
-                                                          heading))
+                                                          (coerce heading 'double-float)))
                              (dtf (course-distance new-pos dest-pos)))
-                          (setf (aref successors k)
+                          (setf (aref next-isochrone index)
                                 (make-routepoint :position new-pos
                                                  :heading heading
                                                  :twa angle
@@ -117,17 +122,15 @@
                                                  :predecessor routepoint
                                                  :destination-angle (course-angle new-pos dest-pos)
                                                  :destination-distance dtf))
-                          (when (< dtf 5000)
+                          (incf index)
+                          (when (< dtf 1000)
                             (unless reached
                               (log2:info "Reached destination at ~a" step-time)
-                              (setf reached t))))))
-               (setf successors (sort successors #'< :key #'routepoint-destination-distance))
-               (setf next-isochrone
-                     (merge 'vector next-isochrone successors #'< :key #'routepoint-destination-distance))))
-           isochrone)
-      (setf next-isochrone (filter-isochrone next-isochrone)))))
+                              (setf reached t))))))))
+           isochrone))))
 
 (defun filter-isochrone (isochrone)
+  (setf isochrone (sort isochrone #'< :key #'routepoint-destination-distance))
   (loop
      :for p1 :across isochrone
      :do (when p1
@@ -143,7 +146,7 @@
   (let ((result (loop
                    :for p :across isochrone
                    :when (and p
-                              #+()(not (is-land (latlng-lat (routepoint-position p))
+                              (not (is-land (latlng-lat (routepoint-position p))
                                             (latlng-lng (routepoint-position p)))))
                    :collect p)))
     (make-array (length result) :initial-contents result)))
@@ -155,7 +158,7 @@
         (let ((angle (course-angle (routepoint-position p2)
                                    (routepoint-position p1)
                                    dist)))
-          (< (abs (- angle (routepoint-heading p1))) 40)))))
+          (< (abs (- angle (routepoint-destination-angle p1))) 40)))))
            
 (defun construct-route (isochrone)
   isochrone)
@@ -225,9 +228,14 @@
       (get-wind-forecast forecast latlon)
     (let ((angle (heading-twa wind-dir heading)))
       (multiple-value-bind (speed sail)
-          (get-max-speed (abs angle) wind-speed)
+          (get-max-speed angle wind-speed)
         (values speed angle sail wind-speed)))))
 
+(defun polars-angle (heading)
+  (let ((angle (if (> heading 180)
+                   (- heading 360)
+                   heading)))
+    (abs angle)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unit conversion
 

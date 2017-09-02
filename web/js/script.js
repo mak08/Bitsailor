@@ -115,15 +115,27 @@ function getRoute () {
 		url: "/function/vh:getRoute",
 		dataType: 'json'
 	}).done( function(data) {
-		for ( var i = 0; i < data.length; i++ ) {
+		var tracks = data.tracks;
+		for ( var i = 0; i < tracks.length; i++ ) {
 			var track = new google.maps.Polyline({
 				geodesic: true,
-				strokeColor: '#FF0000',
+				strokeColor: '#d00000',
 				strokeOpacity: 1.0,
 				strokeWeight: 2
 			});
-			track.setPath(data[i]);
+			track.setPath(tracks[i]);
 			track.setMap(googleMap);
+		}
+		var isochrones = data.isochrones;
+		for ( var i = 0; i < isochrones.length; i++ ) {
+			var isochrone = new google.maps.Polyline({
+				geodesic: true,
+				strokeColor: '#0040ff',
+				strokeOpacity: 1.0,
+				strokeWeight: 2
+			});
+			isochrone.setPath(isochrones[i]);
+			isochrone.setMap(googleMap);
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);

@@ -1,19 +1,28 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-02 00:44:19>
+;;; Last Modified <michael 2017-09-02 22:16:39>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 ;;; Todo: User setting
+;;; Wind & Boat
+;;; - select map [NOAA]|DWD
+;;; - select polars [IMOCA60]|
+;;; - sail change penalty [10%]
+;;; - tack/gybe penalty [10%]
+;;; Search parameters
 ;;; - land check [on]|off
 ;;; - long-step-threshold 3h|[6h]|12h|24h (?)
 ;;; - long-step-value 30min|[60min]
 ;;; - fan 25..85
+;;; Display
 ;;; - display isochrones [on]|off
 ;;; - display tracks on|[off]
-;;; - sail change penalty [10%]
-;;; - tack/gybe penalty [10%]
+;;; Search fine-tuning
+;;; - Minimum point distance [250]|500
+;;; - Wake angle 20|[30]|40
+
 
 (in-package :virtualhelm)
 
@@ -24,6 +33,7 @@
 (defconstant +30min+ (* 30 60))
 (defconstant +60min+ (* 60 60))
 (defconstant +3h+ (* 3 60 60))
+(defconstant +4h+ (* 3 60 60))
 (defconstant +6h+ (* 6 60 60))
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
@@ -42,13 +52,14 @@
   (start +fehmarn+)
   (dest +ystad+)
   twapath
-  route
-  (fan 75)
+  (fan 60)
   (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax +24h+)
-  (stepsize +30min+))
+  (stepmax +4h+)
+  (stepsize +10min+))
+
+(defstruct routeinfo tracks isochrones)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -76,6 +87,8 @@
        (dest-pos (routing-dest routing))
        (isochrones nil))
 
+    (log2:info "Routing from ~a to ~a (heading ~a)" start-pos dest-pos (course-angle start-pos dest-pos))
+
     (gm-to-grib! start-pos)
     (gm-to-grib! dest-pos)
 
@@ -90,7 +103,7 @@
           (isochrone (list (make-routepoint :position start-pos
                                             :heading  (round (course-angle start-pos dest-pos))
                                             :destination-distance (course-distance start-pos dest-pos)))
-                     (filter-isochrone next-isochrone))
+                     next-isochrone)
           ;; The next isochrone - in addition we need all hourly isochrones (tbd)
           (successors-per-point (1+ (truncate (* (routing-fan routing) 2) angle-increment)))
           (next-isochrone (make-array (* successors-per-point (length isochrone)))
@@ -107,8 +120,9 @@
         ;; from the most advanced point's predecessor chain.
         ((or reached
              (>= stepsum (routing-stepmax routing)))
-         (values (construct-route isochrone)
-                 isochrones))
+         (make-routeinfo :tracks (extract-tracks
+                                  (construct-route isochrone))
+                         :isochrones isochrones))
       (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time (length isochrone))
       ;; Iterate over each point in the current isochrone
       (map nil
@@ -142,13 +156,14 @@
                               (log2:info "Reached destination at ~a" step-time)
                               (setf reached t))))))))
            isochrone)
+      (setf next-isochrone (filter-isochrone next-isochrone stepnum))
       (multiple-value-bind (q r) (truncate stepsum 60)
         (when (zerop r)
           (push (map 'vector #'routepoint-position
-                     (sort isochrone #'< :key #'routepoint-destination-angle))
+                     (sort next-isochrone #'< :key #'routepoint-destination-angle))
                 isochrones))))))
       
-(defun filter-isochrone (isochrone)
+(defun filter-isochrone (isochrone stepnum)
   (setf isochrone (sort isochrone #'< :key #'routepoint-destination-distance))
   (loop
      :for p1 :across isochrone
@@ -160,7 +175,7 @@
               :for k :from 0
               :do (when (and p2
                              (not (eq p1 p2))
-                             (covers p1 p2))
+                             (covers p1 p2 stepnum))
                     (setf (aref isochrone k) nil)))))
   (let ((result (loop
                    :for p :across isochrone
@@ -168,19 +183,36 @@
                               (not (is-land (latlng-lat (routepoint-position p))
                                             (latlng-lng (routepoint-position p)))))
                    :collect p)))
+    (log2:info "Filter: in ~a, retaining ~a" (length isochrone) (length result))
     (make-array (length result) :initial-contents result)))
 
-(defun covers (p1 p2)
+(defun covers (p1 p2 stepnum)
   (let ((dist (course-distance (routepoint-position p2)
                                (routepoint-position p1))))
-    (or (< dist 500)
+    (or (case stepnum
+          (0 (< dist 50))
+          (1 (< dist 100))
+          (2 (< dist 200))
+          (3 (< dist 500))
+          (otherwise
+           (< dist 750)))
         (let ((angle (course-angle (routepoint-position p2)
                                    (routepoint-position p1)
                                    dist)))
-          (< (abs (- angle (routepoint-destination-angle p1))) 35)))))
+          (< (abs (- angle (routepoint-heading p1))) 30)))))
            
 (defun construct-route (isochrone)
   isochrone)
+
+(defun extract-tracks (isochrone)
+  (loop
+     :for point :across isochrone
+     :for k :from 0
+     :collect (do ((p point (routepoint-predecessor p))
+                   (v (list)))
+                  ((null p)
+                   v)
+                (push (routepoint-position p) v))))
 
 (defun get-twa-path (routing
                      &key 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-02 22:16:39>
+;;; Last Modified <michael 2017-09-04 00:40:56>
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -33,10 +33,11 @@
 (defconstant +30min+ (* 30 60))
 (defconstant +60min+ (* 60 60))
 (defconstant +3h+ (* 3 60 60))
-(defconstant +4h+ (* 3 60 60))
+(defconstant +4h+ (* 4 60 60))
 (defconstant +6h+ (* 6 60 60))
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
+(defconstant +48h+ (* 48 60 60))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route as well as
@@ -56,7 +57,7 @@
   (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax +4h+)
+  (stepmax +24h+)
   (stepsize +10min+))
 
 (defstruct routeinfo tracks isochrones)
@@ -74,6 +75,7 @@
   sail
   is-land
   predecessor
+  origin-angle
   destination-angle
   destination-distance)
 
@@ -148,6 +150,7 @@
                                                  :sail sail
                                                  :is-land nil ;; compute this after wake pruning
                                                  :predecessor routepoint
+                                                 :origin-angle (course-angle start-pos new-pos)
                                                  :destination-angle (course-angle new-pos dest-pos)
                                                  :destination-distance dtf))
                           (incf index)
@@ -158,33 +161,47 @@
            isochrone)
       (setf next-isochrone (filter-isochrone next-isochrone stepnum))
       (multiple-value-bind (q r) (truncate stepsum 60)
+        (declare (ignore q))
         (when (zerop r)
           (push (map 'vector #'routepoint-position
-                     (sort next-isochrone #'< :key #'routepoint-destination-angle))
+                     (sort next-isochrone #'< :key #'routepoint-origin-angle))
                 isochrones))))))
-      
+
 (defun filter-isochrone (isochrone stepnum)
-  (setf isochrone (sort isochrone #'< :key #'routepoint-destination-distance))
+  (declare (ignore stepnum))
+  (setf isochrone (sort isochrone #'< :key #'routepoint-origin-angle))
   (loop
-     :for p1 :across isochrone
-     :do (when p1
-           ;; It is not quite correct to skip covered points
-           ;; because coveredness is computed w.r.t. the point's heading and thus is not transitive.
-           (loop
-              :for p2 :across isochrone
-              :for k :from 0
-              :do (when (and p2
-                             (not (eq p1 p2))
-                             (covers p1 p2 stepnum))
-                    (setf (aref isochrone k) nil)))))
-  (let ((result (loop
-                   :for p :across isochrone
-                   :when (and p
-                              (not (is-land (latlng-lat (routepoint-position p))
-                                            (latlng-lng (routepoint-position p)))))
-                   :collect p)))
-    (log2:info "Filter: in ~a, retaining ~a" (length isochrone) (length result))
-    (make-array (length result) :initial-contents result)))
+     :with a0 = (routepoint-origin-angle (aref isochrone 0))
+     :with dmin = (routepoint-destination-distance (aref isochrone 0))
+     :with kmax = 0
+     :with result = (make-array 0 :fill-pointer 0 :adjustable t)
+     :with last = (1- (length isochrone))
+     :for point :across isochrone
+     :for k :from 0
+     :for a = (routepoint-origin-angle point)
+     :for d = (routepoint-destination-distance point)
+     :do (cond
+           ((or (= k 0)
+                (= k last))
+            (unless (is-land (latlng-lat (routepoint-position point))
+                             (latlng-lng (routepoint-position point)))
+              (log2:info "Filter: Adding point ~a/~a, a=~a"  k (length isochrone) a)
+              (vector-push-extend point result)))
+           ((>= (- a a0) 0.5)
+            (vector-push-extend (aref isochrone kmax) result)
+            (when (< k last)
+              (setf kmax (1+ k))
+              (let ((next-point (aref isochrone kmax)))
+                (setf a0 (routepoint-origin-angle next-point))
+                (setf dmin (routepoint-destination-distance next-point)))))
+           ((< (routepoint-destination-distance point) dmin)
+            (unless (is-land (latlng-lat (routepoint-position (aref isochrone kmax)))
+                             (latlng-lng (routepoint-position (aref isochrone kmax))))
+              (setf kmax k)
+              (setf dmin (routepoint-destination-distance point)))))
+     :finally (progn
+                (log2:info "Filter: in ~a, retaining ~a" (length isochrone) (length result))
+                (return result))))
 
 (defun covers (p1 p2 stepnum)
   (let ((dist (course-distance (routepoint-position p2)

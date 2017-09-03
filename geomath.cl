@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-01 01:54:47>
+;;; Last Modified <michael 2017-09-04 00:28:44>
 
 (in-package :virtualhelm)
 
@@ -11,7 +11,7 @@
 ;;; Constants
 
 (defconstant +radius+
-  6371229
+  6371229d0
   "Assumed radius of Earth in metres")
 
 (defconstant +radius²+
@@ -79,27 +79,70 @@
        (acos (+ (* (sin lat1) (sin lat2))
                 (* (cos lat1) (cos lat2) (cos (- lon2 lon1))))))))
 
-(defun course-angle (origin target &optional (dist (course-distance origin target)))
-  (when (eql dist 0d0)
-    (error "Distance is zero between ~a and ~a" origin target))
-  (let* ((e (/ dist +radius+))
-         (lat1 (latlng-latr origin))
+(defun course-angle (origin target &optional (dist nil))
+  (let ((a (course-angle% origin target dist)))
+    (when (complexp a)
+      (log2:warning "Complex result ~a for ~a, ~a" a origin target)
+      (return-from course-angle
+        (let ((lng (realpart a))
+              (lat (imagpart a)))
+          (cond
+            ((= lng 0)
+             (if (< lat 0) 0d0 180d0))
+            ((= lat 0)
+             (if (< lng 0) -90d0 90d0))
+            (t
+             (error "Cannot guess direction from complex number ~a" a)))))) 
+    a))
+
+(defun course-angle% (origin target &optional (dist nil))
+  (let ((lat1 (latlng-latr origin))
+        (lat2 (latlng-latr target))
+        (lon1 (latlng-lngr origin))
+        (lon2 (latlng-lngr target)))
+    ;; (declare (double-float lat1 lon1 lat2 lon2 cos-omega omega delta))
+    (cond
+      ((and
+        (eql lat1 lat2)
+        (eql lon1 lon2))
+       (error "Distance is zero between ~a and ~a" origin target))
+      ((eql lat1 lat2)
+       (if (< lon1 lon2)
+           90d0
+           -90d0))
+      ((eql lon1 lon2)
+       (if (< lat1 lat2)
+           0d0
+           180d0))
+      (t
+       (let ((dist (or dist (course-distance origin target))))
+         (when (eql dist 0d0)
+           (error "Distance is zero between ~a and ~a" origin target))
+         (let* ((e (/ dist +radius+))
+                (cos-omega
+                 (/ (- (sin lat2) (* (sin lat1) (cos e)))
+                    (* (cos lat1) (sin e))))
+                (omega
+                 (acos cos-omega))
+                (delta
+                 (- lon2 lon1)))
+           (deg
+            (if (or (< delta 0d0)
+                    (> delta 180d0))
+                (- omega)
+                omega))))))))
+
+(defun gc-angle (origin target)
+  ;; Angle between origin and target on the GC defined by these points (symmetric)
+  (let* ((lat1 (latlng-latr origin))
          (lat2 (latlng-latr target))
          (lon1 (latlng-lngr origin))
          (lon2 (latlng-lngr target))
-         (cos-omega
-          (/ (- (sin lat2) (* (sin lat1) (cos e)))
-             (* (cos lat1) (sin e))))
-         (omega
-          (acos cos-omega))
-         (delta
-          (- lon2 lon1)))
-    ;; (declare (double-float lat1 lon1 lat2 lon2 cos-omega omega delta))
+         (d (- lon2 lon1)))
     (deg
-     (if (or (< delta 0)
-             (> delta 180))
-         (- omega)
-         omega))))
+     (acos
+      (+ (* (sin lat1) (sin lat2))
+         (* (cos lat1) (cos lat2) (cos d)))))))
                      
 (defun add-distance-exact (pos distance alpha)
   ;; Exact calculation on the spherical Earth

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-29 23:34:34>
+;;; Last Modified <michael 2017-09-03 21:30:11>
 
 (in-package :virtualhelm)
 
@@ -44,7 +44,7 @@
 ;;; Variables
 
 (defvar *grib-folder* "/home/michael/Wetter/dwd-gds")
-(defvar *forecasts* (make-hash-table :hash-function #'timestamp-to-universal))
+(defvar *forecasts* (make-hash-table :hash-function #+sbcl #'timestamp-to-universal #+ccl 'timestamp-to-universal))
 (defvar *dwd-forecast-bundle* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

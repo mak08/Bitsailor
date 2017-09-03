@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-24 20:10:09>
+;;; Last Modified <michael 2017-09-03 21:30:57>
 
 (in-package :virtualhelm)
 
@@ -11,6 +11,16 @@
         (location nil))
     (|getWind| location request response :|north| "55.0" :|south| "45.0" :|west| "5.0" :|east| "15.0" :|ddx| "0.2")
     (http-body response)))
+
+#|
+(COURSE-ANGLE
+      #S(LATLNG
+         :LAT 54.434403d0
+         :LNG 11.361632d0)
+      #S(LATLNG
+         :LAT 54.44400124404393d0
+         :LNG 11.361632d0))
+|#
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

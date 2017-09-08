@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-30 22:10:36>
+;;; Last Modified <michael 2017-09-04 22:46:27>
 
 (in-package :virtualhelm)
 
@@ -53,9 +53,8 @@
        :do (let* ((polygon (ogr-f-get-geometry-ref feature))
                   (found (ogr-g-contains polygon point)))
              (ogr-f-destroy feature)
-             (when found 
-               (return-from is-land t)))))
-  (values nil))
+             (when found
+               (return-from is-land t))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialize map on load

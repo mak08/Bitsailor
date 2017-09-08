@@ -1,11 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-04 00:28:44>
+;;; Last Modified <michael 2017-09-08 00:02:19>
 
 (in-package :virtualhelm)
 
-(declaim (optimize speed (debug 0) (space 0) (safety 0)))
+(declaim (optimize (speed 0) debug  (space 0) (safety 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Constants
@@ -24,6 +24,8 @@
 (defconstant +deg-length+
   (/ (* 2 pi +radius+) 360)
   "Distance of 1° at the equator")
+
+(defconstant +eps+ 1d-6)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -49,6 +51,7 @@
           (/ (- a a0) (- a1 a0)))
          (v
           (+ v0 (* da (- v1 v0)))))
+    (declare (double-float dw v0 v1 da v))
     v))
 
 
@@ -80,22 +83,6 @@
                 (* (cos lat1) (cos lat2) (cos (- lon2 lon1))))))))
 
 (defun course-angle (origin target &optional (dist nil))
-  (let ((a (course-angle% origin target dist)))
-    (when (complexp a)
-      (log2:warning "Complex result ~a for ~a, ~a" a origin target)
-      (return-from course-angle
-        (let ((lng (realpart a))
-              (lat (imagpart a)))
-          (cond
-            ((= lng 0)
-             (if (< lat 0) 0d0 180d0))
-            ((= lat 0)
-             (if (< lng 0) -90d0 90d0))
-            (t
-             (error "Cannot guess direction from complex number ~a" a)))))) 
-    a))
-
-(defun course-angle% (origin target &optional (dist nil))
   (let ((lat1 (latlng-latr origin))
         (lat2 (latlng-latr target))
         (lon1 (latlng-lngr origin))
@@ -106,11 +93,11 @@
         (eql lat1 lat2)
         (eql lon1 lon2))
        (error "Distance is zero between ~a and ~a" origin target))
-      ((eql lat1 lat2)
+      ((< (abs (- lat1 lat2)) +eps+)
        (if (< lon1 lon2)
            90d0
            -90d0))
-      ((eql lon1 lon2)
+      ((< (abs (- lon1 lon2)) +eps+)
        (if (< lat1 lat2)
            0d0
            180d0))
@@ -118,6 +105,8 @@
        (let ((dist (or dist (course-distance origin target))))
          (when (eql dist 0d0)
            (error "Distance is zero between ~a and ~a" origin target))
+         (when (complexp dist)
+           (error "Invalid distance |~a ~a|" origin target))
          (let* ((e (/ dist +radius+))
                 (cos-omega
                  (/ (- (sin lat2) (* (sin lat1) (cos e)))
@@ -126,6 +115,8 @@
                  (acos cos-omega))
                 (delta
                  (- lon2 lon1)))
+           (when (complexp omega)
+             (error "Invalid cos-omega ~a for origin=~a target=~a" cos-omega origin target))
            (deg
             (if (or (< delta 0d0)
                     (> delta 180d0))
@@ -204,7 +195,9 @@
 
 (defun angle (u v)
   (declare (double-float u v))
-  (+ 180d0 (* 180d0 (/ (atan u v) pi))))
+  (let ((angle
+         (+ 180d0 (* 180d0 (/ (atan u v) pi)))))
+    angle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Euclidian Norm

@@ -1,15 +1,38 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-01 01:18:35>
+;;; Last Modified <michael 2017-09-08 21:07:06>
 
 (in-package :virtualhelm)
+ 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; - HEADING values range from 0..360 (clockwise from north)
+;;; - ANGLE  values range from -179..180 (starboard downwind to port downwind)  
+
+(deftype heading () `(integer 0 360))
+(deftype angle () `(double-float -179.99999d0 180.0d0))
+
+(defun normalize-heading (value)
+  (if (> value 360)
+      (- value 360)
+      (if (< value 0)
+          (+ value 360)
+          value)))
+
+(defun normalize-angle (value)
+  (if (<= value -180)
+      (+ value 360)
+      (if (> value 180)
+          (- value 360)
+          value)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Data structures
+;;; Structs
 
 ;; TODO: A latlng should only be used to represent Google Maps coordinates.
 (defstruct latlng lat lng latr% lngr%)
+(defmethod print-object ((thing latlng) stream)
+  (format stream "[~3$, ~3$]" (latlng-lat thing) (latlng-lng thing)))
 
 (defun latlng-latr (latlng)
   (or (latlng-latr% latlng)

@@ -180,10 +180,11 @@ function getRoute () {
 		for ( var i = 0; i < isochrones.length; i++ ) {
 			var isochrone = new google.maps.Polyline({
 				geodesic: true,
-				strokeColor: '#0040ff',
-				strokeOpacity: 1.0,
-				strokeWeight: 2
+				strokeColor: '#8080a0',
+				strokeOpacity: 0.8,
+				strokeWeight: 4
 			});
+			isochrone.addListener('click', function(){alert('foo')});
 			isochrone.setPath(isochrones[i]);
 			isochrone.setMap(googleMap);
 			routeIsochrones[i] = isochrone;

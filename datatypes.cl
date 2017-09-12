@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-08 21:07:06>
+;;; Last Modified <michael 2017-09-12 18:14:12>
 
 (in-package :virtualhelm)
  
@@ -30,7 +30,11 @@
 ;;; Structs
 
 ;; TODO: A latlng should only be used to represent Google Maps coordinates.
-(defstruct latlng lat lng latr% lngr%)
+(defstruct latlng
+  (lat 0 :read-only t)
+  (lng 0 :read-only t)
+  latr%
+  lngr%)
 (defmethod print-object ((thing latlng) stream)
   (format stream "[~3$, ~3$]" (latlng-lat thing) (latlng-lng thing)))
 

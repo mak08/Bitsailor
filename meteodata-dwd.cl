@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-11 22:01:54>
+;;; Last Modified <michael 2017-09-12 18:21:22>
 
 (in-package :virtualhelm)
 
@@ -116,6 +116,10 @@
   "Get interpolated direction(deg) & speed(m/s) at lat, lon.
 Data for offset (hour) is used and no time interpolation is done."
   (declare (double-float lat lon))
+
+  (when (< lon 0d0)
+    (incf lon 360d0))
+  
   (handler-case
       (let ((i-inc (gribfile-i-inc grib))
             (j-inc (gribfile-j-inc grib)))

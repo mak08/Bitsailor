@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-13 00:48:41>
+;;; Last Modified <michael 2017-09-13 00:54:51>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -289,7 +289,7 @@
         (let ((forecast (get-forecast forecast-bundle start-time)))
           (multiple-value-bind (speed heading)
               (twa-boatspeed forecast curpos twa)
-            (setf cur-pos (add-distance-exact curpos (* speed step-time) heading))))))))
+            (setf curpos (add-distance-exact curpos (* speed step-time) heading))))))))
 
 (defun twa-heading (wind-dir angle)
   "Compute HEADING resulting from TWA in WIND"

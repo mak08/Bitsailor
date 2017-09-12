@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-12 22:37:55>
+;;; Last Modified <michael 2017-09-13 00:48:41>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -289,7 +289,8 @@
         (let ((forecast (get-forecast forecast-bundle start-time)))
           (multiple-value-bind (speed heading)
               (twa-boatspeed forecast curpos twa)
-            (add-distance-exact! curpos (* speed step-time) heading)))))))
+            (setf cur-pos (add-distance-exact curpos (* speed step-time) heading))))))))
+
 (defun twa-heading (wind-dir angle)
   "Compute HEADING resulting from TWA in WIND"
   (normalize-heading (- wind-dir angle)))
@@ -333,7 +334,8 @@
   (* m/s 3.6))
 
 ;;; Translate latitude coordinates of start and destination to [0..360)
-(defun gm-to-grib! (latlng)
+;;; Can't SETF LATLNG-LNG!
+#+()(defun gm-to-grib! (latlng)
   (when (< (latlng-lng latlng) 0)
     (incf (latlng-lng latlng) 360)))  
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-10 21:43:53>
+;;; Last Modified <michael 2017-09-13 00:47:20>
 
 (in-package :virtualhelm)
 
@@ -154,7 +154,8 @@
       (make-latlng :lat (/ lat-new-r +pi/180+)
                    :lng (/ lon-new-r +pi/180+)))))
 
-(defun add-distance-exact! (pos distance alpha)
+;; Can't SETF LATLNG-LAT/LNG!
+#+()(defun add-distance-exact! (pos distance alpha)
   ;; Exact calculation on the spherical Earth
   (let ((lat (latlng-lat pos))
         (lon (latlng-lng pos)))

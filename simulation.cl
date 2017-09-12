@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-09 00:19:00>
+;;; Last Modified <michael 2017-09-12 17:41:20>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -64,7 +64,7 @@
   (angle-increment 1)
   (sectors 81)
   (points-per-sector 5)
-  (stepmax +6h+)
+  (stepmax +48h+)
   (stepsize +10min+))
 
 (defstruct routeinfo tracks isochrones)
@@ -222,7 +222,7 @@
          :for d = (routepoint-destination-distance point)
          ;; :initially (vector-push-extend (aref isochrone 0) result)
          :do (cond
-               ((>= (abs (- a a0)) 0.25)
+               ((>= (abs (- a a0)) 0.2)
                 ;; Sector scanned, record best distance...
                 (unless (is-land (latlng-lat (routepoint-position (aref isochrone kmin)))
                                  (latlng-lng (routepoint-position (aref isochrone kmin))))
@@ -311,7 +311,7 @@
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
     (multiple-value-bind (speed sail)
-        (get-max-speed (abs angle) wind-speed)
+        (get-max-speed (abs angle) wind-speed "VOR14")
       (values speed
               (twa-heading wind-dir angle)
               sail
@@ -323,14 +323,9 @@
       (get-wind-forecast forecast latlon)
     (let ((angle (heading-twa wind-dir heading)))
       (multiple-value-bind (speed sail)
-          (get-max-speed angle wind-speed)
+          (get-max-speed angle wind-speed "VOR14")
         (values speed angle sail wind-speed)))))
 
-(defun polars-angle (heading)
-  (let ((angle (if (> heading 180)
-                   (- heading 360)
-                   heading)))
-    (abs angle)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unit conversion
 

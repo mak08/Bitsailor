@@ -19,18 +19,19 @@
 .col-12 {width: 100%;}
 
 [class*="col-"] {
-    float: left;
-    magin: 0px;
+	display: flex;
+	flex-direction: column;
+    margin: 0px;
     border: none;
-    padding: 10px;
+    padding: 5px;
 }
 
 .row {
+	display: flex;
+	flex-direction: row;
 }
 .row::after {
     content: "";
-    clear: both;
-    display: table;
 }
 
 .cell {

@@ -1,10 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-03 21:30:11>
+;;; Last Modified <michael 2017-09-11 22:01:54>
 
 (in-package :virtualhelm)
 
+
+(declaim (optimize (speed 3) (safety 1) (debug 1)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Overview
 ;;;
@@ -113,9 +115,11 @@
 (defun get-interpolated-wind (grib offset lat lon)
   "Get interpolated direction(deg) & speed(m/s) at lat, lon.
 Data for offset (hour) is used and no time interpolation is done."
+  (declare (double-float lat lon))
   (handler-case
       (let ((i-inc (gribfile-i-inc grib))
             (j-inc (gribfile-j-inc grib)))
+        (declare (double-float  i-inc j-inc))
         (with-bindings
             (((flat rlat) (ffloor lat j-inc))
              ((flon rlon) (ffloor lon i-inc)))
@@ -132,6 +136,7 @@ Data for offset (hour) is used and no time interpolation is done."
                   (x1 (+ x0 i-inc))
                   (y0 (* (ffloor lat j-inc) j-inc))
                   (y1 (+ y0 j-inc)))
+               (declare (double-float x0 x1 y0 y1))
                (with-bindings (((u00 v00) (get-wind grib offset y0 x0))
                                ((u01 v01) (get-wind grib offset y0 x1))
                                ((u10 v10) (get-wind grib offset y1 x0))
@@ -232,9 +237,12 @@ Data for offset (hour) is used and no time interpolation is done."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Accessing GRIB wind data
+(declaim (ftype (function (t integer double-float double-float) (values double-float double-float)) get-wind))
 
 (defun get-wind (grib offset lat lon)
   "Get u/v values at lat,lon (in GRIB coordinates)"
+  (declare (double-float lat lon))
+  (declare (ftype (function (array) (simple-array double-float)) grib-values-u-array grib-values-v-array))
   (let
       ;; Get grib parameters to check if latlon is within grib range.
       ;; Also used for computing index into data array
@@ -247,6 +255,8 @@ Data for offset (hour) is used and no time interpolation is done."
        ;; Use forecast data at offset (hour). No time interpolation.
        (grib-values
         (aref (gribfile-data grib) offset)))
+    (declare (double-float lat0 lat1 lon0 lon1))
+    (declare ((unsigned-byte 16) lonpoints latpoints))
     ;; 0 - Check if latlon is within grib coordinates
     (unless (and (<= lat0 lat lat1)
                  (or (and (< lon0 lon1)
@@ -267,17 +277,21 @@ Data for offset (hour) is used and no time interpolation is done."
              (j-inc (gribfile-j-inc grib))
              (lat-index (floor olat j-inc))
              (lon-index (floor olon i-inc)))
+        (declare (double-float i-inc j-inc))
+        (declare ((unsigned-byte 16) lat-index lon-index))
         ;; Paranoia
         (unless (<= 0 lon-index lonpoints)
           (error "Invalid data index ~a for lon ~a in ~a" lon-index lon grib-values))
         (unless (<= 0 lat-index latpoints)
           (error "Invalid data index ~a for lat ~a in ~a" lon-index lon grib-values))
         ;; 4 - Return grib data
-        (log2:trace "Getting latlon[~a,~a] at index[~a,~a]~%" lat lon lat-index lon-index)
-        (values (aref (grib-values-u-array grib-values)
-                      (+ (* lat-index lonpoints) lon-index))
-                (aref (grib-values-v-array grib-values)
-                      (+ (* lat-index lonpoints) lon-index)))))))
+        ;; (log2:trace "Getting latlon[~a,~a] at index[~a,~a]~%" lat lon lat-index lon-index)
+        (let* ((lat-offset (* lat-index lonpoints))
+               (offset (+ lat-offset lon-index)))
+          (values (aref (the (simple-array double-float) (grib-values-u-array grib-values))
+                        offset)
+                  (aref (the (simple-array double-float) (grib-values-v-array grib-values))
+                        offset)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Loading GRIB2 files
@@ -334,10 +348,10 @@ Data for offset (hour) is used and no time interpolation is done."
         (gribfile-step-units gribfile) (grib-get-long message "stepUnits")
         (gribfile-lat-points gribfile) (grib-get-long message "numberOfPointsAlongAMeridian")
         (gribfile-lon-points gribfile) (grib-get-long message "numberOfPointsAlongAParallel")
-        (gribfile-lat-start gribfile) (grib-get-long message "latitudeOfFirstGridPointInDegrees")
-        (gribfile-lat-end gribfile) (grib-get-long message "latitudeOfLastGridPointInDegrees")
-        (gribfile-lon-start gribfile) (grib-get-long message "longitudeOfFirstGridPointInDegrees")
-        (gribfile-lon-end gribfile) (grib-get-long message "longitudeOfLastGridPointInDegrees")
+        (gribfile-lat-start gribfile) (coerce (grib-get-long message "latitudeOfFirstGridPointInDegrees") 'double-float)
+        (gribfile-lat-end gribfile) (coerce (grib-get-long message "latitudeOfLastGridPointInDegrees") 'double-float)
+        (gribfile-lon-start gribfile) (coerce (grib-get-long message "longitudeOfFirstGridPointInDegrees") 'double-float)
+        (gribfile-lon-end gribfile) (coerce (grib-get-long message "longitudeOfLastGridPointInDegrees") 'double-float)
         (gribfile-j-inc gribfile) (grib-get-double message "jDirectionIncrementInDegrees") ; "south to north"
         (gribfile-i-inc gribfile) (grib-get-double message "iDirectionIncrementInDegrees") ; "west to east"
         (gribfile-j-scan-pos gribfile) (grib-get-long message "jScansPositively")

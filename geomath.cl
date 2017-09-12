@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-08 00:02:19>
+;;; Last Modified <michael 2017-09-10 21:43:53>
 
 (in-package :virtualhelm)
 
@@ -42,13 +42,13 @@
   (assert (<= w0 w w1))
   (assert (<= a0 a a1))
   (let* ((dw
-          (/ (- w w0) (- w1 w0)))
+          (if (= w0 w1) 0d0 (/ (- w w0) (- w1 w0))))
          (v0
           (+ v00 (* dw (- v01 v00))))
          (v1
           (+ v10 (* dw (- v11 v10))))
          (da
-          (/ (- a a0) (- a1 a0)))
+          (if (= a0 a1) 0d0 (/ (- a a0) (- a1 a0))))
          (v
           (+ v0 (* da (- v1 v0)))))
     (declare (double-float dw v0 v1 da v))

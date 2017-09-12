@@ -18,6 +18,11 @@ var ir_index;
 
 var mapEvent;
 
+var startMarker;
+ 
+var destinationMarker = {};
+
+
 function setUp () {
 	
 	setupColors();
@@ -58,6 +63,29 @@ function setUp () {
 	ir_index = $("#ir_index")[0];
 	updateMap();
 
+	startMarker = new google.maps.Marker({
+		position: {"lat": 54.434403, "lng": 11.361632},
+		map: googleMap,
+		title: 'Start',
+		draggable: true
+	});
+
+	google.maps.event.addListener(startMarker,'dragend',function() {
+		setRoutePoint('start', startMarker.getPosition());
+	});
+
+	destinationMarker = new google.maps.Marker({
+		position: {"lat": 55.391123, "lng": 13.792635},
+		map: googleMap,
+		title: 'Destination',
+		draggable: true
+	});
+
+	google.maps.event.addListener(destinationMarker,'dragend',function() {
+		setRoutePoint('dest', destinationMarker.getPosition());
+	});
+	
+
 }
 
 function onMapMenuMouseLeave(event) {
@@ -82,12 +110,9 @@ var boatPath = new google.maps.Polyline({
     strokeWeight: 2
 });
 
-function setRoute (point) {
-	var lat =  mapEvent.latLng.lat();
-	var lng =  mapEvent.latLng.lng();
-	var mapMenu=$("#mapMenu")[0];
-	var windowEvent = window.event;
-	mapMenu.style.display = "none";
+function setRoutePoint(point, latlng) {
+	var lat =  latlng.lat();
+	var lng =  latlng.lng();
 	var that = this;
 	$.ajax({ 
 		url: "/function/vh:setRoute"
@@ -97,14 +122,37 @@ function setRoute (point) {
 		dataType: 'json'
 	}).done( function(data) {
 		// alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-		boatPath.setMap(undefined);
-		boatPath.setPath(data.route.twapath);
-		boatPath.setMap(googleMap);
+		if ( point === 'start' ) {
+			startMarker.setPosition(latlng);
+		} else if ( point === 'dest' ) {
+			destinationMarker.setPosition(latlng);
+		}
 		console.log("Success: " + point + " set.");
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);
 	});
 }
+
+function setRoute (point) {
+	var mapMenu=$("#mapMenu")[0];
+	mapMenu.style.display = "none";
+	setRoutePoint(point, mapEvent.latLng);
+}
+
+var routeTracks = [];
+var routeIsochrones = [];
+
+function clearRoute() {
+	for ( var i = 0; i<routeTracks.length; i++ ) {
+		routeTracks[i].setMap(undefined);
+	}
+	routeTracks = [];
+	for ( var i = 0; i<routeIsochrones.length; i++ ) {
+		routeIsochrones[i].setMap(undefined);
+	}
+	routeIsochrones = [];
+}
+
 
 function getRoute () {
 	var mapMenu=$("#mapMenu")[0];
@@ -115,6 +163,7 @@ function getRoute () {
 		url: "/function/vh:getRoute",
 		dataType: 'json'
 	}).done( function(data) {
+		clearRoute();
 		var tracks = data.tracks;
 		for ( var i = 0; i < tracks.length; i++ ) {
 			var track = new google.maps.Polyline({
@@ -125,6 +174,7 @@ function getRoute () {
 			});
 			track.setPath(tracks[i]);
 			track.setMap(googleMap);
+			routeTracks[i] = track;
 		}
 		var isochrones = data.isochrones;
 		for ( var i = 0; i < isochrones.length; i++ ) {
@@ -136,6 +186,7 @@ function getRoute () {
 			});
 			isochrone.setPath(isochrones[i]);
 			isochrone.setMap(googleMap);
+			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-13 00:54:51>
+;;; Last Modified <michael 2017-09-14 00:17:40>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -26,10 +26,8 @@
 ;;; - display isochrones [on]|off
 ;;; - display tracks on|[off]
 ;;; Search fine-tuning
-;;; - Minimum point distance [250]|500
-;;; - Wake angle 20|[30]|40
 
-;;; -10 -5 0 5 10 170 180 -180
+
 
 (in-package :virtualhelm)
 
@@ -57,6 +55,8 @@
   (make-latlng :lat 55.391123d0 :lng 13.792635d0))
         
 (defstruct routing
+  (forecast-bundle 'dwd-icon-bundle)
+  (polars "VO65")
   (start +fehmarn+)
   (dest +ystad+)
   twapath
@@ -97,8 +97,9 @@
                            :lng (- (latlng-lng dest-pos) 360))))
 
     (let*
-        ((forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
+        ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
+         (polars-name (routing-polars routing))
          (step-size (routing-stepsize routing))
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
@@ -167,7 +168,7 @@
                     :for heading-index :from left :to right :by angle-increment
                     :for heading = (normalize-heading heading-index)
                     :do (multiple-value-bind (speed angle sail)
-                            (heading-boatspeed forecast (routepoint-position routepoint) heading)
+                            (heading-boatspeed forecast polars-name (routepoint-position routepoint) heading)
                           (when (or (not (equal sail (routepoint-sail routepoint)))
                                     (and (< angle 0 (routepoint-twa routepoint)))
                                     (and (< (routepoint-twa routepoint) 0 angle)))
@@ -219,7 +220,7 @@
          :with last = (1- (length isochrone))
          :with start-angle = (routepoint-origin-angle (aref isochrone 0))
          :with end-angle = (routepoint-origin-angle (aref isochrone last)) 
-         :with delta-angle = (/ (abs (- end-angle start-angle)) 100)
+         :with delta-angle = (/ (abs (- end-angle start-angle)) max-points)
          :with a0 = start-angle
          :with dmin = (routepoint-destination-distance (aref isochrone 0))
          :with kmin = 0
@@ -268,8 +269,9 @@
                      &key 
                        (total-time +12h+)
                        (step-num (truncate total-time (routing-stepsize routing))))
-  (let* ((forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
+  (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
+         (polars-name (routing-polars routing))
          (start-time (now))
          (step-time (routing-stepsize routing))
          (startpos (routing-start routing))
@@ -288,7 +290,7 @@
         (adjust-timestamp! start-time (:offset :sec step-time))
         (let ((forecast (get-forecast forecast-bundle start-time)))
           (multiple-value-bind (speed heading)
-              (twa-boatspeed forecast curpos twa)
+              (twa-boatspeed forecast polars-name curpos twa)
             (setf curpos (add-distance-exact curpos (* speed step-time) heading))))))))
 
 (defun twa-heading (wind-dir angle)
@@ -301,24 +303,24 @@
   "Compute TWA resulting from HEADING in WIND"
   (normalize-angle (- wind-dir heading)))
 
-(defun twa-boatspeed (forecast latlon angle)
+(defun twa-boatspeed (forecast polars latlon angle)
   (check-type angle angle)
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
     (multiple-value-bind (speed sail)
-        (get-max-speed (abs angle) wind-speed "VOR14")
+        (get-max-speed (abs angle) wind-speed polars)
       (values speed
               (twa-heading wind-dir angle)
               sail
               wind-speed))))
 
-(defun heading-boatspeed (forecast latlon heading)
+(defun heading-boatspeed (forecast polars latlon heading)
   (check-type heading heading)
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
     (let ((angle (heading-twa wind-dir heading)))
       (multiple-value-bind (speed sail)
-          (get-max-speed angle wind-speed "VOR14")
+          (get-max-speed angle wind-speed polars)
         (values speed angle sail wind-speed)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

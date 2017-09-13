@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-13 00:49:53>
+;;; Last Modified <michael 2017-09-14 00:23:17>
 
 (in-package :virtualhelm)
 
@@ -62,6 +62,35 @@
       (setf (session-direction session)
             (round (course-angle (routing-start routing)
                                  (routing-dest routing))))
+      (setf (http-body response)
+            (with-output-to-string (s)
+              (json s session))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; setParameter
+(defun |setParameter| (location request response &key |name| |value|)
+  (declare (ignore location))
+  (let* ((session (find-or-create-session request response)))
+    (let ((routing (session-routing session)))
+      (cond
+        ((string= |name| "polars")
+         (setf (routing-polars routing) |value|))
+        ((string= |name| "duration")
+         (let ((duration-hrs
+                (read-from-string |value|)))
+           (setf (routing-stepmax routing)
+                 (* duration-hrs 3600))))
+        ((string= |name| "searchangle")
+         (let ((fan (round (read-from-string |value|) 2)))
+           (setf (routing-fan routing) fan)))
+        ((string= |name| "pointsperisochrone")
+         (let ((points-per-isochrone
+                (read-from-string |value|)))
+           (setf (routing-max-points-per-isochrone routing)
+                 points-per-isochrone)))
+        
+        (t
+         (error "unsupported")))
       (setf (http-body response)
             (with-output-to-string (s)
               (json s session))))))

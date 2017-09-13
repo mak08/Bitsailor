@@ -56,6 +56,17 @@ function setUp () {
 	$("#bt_inc6").click(onAdjustIndex);
 	$("#bt_dec6").click(onAdjustIndex);
 	
+	// Connect option selectors
+	$("#sel_polars").change(onSetParameter);
+	$("#sel_forecastbundle").change(onSetParameter);
+	$("#sel_duration").change(onSetParameter);
+	$("#sel_searchangle").change(onSetParameter);
+	$("#sel_pointsperisochrone").change(onSetParameter);
+
+	// Tracks & Isochrones display is handled by the client directly
+	$("#cb_tracks").change(onSetClientParameter);
+	$("#cb_isochrones").change(onSetClientParameter);
+
 	// Connect menu events
 	var mapMenu = $("#mapMenu")[0];
 	mapMenu.onmouseleave = onMapMenuMouseLeave;
@@ -88,7 +99,24 @@ function setUp () {
 
 }
 
-function onMapMenuMouseLeave(event) {
+function onSetClientParameter (event) {
+	alert('later.');
+}
+
+function onSetParameter (event) {
+	var paramName = event.currentTarget.name;
+	var paramValue = event.currentTarget.value;
+	$.ajax({ 
+		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
+		dataType: 'json'
+	}).done( function(data) {
+		alert("OK");
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
+	});
+}
+
+function onMapMenuMouseLeave (event) {
 	var mapMenu=$("#mapMenu")[0];
 	mapMenu.style.display = "none";
 }
@@ -127,9 +155,8 @@ function setRoutePoint(point, latlng) {
 		} else if ( point === 'dest' ) {
 			destinationMarker.setPosition(latlng);
 		}
-		console.log("Success: " + point + " set.");
 	}).fail( function (jqXHR, textStatus, errorThrown) {
-		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);
+		alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
 	});
 }
 

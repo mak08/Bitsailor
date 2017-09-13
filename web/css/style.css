@@ -37,7 +37,12 @@
 .cell {
     display: inline-flex;
     flex-direction: row;
+	justify-content: flex-start;
     padding: 2px;
+}
+.cell label {
+	flex: 0 0 9em;
+	font-size: 90%
 }
 
 .colorbox {

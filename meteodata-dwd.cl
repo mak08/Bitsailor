@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-12 18:21:22>
+;;; Last Modified <michael 2017-09-13 20:57:21>
 
 (in-package :virtualhelm)
 
@@ -162,31 +162,13 @@ Data for offset (hour) is used and no time interpolation is done."
 (defun update-forecast-data (&key (resolution "0.250") (timestamp (now)))
   (let ((timestamp (update-local-files :timestamp timestamp :resolution resolution)))
     (cond
-      ((gethash timestamp *forecasts*)
-       (log2:trace "Forecast data for ~a already loaded" timestamp))
+      ((timestamp<= (fcb-time *dwd-forecast-bundle*))
+       (log2:info "Forecast data for ~a already loaded" timestamp))
       (t
        (let ((grib (read-icon-wind-data timestamp :resolution resolution)))
-         (setf (gethash timestamp *forecasts*)
-               grib)
          (setf *dwd-forecast-bundle*
-               (make-instance 'dwd-icon-bundle :data grib))) 
-       (cleanup-forecast-data))))
+               (make-instance 'dwd-icon-bundle :data grib))))))
   (values t))
-
-(defun cleanup-forecast-data ()
-  (let ((now (adjust-timestamp (now) (set :nsec 0) (set :sec 0) (set :minute 0)))
-        (forecasts 0))
-    (format t "~a~%" now)
-    (maphash (lambda (k v)
-               (let ((age (/ (timestamp-difference now k) 3600)))
-                 (cond
-                   ((> age 11)
-                    (log2:info "Removing old forecast ~a" k)
-                    (remhash k *forecasts*))
-                   (t
-                    (incf forecasts)))))
-             *forecasts*)
-    (log2:info "Retaining ~a forecasts" forecasts)))
 
 ;; Get spec for the newest GRIB file providing data for $time+$offset, from the latest cycle that encompasses $time"
 ;; Avaliability of forecasts: T+5h (T=0,6,12,18) UTC

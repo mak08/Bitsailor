@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-14 00:23:17>
+;;; Last Modified <michael 2017-09-14 00:49:03>
 
 (in-package :virtualhelm)
 
@@ -81,7 +81,7 @@
            (setf (routing-stepmax routing)
                  (* duration-hrs 3600))))
         ((string= |name| "searchangle")
-         (let ((fan (round (read-from-string |value|) 2)))
+         (let ((fan (read-from-string |value|)))
            (setf (routing-fan routing) fan)))
         ((string= |name| "pointsperisochrone")
          (let ((points-per-isochrone

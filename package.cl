@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-14 22:06:34>
+;;; Last Modified <michael 2017-09-14 22:41:03>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -22,10 +22,7 @@
    ;; VH backend
    "*MAP-FILE*"
    "*GRIB-FOLDER*"
-   "START-GRIB-UPDATES"
-   "ENSURE-MAP"
-   "IS-LAND"
-   "FORMAT-TIMESPEC-DATEHH"))
+   "RUN-VIRTUAL-HELM"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

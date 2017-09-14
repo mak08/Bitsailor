@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-24 20:07:23>
+;;; Last Modified <michael 2017-09-14 23:44:57>
 
 (in-package :virtualhelm)
 
@@ -29,6 +29,10 @@
 
 (defcfun ("GDALDatasetGetLayerCount" gdal-dataset-get-layer-count) :int
   (datasource :pointer))
+
+(defcfun ("GDALDatasetGetLayer" gdal-dataset-get-layer) :pointer
+  (dataset :pointer)
+  (layer :int))
 
 (defcfun ("GDALDatasetGetLayerByName"  gdal-dataset-get-layer-by-name) :pointer
   (dataset :pointer)

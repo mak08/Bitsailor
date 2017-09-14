@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-14 22:25:16>
+;;; Last Modified <michael 2017-09-15 00:07:57>
 
 (in-package :virtualhelm)
 
@@ -10,7 +10,11 @@
 
 ;; Vector map describing Land areas. It must contain a layer "Land_Polygons".
 ;; It must have an accompanying index file land_polygons.shx."
-
+;;
+;;   There is a smaller file, simplified-land-polygons-complete-3857,
+;;   but it is NOT faster, most likely because it does not have split polygons
+;;   (and therefore, indexing does not help as much).
+;;   Moreover, land detection is too coarse with the simplified polygons.
 (defvar *map-file* "/home/michael/Maps/land-polygons-split-4326/land_polygons.shp"
   "Map data filename")
 
@@ -26,15 +30,19 @@
   (bordeaux-threads:make-lock "MAP-LOCK"))
 
 (defun ensure-map (&key (filename *map-file*))
-  (bordeaux-threads:with-lock-held (+map-lock+)
-    (unless *map*
+  (unless *map*
+    (bordeaux-threads:with-lock-held (+map-lock+)
+      (log2:info "Loading shapefile ~a" filename)
       (gdal-all-register)
       (let* ((ds (gdal-open-ex filename
                                4
                                (cffi:null-pointer)
                                (cffi:null-pointer)
                                (cffi:null-pointer)))
-             (land-polygons (gdal-dataset-get-layer-by-name ds "Land_Polygons")))
+             (layer-count (gdal-dataset-get-layer-count ds))
+             (land-polygons (gdal-dataset-get-layer ds 0)))
+        (unless (eql layer-count 1)
+          (error "Unexpected layer count ~a" layer-count))
         (cond
           ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
            ;; Succeed only if we have an index

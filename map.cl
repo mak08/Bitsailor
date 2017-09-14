@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-14 21:52:21>
+;;; Last Modified <michael 2017-09-14 22:25:16>
 
 (in-package :virtualhelm)
 
@@ -26,7 +26,7 @@
   (bordeaux-threads:make-lock "MAP-LOCK"))
 
 (defun ensure-map (&key (filename *map-file*))
-  (bordeaux-threads:with-lock-held +map-lock+
+  (bordeaux-threads:with-lock-held (+map-lock+)
     (unless *map*
       (gdal-all-register)
       (let* ((ds (gdal-open-ex filename
@@ -48,7 +48,7 @@
 
 (let ((point (ogr-g-create-geometry wkbPoint)))
   (defun is-land (lat lon)
-    (bordeaux-threads:with-lock-held +map-lock+
+    (bordeaux-threads:with-lock-held (+map-lock+)
       (ogr-g-set-point-2d point 0 lon lat)
       (ogr-l-set-spatial-filter *map* point)
       (ogr-l-reset-reading *map*)

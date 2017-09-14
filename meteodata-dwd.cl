@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-13 21:08:23>
+;;; Last Modified <michael 2017-09-14 21:41:32>
 
 (in-package :virtualhelm)
 
@@ -162,7 +162,7 @@ Data for offset (hour) is used and no time interpolation is done."
 (defun update-forecast-data (&key (resolution "0.250") (timestamp (now)))
   (let ((timestamp (update-local-files :timestamp timestamp :resolution resolution)))
     (cond
-      ((and *dwd-forecast-bundle* (timestamp<= (fcb-time *dwd-forecast-bundle*)))
+      ((and *dwd-forecast-bundle* (timestamp<=  timestamp (fcb-time *dwd-forecast-bundle*)))
        (log2:info "Forecast data for ~a already loaded" timestamp))
       (t
        (let ((grib (read-icon-wind-data timestamp :resolution resolution)))

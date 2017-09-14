@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-04 22:46:27>
+;;; Last Modified <michael 2017-09-14 21:52:21>
 
 (in-package :virtualhelm)
 
@@ -22,21 +22,25 @@
 ;;   Initialize GDAL and load map data.
 ;;   Does NOT clean-up the dataset 
 
+(defvar +map-lock+
+  (bordeaux-threads:make-lock "MAP-LOCK"))
+
 (defun ensure-map (&key (filename *map-file*))
-  (unless *map*
-    (gdal-all-register)
-    (let* ((ds (gdal-open-ex filename
-                             4
-                             (cffi:null-pointer)
-                             (cffi:null-pointer)
-                             (cffi:null-pointer)))
-           (land-polygons (gdal-dataset-get-layer-by-name ds "Land_Polygons")))
-    (cond
-      ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
-       ;; Succeed only if we have an index
-       (setf *map* land-polygons))
-      (t
-       (error "Layer not found or no index"))))))  
+  (bordeaux-threads:with-lock-held +map-lock+
+    (unless *map*
+      (gdal-all-register)
+      (let* ((ds (gdal-open-ex filename
+                               4
+                               (cffi:null-pointer)
+                               (cffi:null-pointer)
+                               (cffi:null-pointer)))
+             (land-polygons (gdal-dataset-get-layer-by-name ds "Land_Polygons")))
+        (cond
+          ((< 0 (ogr-l-test-capability land-polygons OLCFastSpatialFilter))
+           ;; Succeed only if we have an index
+           (setf *map* land-polygons))
+          (t
+           (error "Layer not found or no index")))))))  
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; IS-LAND
@@ -44,22 +48,24 @@
 
 (let ((point (ogr-g-create-geometry wkbPoint)))
   (defun is-land (lat lon)
-    (ogr-g-set-point-2d point 0 lon lat)
-    (ogr-l-set-spatial-filter *map* point)
-    (ogr-l-reset-reading *map*)
-    (loop
-       :for feature = (ogr-l-get-next-feature *map*)
-       :while (not (null-pointer-p feature))
-       :do (let* ((polygon (ogr-f-get-geometry-ref feature))
-                  (found (ogr-g-contains polygon point)))
-             (ogr-f-destroy feature)
-             (when found
-               (return-from is-land t))))))
+    (bordeaux-threads:with-lock-held +map-lock+
+      (ogr-g-set-point-2d point 0 lon lat)
+      (ogr-l-set-spatial-filter *map* point)
+      (ogr-l-reset-reading *map*)
+      (loop
+         :for feature = (ogr-l-get-next-feature *map*)
+         :while (not (null-pointer-p feature))
+         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                    (found (ogr-g-contains polygon point)))
+               (ogr-f-destroy feature)
+               (when found
+                 (return-from is-land t)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Initialize map on load
+;;; Initialize map on load -
+;;; DON'T - *map-file* needs to be customized first!
 
-(ensure-map)
+;;; (ensure-map)
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

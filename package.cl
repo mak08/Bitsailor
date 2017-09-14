@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-13 23:18:06>
+;;; Last Modified <michael 2017-09-14 22:06:34>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -12,13 +12,20 @@
         "CFFI"
         "LOCAL-TIME"
         "BABEL")
-  (:export "getWind"
-           "setRoute"
-           "setParameter"
-           "getRoute"
-           "getWindAtPosition"
-           "START-GRIB-UPDATES"
-           "FORMAT-TIMESPEC-DATEHH"))
+  (:export
+   ;; HTTP API
+   "getWind"
+   "setRoute"
+   "setParameter"
+   "getRoute"
+   "getWindAtPosition"
+   ;; VH backend
+   "*MAP-FILE*"
+   "*GRIB-FOLDER*"
+   "START-GRIB-UPDATES"
+   "ENSURE-MAP"
+   "IS-LAND"
+   "FORMAT-TIMESPEC-DATEHH"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-14 00:49:03>
+;;; Last Modified <michael 2017-09-15 22:58:33>
 
 (in-package :virtualhelm)
 
@@ -12,10 +12,7 @@
 
 (defstruct session
   (session-id (make-session-id))
-  (routing (make-routing))
-  (direction ""))
-
-
+  (routing (make-routing)))
 
 (defun find-or-create-session (request response)
   (let* ((session-cookie
@@ -57,11 +54,6 @@
          (setf (routing-start routing) (make-latlng :lat lat :lng lng)))
         ((string= |pointType| "dest")
          (setf (routing-dest routing) (make-latlng :lat lat :lng lng))))
-      (let ((path (get-twa-path (session-routing session))))
-        (setf (routing-twapath routing) path))
-      (setf (session-direction session)
-            (round (course-angle (routing-start routing)
-                                 (routing-dest routing))))
       (setf (http-body response)
             (with-output-to-string (s)
               (json s session))))))
@@ -109,6 +101,17 @@
       (setf (http-body response)
             (with-output-to-string (s)
               (json s routeinfo)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; getSession
+
+(defun |getSession| (location request response)
+  (declare (ignore location))
+  (let* ((session
+          (find-or-create-session request response)))
+      (setf (http-body response)
+            (with-output-to-string (s)
+              (json s session)))))
          
 (defun make-session-id ()
   (create-uuid))

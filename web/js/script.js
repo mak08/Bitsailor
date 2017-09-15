@@ -96,7 +96,54 @@ function setUp () {
 		setRoutePoint('dest', destinationMarker.getPosition());
 	});
 	
+	getSession();
 
+}
+
+function getSession () {
+	$.ajax({ 
+		url: "/function/vh:getSession",
+		dataType: 'json'
+	}).done( function(session) {
+
+		var start = new google.maps.LatLng(session.routing.start.lat, session.routing.start.lng);
+		startMarker.setPosition(start);
+		var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
+		destinationMarker.setPosition(dest);
+
+		var polars = session.routing.polars;
+		var selPolars = $("#sel_polars")[0];
+		selPolars.value = polars;
+
+		var duration = session.routing.stepmax;
+		var selDuration = $("#sel_duration")[0];
+		if ( duration === 21600 ) {
+			selDuration.value = 6;
+		} else if ( duration === 43200 ) {
+			selDuration.value = 12;
+		} else if ( duration === 86400 ) {
+			selDuration.value = 24;
+		} else if ( duration === 129600 ) {
+			selDuration.value = 36;
+		} else if ( duration === 172800 ) {
+			selDuration.value = 48;
+		} else if ( duration === 345600 ) {
+			selDuration.value = 96;
+		} else if ( duration === 518400 ) {
+			selDuration.value = 144;
+		}
+
+		var searchAngle = session.routing.fan;
+		var selSearchAngle = $("#sel_searchangle")[0];
+		selSearchAngle.value = searchAngle;
+
+		var maxPoints = session.routing["max-points-per-isochrone"];
+		var selMaxPoints = $("#sel_pointsperisochrone")[0];
+		selMaxPoints.value = maxPoints;
+
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		alert('Error: ' + textStatus + ' ' + errorThrown);
+	});
 }
 
 function onSetClientParameter (event) {

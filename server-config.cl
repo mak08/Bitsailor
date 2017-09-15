@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2017-09-13 23:16:38>
+;;; Last Modified <michael 2017-09-15 22:58:57>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -56,6 +56,7 @@
  :request (:prefix "/function")
  :handler (:query-function t :authentication nil))
 
+(register-function 'vh:|getSession|)
 (register-function 'vh:|getWind|)
 (register-function 'vh:|setRoute|)
 (register-function 'vh:|setParameter|)

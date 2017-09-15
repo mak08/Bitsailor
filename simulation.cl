@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-14 00:17:40>
+;;; Last Modified <michael 2017-09-15 23:13:21>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -59,8 +59,7 @@
   (polars "VO65")
   (start +fehmarn+)
   (dest +ystad+)
-  twapath
-  (fan 80)
+  (fan 75)
   (angle-increment 1)
   (max-points-per-isochrone 100)
   (stepmax +24h+)
@@ -82,6 +81,7 @@
   is-land
   predecessor
   origin-angle
+  sort-angle%
   destination-angle
   destination-distance)
 
@@ -207,24 +207,43 @@
 
 (defun filter-isochrone (isochrone min-heading max-heading max-points)
   (declare (ignore stepnum))
-  (let ((southbound-p (southbound-p min-heading max-heading)))
+  (let* ((last
+          (1- (length isochrone)))
+         (a-start
+          (routepoint-origin-angle (aref isochrone 0)))
+         (a-end
+          (routepoint-origin-angle (aref isochrone last)))
+         (southbound
+          (< a-end a-start))
+         (h-end
+          (if southbound  (+ a-end 360) a-end))
+         (delta-angle
+          (/ (- h-end a-start) max-points))
+         (a0
+          a-start)
+         (dmin
+          (routepoint-destination-distance (aref isochrone 0)))
+         (kmin
+          0)
+         (result
+          (make-array 0 :fill-pointer 0 :adjustable t)))
+    (assert (plusp delta-angle))
     (flet ((routepoint-sort-key (routepoint)
-             (let ((angle (routepoint-origin-angle routepoint)))
-               (check-type angle angle)
-               (if (and southbound-p
-                        (< angle 0))
-                   (+ angle 360)
-                   angle))))
+             (or (routepoint-sort-angle% routepoint)
+                 (setf (routepoint-sort-angle% routepoint)
+                       (let ((angle (routepoint-origin-angle routepoint)))
+                         (check-type angle angle)
+                         (if (and southbound (< angle 0)) (+ angle 360) angle))))))
       (setf isochrone (sort isochrone #'< :key #'routepoint-sort-key))
+      (log2:trace "In: ~a, a-start: ~a, a-end: ~a, diff-a: ~a, delta-a: ~a, h-min: ~a, h-max: ~a"
+                  last
+                  a-start
+                  h-end
+                  (* delta-angle max-points)
+                  delta-angle
+                  min-heading
+                  max-heading)
       (loop
-         :with last = (1- (length isochrone))
-         :with start-angle = (routepoint-origin-angle (aref isochrone 0))
-         :with end-angle = (routepoint-origin-angle (aref isochrone last)) 
-         :with delta-angle = (/ (abs (- end-angle start-angle)) max-points)
-         :with a0 = start-angle
-         :with dmin = (routepoint-destination-distance (aref isochrone 0))
-         :with kmin = 0
-         :with result = (make-array 0 :fill-pointer 0 :adjustable t)
          :for point :across isochrone
          :for k :from 0
          :for a = (routepoint-origin-angle point)

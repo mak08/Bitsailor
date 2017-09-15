@@ -9,19 +9,19 @@ var svgArea = {};
 // Bounds and width from the map are kept here for convenience
 var geometry = {};
 
+// Number of wind arrows
 var xSteps = 40;
 var ySteps = 25;
-
-var bt_inc;
-var bt_dec;
+// Time index
 var ir_index;
 
 var mapEvent;
 
 var startMarker;
- 
-var destinationMarker = {};
+ var destinationMarker = {};
 
+var routeTracks = [];
+var routeIsochrones = [];
 
 function setUp () {
 	
@@ -213,9 +213,6 @@ function setRoute (point) {
 	setRoutePoint(point, mapEvent.latLng);
 }
 
-var routeTracks = [];
-var routeIsochrones = [];
-
 function clearRoute() {
 	for ( var i = 0; i<routeTracks.length; i++ ) {
 		routeTracks[i].setMap(undefined);
@@ -258,14 +255,22 @@ function getRoute () {
 				strokeOpacity: 0.8,
 				strokeWeight: 4
 			});
-			isochrone.addListener('click', function(){alert('foo')});
-			isochrone.setPath(isochrones[i]);
+			isochrone.set("time", isochrones[i].time);
+			isochrone.addListener('click', function () {
+				onSelectIsochrone(isochrone);
+			});
+			isochrone.setPath(isochrones[i].path);
 			isochrone.setMap(googleMap);
 			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);
 	});
+}
+
+function onSelectIsochrone (isochrone) {
+	var time = isochrone.get('time');
+	alert(JSON.toString(time));
 }
 
 function onAdjustIndex (event) {

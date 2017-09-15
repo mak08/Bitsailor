@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-15 23:13:21>
+;;; Last Modified <michael 2017-09-16 00:28:52>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -66,6 +66,8 @@
   (stepsize +10min+))
 
 (defstruct routeinfo tracks isochrones)
+
+(defstruct isochrone time path)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -202,7 +204,8 @@
         (multiple-value-bind (q r) (truncate stepsum 3600)
           (declare (ignore q))
           (when (zerop r)
-            (let ((iso (map 'vector #'routepoint-position next-isochrone)))
+            (let ((iso (make-isochrone :time step-time
+                                       :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
 
 (defun filter-isochrone (isochrone min-heading max-heading max-points)

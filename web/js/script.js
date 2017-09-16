@@ -109,7 +109,10 @@ function setUp () {
 	});
 	
 	getSession();
-	updateMap();
+
+	google.maps.event.addListenerOnce(googleMap, 'idle', function(){
+		updateMap();
+	});
 }
 
 function getSession () {

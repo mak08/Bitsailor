@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-16 00:28:52>
+;;; Last Modified <michael 2017-09-16 21:21:52>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -149,7 +149,7 @@
             (make-routeinfo :tracks (extract-tracks
                                      (construct-route isochrone))
                             :isochrones isochrones))
-        (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time (length isochrone))
+        (log2:info "Isochrone ~a at ~a, ~a points" stepnum (to-rfc3339-timestring step-time) (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
              (lambda (routepoint)
@@ -204,12 +204,11 @@
         (multiple-value-bind (q r) (truncate stepsum 3600)
           (declare (ignore q))
           (when (zerop r)
-            (let ((iso (make-isochrone :time step-time
+            (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
 
 (defun filter-isochrone (isochrone min-heading max-heading max-points)
-  (declare (ignore stepnum))
   (let* ((last
           (1- (length isochrone)))
          (a-start

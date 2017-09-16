@@ -12,13 +12,26 @@ var geometry = {};
 // Number of wind arrows
 var xSteps = 40;
 var ySteps = 25;
+// Screen resolution
+var dx = 1100;
+var dy = 800;
+// Increments
+var ddx = dx / xSteps;
+var ddy = dy / ySteps;
+
+// Map bounds
+var north;
+var south;
+var west;
+var east;
+
 // Time index
 var ir_index;
 
 var mapEvent;
 
 var startMarker;
- var destinationMarker = {};
+var destinationMarker = {};
 
 var routeTracks = [];
 var routeIsochrones = [];
@@ -72,7 +85,6 @@ function setUp () {
 	mapMenu.onmouseleave = onMapMenuMouseLeave;
 
 	ir_index = $("#ir_index")[0];
-	updateMap();
 
 	startMarker = new google.maps.Marker({
 		position: {"lat": 54.434403, "lng": 11.361632},
@@ -97,7 +109,7 @@ function setUp () {
 	});
 	
 	getSession();
-
+	updateMap();
 }
 
 function getSession () {
@@ -255,12 +267,9 @@ function getRoute () {
 				strokeOpacity: 0.8,
 				strokeWeight: 4
 			});
-			isochrone.set("time", isochrones[i].time);
-			isochrone.addListener('click', function () {
-				onSelectIsochrone(isochrone);
-			});
 			isochrone.setPath(isochrones[i].path);
 			isochrone.setMap(googleMap);
+			addInfo(isochrone, isochrones[i].time)
 			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
@@ -268,9 +277,17 @@ function getRoute () {
 	});
 }
 
+function addInfo (isochrone, info) {
+	isochrone.set("time", info);
+	isochrone.addListener('click', function () {
+		var iso = isochrone;
+		onSelectIsochrone(iso);
+	});
+}
+
 function onSelectIsochrone (isochrone) {
 	var time = isochrone.get('time');
-	alert(JSON.toString(time));
+	redrawWind("time", time);
 }
 
 function onAdjustIndex (event) {
@@ -283,48 +300,31 @@ function onAdjustIndex (event) {
 		ir_index.valueAsNumber = ir_index.valueAsNumber + 1;
 	else if (source == "bt_inc6")
 		ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
-	onRedrawWind(event);
+	redrawWind("offset", ir_index.value);
 }
 
 function updateMap () {
 	var mapBounds = googleMap.getBounds();
-	if ( mapBounds != undefined ) {
-		var sw = mapBounds.getSouthWest();
-		var ne = mapBounds.getNorthEast();
-		var label = "⌊" + formatLatLng(sw) + " \\\\ " +  formatLatLng(ne) + "⌉"; 
-		$("#lb_map_bounds").text("Kartenausschnitt: " + label);
-		onRedrawWind();
-	}
-}
-
-function onRedrawWind () {
-	var mapBounds = googleMap.getBounds();
-
 	var sw = mapBounds.getSouthWest();
 	var ne = mapBounds.getNorthEast();
-	var north = ne.lat();
-	var south = sw.lat();
-	var west = sw.lng();
-	var east = ne.lng();
-	redrawWind(north, south, east, west);
+	north = ne.lat();
+	south = sw.lat();
+	west = sw.lng();
+	east = ne.lng();
+	var label = "⌊" + formatLatLng(sw) + " \\\\ " +  formatLatLng(ne) + "⌉"; 
+	$("#lb_map_bounds").text("Kartenausschnitt: " + label);
+	redrawWind("offset", ir_index.value);
 }
 
-function redrawWind (north, south, east, west) {
-	var dx = 1100;
-	var dy = 800;
 
-	// Compute number of wind marker, taking window ratio into account
-	var ddx = dx / xSteps;
-	var ddy = dy / ySteps;
+function redrawWind (timeParamName, timeParamValue) {
 	
-	var ddlat = (north - south) / ySteps;
-	var ddlon = (east - west) / xSteps;
-	var lat0 = north + ddlat/2;
-	var lon0 = east + ddlon/2;
+	var lat0 = north + ((north - south) / ySteps)/2;
+	var lon0 = east + ((east - west) / xSteps)/2;
 
 	$.ajax({ 
 		url: "/function/vh:getWind"
-		    + "?offset=" + ir_index.value
+		    + "?" + timeParamName + "=" + timeParamValue
 			+ "&north=" + roundTo(lat0, 6)
 			+ "&south=" + roundTo(south, 6)
 			+ "&west=" + roundTo(west, 6)
@@ -333,23 +333,29 @@ function redrawWind (north, south, east, west) {
 		    + "&ddy=" + roundTo((north-south)/ySteps, 8),
 		dataType: 'json'
 	}).done( function(data) {
-		$("#lb_modelrun").text(data[0]);
-		$("#lb_index").text(data[1]);
-		data = data[2];
-		var ctx = mapCanvas.getContext("2d");
-		ctx.globalAlpha = 0.6;
-		ctx.clearRect(0, 0, geometry.width, geometry.height);
-		for ( var y = 0; y < ySteps; y++ ) {
-			var yOffset = y * ddy + (ddy / 2);
-			for ( var x = 0; x < xSteps; x++ ) {
-				var xOffset = x * ddx + (ddx / 2);
-				drawWindArrow(ctx, xOffset, yOffset, data[y][x][0], data[y][x][1]);
-			}
-		}
-
+		drawWind(data)
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
 	});
+}
+
+function drawWind (data) {
+	$("#lb_modelrun").text(data[0]);
+	$("#lb_index").text(data[1]);
+	data = data[2];
+	var ctx = mapCanvas.getContext("2d");
+	ctx.globalAlpha = 0.6;
+	ctx.clearRect(0, 0, geometry.width, geometry.height);
+	for ( var y = 0; y < ySteps; y++ ) {
+		var yOffset = y * ddy + (ddy / 2);
+		for ( var x = 0; x < xSteps; x++ ) {
+			var xOffset = x * ddx + (ddx / 2);
+			drawWindArrow(ctx, xOffset, yOffset, data[y][x][0], data[y][x][1]);
+		}
+	}
+}
+
+function getWind () {
 }
 
 function drawWindArrow(ctx, x, y, direction, speed) {

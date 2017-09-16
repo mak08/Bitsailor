@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-15 22:58:33>
+;;; Last Modified <michael 2017-09-16 23:37:53>
 
 (in-package :virtualhelm)
 
@@ -126,40 +126,44 @@
 ;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
 ;; Returns (0d0, -1d0) for unavailable values.
 ;; Does not work if date line is in longitude range.
-(defun |getWind| (location request response &key (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5"))
+(defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5"))
   (declare (ignore location request))
   (handler-case
       (let ((*read-default-float-format* 'double-float))
-        (let* (;; Recalculate offset based on forecast file age
-               (offset (read-from-string |offset|))
-               (forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
+        (let* ((forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
                                     (get-forecast-bundle 'constant-wind-bundle)))
-               (forecast (get-forecast forecast-bundle (adjust-timestamp (now) (:offset :hour offset))))
+               (forecast-time
+                (if |time|
+                    (parse-rfc3339-timestring |time|)
+                    (adjust-timestamp
+                        (fcb-time forecast-bundle)
+                      (:offset :hour (read-from-string |offset|)))))
+               (forecast (get-forecast forecast-bundle forecast-time))
                (ddx (read-from-string |ddx|))
                (ddy (read-from-string |ddy|))
-               (north (coerce (read-from-string |north|) 'double-float))
-               (south (coerce (read-from-string |south|) 'double-float))
-               (east (coerce (read-from-string |east|) 'double-float))
-               (west (coerce (read-from-string |west|) 'double-float)))
+               (north (read-from-string |north|))
+               (south (read-from-string |south|))
+               (east (read-from-string |east|))
+               (west (read-from-string |west|)))
           (assert (and (plusp ddx)
-                         (plusp ddy)
-                         (< south north)))
-            (setf (http-body response)
-                  (with-output-to-string (s)
-                    (json s
-                          (list
-                           (format-timespec-datehh nil (fcb-time forecast-bundle) :timezone *default-timezone*)
-                           (format-timespec-datehh nil (fcb-time forecast-bundle) :offset offset :timezone *default-timezone*)
-                           (loop
-                              :for lat :from north :downto south :by ddy
-                              :collect (loop
-                                          :for lon :from west :to east :by ddx
-                                          :collect (multiple-value-bind (dir speed)
-                                                       (let ((lon-icon
-                                                              (if (< lon 0) (+ lon 360) lon)))
-                                                         (get-wind-forecast forecast (make-latlng :lat lat :lng lon-icon)))
-                                                     (list (round-to-digits dir 2)
-                                                           (round-to-digits speed 2)))))))))))
+                       (plusp ddy)
+                       (< south north)))
+          (setf (http-body response)
+                (with-output-to-string (s)
+                  (json s
+                        (list
+                         (format-timespec-datehh nil (fcb-time forecast-bundle) :timezone *default-timezone*)
+                         (format-timespec-datehh nil forecast-time :timezone *default-timezone*)
+                         (loop
+                            :for lat :from north :downto south :by ddy
+                            :collect (loop
+                                        :for lon :from west :to east :by ddx
+                                        :collect (multiple-value-bind (dir speed)
+                                                     (let ((lon-icon
+                                                            (if (< lon 0) (+ lon 360) lon)))
+                                                       (get-wind-forecast forecast (make-latlng :lat lat :lng lon-icon)))
+                                                   (list (round-to-digits dir 2)
+                                                         (round-to-digits speed 2)))))))))))
     (error (e)
       (log2:error "|getWind|: ~a" e)
       (setf (status-code response) 500)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-14 21:41:32>
+;;; Last Modified <michael 2017-09-18 23:11:57>
 
 (in-package :virtualhelm)
 
@@ -28,30 +28,14 @@
 ;;; cat ~/.netrc
 ;;; curl -n ftp://ftp-outgoing2.dwd.de/gds/ICON/grib/europe/ICON_GDS_europe_reg_0.250x0.250_U_10M_2017040300.grib2.bz2 -o ICON_GDS_europe_reg_0.250x0.250_U_10M_2017040300.grib2.bz2 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Coordinate Systems
-;;;
-;;; Google Maps
-;;;    Latitude:    0..90  from Equator to North Pole
-;;;                 -90..0 from South Pole to Equator
-;;;              == 90..-90 from North Pole to South Pole   
-;;;    Longitude:   0..180 from Greenwich Meridien to date line
-;;;                 -180..0 from date line to Greenwich Meridien
-;;;
-;;; GRIB (usually; if i-scans-negatively=0 and j-scans-positively = 1)
-;;;    Latitude:    90..-90 from North Pole to South Pole
-;;;    Longitude:   0..359 from Greenwich Meridien to EAST 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Variables
 
-(defvar *grib-folder* "/home/michael/Wetter/dwd-gds")
-(defvar *forecasts* (make-hash-table :hash-function #+sbcl #'timestamp-to-universal #+ccl 'timestamp-to-universal))
 (defvar *dwd-forecast-bundle* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API Functions
-
 
 (defclass dwd-icon-bundle (forecast-bundle)
   ((dwd-icon-data :reader dwd-icon-data :initarg :data)))

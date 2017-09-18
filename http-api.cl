@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-16 23:37:53>
+;;; Last Modified <michael 2017-09-18 23:28:40>
 
 (in-package :virtualhelm)
 
@@ -43,20 +43,29 @@
 
 (defun |setRoute| (location request response &key |pointType| |lat| |lng|)
   (declare (ignore location))
-  (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
-  (let* ((session (find-or-create-session request response))
-         (lat (coerce (read-from-string |lat|) 'double-float))
-         (lng (coerce (read-from-string |lng|) 'double-float)))
-    (log2:trace "Session: ~a, Request: ~a" session request)
-    (let ((routing (session-routing session)))
-      (cond
-        ((string= |pointType| "start")
-         (setf (routing-start routing) (make-latlng :lat lat :lng lng)))
-        ((string= |pointType| "dest")
-         (setf (routing-dest routing) (make-latlng :lat lat :lng lng))))
-      (setf (http-body response)
-            (with-output-to-string (s)
-              (json s session))))))
+  (handler-case
+      (let* ((session (find-or-create-session request response))
+             (lat (coerce (read-from-string |lat|) 'double-float))
+             (lng (coerce (read-from-string |lng|) 'double-float))
+             (position (make-latlng :lat lat :lng lng)))
+        (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
+        (log2:trace "Session: ~a, Request: ~a" session request)
+        (cond ((is-land lat lng)
+               (error "Can't sail ~:[to~;from~] interior point ~a" (string= |pointType| "start") position ))
+              (t
+               (let ((routing (session-routing session)))
+                 (cond
+                   ((string= |pointType| "start")
+                    (setf (routing-start routing) position))
+                   ((string= |pointType| "dest")
+                    (setf (routing-dest routing) position)))
+                 (setf (http-body response)
+                       (with-output-to-string (s)
+                         (json s session)))))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setParameter
@@ -92,15 +101,20 @@
 
 (defun |getRoute| (location request response)
   (declare (ignore location))
-  (let* ((session
-          (find-or-create-session request response))
-         (routing
-          (session-routing session))
-         (routeinfo
-          (get-route routing)))
-      (setf (http-body response)
-            (with-output-to-string (s)
-              (json s routeinfo)))))
+  (handler-case
+      (let* ((session
+              (find-or-create-session request response))
+             (routing
+              (session-routing session))
+             (routeinfo
+              (get-route routing)))
+        (setf (http-body response)
+              (with-output-to-string (s)
+                (json s routeinfo))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getSession
@@ -165,7 +179,7 @@
                                                    (list (round-to-digits dir 2)
                                                          (round-to-digits speed 2)))))))))))
     (error (e)
-      (log2:error "|getWind|: ~a" e)
+      (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))
     #+ccl(ccl::invalid-memory-access (e)

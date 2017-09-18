@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Meteorological Data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-08-25 00:38:39>
+;;; Last Modified <michael 2017-09-17 20:37:36>
 
 (in-package :virtualhelm)
 
@@ -17,6 +17,27 @@
 ;;; - Interface still incomplete: how to handle spatial interpolation?
 ;;;   - include access to i-inc/j-inc ?
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Coordinate Systems
+;;;
+;;; Google Maps
+;;;    Latitude:    0..90  from Equator to North Pole
+;;;                 -90..0 from South Pole to Equator
+;;;              == 90..-90 from North Pole to South Pole   
+;;;    Longitude:   0..180 from Greenwich Meridien to date line
+;;;                 -180..0 from date line to Greenwich Meridien
+;;;
+;;; GRIB (usually; if i-scans-negatively=0 and j-scans-positively = 1)
+;;;    Latitude:    90..-90 from North Pole to South Pole
+;;;    Longitude:   0..359 from Greenwich Meridien to EAST 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ===========
+;;; Local files
+;;; ===========
+
+(defvar *grib-folder* "/home/michael/Wetter/grib2")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ===========

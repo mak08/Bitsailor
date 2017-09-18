@@ -187,9 +187,19 @@ function onMapRightClick (event) {
 	mapEvent = event;
 	var windowEvent = window.event;
 	var mapMenu=$("#mapMenu")[0];
+	var pageY;
+	var pageX;
+	if (windowEvent != undefined) {
+		pageX = windowEvent.pageX;
+		pageY = windowEvent.pageY;
+	} else {
+		pageX = event.pixel.x;
+		pageY = event.pixel.y;
+	}
+		
 	mapMenu.style.display = "block";
-	mapMenu.style.top = windowEvent.pageY + "px";
-	mapMenu.style.left = windowEvent.pageX + "px";
+	mapMenu.style.top = pageY + "px";
+	mapMenu.style.left = pageX + "px";
 	return false;
 }
 
@@ -276,7 +286,7 @@ function getRoute () {
 			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
-		console.log("Could not set route point:" + textStatus + ' ' + errorThrown);
+		alert("Error:" + textStatus + ' ' + errorThrown);
 	});
 }
 

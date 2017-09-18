@@ -2,7 +2,7 @@
 ;;; Description
 ;;; Author         Michael Kappert
 ;;; Created        22/03/2000 11:15:16
-;;; Last Modified  <michael 2017-09-14 22:48:02>
+;;; Last Modified  <michael 2017-09-17 22:31:33>
 
 (defsystem "virtualhelm"
   :description "Sailing route optimization using isochrones search"
@@ -19,6 +19,7 @@
                (:file "polars")
                (:file "map")
                (:file "meteodata-dwd")
+               (:file "meteodata-noaa")
                (:file "simulation")
                (:file "json")
                (:file "http-api")

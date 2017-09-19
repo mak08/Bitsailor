@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-16 01:32:16>
+;;; Last Modified <michael 2017-09-20 00:35:01>
 
 (in-package :virtualhelm)
 
@@ -20,7 +20,8 @@
     (ensure-map)
     (log2:info "Loading serveer configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
-    (start-grib-updates)))
+    ;; (start-grib-updates)
+    ))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

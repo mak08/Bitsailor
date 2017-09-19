@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-19 23:38:13>
+;;; Last Modified <michael 2017-09-20 00:47:29>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -65,12 +65,13 @@
   (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))
     (cond
       ((or (null timestamp)
-           (>= (timestamp-difference (now) timestamp) (* 5 3600)))
+           (>= (timestamp-difference (now) timestamp) (* 6 3600)))
        (log2:info "Updating NOAA forecast from ~a" timestamp)
        ;; Forecast is outdated, fetch new. The latest available cycle will should be 4:30
-       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -6)))
+       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -7)))
               (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
               (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
+              (dummy (log2:info "At ~a, looking for cycle ~a-~a" (now) date  cycle))
               (filenames (download-noaa-bundle date cycle)))
          (setf *noaa-forecast-bundle*
                (make-instance 'noaa-bundle

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-18 23:11:45>
+;;; Last Modified <michael 2017-09-19 23:38:13>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -11,8 +11,11 @@
 ;;;    Model: NOAA GFS
 ;;;    Resolution: 1 degree
 ;;;    GRIB2 times are UTC
-;;;    NOAA GFS forecasts are produced every 6hrs (four 'runs' per day)
-
+;;;    NOAA GFS forecasts are produced every 6hrs (four cycles per day)
+;;;
+;;; Forecast availability
+;;;    Cycle nn becomes available at nn+5hrs UTC (eg. cycle 18 at 23:00Z, 01:00MEST(+1d)
+;;;
 ;;; VR forecast usage
 ;;;    0700 UTC Update: Cycle 00z, timestamp H06
 ;;;    1900 UTC Update: Cycle 12z, timestamp H06
@@ -27,11 +30,11 @@
   ((noaa-data :reader noaa-data :initarg :data)))
 
 (defmethod get-forecast-bundle ((datasource (eql 'noaa-bundle)))
-  *dwd-forecast-bundle*)
-  
+  *noaa-forecast-bundle*)
+
 (defmethod fcb-time ((bundle noaa-bundle))
   (let ((grib (noaa-data bundle)))
-    (grib-filespec-date (gribfile-timespec grib))))
+    (gribfile-forecast-time grib)))
 
 (defclass noaa-forecast (forecast)
   ((noaa-bundle :reader noaa-bundle :initarg :bundle)
@@ -47,11 +50,34 @@
          (grib
           (noaa-data bundle))
          (offset
+          ;; NOAA forecasts are 3-hourly
           (truncate
            (/ (timestamp-difference (fc-time forecast) (fcb-time bundle))
-              3600))))  
+              (* 3 3600)))))  
     (get-interpolated-wind grib offset (latlng-lat latlng) (latlng-lng latlng))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Update data
+
+(defun update-noaa-bundle ()
+  ;; If we don't have files, or if newer files than we have should be available,
+  ;; update to the latest available files.
+  (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))
+    (cond
+      ((or (null timestamp)
+           (>= (timestamp-difference (now) timestamp) (* 5 3600)))
+       (log2:info "Updating NOAA forecast from ~a" timestamp)
+       ;; Forecast is outdated, fetch new. The latest available cycle will should be 4:30
+       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -6)))
+              (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
+              (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
+              (filenames (download-noaa-bundle date cycle)))
+         (setf *noaa-forecast-bundle*
+               (make-instance 'noaa-bundle
+                              :data (read-noaa-wind-data filenames)))))
+      (t
+       (log2:info "Forecast data for ~a already loaded" timestamp)))))
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Download forecasts from NOAA.
 ;;;    See http://nomads.ncep.noaa.gov/
@@ -67,26 +93,7 @@
   (loop
      :for k :from 1
      :for offset :from 0 :to 240 :by 3
-     :do (multiple-value-bind (directory spec destfile)
-             (noaa-spec-and-destfile date :cycle cycle :offset offset)
-           (let ((destpath (format () "~a/~a" *grib-folder* destfile)))
-             (if (probe-file destpath)
-                 (log2:info "File (~a:~a) exists: ~a)" date cycle destpath)
-                 (progn
-                   (log2:info "Downloading file (~a:~a) ~a" date cycle destpath)
-                   (multiple-value-bind
-                         (out error-out status)
-                       (download-noaa-file directory spec destfile)
-                     (case status
-                       (0
-                        (let ((download-size
-                               (with-open-file (f (format () "~a/~a" *grib-folder* destfile))
-                                 (file-length f))))
-                          (when (< download-size 90000)
-                            (uiop:delete-file-if-exists destpath)
-                            (error "Short file. Forecast ~a:~a not available yet?" date spec))))
-                       (otherwise
-                        (error "cURL error ~a" status))))))))))
+     :collect (download-noaa-file date cycle offset)))
 
 (defun noaa-spec-and-destfile (date &key (cycle "0") (offset 6) (basename "pgrb2") (resolution "1p00"))
   (let* ((directory
@@ -97,7 +104,30 @@
           (format () "~a_~a.grib2" date spec)))
     (values directory spec destfile)))
 
-(defun download-noaa-file (directory spec destfile &key  (resolution "1p00"))
+(defun download-noaa-file (date cycle offset)
+  (multiple-value-bind (directory spec destfile)
+      (noaa-spec-and-destfile date :cycle cycle :offset offset)
+    (let ((destpath (format () "~a/~a" *grib-folder* destfile)))
+      (if (probe-file destpath)
+          (log2:info "File (~a:~a) exists: ~a)" date cycle destpath)
+          (progn
+            (log2:info "Downloading file (~a:~a) ~a" date cycle destpath)
+            (multiple-value-bind
+                  (out error-out status)
+                (download-noaa-file% directory spec destfile)
+              (case status
+                (0
+                 (let ((download-size
+                        (with-open-file (f (format () "~a/~a" *grib-folder* destfile))
+                          (file-length f))))
+                   (when (< download-size 90000)
+                     (uiop:delete-file-if-exists destpath)
+                     (error "Short file. Forecast ~a:~a not available yet?" date spec))))
+                (otherwise
+                 (error "cURL error ~a" status))))))
+      destpath)))
+
+(defun download-noaa-file% (directory spec destfile &key  (resolution "1p00"))
   "Retrieve the GRIB file valid at timestamp according to VR rules"
   (let* ((dest-folder
           *grib-folder*)
@@ -117,109 +147,17 @@
           (format () "curl -n \"~a\" -o ~a/~a" url dest-folder destfile)))
     (uiop:run-program ftp-command)))
 
-(defun get-grib-simulation-timespec (start-time &optional (offset 6))
-  "Get spec for GRIB file that should be used for interpolation starting from start-time"
-  (let ((hour (timestamp-hour start-time :timezone +utc-zone+))
-        (cycle 0))
-    (cond
-      ((<= 0 hour 7)
-       (setf start-time
-             (timestamp- start-time 1 :day))  
-       (incf cycle 12))
-      ((<= 20 hour 23)
-       (incf cycle 12)))
-    (let ((date (format-timestring () start-time :format '(:year (:month 2) (:day 2)) :timezone +utc-zone+)))
-      (make-timespec :date date
-                     :cycle cycle
-                     :offset offset))))
-
-(defun get-grib-timespec (time &optional (offset 0))
-  "Get spec for the newest GRIB file providing data for $time+$offset, from the latest cycle that encompasses $time"
-  (let ((hour (timestamp-hour time :timezone +utc-zone+)))
-    (multiple-value-bind (cycle cycle-offset)
-        (floor (- hour 4) 6)
-      (setf cycle (* cycle 6))
-      (when (< cycle 0)
-        (incf cycle 24)
-        (setf time (timestamp- time 1 :day)))
-      (setf offset (* 3 (floor (+ offset cycle-offset 4) 3)))
-      (let ((date (format-timestring () time :format '(:year (:month 2) (:day 2)) :timezone +utc-zone+)))
-        (make-timespec :date date
-                       :cycle cycle
-                       :offset offset)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Accessing GRIB wind data
 
-(defun read-noaa-wind-data (timespec filename)
+(defun read-noaa-wind-data (filenames)
   "Read GRIB data into U and V arrays. Assumes the GRIB file contains U-GRD and V-GRD values"
-  (let* ((path (namestring (truename filename)))
-         (index (grib-index-new-from-file path '("shortName")))
-
-         (u-handle (select-by-shortname index "10u"))
-         (grid-size-u (grib-get-size u-handle "values"))
-         (u-array (grib-get-double-array u-handle "values"))
-
-         (v-handle (select-by-shortname index "10v"))
-         (grid-size-v (grib-get-size v-handle "values"))
-         (v-array (grib-get-double-array v-handle "values"))
-
-         (date (format nil "~a" (grib-get-long u-handle "dataDate")))
-         (time (format nil "~4,,,'0a" (grib-get-long u-handle "dataTime")))
-         (timestamp (parse-timestring
-                      (format () "~a-~a-~aT~a:~a:00+00:00"
-                              (subseq date 0 4)
-                              (subseq date 4 6)
-                              (subseq date 6 8)
-                              (subseq time 0 2)
-                              (subseq time 2 4))))
-
-         (stepUnits (grib-get-long u-handle "stepUnits"))
-         
-         (forecast-time (grib-get-long u-handle "forecastTime"))
-         
-         (lat-points  (grib-get-long u-handle "numberOfPointsAlongAMeridian"))
-         (lon-points (grib-get-long u-handle "numberOfPointsAlongAParallel"))
-         (lat-start (grib-get-long u-handle "latitudeOfFirstGridPointInDegrees"))
-         (lat-end (grib-get-long u-handle "latitudeOfLastGridPointInDegrees"))
-         (lon-start (grib-get-long u-handle "longitudeOfFirstGridPointInDegrees"))
-         (lon-end (grib-get-long u-handle "longitudeOfLastGridPointInDegrees"))
-      
-         (j-inc ; "south to north"
-          (grib-get-long u-handle "jDirectionIncrementInDegrees"))
-         (i-inc ; "west to east"
-          (grib-get-long u-handle "iDirectionIncrementInDegrees"))
-
-         (j-scan-pos
-          (grib-get-long u-handle "jScansPositively"))
-         (i-scan-neg
-          (grib-get-long u-handle "iScansNegatively")))
-
-    (grib-handle-delete u-handle)
-    (grib-handle-delete v-handle)
-    (grib-index-delete index)
-    
-    (assert (eql grid-size-u grid-size-v))
-    (assert (eql stepunits 1))
-    (assert (= 1 j-inc i-inc))
-    (assert (= 0 j-scan-pos i-scan-neg))
-
-    (make-wind :timespec timespec
-               :timestamp timestamp
-               :forecast-time (adjust-timestamp timestamp (offset :hour forecast-time))
-               :grid-size grid-size-u
-               :lat-start lat-start
-               :lat-end lat-end
-               :lat-points lat-points
-               :lon-start lon-start
-               :lon-end lon-end
-               :lon-points lon-points
-               :u u-array
-               :v v-array)))
-
-(defun select-by-shortname (index value)
-  (grib-index-select-string index "shortName" value)
-  (grib-handle-new-from-index index))
+  (let ((index (grib-index-new '("step" "shortName"))))
+    (dolist (filename filenames)
+      (log2:info "Add file ~a~%" filename)
+      (grib-index-add-file index filename))
+    (get-values-from-index index)))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

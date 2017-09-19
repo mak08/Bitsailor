@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-13 00:47:20>
+;;; Last Modified <michael 2017-09-19 22:13:37>
 
 (in-package :virtualhelm)
 
@@ -174,7 +174,7 @@
       (setf (latlng-lat pos) (/ lat-new-r +pi/180+)
             (latlng-lng pos) (/ lon-new-r +pi/180+)))))
 
-(defun add-distance-estimate! (pos distance alpha)
+(defun add-distance-estimate (pos distance alpha)
   ;; Approximation for short distances (<< 100km)
   (let ((lat (latlng-lat pos))
         (lon (latlng-lng pos)))
@@ -185,8 +185,8 @@
            (lon-r (* lon +pi/180+))
            (d-lat-r (* d (cos a)))
            (d-lon-r (* d (/ (sin a) (cos (+ lat-r d-lat-r))))))
-      (setf (latlng-lat pos) (/ (+ lat-r d-lat-r) +pi/180+)
-            (latlng-lng pos) (/ (+ lon-r d-lon-r) +pi/180+)))))
+      (make-latlng :lat (/ (+ lat-r d-lat-r) +pi/180+)
+                   :lng (/ (+ lon-r d-lon-r) +pi/180+)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

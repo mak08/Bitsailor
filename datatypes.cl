@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-13 00:33:54>
+;;; Last Modified <michael 2017-09-19 20:34:15>
 
 (in-package :virtualhelm)
  
@@ -64,8 +64,7 @@
 
 (defstruct gribfile
   "Basic / common GRIB data"
-  timespec                      ; The timespec (yyyymmdd, hh) specifying the DWD ICON data files
-  forecast-time
+  forecast-time                 ; The timestamp (yyyymmdd, hh) of the forecast (identical with the first forecast in the bundle)
   grid-size                     ; Number of data points, should equal lat-points * lon-points
   step-units
   lat-start lat-end lat-points  ; Start, end and number of points along parallel
@@ -81,7 +80,7 @@
           (gribfile-lon-start thing)
           (gribfile-lat-end thing)
           (gribfile-lon-end thing)
-          (gribfile-timespec thing)))
+          (gribfile-forecast-time thing)))
 
 (defstruct grib-filespec
   region

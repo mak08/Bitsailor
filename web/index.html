@@ -40,8 +40,15 @@
 
 	<div class="row">
 	  <div class="col-2">
+		<div class="cell">
+			<label style="font-weight:bold">Forecast data</label>
+			<select id="sel_forecastbundle" name="forecastbundle">
+				<option value="dwd025">DWD GDS ICON 0.25</option>
+				<option value="noaa">NOAA</option>
+			</select>
+		</div>
         <div class="cell">
-		  <label style="font-weight:bold">Time</label>
+		  <label>Forecast time</label>
           <input id="ir_index" type = "range" min="0" max="78" step="1" value="0" onchange="onRedrawWind()"/>
         </div>
         <div class="cell">
@@ -51,21 +58,14 @@
           <button id="bt_inc" type="button">+1</button>
           <button id="bt_inc6" type="button">+6</button>
         </div>
-		<div class="cell"><label style="font-weight:bold">Options</label></div>
 		<div class="cell">
-			<label>Polars</label>
+			<label style="font-weight:bold">Polars</label>
 			<select id="sel_polars" name="polars">
 				<option value="VO65">Volvo Ocean 65</option>
 				<option value="IMOCA60">IMOCA 60</option>
 			</select>
 		</div>
-		<div class="cell">
-			<label>Wind forecast</label>
-			<select id="sel_forecastbundle" name="forecastbundle">
-				<option value="dwd025">DWD GDS ICON 0.25</option>
-				<option value="noaa">NOAA</option>
-			</select>
-		</div>
+		<div class="cell"><label style="font-weight:bold">Options</label></div>
 		<div class="cell">
 			<label>Duration</label>
 			<select id="sel_duration" name="duration">

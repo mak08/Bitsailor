@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-18 23:28:40>
+;;; Last Modified <michael 2017-09-20 00:15:05>
 
 (in-package :virtualhelm)
 
@@ -74,6 +74,14 @@
   (let* ((session (find-or-create-session request response)))
     (let ((routing (session-routing session)))
       (cond
+        ((string= |name| "forecastbundle")
+         (cond
+           ((string= |value| "dwd025")
+            (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
+           ((string= |value| "noaa")
+            (setf (routing-forecast-bundle routing) 'noaa-bundle))
+           (t
+            (error "Invalid forecast designator ~a" |value|))))
         ((string= |name| "polars")
          (setf (routing-polars routing) |value|))
         ((string= |name| "duration")
@@ -91,6 +99,7 @@
                  points-per-isochrone)))
         
         (t
+         (log2:error "Unsupported parameter ~a ~a" |name| |value|)
          (error "unsupported")))
       (setf (http-body response)
             (with-output-to-string (s)
@@ -144,7 +153,9 @@
   (declare (ignore location request))
   (handler-case
       (let ((*read-default-float-format* 'double-float))
-        (let* ((forecast-bundle (or (get-forecast-bundle 'dwd-icon-bundle)
+        (let* ((session (find-or-create-session request response))
+               (routing (session-routing session))
+               (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                                     (get-forecast-bundle 'constant-wind-bundle)))
                (forecast-time
                 (if |time|

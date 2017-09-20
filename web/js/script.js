@@ -126,6 +126,20 @@ function getSession () {
 		var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
 		destinationMarker.setPosition(dest);
 
+		var forecast = session.routing["forecast-bundle"];
+		var selForecast = $("#sel_forecastbundle")[0];
+		var irIndex = $("#ir_index")[0];
+		if 	( selForecast.value !== forecast ) {
+			irIndex.value = 0;
+			if ( forecast === "DWD-ICON-BUNDLE" ) {
+				irIndex.max = 72;
+			} else if ( forecast === "NOAA-BUNDLE" ) {
+				irIndex.max = 240;
+			}
+			selForecast.value = forecast;
+			redrawWind("offset", irIndex.value);
+		}
+
 		var polars = session.routing.polars;
 		var selPolars = $("#sel_polars")[0];
 		selPolars.value = polars;
@@ -172,6 +186,17 @@ function onSetParameter (event) {
 		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
 		dataType: 'json'
 	}).done( function(data) {
+		if ( paramName === "forecastbundle" ) {
+			var selForecast = $("#sel_forecastbundle")[0];
+			var irIndex = $("#ir_index")[0];
+			irIndex.value = 0;
+			if ( paramValue === "DWD-ICON-BUNDLE" ) {
+				irIndex.max = 72;
+			} else if ( paramValue === "NOAA-BUNDLE" ) {
+				irIndex.max = 240;
+			}
+			redrawWind("offset", irIndex.value);
+		}
 		alert("OK");
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);

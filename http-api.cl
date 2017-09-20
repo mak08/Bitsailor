@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 00:15:05>
+;;; Last Modified <michael 2017-09-20 21:45:15>
 
 (in-package :virtualhelm)
 
@@ -76,9 +76,9 @@
       (cond
         ((string= |name| "forecastbundle")
          (cond
-           ((string= |value| "dwd025")
+           ((string= |value| "DWD-ICON-BUNDLE")
             (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
-           ((string= |value| "noaa")
+           ((string= |value| "NOAA-BUNDLE")
             (setf (routing-forecast-bundle routing) 'noaa-bundle))
            (t
             (error "Invalid forecast designator ~a" |value|))))

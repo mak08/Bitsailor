@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-19 22:37:09>
+;;; Last Modified <michael 2017-09-20 21:26:34>
 
 (in-package :virtualhelm)
 
@@ -65,21 +65,10 @@
               3600))))  
     (get-interpolated-wind grib offset (latlng-lat latlng) (latlng-lng latlng))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Periodic updates
-
-(defun start-grib-updates (&key (resolution "0.250"))
-  "Check for new forecast data an remove old data periodically"
-  (flet ((run-updates ()
-           (loop
-              (update-dwd-bundle :resolution resolution)
-              (sleep 3600))))
-    (bordeaux-threads:make-thread #'run-updates :name "FORECASTS-UPDATER")))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Non API functions
 
-(defun update-dwd-bundle (&key (resolution "0.250") (timestamp (now)))
+(defmethod update-forecast-bundle ((bundle (eql 'dwd-icon-bundle)) &key (resolution "0.250") (timestamp (now)))
   (let ((timestamp (update-local-files :timestamp timestamp :resolution resolution)))
     (cond
       ((and *dwd-forecast-bundle* (timestamp<=  timestamp (fcb-time *dwd-forecast-bundle*)))
@@ -101,8 +90,8 @@
                  (v-file (grib-file-name "V_10M" timestamp :resolution resolution)))
              (log2:trace "Trying ~a~%"
                          (format-timestring () timestamp :format '((:year 4) (:month 2) (:day 2) (:hour 2)) :timezone +utc-zone+))
-             (download-file u-file)
-             (download-file v-file)
+             (download-dwd-file u-file)
+             (download-dwd-file v-file)
              ;; Successful download - return timestamp
              (values timestamp))))
     (handler-case
@@ -121,7 +110,7 @@
     (values
      (format nil "ICON_GDS_~a_reg_~ax~:*~a_~a_~a.grib2" map resolution variable timestamp))))
 
-(defun download-file (filename
+(defun download-dwd-file (filename
                       &key
                         (dest-file filename)
                         (path "gds/ICON/grib/")

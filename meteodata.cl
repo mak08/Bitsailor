@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Meteorological Data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-17 20:37:36>
+;;; Last Modified <michael 2017-09-20 20:56:47>
 
 (in-package :virtualhelm)
 
@@ -95,6 +95,12 @@
 ;;; TBD: Should this method allow only latlng on grid points or interpolate?
 (defgeneric get-wind-forecast (forecast latlng))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; ================
+;;; Periodic updates
+;;; ================
+
+(defgeneric update-forecast-bundle (bundle &key &allow-other-keys))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ====================

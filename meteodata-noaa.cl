@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 00:47:29>
+;;; Last Modified <michael 2017-09-20 20:55:36>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -59,7 +59,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Update data
 
-(defun update-noaa-bundle ()
+(defmethod update-forecast-bundle ((bundle (eql 'noaa-bundle)) &key)
   ;; If we don't have files, or if newer files than we have should be available,
   ;; update to the latest available files.
   (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))

@@ -1,0 +1,51 @@
++-------------------------------------------------------------------------------
+| Description
+| Author         Michael Kappert 2017
+| Last Modified <michael 2017-09-20 23:43:19>
++-------------------------------------------------------------------------------
+
+p/s
+    Positions per second
+s/i
+    seconds per isochrone
+tpi
+    Total positions per isochrone
+points
+    Max positions kept on isocrone
+fan
+    search angle
+
+
+lessables->lacoruna
+
+    fan=150, points=100
+        Elapsed 14.29, Positions 1903808, Isochrones 134 | p/s=133249.43 | s/i=0.1066 | tpi=14207.52 |
+        Elapsed 13.26, Positions 1838576, Isochrones 134 | p/s=138667.15 | s/i=0.0989 | tpi=13720.72 |
+        Elapsed 13.57, Positions 1810943, Isochrones 134 | p/s=133409.57 | s/i=0.1013 | tpi=13514.50 |
+
+    fan=150, points=200
+        Elapsed 30.09, Positions 3883116, Isochrones 134 | p/s=129053.58 | s/i=0.2245 | tpi=28978.48 |
+        Elapsed 29.31, Positions 3909390, Isochrones 134 | p/s=133364.66 | s/i=0.2188 | tpi=29174.55 |
+
+    fan=150, points=300
+        Elapsed 46.57, Positions 5827543, Isochrones 133 | p/s=125142.86 | s/i=0.3501 | tpi=43816.11 |
+        Elapsed 44.56, Positions 5780582, Isochrones 133 | p/s=129730.58 | s/i=0.3350 | tpi=43463.02 |
+
+    fan=170, points=100
+        Elapsed 15.80, Positions 2058669, Isochrones 134 | p/s=130286.67 | s/i=0.1179 | tpi=15363.20 |
+        Elapsed 14.03, Positions 1864413, Isochrones 134 | p/s=132887.41 | s/i=0.1047 | tpi=13913.53 |
+        Elapsed 10.22, Positions 1838592, Isochrones 134 | p/s=179841.80 | s/i=0.0763 | tpi=13720.84 |
+        Elapsed 9.56, Positions 1755224, Isochrones 133 | p/s=183593.81 | s/i=0.0719 | tpi=13197.17 |
+
+    fan=170, points=200
+        Elapsed 34.52, Positions 4377429, Isochrones 134 | p/s=126824.62 | s/i=0.2576 | tpi=32667.38 |
+        Elapsed 33.43, Positions 4362894, Isochrones 134 | p/s=130497.22 | s/i=0.2495 | tpi=32558.91 |
+        Elapsed 24.87, Positions 4366656, Isochrones 134 | p/s=175558.05 | s/i=0.1856 | tpi=32586.98 |
+        Elapsed 24.28, Positions 4321341, Isochrones 133 | p/s=178000.36 | s/i=0.1825 | tpi=32491.29 |
+
+    fan=170, points=300
+        Elapsed 53.54, Positions 6591708, Isochrones 134 | p/s=123118.34 | s/i=0.3995 | tpi=49191.85 |
+        Elapsed 51.45, Positions 6556311, Isochrones 133 | p/s=127439.18 | s/i=0.3868 | tpi=49295.57 |
+        Elapsed 36.99, Positions 6526386, Isochrones 133 | p/s=176419.68 | s/i=0.2781 | tpi=49070.57 |
+        Elapsed 32.65, Positions 5777713, Isochrones 133 | p/s=176955.20 | s/i=0.2455 | tpi=43441.45 |
+

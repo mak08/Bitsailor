@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-16 21:21:52>
+;;; Last Modified <michael 2017-09-20 22:52:43>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -46,7 +46,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route as well as
-;;; routing parameters 
+;;; routing parameters
+
+(defvar +LACORUNA+
+  (make-latlng :lat 43.484812d0 :lng -8.5897636d0))
+
+(defvar +LESSABLES+
+  (make-latlng :lat 46.479120d0 :lng -1.7941526d0))
 
 (defvar +FEHMARN+
   (make-latlng :lat 54.434403d0 :lng 11.361632d0))
@@ -57,8 +63,8 @@
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)
   (polars "VO65")
-  (start +fehmarn+)
-  (dest +ystad+)
+  (start +lessables+)
+  (dest +lacoruna+)
   (fan 75)
   (angle-increment 1)
   (max-points-per-isochrone 100)
@@ -143,9 +149,15 @@
            ;; from the most advanced point's predecessor chain.
            ((or reached
                 (>= stepsum (routing-stepmax routing)))
-            (let* ((elapsed (timestamp-difference (now) elapsed0))
-                   (pps (/ pointnum elapsed)))
-              (log2:info "Examined ~a routepoints in ~2$s (~2$p/s)" pointnum elapsed pps))
+            (let* ((elapsed (timestamp-difference (now) elapsed0)))
+              (log2:info "Elapsed ~2$, Positions ~a, Isochrones ~a | p/s=~2$ | s/i=~4$ | tpi=~2$ |"
+                         elapsed
+                         pointnum
+                         stepnum
+                         (/ pointnum elapsed)
+                         (/ elapsed stepnum)
+                         (coerce (/ pointnum stepnum) 'float)))
+
             (make-routeinfo :tracks (extract-tracks
                                      (construct-route isochrone))
                             :isochrones isochrones))

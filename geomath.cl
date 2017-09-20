@@ -1,11 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-19 22:13:37>
+;;; Last Modified <michael 2017-09-20 23:38:15>
 
 (in-package :virtualhelm)
 
-(declaim (optimize (speed 0) debug  (space 0) (safety 1)))
+(declaim (optimize (speed 3) (debug 1)  (space 0) (safety 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Constants
@@ -73,21 +73,30 @@
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
 (defun course-distance (origin target)
-  (let ((lat1 (latlng-latr origin))
-        (lon1 (latlng-lngr origin))
-        (lat2 (latlng-latr target))
-        (lon2 (latlng-lngr target)))
-    (declare (double-float lat1 lon1 lat2 lon2))
+  (let* ((lat1 (latlng-latr origin))
+         (lon1 (latlng-lngr origin))
+         (lat2 (latlng-latr target))
+         (lon2 (latlng-lngr target))
+         (cis-lat1 (cis lat1))
+         (cos-lat1 (realpart cis-lat1))
+         (sin-lat1 (imagpart cis-lat1))
+         (cis-lat2 (cis lat2))
+         (cos-lat2 (realpart cis-lat2))
+         (sin-lat2 (imagpart cis-lat2)))
+    (declare (double-float lat1 lon1 lat2 lon2 cos-lat1 sin-lat1 cos-lat2 sin-lat2))
     (* +radius+
-       (acos (+ (* (sin lat1) (sin lat2))
-                (* (cos lat1) (cos lat2) (cos (- lon2 lon1))))))))
+       (acos (+ (* sin-lat1 sin-lat2)
+                (* cos-lat1 cos-lat2 (cos (- lon2 lon1))))))))
 
 (defun course-angle (origin target &optional (dist nil))
-  (let ((lat1 (latlng-latr origin))
-        (lat2 (latlng-latr target))
-        (lon1 (latlng-lngr origin))
-        (lon2 (latlng-lngr target)))
-    ;; (declare (double-float lat1 lon1 lat2 lon2 cos-omega omega delta))
+  (let* ((lat1 (latlng-latr origin))
+         (cis-lat1 (cis lat1))
+         (cos-lat1 (realpart cis-lat1))
+         (sin-lat1 (imagpart cis-lat1))
+         (lat2 (latlng-latr target))
+         (lon1 (latlng-lngr origin))
+         (lon2 (latlng-lngr target)))
+    (declare (double-float lat1 cos-lat1 sin-lat1 lon1 lat2 lon2))
     (cond
       ((and
         (eql lat1 lat2)
@@ -109,12 +118,13 @@
            (error "Invalid distance |~a ~a|" origin target))
          (let* ((e (/ dist +radius+))
                 (cos-omega
-                 (/ (- (sin lat2) (* (sin lat1) (cos e)))
-                    (* (cos lat1) (sin e))))
+                 (/ (- (sin lat2) (* sin-lat1 (cos e)))
+                    (* cos-lat1 (sin e))))
                 (omega
                  (acos cos-omega))
                 (delta
                  (- lon2 lon1)))
+           (declare (double-float cos-omega omega delta))
            (when (complexp omega)
              (error "Invalid cos-omega ~a for origin=~a target=~a" cos-omega origin target))
            (deg
@@ -141,16 +151,22 @@
         (lon (latlng-lng pos)))
     (declare (double-float lat lon distance alpha))
     (let* ((d (/ distance +radius+))
+           (cis-d (cis d))
+           (cos-d (realpart cis-d))
+           (sin-d (imagpart cis-d))
            (a (* alpha +pi/180+))
            (sin-a (sin a))
-           (sin-d (sin d))
-           (lat-r (* lat +pi/180+)) 
+           (lat-r (* lat +pi/180+))
+           (cis-lat-r (cis lat-r))
+           (cos-lat-r (realpart cis-lat-r))
+           (sin-lat-r (imagpart cis-lat-r))
            (lon-r (* lon +pi/180+))
-           (lat-new-r (asin (+ (* (sin lat-r) (cos d))
-                               (* (cos lat-r) sin-d (cos a)))))
+           (lat-new-r (asin (+ (* sin-lat-r cos-d)
+                               (* cos-lat-r sin-d (cos a)))))
            (lon-new-r (+ lon-r
                          (asin (/ (* sin-a sin-d)
                                   (cos lat-new-r))))))
+      (declare (double-float cos-d sin-d cos-lat-r sin-lat-r))
       (make-latlng :lat (/ lat-new-r +pi/180+)
                    :lng (/ lon-new-r +pi/180+)))))
 

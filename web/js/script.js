@@ -129,12 +129,15 @@ function getSession () {
 		var forecast = session.routing["forecast-bundle"];
 		var selForecast = $("#sel_forecastbundle")[0];
 		var irIndex = $("#ir_index")[0];
+		var lbFCMax = $("#lb_fcmax")[0];
 		if 	( selForecast.value !== forecast ) {
 			irIndex.value = 0;
 			if ( forecast === "DWD-ICON-BUNDLE" ) {
 				irIndex.max = 72;
+				lbFCMax.innerText = '' + 72;
 			} else if ( forecast === "NOAA-BUNDLE" ) {
 				irIndex.max = 240;
+				lbFCMax.innerText = '' + 240;
 			}
 			selForecast.value = forecast;
 			redrawWind("offset", irIndex.value);
@@ -189,11 +192,14 @@ function onSetParameter (event) {
 		if ( paramName === "forecastbundle" ) {
 			var selForecast = $("#sel_forecastbundle")[0];
 			var irIndex = $("#ir_index")[0];
+			var lbFCMax = $("#lb_fcmax")[0];
 			irIndex.value = 0;
 			if ( paramValue === "DWD-ICON-BUNDLE" ) {
 				irIndex.max = 72;
+				lbFCMax.innerText = 72;
 			} else if ( paramValue === "NOAA-BUNDLE" ) {
 				irIndex.max = 240;
+				lbFCMax.innerText = 240;
 			}
 			redrawWind("offset", irIndex.value);
 		}

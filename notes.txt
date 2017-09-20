@@ -1,7 +1,7 @@
 +-------------------------------------------------------------------------------
 | Description
 | Author         Michael Kappert 2017
-| Last Modified <michael 2017-09-20 23:43:19>
+| Last Modified <michael 2017-09-20 23:53:43>
 +-------------------------------------------------------------------------------
 
 p/s
@@ -35,7 +35,7 @@ lessables->lacoruna
         Elapsed 15.80, Positions 2058669, Isochrones 134 | p/s=130286.67 | s/i=0.1179 | tpi=15363.20 |
         Elapsed 14.03, Positions 1864413, Isochrones 134 | p/s=132887.41 | s/i=0.1047 | tpi=13913.53 |
         Elapsed 10.22, Positions 1838592, Isochrones 134 | p/s=179841.80 | s/i=0.0763 | tpi=13720.84 |
-        Elapsed 9.56, Positions 1755224, Isochrones 133 | p/s=183593.81 | s/i=0.0719 | tpi=13197.17 |
+        Elapsed 9.56,  Positions 1755224, Isochrones 133 | p/s=183593.81 | s/i=0.0719 | tpi=13197.17 |
 
     fan=170, points=200
         Elapsed 34.52, Positions 4377429, Isochrones 134 | p/s=126824.62 | s/i=0.2576 | tpi=32667.38 |
@@ -49,3 +49,4 @@ lessables->lacoruna
         Elapsed 36.99, Positions 6526386, Isochrones 133 | p/s=176419.68 | s/i=0.2781 | tpi=49070.57 |
         Elapsed 32.65, Positions 5777713, Isochrones 133 | p/s=176955.20 | s/i=0.2455 | tpi=43441.45 |
 
+        Elapsed 37.20, Positions 6542631, Isochrones 133 | p/s=175864.09 | s/i=0.2797 | tpi=49192.71 |

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 20:55:36>
+;;; Last Modified <michael 2017-09-21 00:40:26>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -68,7 +68,7 @@
            (>= (timestamp-difference (now) timestamp) (* 6 3600)))
        (log2:info "Updating NOAA forecast from ~a" timestamp)
        ;; Forecast is outdated, fetch new. The latest available cycle will should be 4:30
-       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -7)))
+       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -6)))
               (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
               (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
               (dummy (log2:info "At ~a, looking for cycle ~a-~a" (now) date  cycle))

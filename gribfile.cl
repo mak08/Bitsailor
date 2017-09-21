@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-19 22:09:29>
+;;; Last Modified <michael 2017-09-21 21:16:42>
 
 (in-package :virtualhelm)
 
@@ -47,6 +47,7 @@
 (defun get-grid-info (gribfile message)
   (let* ((date (format nil "~a" (grib-get-long message "dataDate")))
          (time (format nil "~4,,,'0a" (grib-get-long message "dataTime")))
+         (dummy (log2:info "Reading grib with timestamp <~aT~a>" date time))
          (timestamp (parse-timestring
                      (format () "~a-~a-~aT~a:~a:00+00:00"
                              (subseq date 0 4)

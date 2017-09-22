@@ -1,10 +1,23 @@
 # VirtualHelm
-Automated Weather Routing using Isochrones - sail routing optimizer
 
+### Sailing route optimization
+
+VirtualHelm uses the well-known Isochrones method for sailing route optimization. This is basically a brute-force algorithm that computes all positions reachable from a given position by moving with constant speed and direction for a fixed amount of time (eg. 10min). The resulting positions are filtered to prevent exponential growth and constitute the next isochrone.
+
+#### Map
+'Land check' is discrete, i.e. only the computed positions are checked but not the line connecting a position to the predecessor position. It therefore possible that the route skips over small stretches of land.
+
+VirtualHelm uses libgdal for detecting interior points. The 'Land Polygons' file with split polygons from openstreetmapdata is used. 
+A geospatial index is computed off-line on the set of polygons. At runtime the index is used to quickly find and intersect polygons with the current position. This is why the non-split polygons are much slower.
+
+#### Wind
+#### Polars
+#### Filtering
+
+
+### Installation
 
 #### Prerequisites
-
-VirtualHelm uses libgdal for determining if a point is on shore or at sea.
 
 
 *	Install libgeos-3.4.2 (to automatically enable GEOS support in libgdal)

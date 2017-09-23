@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-10 22:43:27>
+;;; Last Modified <michael 2017-09-23 00:59:56>
 
 (in-package :virtualhelm)
 
@@ -148,6 +148,24 @@
       (make-array (list (length values)
                         (length (car values)))
                   :initial-contents values))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Reading polars from JSON
+
+(rdparse:defparser parse-json
+    :rules ((json
+             (:alt object array :string :numeric))
+            (object
+             (:seq "{" fieldseq "}"))
+            (fieldseq
+             (:alt fieldassign
+                   (:seq fieldassign "," fieldseq)))
+            (array
+             (:seq "[" jsonseq "]"))
+            (jsonseq
+             (:alt json
+                   (:seq json "," jsonseq)))))
+
 
 
 ;;; EOF

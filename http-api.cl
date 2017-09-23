@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 21:45:15>
+;;; Last Modified <michael 2017-09-23 00:24:21>
 
 (in-package :virtualhelm)
 
@@ -84,6 +84,9 @@
             (error "Invalid forecast designator ~a" |value|))))
         ((string= |name| "polars")
          (setf (routing-polars routing) |value|))
+        ((string= |name| "fastmanoeuvres")
+         (log2:info "fastmnaoeuvres=~" |value|)
+         (setf (routing-fastmanoeuvres routing) (string= |value| "true")))
         ((string= |name| "duration")
          (let ((duration-hrs
                 (read-from-string |value|)))

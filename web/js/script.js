@@ -75,6 +75,7 @@ function setUp () {
 	$("#sel_duration").change(onSetParameter);
 	$("#sel_searchangle").change(onSetParameter);
 	$("#sel_pointsperisochrone").change(onSetParameter);
+	$("#cb_fastmanoeuvres").change(onSetParameter);
 
 	// Tracks & Isochrones display is handled by the client directly
 	$("#cb_tracks").change(onSetClientParameter);
@@ -179,12 +180,15 @@ function getSession () {
 }
 
 function onSetClientParameter (event) {
-	alert('later.');
+	if ( event.currentTarget === 'foo' ) {
+	} else {
+		alert('later.');
+	}
 }
 
 function onSetParameter (event) {
 	var paramName = event.currentTarget.name;
-	var paramValue = event.currentTarget.value;
+	var paramValue = event.currentTarget.checked || event.currentTarget.value;
 	$.ajax({ 
 		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
 		dataType: 'json'

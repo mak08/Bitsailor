@@ -2,12 +2,12 @@
 ;;; Description
 ;;; Author         Michael Kappert
 ;;; Created        22/03/2000 11:15:16
-;;; Last Modified  <michael 2017-09-19 22:12:07>
+;;; Last Modified  <michael 2017-09-23 00:51:16>
 
 (defsystem "virtualhelm"
   :description "Sailing route optimization using isochrones search"
   :default-component-class cl-source-file.cl
-  :depends-on ("cl-grib2" "polarcl" "log2" "cffi" "cl-utilities")
+  :depends-on ("cl-grib2" "polarcl" "log2" "cffi" "rdparse" "cl-utilities")
   :serial t
   :components ((:file "package")
                (:file "libraries")

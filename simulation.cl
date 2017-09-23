@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 22:52:43>
+;;; Last Modified <michael 2017-09-22 23:26:56>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -63,6 +63,7 @@
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)
   (polars "VO65")
+  (fastmanoeuvres t)
   (start +lessables+)
   (dest +lacoruna+)
   (fan 75)
@@ -85,6 +86,7 @@
   heading
   twa
   speed
+  penalty
   sail
   is-land
   predecessor
@@ -181,13 +183,8 @@
                  (loop
                     :for heading-index :from left :to right :by angle-increment
                     :for heading = (normalize-heading heading-index)
-                    :do (multiple-value-bind (speed angle sail)
-                            (heading-boatspeed forecast polars-name (routepoint-position routepoint) heading)
-                          (when (or (not (equal sail (routepoint-sail routepoint)))
-                                    (and (< angle 0 (routepoint-twa routepoint)))
-                                    (and (< (routepoint-twa routepoint) 0 angle)))
-                            ;; Manoeuvering penalty
-                            (setf speed (* speed 0.9)))
+                    :do (multiple-value-bind (twa sail speed reason)
+                            (get-penalized-avg-speed routing routepoint forecast polars-name heading)
                           (let*
                               ((new-pos (add-distance-exact (routepoint-position routepoint)
                                                             (* speed step-size)
@@ -197,8 +194,9 @@
                             (setf (aref next-isochrone index)
                                   (make-routepoint :position new-pos
                                                    :heading heading
-                                                   :twa angle
+                                                   :twa twa
                                                    :speed speed
+                                                   :penalty reason
                                                    :sail sail
                                                    :is-land nil ;; compute this after wake pruning
                                                    :predecessor routepoint
@@ -219,6 +217,24 @@
             (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
+
+(defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
+  (multiple-value-bind (speed twa sail)
+      (heading-boatspeed forecast polars-name (routepoint-position predecessor) heading)
+    (let ((pspeed
+           (if (routing-fastmanoeuvres routing)
+               (* speed 0.9375)
+               (* speed 0.75))))
+      (cond
+        ((and
+          (not (equal sail (routepoint-sail predecessor)))
+          (not (equal twa (routepoint-twa predecessor))))
+         (values twa sail pspeed "Sail Change"))
+        ((or (< twa 0 (routepoint-twa predecessor))
+             (< (routepoint-twa predecessor) 0 twa))
+         (values twa sail pspeed "Tack/Gybe"))
+        (t
+         (values twa sail speed nil))))))
 
 (defun filter-isochrone (isochrone min-heading max-heading max-points)
   (let* ((last

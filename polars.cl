@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-23 00:59:56>
+;;; Last Modified <michael 2017-09-24 01:51:47>
 
 (in-package :virtualhelm)
 
@@ -31,13 +31,13 @@
      :for i :below 7
      :for v = (get-boat-speed (polars-angle angle)
                               wind-speed
-                              (aref polars i))
+                              (sail-speed (aref polars i)))
      :do (when (>= v vmax)
            (setf imax i
                  vmax v))
      :finally (return
                 (values vmax
-                        (aref +sail-names+ imax)))))
+                        (sail-name (aref polars imax))))))
 
 (defun get-boat-speed (angle wind-speed polars)
   (let* ((w-max-index (- (array-dimension polars 1) 1))
@@ -91,8 +91,9 @@
 (defun preprocess-polars (name)
   (let* ((polars (get-polars name))
          (first-sail (aref polars 0))
-         (wind-values (array-dimension first-sail 1))
-         (max-wind (aref first-sail 0 (1- wind-values)))
+         (first-sail-speed (sail-speed first-sail))
+         (wind-values (array-dimension first-sail-speed 1))
+         (max-wind (aref first-sail-speed 0 (1- wind-values)))
          (precomputed
           (loop
              :for angle :of-type double-float :from 0d0 :to 180d0 :by 0.1d0
@@ -117,13 +118,23 @@
 (defun fetch-polars (polars)
   (let ((polars-dir (merge-pathnames (make-pathname :directory (list :relative polars))
                                      (make-pathname :directory *polars-dir*))))
-    (log2:info "Loading polars from ~a~%" polars-dir)
-    (map 'vector
-         (lambda (filename)
-           (parse-polars
-            (load-polars (merge-pathnames (make-pathname :name filename)
-                                          polars-dir))))
-         +polar-file-names+)))
+    (cond
+      ((probe-file polars-dir)
+       (log2:info "Loading polars from ~a~%" polars-dir)
+       (map 'vector
+            (lambda (filename sailname)
+              (make-sail :name sailname
+                         :speed (parse-polars
+                                 (load-polars (merge-pathnames (make-pathname :name filename)
+                                                               polars-dir)))))
+            +polar-file-names+
+            +sail-names+))
+      (t
+       (let ((polars-file (merge-pathnames (make-pathname :name polars :type "json")
+                                           (make-pathname :directory *polars-dir*))))
+         (log2:info "Loading polars from ~a~%" polars-file)
+         (let ((sails (load-polars-json :filename polars-file)))
+           (make-array (length sails) :initial-contents sails)))))))
 
 (defun load-polars (polars-filename)
   (cond
@@ -152,21 +163,36 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
 
-(rdparse:defparser parse-json
-    :rules ((json
-             (:alt object array :string :numeric))
-            (object
-             (:seq "{" fieldseq "}"))
-            (fieldseq
-             (:alt fieldassign
-                   (:seq fieldassign "," fieldseq)))
-            (array
-             (:seq "[" jsonseq "]"))
-            (jsonseq
-             (:alt json
-                   (:seq json "," jsonseq)))))
+(defstruct sail name speed)
 
-
+(defun load-polars-json (&key (filename  "/home/michael/Repository/VirtualHelm/polars/IMOCA60VVOR17.json"))
+  (with-open-file (f filename :element-type 'character)
+    (let ((json-string (make-string (file-length f))))
+      (read-sequence json-string f)
+      (let* ((polar (joref (joref (parse-json json-string) "scriptData") "polar"))
+             (tws (joref polar "tws"))
+             (twa (joref polar "twa"))
+             (saildefs (joref polar "sail")))
+        (log2:info "Reading sail data")
+        (loop
+           :for saildef :across saildefs
+           :collect (let ((speeddata (make-array (list (1+ (length twa)) (1+ (length tws))))))
+                      (loop
+                         :for speed :across tws
+                         :for s :from 0
+                         :do (setf (aref speeddata 0 (1+ s))
+                                   (coerce (aref tws s) 'double-float)))
+                      (loop
+                         :for angle :across twa
+                         :for a :from 0
+                         :do (setf (aref speeddata (1+ a) 0) (coerce (aref twa a) 'double-float))
+                         :do (loop
+                                :for speed :across tws
+                                :for s :from 0
+                                :do (setf (aref speeddata (1+ a) (1+ s))
+                                          (coerce (aref (aref (joref saildef "speed") a) s) 'double-float))))
+                      (make-sail :name (joref saildef "name")
+                                 :speed speeddata)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

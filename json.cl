@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2017-08-26 00:08:45>
+;;; Last Modified  <michael 2017-09-24 00:27:35>
  
 (in-package :virtualhelm)
 
@@ -93,6 +93,69 @@
      :do (json% stream element)
      :when (< k (1- (length thing))) :do (format stream ", "))
   (format stream "]"))
- 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Deserializing JSON
+
+(defstruct json-object fields)
+(defstruct json-field name value)
+
+(defun joref (json-object field-name)
+  (loop
+     :for jf :in (json-object-fields json-object)
+     :when (string= (json-field-name jf) field-name)
+     :return (json-field-value jf)))
+                    
+(defun _json (name tree &rest args)
+  (etypecase tree
+    (rdparse::token
+     (read-from-string (token-value tree)))
+    (atom
+     tree)))
+
+(defun _object (name tree &rest args)
+  (make-json-object :fields (cadr tree)))
+
+(defun _array (name tree &rest args)
+  (let ((elements (cadr tree)))
+    (make-array (length elements) :initial-contents elements)))
+
+(defun _jsonseq (name tree &rest args)
+  (typecase tree
+    (rdparse::token 
+     (list (read-from-string (token-value tree))))
+    (atom
+     (list tree))
+    (otherwise
+     (cons (car tree) (caddr tree)))))
+
+(defun _fieldseq (name tree &rest args)
+  (if (atom tree)
+      (list tree)
+      (cons (car tree) (caddr tree))))
+
+(defun _fieldassign (name tree &rest args)
+  (make-json-field :name (read-from-string (token-value (car tree))) :value (caddr tree)))
+
+
+(defparser parse-json
+    :tokens ((_string (:alt :sq-string :dq-string))
+             (_number (:seq (:opt "-") :numeric (:opt (:seq "." :numeric)))))
+    :rules ((_json
+             (:alt _number _string _object _array))
+            (_object
+             (:seq "{" _fieldseq "}"))
+            (_fieldseq
+             (:alt (:seq _fieldassign "," _fieldseq)
+                   _fieldassign))
+            (_fieldassign
+             (:seq :dq-string ":" _json))
+            (_array
+             (:seq "[" _jsonseq "]"))
+            (_jsonseq
+             (:alt (:seq _json "," _jsonseq)
+                   _json))))
+
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

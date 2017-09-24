@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2017-09-24 00:27:35>
+;;; Last Modified  <michael 2017-09-24 02:14:57>
  
 (in-package :virtualhelm)
 
@@ -101,6 +101,8 @@
 (defstruct json-object fields)
 (defstruct json-field name value)
 
+(eval-when (:compile-toplevel :load-toplevel :execute)
+
 (defun joref (json-object field-name)
   (loop
      :for jf :in (json-object-fields json-object)
@@ -137,7 +139,7 @@
 
 (defun _fieldassign (name tree &rest args)
   (make-json-field :name (read-from-string (token-value (car tree))) :value (caddr tree)))
-
+)
 
 (defparser parse-json
     :tokens ((_string (:alt :sq-string :dq-string))

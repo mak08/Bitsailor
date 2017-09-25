@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-26 00:54:12>
+;;; Last Modified <michael 2017-09-26 01:54:58>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -83,6 +83,7 @@
 
 (defstruct routepoint
   position
+  time
   heading
   twa
   speed
@@ -131,6 +132,7 @@
             (elapsed0 (now))
             ;; The initial isochrone is just the start point, heading towards destination
             (isochrone (list (make-routepoint :position start-pos
+                                              :time (format-rfc1123-timestring nil elapsed0)
                                               :heading  dest-heading
                                               :destination-distance (course-distance start-pos dest-pos)))
                        next-isochrone)
@@ -142,8 +144,8 @@
             ;; Get min and max heading of the point of each isochrone for sorting
             (min-heading 360 360)
             (max-heading 0 0)
-            ;; Advance the simulation time after each iteration
-            (step-time (now)
+            ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
+            (step-time (adjust-timestamp (now) (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
             ;; Get wind data for simulation time
             (forecast (get-forecast forecast-bundle step-time)
@@ -165,7 +167,7 @@
             (make-routeinfo :best (construct-route isochrone)
                             :tracks (extract-tracks isochrone)
                             :isochrones isochrones))
-        (log2:info "Isochrone ~a at ~a, ~a points" stepnum (to-rfc3339-timestring step-time) (length isochrone))
+        (log2:info "Isochrone ~a at ~a, ~a points" stepnum (to-rfc1123-timestring step-time) (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
              (lambda (routepoint)
@@ -195,6 +197,7 @@
                             (incf pointnum)
                             (setf (aref next-isochrone index)
                                   (make-routepoint :position new-pos
+                                                   :time (format-rfc1123-timestring nil step-time)
                                                    :heading heading
                                                    :twa (round twa)
                                                    :speed speed

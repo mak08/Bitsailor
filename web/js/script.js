@@ -310,7 +310,8 @@ function addWaypointInfo(trackMarker, point, nextPoint) {
 }
 function makeWaypointInfo(point, nextPoint) {
 	result =  "<div>";
-	result = result + "<b>Position</b>:" + formatPosition(point.position) + "<p>";
+	result = result + "<b>Position</b>:" + formatPosition(point.position) + "<p>"
+		+ "<b>Time</b>: " + point.time + "<p>";
 	if ( nextPoint !== undefined ) {
 		result = result + "<b>Heading</b>:" + nextPoint.heading + "°<p>"
 			+ "<b>Wind</b>:" + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°<p>"

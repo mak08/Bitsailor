@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-24 23:44:42>
+;;; Last Modified <michael 2017-09-26 00:54:12>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -67,7 +67,7 @@
   (start +lessables+)
   (dest +lacoruna+)
   (fan 75)
-  (angle-increment 1)
+  (angle-increment 2)
   (max-points-per-isochrone 100)
   (stepmax +24h+)
   (stepsize +10min+))
@@ -88,6 +88,8 @@
   speed
   penalty
   sail
+  wind-dir
+  wind-speed
   is-land
   predecessor
   origin-angle
@@ -183,7 +185,7 @@
                  (loop
                     :for heading-index :from left :to right :by angle-increment
                     :for heading = (normalize-heading heading-index)
-                    :do (multiple-value-bind (twa sail speed reason)
+                    :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
                             (get-penalized-avg-speed routing routepoint forecast polars-name heading)
                           (let*
                               ((new-pos (add-distance-exact (routepoint-position routepoint)
@@ -194,17 +196,19 @@
                             (setf (aref next-isochrone index)
                                   (make-routepoint :position new-pos
                                                    :heading heading
-                                                   :twa twa
+                                                   :twa (round twa)
                                                    :speed speed
                                                    :penalty reason
                                                    :sail sail
-                                                   :is-land nil ;; compute this after wake pruning
+                                                   :wind-dir wind-dir
+                                                   :wind-speed wind-speed
+                                                   :is-land nil ;; compute this after filtering
                                                    :predecessor routepoint
                                                    :origin-angle (course-angle start-pos new-pos)
-                                                   :destination-angle (course-angle new-pos dest-pos)
+                                                   :destination-angle "not computed"
                                                    :destination-distance dtf))
                             (incf index)
-                            (when (< dtf 1000)
+                            (when (< dtf 10000)
                               (unless reached
                                 (log2:info "Reached destination at ~a" step-time)
                                 (setf reached t))))))))
@@ -219,7 +223,7 @@
               (push iso isochrones))))))))
 
 (defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
-  (multiple-value-bind (speed twa sail)
+  (multiple-value-bind (speed twa sail wind-dir wind-speed)
       (heading-boatspeed forecast polars-name (routepoint-position predecessor) heading)
     (let ((pspeed
            (if (routing-fastmanoeuvres routing)
@@ -229,12 +233,12 @@
         ((and
           (not (equal sail (routepoint-sail predecessor)))
           (not (equal twa (routepoint-twa predecessor))))
-         (values twa sail pspeed "Sail Change"))
+         (values twa sail pspeed "Sail Change" wind-dir wind-speed))
         ((or (< twa 0 (routepoint-twa predecessor))
              (< (routepoint-twa predecessor) 0 twa))
-         (values twa sail pspeed "Tack/Gybe"))
+         (values twa sail pspeed "Tack/Gybe" wind-dir wind-speed))
         (t
-         (values twa sail speed nil))))))
+         (values twa sail speed nil wind-dir wind-speed))))))
 
 (defun filter-isochrone (isochrone min-heading max-heading max-points)
   (let* ((last
@@ -265,14 +269,6 @@
                          (check-type angle angle)
                          (if (and southbound (< angle 0)) (+ angle 360) angle))))))
       (setf isochrone (sort isochrone #'< :key #'routepoint-sort-key))
-      (log2:trace "In: ~a, a-start: ~a, a-end: ~a, diff-a: ~a, delta-a: ~a, h-min: ~a, h-max: ~a"
-                  last
-                  a-start
-                  h-end
-                  (* delta-angle max-points)
-                  delta-angle
-                  min-heading
-                  max-heading)
       (loop
          :for point :across isochrone
          :for k :from 0
@@ -316,7 +312,7 @@
         ((null cur-point)
          route)
       (when (or (null predecessor)
-                (not (eql (routepoint-twa cur-point) (routepoint-twa predecessor)))
+                (not (eql (routepoint-heading cur-point) (routepoint-heading predecessor)))
                 (not (eql (routepoint-sail cur-point) (routepoint-sail predecessor))))
         (let ((next-point (copy-routepoint cur-point)))
           (setf (routepoint-predecessor next-point) nil)
@@ -388,7 +384,7 @@
     (let ((angle (heading-twa wind-dir heading)))
       (multiple-value-bind (speed sail)
           (get-max-speed angle wind-speed polars)
-        (values speed angle sail wind-speed)))))
+        (values speed angle sail wind-dir wind-speed)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unit conversion

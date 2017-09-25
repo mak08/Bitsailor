@@ -35,6 +35,7 @@ var destinationMarker = {};
 
 var routeTracks = [];
 var routeIsochrones = [];
+var trackMarkers = [];
 
 function setUp () {
 	
@@ -274,6 +275,10 @@ function setRoute (point) {
 }
 
 function clearRoute() {
+	for ( var i = 0; i<trackMarkers.length; i++ ) {
+		trackMarkers[i].setMap(undefined);
+	}
+	trackMarkers = [];
 	for ( var i = 0; i<routeTracks.length; i++ ) {
 		routeTracks[i].setMap(undefined);
 	}
@@ -286,7 +291,35 @@ function clearRoute() {
 
 function updateGetRouteProgress () {
 	var pgGetRoute = $("#pg_getroute")[0];
-	pgGetRoute.value = pgGetRoute.value + 10;
+	if ( pgGetRoute.value < pgGetRoute.max ) { 
+		pgGetRoute.value = pgGetRoute.value + 10;
+	}
+}
+
+
+function addWaypointInfo(trackMarker, point, nextPoint) {
+	var infowindow = new google.maps.InfoWindow({
+		content: makeWaypointInfo(point, nextPoint)
+	});
+	trackMarker.addListener('mouseover', function() {
+		infowindow.open(googleMap, trackMarker);
+	});
+	trackMarker.addListener('mouseout', function() {
+		infowindow.close();
+	});
+}
+function makeWaypointInfo(point, nextPoint) {
+	result =  "<div>";
+	result = result + "<b>Position</b>:" + formatPosition(point.position) + "<p>";
+	if ( nextPoint !== undefined ) {
+		result = result + "<b>Heading</b>:" + nextPoint.heading + "°<p>"
+			+ "<b>Wind</b>:" + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°<p>"
+			+ "<b>Speed</b>:" + roundTo(ms2knots(nextPoint.speed), 2) + "kts" + "<b> TWA</b>:" + nextPoint.twa + "</p>"
+			+ "<b>Sail</b>:" + nextPoint.sail + "<p>";
+	}
+	result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
+		+ "</div>";
+	return result;
 }
 
 function getRoute () {
@@ -295,7 +328,7 @@ function getRoute () {
 	mapMenu.style.display = "none";
 	var that = this;
 	var pgGetRoute = $("#pg_getroute")[0];
-	pgGetRoute.value = 10;
+	pgGetRoute.value = 5;
 	var selMaxPoints = $("#sel_pointsperisochrone")[0];
 	var maxPoints = selMaxPoints.value;
 	var selDuration = $("#sel_duration")[0];
@@ -307,7 +340,19 @@ function getRoute () {
 	}).done( function(data) {
 		clearRoute();
 		window.clearInterval(timer);
-		pgGetRoute.value = 0;
+		pgGetRoute.value = pgGetRoute.max;
+		var best = data.best;
+		for ( var i = 0; i < best.length; i++ ) {
+			var trackMarker = new google.maps.Marker({
+				position: best[i].position,
+				map: googleMap,
+				draggable: false
+			});
+			addWaypointInfo(trackMarker, best[i], best[i+1]);
+			trackMarkers[i] = trackMarker;
+
+		}
+
 		var tracks = data.tracks;
 		for ( var i = 0; i < tracks.length; i++ ) {
 			var track = new google.maps.Polyline({
@@ -442,8 +487,20 @@ function drawWindArrow(ctx, x, y, direction, speed) {
 	ctx.restore();
 }
 
+function m2nm (dist) {
+	return dist / 1852;
+}
+
+function ms2knots (speed) {
+	return 900.0 * speed / 463.0;
+}
+
 function formatLatLng (latlng) {
 	return formatDeg(toDeg(latlng.lat())) + ", " + formatDeg(toDeg(latlng.lng()));
+}
+
+function formatPosition (latlng) {
+	return formatDeg(toDeg(latlng.lat)) + "N, " + formatDeg(toDeg(latlng.lng)) + "E";
 }
 
 function formatDeg (deg) {

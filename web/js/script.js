@@ -284,17 +284,30 @@ function clearRoute() {
 	routeIsochrones = [];
 }
 
+function updateGetRouteProgress () {
+	var pgGetRoute = $("#pg_getroute")[0];
+	pgGetRoute.value = pgGetRoute.value + 10;
+}
 
 function getRoute () {
 	var mapMenu=$("#mapMenu")[0];
 	var windowEvent = window.event;
 	mapMenu.style.display = "none";
 	var that = this;
+	var pgGetRoute = $("#pg_getroute")[0];
+	pgGetRoute.value = 10;
+	var selMaxPoints = $("#sel_pointsperisochrone")[0];
+	var maxPoints = selMaxPoints.value;
+	var selDuration = $("#sel_duration")[0];
+	var duration = selDuration.value; 
+	var timer = window.setInterval(updateGetRouteProgress, maxPoints * duration / 6);
 	$.ajax({ 
 		url: "/function/vh:getRoute",
 		dataType: 'json'
 	}).done( function(data) {
 		clearRoute();
+		window.clearInterval(timer);
+		pgGetRoute.value = 0;
 		var tracks = data.tracks;
 		for ( var i = 0; i < tracks.length; i++ ) {
 			var track = new google.maps.Polyline({

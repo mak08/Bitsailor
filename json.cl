@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2017-09-24 02:14:57>
+;;; Last Modified  <michael 2017-09-24 21:45:02>
  
 (in-package :virtualhelm)
 
@@ -48,12 +48,22 @@
      ;; (setf (gethash thing seen-ht) t)
      (format stream "{")
      (loop
-        :for (slot . rest) :on (class-slots (class-of thing))
+        :for (slotname . rest) :on (filtered-slots thing)
         :do  (progn
-               (format stream "\"~(~a~)\": " (slot-definition-name slot))
-               (json% stream (slot-value thing (slot-definition-name slot))))
+               (format stream "\"~(~a~)\": " slotname)
+               (json% stream (slot-value thing slotname)))
         :when rest :do (format stream ", "))
      (format stream "}"))))
+
+(defun filtered-slots (thing)
+  (let ((slots (class-slots (class-of thing))))
+    (loop
+       :for slot :in slots
+       :for sd-name = (slot-definition-name slot)
+       :for sd-name-str = (symbol-name sd-name)
+       :unless (eql (aref sd-name-str (1- (length sd-name-str))) #\%)
+       :collect sd-name)))
+    
 
 (defmethod json% (stream (thing standard-object))
   (declare (special seen-ht))

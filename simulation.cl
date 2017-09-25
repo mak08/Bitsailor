@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-22 23:26:56>
+;;; Last Modified <michael 2017-09-24 23:44:42>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -72,7 +72,7 @@
   (stepmax +24h+)
   (stepsize +10min+))
 
-(defstruct routeinfo tracks isochrones)
+(defstruct routeinfo best tracks isochrones)
 
 (defstruct isochrone time path)
 
@@ -160,8 +160,8 @@
                          (/ elapsed stepnum)
                          (coerce (/ pointnum stepnum) 'float)))
 
-            (make-routeinfo :tracks (extract-tracks
-                                     (construct-route isochrone))
+            (make-routeinfo :best (construct-route isochrone)
+                            :tracks (extract-tracks isochrone)
                             :isochrones isochrones))
         (log2:info "Isochrone ~a at ~a, ~a points" stepnum (to-rfc3339-timestring step-time) (length isochrone))
         ;; Iterate over each point in the current isochrone
@@ -302,7 +302,25 @@
   (< min-heading 180 max-heading))
            
 (defun construct-route (isochrone)
-  isochrone)
+  (let ((min-dtf nil)
+        (min-point nil)
+        (route nil))
+    (loop
+       :for point :across isochrone
+       :do (when (or (null min-point)
+                     (< (routepoint-destination-distance point) min-dtf))
+             (setf min-dtf (routepoint-destination-distance point)
+                   min-point point)))
+    (do ((cur-point min-point (routepoint-predecessor cur-point))
+         (predecessor nil cur-point))
+        ((null cur-point)
+         route)
+      (when (or (null predecessor)
+                (not (eql (routepoint-twa cur-point) (routepoint-twa predecessor)))
+                (not (eql (routepoint-sail cur-point) (routepoint-sail predecessor))))
+        (let ((next-point (copy-routepoint cur-point)))
+          (setf (routepoint-predecessor next-point) nil)
+          (push next-point route))))))
 
 (defun extract-tracks (isochrone)
   (loop

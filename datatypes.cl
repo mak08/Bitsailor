@@ -1,9 +1,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-19 20:34:15>
+;;; Last Modified <michael 2017-09-26 18:09:28>
 
 (in-package :virtualhelm)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Unit conversion
+
+(defun knots-to-m/s (knots)
+  (coerce (* 463 (/ knots 900)) 'double-float))
+
+(defun m/s-to-knots (m/s)
+  (coerce (* 900 (/ m/s 463)) 'double-float))
+
+(defun m/s-to-kM/H (m/s)
+  (* m/s 3.6))
  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; - HEADING values range from 0..360 (clockwise from north)

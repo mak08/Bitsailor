@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-23 00:24:21>
+;;; Last Modified <michael 2017-09-26 22:31:17>
 
 (in-package :virtualhelm)
 
@@ -200,6 +200,35 @@
            (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
+
+
+(defun |getWindAt| (location request response &key |offset| |lat| |lng|)
+  (declare (ignore location request))
+  (handler-case
+      (let* ((*read-default-float-format* 'double-float)
+             (session (find-or-create-session request response))
+             (routing (session-routing session))
+             (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
+                                  (get-forecast-bundle 'constant-wind-bundle)))
+             (time
+              (adjust-timestamp
+                  (fcb-time forecast-bundle)
+                (:offset :hour (read-from-string |offset|))))
+             (forecast (get-forecast forecast-bundle time))
+             (lat (read-from-string |lat|))
+             (lng (read-from-string |lng|)))
+        (when (< lng 0)
+          (incf lng 360))
+        (setf (http-body response)
+              (multiple-value-bind (dir speed)
+                  (get-wind-forecast forecast (make-latlng :lat lat :lng lng))
+                (format nil "{\"dir\": ~a, \"speed\": ~a}"
+                        (round-to-digits dir 2)
+                        (round-to-digits speed 2)))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 #|
 (defun |getTWAPath| (location request response &key |offset| |lat| |lon| |heading| |time|)

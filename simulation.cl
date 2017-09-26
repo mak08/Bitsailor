@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-26 01:54:58>
+;;; Last Modified <michael 2017-09-26 18:23:06>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -147,6 +147,8 @@
             ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
             (step-time (adjust-timestamp (now) (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
+            (step-time-string (format-rfc1123-timestring nil step-time)
+                              (format-rfc1123-timestring nil step-time))
             ;; Get wind data for simulation time
             (forecast (get-forecast forecast-bundle step-time)
                       (get-forecast forecast-bundle step-time)))
@@ -167,7 +169,7 @@
             (make-routeinfo :best (construct-route isochrone)
                             :tracks (extract-tracks isochrone)
                             :isochrones isochrones))
-        (log2:info "Isochrone ~a at ~a, ~a points" stepnum (to-rfc1123-timestring step-time) (length isochrone))
+        (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
              (lambda (routepoint)
@@ -197,7 +199,7 @@
                             (incf pointnum)
                             (setf (aref next-isochrone index)
                                   (make-routepoint :position new-pos
-                                                   :time (format-rfc1123-timestring nil step-time)
+                                                   :time step-time-string
                                                    :heading heading
                                                    :twa (round twa)
                                                    :speed speed
@@ -388,18 +390,6 @@
       (multiple-value-bind (speed sail)
           (get-max-speed angle wind-speed polars)
         (values speed angle sail wind-dir wind-speed)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Unit conversion
-
-(defun knots-to-m/s (knots)
-  (* 463d0 (/ knots 900d0)))
-
-(defun m/s-to-knots (m/s)
-  (* 900d0 (/ m/s 463d0)))
-
-(defun m/s-to-kM/H (m/s)
-  (* m/s 3.6))
 
 ;;; Translate latitude coordinates of start and destination to [0..360)
 ;;; Can't SETF LATLNG-LNG!

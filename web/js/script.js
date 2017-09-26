@@ -30,12 +30,16 @@ var ir_index;
 
 var mapEvent;
 
-var startMarker;
+var startMarker = {};
 var destinationMarker = {};
+var windProbe = {};
 
 var routeTracks = [];
 var routeIsochrones = [];
 var trackMarkers = [];
+
+var oldLat = 0;
+var oldLng = 0;
 
 function setUp () {
 	
@@ -58,11 +62,15 @@ function setUp () {
 
 	mapContextMenu = $("#mymenu")[0];
 
+
 	// Connect map events
 	google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
 	// google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
 	google.maps.event.addListener(googleMap, 'dragend', updateMap);
 	google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
+
+	// Track cursor position
+	google.maps.event.addListener(googleMap, 'mousemove', updateWindInfo);
 
 	// Connect button events
 	$("#bt_inc").click(onAdjustIndex);
@@ -110,6 +118,17 @@ function setUp () {
 		setRoutePoint('dest', destinationMarker.getPosition());
 	});
 	
+	windProbe = new google.maps.Marker({
+		position: {"lat": 55.391123, "lng": 13.792635},
+		map: googleMap,
+		title: 'Wind',
+		draggable: true
+	});
+
+	google.maps.event.addListener(windProbe,'dragend',function() {
+		probeWindAt(windProbe.getPosition());
+	});
+
 	getSession();
 
 	google.maps.event.addListenerOnce(googleMap, 'idle', function(){
@@ -213,6 +232,7 @@ function onSetParameter (event) {
 		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
 	});
 }
+
 
 function onMapMenuMouseLeave (event) {
 	var mapMenu=$("#mapMenu")[0];
@@ -421,6 +441,7 @@ function updateMap () {
 	var label = "⌊" + formatLatLng(sw) + " \\\\ " +  formatLatLng(ne) + "⌉"; 
 	$("#lb_map_bounds").text("Kartenausschnitt: " + label);
 	redrawWind("offset", ir_index.value);
+	windProbe.setPosition(sw);
 }
 
 
@@ -462,8 +483,45 @@ function drawWind (data) {
 	}
 }
 
-function getWind () {
+function updateWindInfo (event) {
+
+	var zoom = googleMap.getZoom();
+	var lat = roundTo(event.latLng.lat(), Math.floor(zoom/5));
+	var lng = roundTo(event.latLng.lng(), Math.floor(zoom/5));
+
+	var gN = 'N';
+	if ( lat < 0 ) { gN = 'S'; lat = -lat; }
+	var gE = 'E';
+	if ( lng < 0 ) { gE = 'W'; lng = -lng; }
+
+	$("#lb_position").text(formatLatLng(event.latLng));
+	if ( lat != oldLat || lng != oldLng) {
+		oldLat = lat;
+		oldLng = lng;
+		getWindData(event);
+	}
 }
+
+function getWindData (event) {
+	var position = event.latLng;
+	var lat = position.lat();
+	var lng = position.lng();
+	if ( lng < 0) lng += 360;
+	$.ajax({
+		url: "/function/vh:getWindAt" 
+		    + "?offset=" + $("#ir_index")[0].value
+			+ "&lat=" + lat
+			+ "&lng=" + lng,
+		dataType: 'json'
+	}).done( function(data) {
+		var dir = data.dir;
+		var speed = roundTo(ms2knots(data.speed), 2);
+		$("#lb_windatposition").text(speed + "kts " +  dir + "°" );
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		windInfo.setContent("Dir:" + "-" + ", Speed:" + "-");
+	});
+}
+
 
 function drawWindArrow(ctx, x, y, direction, speed) {
 	direction = direction + 90;
@@ -497,7 +555,7 @@ function ms2knots (speed) {
 }
 
 function formatLatLng (latlng) {
-	return formatDeg(toDeg(latlng.lat())) + ", " + formatDeg(toDeg(latlng.lng()));
+	return formatDeg(toDeg(latlng.lat())) + "N, " + formatDeg(toDeg(latlng.lng())) +"E";
 }
 
 function formatPosition (latlng) {

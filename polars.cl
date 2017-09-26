@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-24 01:51:47>
+;;; Last Modified <michael 2017-09-26 18:12:40>
 
 (in-package :virtualhelm)
 
@@ -162,10 +162,15 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
+;;;
+;;; JSON polars are in deg and kts!
+
 
 (defstruct sail name speed)
 
 (defun load-polars-json (&key (filename  "/home/michael/Repository/VirtualHelm/polars/IMOCA60VVOR17.json"))
+  ;;; Speed values are on knots. Convert to m/s.
+  ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (with-open-file (f filename :element-type 'character)
     (let ((json-string (make-string (file-length f))))
       (read-sequence json-string f)
@@ -181,16 +186,17 @@
                          :for speed :across tws
                          :for s :from 0
                          :do (setf (aref speeddata 0 (1+ s))
-                                   (coerce (aref tws s) 'double-float)))
+                                   (knots-to-m/s (aref tws s))))
                       (loop
                          :for angle :across twa
                          :for a :from 0
-                         :do (setf (aref speeddata (1+ a) 0) (coerce (aref twa a) 'double-float))
+                         :do (setf (aref speeddata (1+ a) 0)
+                                   (coerce (aref twa a) 'double-float))
                          :do (loop
                                 :for speed :across tws
                                 :for s :from 0
                                 :do (setf (aref speeddata (1+ a) (1+ s))
-                                          (coerce (aref (aref (joref saildef "speed") a) s) 'double-float))))
+                                          (knots-to-m/s (aref (aref (joref saildef "speed") a) s)))))
                       (make-sail :name (joref saildef "name")
                                  :speed speeddata)))))))
 

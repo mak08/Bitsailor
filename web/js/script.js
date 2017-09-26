@@ -502,24 +502,34 @@ function updateWindInfo (event) {
 	}
 }
 
+var running = false;
 function getWindData (event) {
 	var position = event.latLng;
 	var lat = position.lat();
 	var lng = position.lng();
 	if ( lng < 0) lng += 360;
-	$.ajax({
-		url: "/function/vh:getWindAt" 
-		    + "?offset=" + $("#ir_index")[0].value
-			+ "&lat=" + lat
-			+ "&lng=" + lng,
-		dataType: 'json'
-	}).done( function(data) {
-		var dir = data.dir;
-		var speed = roundTo(ms2knots(data.speed), 2);
-		$("#lb_windatposition").text(speed + "kts " +  dir + "°" );
-	}).fail( function (jqXHR, textStatus, errorThrown) {
-		windInfo.setContent("Dir:" + "-" + ", Speed:" + "-");
-	});
+
+	if (running === false) {
+		running = true;
+
+		$.ajax({
+			url: "/function/vh:getWindAt" 
+				+ "?offset=" + $("#ir_index")[0].value
+				+ "&lat=" + roundTo(lat, 4)
+				+ "&lng=" + roundTo(lng, 4),
+			dataType: 'json'
+		}).done( function(data) {
+			var dir = data.dir;
+			var speed = roundTo(ms2knots(data.speed), 2);
+			$("#lb_windatposition").text(speed + "kts " +  dir + "°" );
+			running = false;
+		}).fail( function (jqXHR, textStatus, errorThrown) {
+			windInfo.setContent("Dir:" + "-" + ", Speed:" + "-");
+			running = false;
+		});
+	} else {
+		console.log('running');
+	}
 }
 
 

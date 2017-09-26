@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-21 00:40:26>
+;;; Last Modified <michael 2017-09-27 00:35:48>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -94,7 +94,10 @@
   (loop
      :for k :from 1
      :for offset :from 0 :to 240 :by 3
-     :collect (download-noaa-file date cycle offset)))
+     :for file = (ignore-errors
+                   (download-noaa-file date cycle offset))
+     :while file
+     :collect file))
 
 (defun noaa-spec-and-destfile (date &key (cycle "0") (offset 6) (basename "pgrb2") (resolution "1p00"))
   (let* ((directory

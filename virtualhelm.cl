@@ -1,9 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-22 00:50:35>
+;;; Last Modified <michael 2017-09-27 21:54:55>
 
 (in-package :virtualhelm)
+
+(setf (log2:log-level "virtualhelm") log2:+info+)
+(setf (log2:log-level "polarcl") log2:+warning+)
+(setf (log2:log-level "mbedtls") log2:+warning+)
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")

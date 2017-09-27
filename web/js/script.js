@@ -32,7 +32,8 @@ var mapEvent;
 
 var startMarker = {};
 var destinationMarker = {};
-var windProbe = {};
+
+var windData = [];
 
 var routeTracks = [];
 var routeIsochrones = [];
@@ -118,17 +119,6 @@ function setUp () {
 		setRoutePoint('dest', destinationMarker.getPosition());
 	});
 	
-	windProbe = new google.maps.Marker({
-		position: {"lat": 55.391123, "lng": 13.792635},
-		map: googleMap,
-		title: 'Wind',
-		draggable: true
-	});
-
-	google.maps.event.addListener(windProbe,'dragend',function() {
-		probeWindAt(windProbe.getPosition());
-	});
-
 	getSession();
 
 	google.maps.event.addListenerOnce(googleMap, 'idle', function(){
@@ -438,10 +428,9 @@ function updateMap () {
 	south = sw.lat();
 	west = sw.lng();
 	east = ne.lng();
-	var label = "⌊" + formatLatLng(sw) + " \\\\ " +  formatLatLng(ne) + "⌉"; 
+	var label = "⌊" + formatLatLng(sw) + " \\ " +  formatLatLng(ne) + "⌉"; 
 	$("#lb_map_bounds").text("Kartenausschnitt: " + label);
 	redrawWind("offset", ir_index.value);
-	windProbe.setPosition(sw);
 }
 
 
@@ -470,7 +459,7 @@ function redrawWind (timeParamName, timeParamValue) {
 function drawWind (data) {
 	$("#lb_modelrun").text(data[0]);
 	$("#lb_index").text(data[1]);
-	data = data[2];
+	windData = data[2];
 	var ctx = mapCanvas.getContext("2d");
 	ctx.globalAlpha = 0.6;
 	ctx.clearRect(0, 0, geometry.width, geometry.height);
@@ -478,7 +467,7 @@ function drawWind (data) {
 		var yOffset = y * ddy + (ddy / 2);
 		for ( var x = 0; x < xSteps; x++ ) {
 			var xOffset = x * ddx + (ddx / 2);
-			drawWindArrow(ctx, xOffset, yOffset, data[y][x][0], data[y][x][1]);
+			drawWindArrow(ctx, xOffset, yOffset, windData[y][x][0], windData[y][x][1]);
 		}
 	}
 }
@@ -495,43 +484,21 @@ function updateWindInfo (event) {
 	if ( lng < 0 ) { gE = 'W'; lng = -lng; }
 
 	$("#lb_position").text(formatLatLng(event.latLng));
-	if ( lat != oldLat || lng != oldLng) {
-		oldLat = lat;
-		oldLng = lng;
-		getWindData(event);
-	}
+
+	var mapBounds = googleMap.getBounds();
+
+	var sw = mapBounds.getSouthWest();
+	var ne = mapBounds.getNorthEast();
+	north = ne.lat();
+	south = sw.lat();
+	west = sw.lng();
+	east = ne.lng();
+	var iLat = Math.round((event.latLng.lat() - north) / (south - north) * ySteps);
+	var iLng = xSteps - Math.round((event.latLng.lng() - east) / (west - east) * xSteps);
+	var windDir = roundTo(windData[iLat][iLng][0], 0);
+	var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
+	$("#lb_windatposition").text(windDir + "°, " + windSpeed + "kts");
 }
-
-var running = false;
-function getWindData (event) {
-	var position = event.latLng;
-	var lat = position.lat();
-	var lng = position.lng();
-	if ( lng < 0) lng += 360;
-
-	if (running === false) {
-		running = true;
-
-		$.ajax({
-			url: "/function/vh:getWindAt" 
-				+ "?offset=" + $("#ir_index")[0].value
-				+ "&lat=" + roundTo(lat, 4)
-				+ "&lng=" + roundTo(lng, 4),
-			dataType: 'json'
-		}).done( function(data) {
-			var dir = data.dir;
-			var speed = roundTo(ms2knots(data.speed), 2);
-			$("#lb_windatposition").text(speed + "kts " +  dir + "°" );
-			running = false;
-		}).fail( function (jqXHR, textStatus, errorThrown) {
-			windInfo.setContent("Dir:" + "-" + ", Speed:" + "-");
-			running = false;
-		});
-	} else {
-		console.log('running');
-	}
-}
-
 
 function drawWindArrow(ctx, x, y, direction, speed) {
 	direction = direction + 90;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-30 21:37:27>
+;;; Last Modified <michael 2017-10-01 22:23:03>
 
 (in-package :virtualhelm)
 
@@ -24,8 +24,7 @@
     (ensure-map)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
-    ;; (start-grib-updates)
-    ))
+    (start-grib-updates)))
 
 (defun start-grib-updates (&key (resolution "0.250"))
   "Check for new forecast data an remove old data periodically"

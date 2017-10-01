@@ -60,6 +60,23 @@
           <button id="bt_inc6" type="button">+6</button>
         </div>
 		<div class="cell">
+			<label style="font-weight:bold">Start</label>
+		</div>
+		<div class="cell">
+			<label>Latitude:</label>
+			<input id="tb_dstartlat" type="text" maxlength="2" style="width:3em"/>°
+			<input id="tb_mstartlat" type="text" maxlength="2" style="width:2em"/>'
+			<input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot
+			<button id="bt_setstartlat" style="width:5em; text-align:center;">Set</button>
+		</div>
+ 		<div class="cell">
+			<label>Longitude:</label>
+			<input id="tb_dstartlng" type="text" maxlength="2" style="width:3em"/>°
+			<input id="tb_mstartlng" type="text" maxlength="2" style="width:2em"/>'
+			<input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot
+			<button id="bt_setstartlng" style="width:5em; text-align:center;">Set</button>
+		</div>
+		<div class="cell">
 			<label style="font-weight:bold">Polars</label>
 			<select id="sel_polars" name="polars">
 				<option value="VO65">Volvo Ocean 65</option>
@@ -100,6 +117,9 @@
 				<option value="300">300</option>
 				<option value="400">400</option>
 			</select>
+		</div>
+		<div class="cell">
+			<label>Use foils</label><input id="cb_usefoils" name="usefoils" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
 			<label>Fast manoeuvres</label><input id="cb_fastmanoeuvres" name="fastmanoeuvres" type="checkbox" checked="true">

@@ -31,6 +31,7 @@ var ir_index;
 var mapEvent;
 
 var startMarker = {};
+
 var destinationMarker = {};
 
 var windData = [];
@@ -78,6 +79,10 @@ function setUp () {
 	$("#bt_dec").click(onAdjustIndex);
 	$("#bt_inc6").click(onAdjustIndex);
 	$("#bt_dec6").click(onAdjustIndex);
+
+	$("#bt_setstartlat").click(onStartDMSUpdated);
+	
+	$("#bt_setstartlng").click(onStartDMSUpdated);
 	
 	// Connect option selectors
 	$("#sel_polars").change(onSetParameter);
@@ -126,14 +131,55 @@ function setUp () {
 	});
 }
 
+function updateStartPosition (lat, lng) {
+	var latLng = new google.maps.LatLng(lat, lng);
+	startMarker.setPosition(latLng);
+	var latDMS = toDeg(lat);
+	$("#tb_dstartlat")[0].value = latDMS.u * latDMS.g;
+	$("#tb_mstartlat")[0].value = latDMS.m;
+	$("#tb_sstartlat")[0].value = latDMS.s;
+	var lngDMS = toDeg(lng);
+	$("#tb_dstartlng")[0].value = lngDMS.u * lngDMS.g;
+	$("#tb_mstartlng")[0].value = lngDMS.m;
+	$("#tb_sstartlng")[0].value = lngDMS.s;
+}
+
+function onStartDMSUpdated (component) {
+	var d = $("#tb_dstartlat")[0].value;
+	var u = sign(d);
+	var g = Math.abs(d);
+	var latDMS =  {
+		"u": u,
+		"g": g,
+		"m": $("#tb_mstartlat")[0].value,
+		"s": $("#tb_sstartlat")[0].value,
+		"cs": 0
+	}
+	d = $("#tb_dstartlng")[0].value;
+	u = sign(d);
+	g = Math.abs(d);
+	var lngDMS =  {
+		"u": u,
+		"g": g,
+		"m": $("#tb_mstartlng")[0].value,
+		"s": $("#tb_sstartlng")[0].value,
+		"cs": 0
+	}
+	var lat = fromDeg(latDMS);
+	var lng = fromDeg(lngDMS);
+	var latLng = new google.maps.LatLng(lat, lng);
+	setRoutePoint('start', latLng);
+}
+
+
 function getSession () {
 	$.ajax({ 
 		url: "/function/vh:getSession",
 		dataType: 'json'
 	}).done( function(session) {
 
-		var start = new google.maps.LatLng(session.routing.start.lat, session.routing.start.lng);
-		startMarker.setPosition(start);
+		updateStartPosition(session.routing.start.lat, session.routing.start.lng);
+
 		var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
 		destinationMarker.setPosition(dest);
 
@@ -218,7 +264,7 @@ function onSetParameter (event) {
 			redrawWind("offset", irIndex.value);
 		}
 		alert("OK");
-	}).fail( function (jqXHR, textStatus, errorThrown) {
+	}).fail( function (jqXHR, textStatus, errorThrown) {deg
 		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
 	});
 }
@@ -269,7 +315,7 @@ function setRoutePoint(point, latlng) {
 	}).done( function(data) {
 		// alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
 		if ( point === 'start' ) {
-			startMarker.setPosition(latlng);
+			updateStartPosition(lat, lng);
 		} else if ( point === 'dest' ) {
 			destinationMarker.setPosition(latlng);
 		}
@@ -540,8 +586,14 @@ function formatPosition (latlng) {
 }
 
 function formatDeg (deg) {
-	var val = deg.g + "°" + deg.m + "'" + deg.s + "." + deg.cs + "\"" ;
+	var val = deg.g + "°" + deg.m + "'" + deg.s;
 	return (deg.u < 0) ? "-" + val : val;
+}
+
+function fromDeg (deg) {
+	var sign = deg.u || 1.0;
+	var abs = 0.0 + deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000);
+	return 1.0 * sign * abs
 }
 
 function toDeg (number) {
@@ -553,7 +605,11 @@ function toDeg (number) {
 	frac = frac - m/60;
 	var s = Math.floor(frac * 3600);
 	var cs = roundTo(360000 * (frac - s/3600), 0);
-	return {u:u, g:g, m:m, s:s, cs:cs};
+	while ( cs >= 100 ) {
+		cs = cs - 100;
+		s = s + 1;
+	}
+	return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
 }
 
 function roundTo (number, digits) {

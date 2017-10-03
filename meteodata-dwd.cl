@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-20 21:26:34>
+;;; Last Modified <michael 2017-10-03 16:45:06>
 
 (in-package :virtualhelm)
 
@@ -46,6 +46,9 @@
 (defmethod fcb-time ((bundle dwd-icon-bundle))
   (let ((grib (dwd-icon-data bundle)))
     (gribfile-forecast-time grib)))
+
+(defmethod fcb-max-offset ((bundle dwd-icon-bundle))
+  72)
 
 (defclass dwd-icon-forecast (forecast)
   ((dwd-icon-bundle :reader dwd-icon-bundle :initarg :bundle)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-26 18:09:28>
+;;; Last Modified <michael 2017-10-03 20:44:23>
 
 (in-package :virtualhelm)
 
@@ -106,7 +106,7 @@
                      :format '((:year 4) "-" (:month 2) "-" (:day 2) ", " (:hour 2) "Uhr") :timezone timezone))  
 
 (defmethod print-object ((thing timestamp) stream)
-  (format-timespec-datehh stream thing))
+  (format-rfc1123-timestring stream thing))
 
 (defstruct grib-values
   forecast-time                 ; 

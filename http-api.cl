@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-26 22:31:17>
+;;; Last Modified <michael 2017-10-03 16:42:42>
 
 (in-package :virtualhelm)
 
@@ -84,6 +84,9 @@
             (error "Invalid forecast designator ~a" |value|))))
         ((string= |name| "polars")
          (setf (routing-polars routing) |value|))
+        ((string= |name| "foils")
+         (log2:info "foils=~" |value|)
+         (setf (routing-foils routing) (string= |value| "true")))
         ((string= |name| "fastmanoeuvres")
          (log2:info "fastmnaoeuvres=~" |value|)
          (setf (routing-fastmanoeuvres routing) (string= |value| "true")))
@@ -180,8 +183,9 @@
                 (with-output-to-string (s)
                   (json s
                         (list
-                         (format-timespec-datehh nil (fcb-time forecast-bundle) :timezone *default-timezone*)
-                         (format-timespec-datehh nil forecast-time :timezone *default-timezone*)
+                         (format-rfc1123-timestring nil (fcb-time forecast-bundle) :timezone *default-timezone*)
+                         (format-rfc1123-timestring nil forecast-time :timezone *default-timezone*)
+                         (fcb-max-offset forecast-bundle)
                          (loop
                             :for lat :from north :downto south :by ddy
                             :collect (loop

@@ -39,132 +39,139 @@
     </div>
 
 	<div class="row">
-	  <div class="col-2">
+	  <div class="col-3">
 		<div class="cell">
-			<label style="font-weight:bold">Forecast data</label>
-			<select id="sel_forecastbundle" name="forecastbundle">
-				<option value="DWD-ICON-BUNDLE">DWD GDS ICON 0.25</option>
-				<option value="NOAA-BUNDLE">NOAA GFS 1.00</option>
-			</select>
+		  <label style="font-weight:bold">Forecast data</label>
+		  <select id="sel_forecastbundle" name="forecastbundle">
+			<option value="DWD-ICON-BUNDLE">DWD GDS ICON 0.25</option>
+			<option value="NOAA-BUNDLE">NOAA GFS 1.00</option>
+		  </select>
+		  <label></label>
+		  <label id="lb_fcmax" style="display:inline-block; vertical-align:bottom">---</label>
 		</div>
         <div class="cell">
 		  <label>Forecast time</label>
-          <input id="ir_index" type = "range" min="0" max="72" step="1" value="0" style="display:inline-block; vertical-align:middle" onchange="onRedrawWind()"/>
-		  <label id="lb_fcmax" style="display:inline-block; vertical-align:middle">72</label>
+          <nobr><b>
+			  <label id="lb_index" style="display:inline-block; vertical-align:middle; font-size: 80%"></label>
+		  </b></nobr>
         </div>
         <div class="cell">
-          <label id="lb_index" style="font-size: 90%"></label>
+		  <label></label>
           <button id="bt_dec6" type="button">-6</button>
           <button id="bt_dec" type="button">-1</button>
+          <input id="ir_index" type = "range" min="0" max="72" step="1" value="0" style="display:inline-block; vertical-align:middle"/>
           <button id="bt_inc" type="button">+1</button>
           <button id="bt_inc6" type="button">+6</button>
         </div>
 		<div class="cell">
-			<label style="font-weight:bold">Start</label>
+		  <label style="font-weight:bold">Start</label>
 		</div>
 		<div class="cell">
-			<label>Latitude:</label>
-			<input id="tb_dstartlat" type="text" maxlength="2" style="width:3em"/>°
-			<input id="tb_mstartlat" type="text" maxlength="2" style="width:2em"/>'
-			<input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot
-			<button id="bt_setstartlat" style="width:5em; text-align:center;">Set</button>
+		  <label>Latitude:</label>
+		  <input id="tb_dstartlat" type="text" maxlength="3" style="width:3em"/>°
+		  <input id="tb_mstartlat" type="text" maxlength="2" style="width:2em"/>'
+		  <input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot N 
 		</div>
  		<div class="cell">
-			<label>Longitude:</label>
-			<input id="tb_dstartlng" type="text" maxlength="2" style="width:3em"/>°
-			<input id="tb_mstartlng" type="text" maxlength="2" style="width:2em"/>'
-			<input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot
-			<button id="bt_setstartlng" style="width:5em; text-align:center;">Set</button>
+		  <label>Longitude:</label>
+		  <input id="tb_dstartlng" type="text" maxlength="3" style="width:3em"/>°
+		  <input id="tb_mstartlng" type="text" maxlength="2" style="width:2em"/>'
+		  <input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot E
+		</div>
+   		<div class="cell">
+		  <label></label>
+		  <button id="bt_setstartlng" style="width:5em; text-align:center;">Set</button>
+		</div>
+		<div class="cell"><label style="font-weight:bold">Settings</label></div>
+		<div class="cell">
+		  <label>Polars</label>
+		  <select id="sel_polars" name="polars">
+			<option value="VO65">Volvo Ocean 65</option>
+			<option value="IMOCA60">IMOCA 60</option>
+			<option value="IMOCA60VVOR17">IMOCA 60 VVOR 2017</option>
+			<option value="MINITRANSAT17">Mini Transat 2017</option>
+		  </select>
 		</div>
 		<div class="cell">
-			<label style="font-weight:bold">Polars</label>
-			<select id="sel_polars" name="polars">
-				<option value="VO65">Volvo Ocean 65</option>
-				<option value="IMOCA60">IMOCA 60</option>
-				<option value="IMOCA60VVOR17">IMOCA 60 VVOR 2017</option>
-				<option value="MINITRANSAT17">Mini Transat 2017</option>
-			</select>
-		</div>
-		<div class="cell"><label style="font-weight:bold">Options</label></div>
-		<div class="cell">
-			<label>Duration</label>
-			<select id="sel_duration" name="duration">
-				<option value="6">6 hours</option>
-				<option value="12">12 hours</option>
-				<option value="24" selected>24 hours</option>
-				<option value="36">36 hours</option>
-				<option value="48">2 days</option>
-				<option value="96">4 days</option>
-				<option value="144">6 days</option>
-			</select>
+		  <label>Duration</label>
+		  <select id="sel_duration" name="duration">
+			<option value="6">6 hours</option>
+			<option value="12">12 hours</option>
+			<option value="24" selected>24 hours</option>
+			<option value="36">36 hours</option>
+			<option value="48">2 days</option>
+			<option value="96">4 days</option>
+			<option value="144">6 days</option>
+		  </select>
 		</div>
 		<div class="cell">
-			<label>Search angle</label>
-			<select id="sel_searchangle" name="searchangle">
-				<option value="45">90°</option>
-				<option value="60">120°</option>
-				<option value="75" selected>150°</option>
-				<option value="85">170°</option>
-				<option value="90">180°</option>
-			</select>
+		  <label>Search angle</label>
+		  <select id="sel_searchangle" name="searchangle">
+			<option value="45">90°</option>
+			<option value="60">120°</option>
+			<option value="75" selected>150°</option>
+			<option value="85">170°</option>
+			<option value="90">180°</option>
+		  </select>
 		</div>
 		<div class="cell">
-			<label>Points per isochrone</label>
-			<select id="sel_pointsperisochrone"  name="pointsperisochrone">
-				<option value="100" selected>100</option>
-				<option value="150">150</option>
-				<option value="200">200</option>
-				<option value="300">300</option>
-				<option value="400">400</option>
-			</select>
+		  <label>Points per isochrone</label>
+		  <select id="sel_pointsperisochrone"  name="pointsperisochrone">
+			<option value="100" selected>100</option>
+			<option value="150">150</option>
+			<option value="200">200</option>
+			<option value="300">300</option>
+			<option value="400">400</option>
+		  </select>
 		</div>
 		<div class="cell">
-			<label>Use foils</label><input id="cb_usefoils" name="usefoils" type="checkbox" checked="true">
+		  <label>Use foils</label><input id="cb_usefoils" name="usefoils" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
-			<label>Fast manoeuvres</label><input id="cb_fastmanoeuvres" name="fastmanoeuvres" type="checkbox" checked="true">
+		  <label>Fast manoeuvres</label><input id="cb_fastmanoeuvres" name="fastmanoeuvres" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
-			<label>Display tracks</label><input id="cb_tracks" type="checkbox" checked="true">
+		  <label>Display tracks</label><input id="cb_tracks" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
-			<label>Display isochrones</label><input id="cb_isochrones" type="checkbox" checked="true">
+		  <label>Display isochrones</label><input id="cb_isochrones" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
-			<button id="bt_getroute"  style="width:130px; text-align:center; font-size:100%; font-weight:bold;" onclick="getRoute();">Calculate route</button>
-			<label></label>
+		  <button id="bt_getroute" style="width:300px; text-align:center; font-size:100%; font-weight:bold;" onclick="getRoute();">Calculate route</button>
 		</div>
-		<div>
-			<progress id="pg_getroute" max="300" value="0"><progress>
+		<div class="cell">
+		  <progress id="pg_getroute" style="width:300px" max="300" value="0"><progress>
 		</div>
 		<div class="cell" style="align-self:bottom">
-			<label>Position</label>
-			<label id="lb_position" style="font-size:90%">-.-.-.-</label>
+		  <label>Position</label>
+		  <nobr>
+		  <label id="lb_position" style="font-size:90%">-.-.-.-</label>
+		  </nobr>	
 		</div>
 		<div class="cell" style="align-self:bottom">
-			<label>Wind</label>
-			<label id="lb_windatposition" style="font-size:90%">-.-.-.-</label>
+		  <label>Wind</label>
+		  <label id="lb_windatposition" style="font-size:90%">-.-.-.-</label>
 		</div>
       </div>
-      <div class="col-10" style="height:820px;">
+      <div class="col-9" style="height:820px;">
         <div id="googleMap" style="position:absolute; width:1104px; height:804px; border:solid 2px black; border-radius:4px;">
 		</div>
 		<div id="player_area" style="position:absolute; width:1104px; height:804px;  border: 2px solid #505056; background:none; pointer-events:none; ">
 		  <canvas id="map_canvas" style="background:none;pointer-events:none; border: 0px solid green; " width="1100px" height="800px"></canvas>
 		</div>
 		<div id="mapMenu" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:140px; height:90px; display:none;">
-			<button id="bt_setstart" style="width:130px; text-align:left;" onclick="setRoute('start');">Set Start</button>
-			<button id="bt_setdest"  style="width:130px; text-align:left;" onclick="setRoute('dest');">Set Destination</button>
-			<button id="bt_ltpmark"  style="width:130px; text-align:left;" onclick="setRoute('ltp);">Add port mark</button>
-			<button id="bt_ltsmark"  style="width:130px; text-align:left;" onclick="setRoute('lts');">Add stbd mark</button>
+		  <button id="bt_setstart" style="width:130px; text-align:left;" onclick="setRoute('start');">Set Start</button>
+		  <button id="bt_setdest"  style="width:130px; text-align:left;" onclick="setRoute('dest');">Set Destination</button>
+		  <button id="bt_ltpmark"  style="width:130px; text-align:left;" onclick="setRoute('ltp);">Add port mark</button>
+		  <button id="bt_ltsmark"  style="width:130px; text-align:left;" onclick="setRoute('lts');">Add stbd mark</button>
 		</div>
       </div>
     </div>
     <div class="row" style="color: #ffffff; background-color:#505056">
-      <div class="col-2" style="font-size:80%">
-	<div class="cell">
-        <label>Stand:</label> <label id="lb_modelrun"></label>
-	</div>
+      <div class="col-3" style="font-size:80%">
+		<div class="cell">
+          <label>Stand:</label> <label id="lb_modelrun"></label>
+		</div>
 
       </div>
       <div class="col-3">
@@ -186,7 +193,7 @@
 		  Beaufort
 		</div>
       </div>
-	  <div class="col-5">
+	  <div class="col-4">
 	    <label id="lb_map_bounds" style="font-size:80%"></label>
 	  </div>	
       <div class="col-2" style="font-size: 70%">

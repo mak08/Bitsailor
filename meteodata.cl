@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Meteorological Data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-20 20:56:47>
+;;; Last Modified <michael 2017-10-03 16:43:23>
 
 (in-package :virtualhelm)
 
@@ -63,6 +63,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Get the time of the first forecast in the bundle
 (defgeneric fcb-time (forecast-bundle)
+  )
+
+(defgeneric fcb-max-offset (forecast-bundle)
   )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

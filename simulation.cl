@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-26 18:23:06>
+;;; Last Modified <michael 2017-10-03 20:47:56>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -32,13 +32,11 @@
 (in-package :virtualhelm)
 
 ;;; time in seconds
-(defconstant +5min+ (* 5 60))
 (defconstant +10min+ (* 10 60))
 (defconstant +20min+ (* 20 60))
 (defconstant +30min+ (* 30 60))
 (defconstant +60min+ (* 60 60))
 (defconstant +3h+ (* 3 60 60))
-(defconstant +4h+ (* 4 60 60))
 (defconstant +6h+ (* 6 60 60))
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
@@ -63,7 +61,9 @@
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)
   (polars "VO65")
+  (foils t)
   (fastmanoeuvres t)
+  (minwind 2.0578) ;; m/s !!
   (start +lessables+)
   (dest +lacoruna+)
   (fan 75)
@@ -74,7 +74,7 @@
 
 (defstruct routeinfo best tracks isochrones)
 
-(defstruct isochrone time path)
+(defstruct isochrone time offset path)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -129,7 +129,9 @@
             (stepnum 0
                      (1+ stepnum))
             (pointnum 0)
-            (elapsed0 (now))
+            (start-time (now))
+            (start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
+            (elapsed0 start-time)
             ;; The initial isochrone is just the start point, heading towards destination
             (isochrone (list (make-routepoint :position start-pos
                                               :time (format-rfc1123-timestring nil elapsed0)
@@ -145,7 +147,7 @@
             (min-heading 360 360)
             (max-heading 0 0)
             ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
-            (step-time (adjust-timestamp (now) (:offset :sec step-size))
+            (step-time (adjust-timestamp start-time (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
             (step-time-string (format-rfc1123-timestring nil step-time)
                               (format-rfc1123-timestring nil step-time))
@@ -224,12 +226,19 @@
           (declare (ignore q))
           (when (zerop r)
             (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
+                                       :offset (+ start-offset (/ (* stepnum step-size) 3600))
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
 
 (defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
   (multiple-value-bind (speed twa sail wind-dir wind-speed)
       (heading-boatspeed forecast polars-name (routepoint-position predecessor) heading)
+    (when
+        ;; Foiling speed if twa and tws (in m/s) falls in the specified range
+        (and (routing-foils routing)
+             (< 80 twa 160)
+             (< 8.23 wind-speed 18.00))
+      (setf speed (* speed 1.04)))
     (let ((pspeed
            (if (routing-fastmanoeuvres routing)
                (* speed 0.9375)

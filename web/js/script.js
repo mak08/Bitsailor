@@ -79,6 +79,7 @@ function setUp () {
 	$("#bt_dec").click(onAdjustIndex);
 	$("#bt_inc6").click(onAdjustIndex);
 	$("#bt_dec6").click(onAdjustIndex);
+	$("#ir_index").change(onAdjustIndex);
 
 	$("#bt_setstartlat").click(onStartDMSUpdated);
 	
@@ -432,7 +433,7 @@ function getRoute () {
 			});
 			isochrone.setPath(isochrones[i].path);
 			isochrone.setMap(googleMap);
-			addInfo(isochrone, isochrones[i].time)
+			addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
 			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
@@ -440,8 +441,9 @@ function getRoute () {
 	});
 }
 
-function addInfo (isochrone, info) {
-	isochrone.set("time", info);
+function addInfo (isochrone, time, offset) {
+	isochrone.set("time", time);
+	isochrone.set("offset", offset);
 	isochrone.addListener('click', function () {
 		var iso = isochrone;
 		onSelectIsochrone(iso);
@@ -449,6 +451,8 @@ function addInfo (isochrone, info) {
 }
 
 function onSelectIsochrone (isochrone) {
+	var offset = isochrone.get('offset');
+	$("#ir_index")[0].value = offset;
 	var time = isochrone.get('time');
 	redrawWind("time", time);
 }
@@ -505,7 +509,8 @@ function redrawWind (timeParamName, timeParamValue) {
 function drawWind (data) {
 	$("#lb_modelrun").text(data[0]);
 	$("#lb_index").text(data[1]);
-	windData = data[2];
+	$("#lb_fcmax").text(' ' + data[2] + 'hrs');
+	windData = data[3];
 	var ctx = mapCanvas.getContext("2d");
 	ctx.globalAlpha = 0.6;
 	ctx.clearRect(0, 0, geometry.width, geometry.height);
@@ -543,7 +548,7 @@ function updateWindInfo (event) {
 	var iLng = xSteps - Math.round((event.latLng.lng() - east) / (west - east) * xSteps);
 	var windDir = roundTo(windData[iLat][iLng][0], 0);
 	var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
-	$("#lb_windatposition").text(windDir + "°, " + windSpeed + "kts");
+	$("#lb_windatposition").text(windDir + "° | " + windSpeed + "kts");
 }
 
 function drawWindArrow(ctx, x, y, direction, speed) {
@@ -578,11 +583,11 @@ function ms2knots (speed) {
 }
 
 function formatLatLng (latlng) {
-	return formatDeg(toDeg(latlng.lat())) + "N, " + formatDeg(toDeg(latlng.lng())) +"E";
+	return formatDeg(toDeg(latlng.lat())) + "N | " + formatDeg(toDeg(latlng.lng())) +"E";
 }
 
 function formatPosition (latlng) {
-	return formatDeg(toDeg(latlng.lat)) + "N, " + formatDeg(toDeg(latlng.lng)) + "E";
+	return formatDeg(toDeg(latlng.lat)) + "N | " + formatDeg(toDeg(latlng.lng)) + "E";
 }
 
 function formatDeg (deg) {

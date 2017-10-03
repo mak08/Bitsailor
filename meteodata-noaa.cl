@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-27 00:35:48>
+;;; Last Modified <michael 2017-10-03 18:07:46>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -36,6 +36,10 @@
   (let ((grib (noaa-data bundle)))
     (gribfile-forecast-time grib)))
 
+(defmethod fcb-max-offset ((bundle noaa-bundle))
+  (let ((grib (noaa-data bundle)))
+    (* 3 (1- (length (gribfile-data grib))))))
+
 (defclass noaa-forecast (forecast)
   ((noaa-bundle :reader noaa-bundle :initarg :bundle)
    (fc-time :reader fc-time :initarg :time)))
@@ -63,21 +67,16 @@
   ;; If we don't have files, or if newer files than we have should be available,
   ;; update to the latest available files.
   (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))
-    (cond
-      ((or (null timestamp)
-           (>= (timestamp-difference (now) timestamp) (* 6 3600)))
-       (log2:info "Updating NOAA forecast from ~a" timestamp)
-       ;; Forecast is outdated, fetch new. The latest available cycle will should be 4:30
-       (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -6)))
-              (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
-              (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
-              (dummy (log2:info "At ~a, looking for cycle ~a-~a" (now) date  cycle))
-              (filenames (download-noaa-bundle date cycle)))
-         (setf *noaa-forecast-bundle*
-               (make-instance 'noaa-bundle
-                              :data (read-noaa-wind-data filenames)))))
-      (t
-       (log2:info "Forecast data for ~a already loaded" timestamp)))))
+    (log2:info "Updating NOAA forecast from ~a" timestamp)
+    ;; Forecast is outdated, fetch new. The latest available cycle will should be 4:30
+    (let* ((new-timestamp (adjust-timestamp (now) (offset :hour -5)))
+           (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
+           (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
+           (dummy (log2:info "At ~a, looking for cycle ~a-~a" (now) date  cycle))
+           (filenames (download-noaa-bundle date cycle)))
+      (setf *noaa-forecast-bundle*
+            (make-instance 'noaa-bundle
+                           :data (read-noaa-wind-data filenames))))))
     
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Download forecasts from NOAA.
@@ -97,7 +96,9 @@
      :for file = (ignore-errors
                    (download-noaa-file date cycle offset))
      :while file
-     :collect file))
+     :collect file :into files
+     :finally (return (values files
+                              cycle))))
 
 (defun noaa-spec-and-destfile (date &key (cycle "0") (offset 6) (basename "pgrb2") (resolution "1p00"))
   (let* ((directory
@@ -157,6 +158,8 @@
 
 (defun read-noaa-wind-data (filenames)
   "Read GRIB data into U and V arrays. Assumes the GRIB file contains U-GRD and V-GRD values"
+  (when (null filenames)
+    (error "No input files"))
   (let ((index (grib-index-new '("step" "shortName"))))
     (dolist (filename filenames)
       (log2:info "Add file ~a~%" filename)

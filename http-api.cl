@@ -1,14 +1,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-03 16:42:42>
+;;; Last Modified <michael 2017-10-05 20:22:26>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; HTTP API
 
-(defparameter *session-ht* (make-hash-table :test #'equalp))
+;;; Keep session table when reloading system!
+(defvar *session-ht* (make-hash-table :test #'equalp))
 
 (defstruct session
   (session-id (make-session-id))
@@ -71,7 +72,9 @@
 ;;; setParameter
 (defun |setParameter| (location request response &key |name| |value|)
   (declare (ignore location))
+
   (let* ((session (find-or-create-session request response)))
+    (log2:info "Session ~a: ~a=~a" (session-session-id session) |name| |value|)
     (let ((routing (session-routing session)))
       (cond
         ((string= |name| "forecastbundle")
@@ -85,11 +88,11 @@
         ((string= |name| "polars")
          (setf (routing-polars routing) |value|))
         ((string= |name| "foils")
-         (log2:info "foils=~" |value|)
          (setf (routing-foils routing) (string= |value| "true")))
         ((string= |name| "fastmanoeuvres")
-         (log2:info "fastmnaoeuvres=~" |value|)
          (setf (routing-fastmanoeuvres routing) (string= |value| "true")))
+        ((string= |name| "minwind")
+         (setf (routing-minwind routing) (string= |value| "true")))
         ((string= |name| "duration")
          (let ((duration-hrs
                 (read-from-string |value|)))
@@ -98,12 +101,14 @@
         ((string= |name| "searchangle")
          (let ((fan (read-from-string |value|)))
            (setf (routing-fan routing) fan)))
+        ((string= |name| "angleincrement")
+         (let ((increment (read-from-string |value|)))
+           (setf (routing-angle-increment routing) increment)))
         ((string= |name| "pointsperisochrone")
          (let ((points-per-isochrone
                 (read-from-string |value|)))
            (setf (routing-max-points-per-isochrone routing)
                  points-per-isochrone)))
-        
         (t
          (log2:error "Unsupported parameter ~a ~a" |name| |value|)
          (error "unsupported")))
@@ -205,48 +210,20 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
-
-(defun |getWindAt| (location request response &key |offset| |lat| |lng|)
-  (declare (ignore location request))
+(defun |getTWAPath| (location request response &key |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (session (find-or-create-session request response))
              (routing (session-routing session))
-             (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
-                                  (get-forecast-bundle 'constant-wind-bundle)))
-             (time
-              (adjust-timestamp
-                  (fcb-time forecast-bundle)
-                (:offset :hour (read-from-string |offset|))))
-             (forecast (get-forecast forecast-bundle time))
              (lat (read-from-string |lat|))
              (lng (read-from-string |lng|)))
-        (when (< lng 0)
-          (incf lng 360))
         (setf (http-body response)
-              (multiple-value-bind (dir speed)
-                  (get-wind-forecast forecast (make-latlng :lat lat :lng lng))
-                (format nil "{\"dir\": ~a, \"speed\": ~a}"
-                        (round-to-digits dir 2)
-                        (round-to-digits speed 2)))))
+              (with-output-to-string (s)
+                (json s (get-twa-path routing :lat lat :lng lng)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
-
-#|
-(defun |getTWAPath| (location request response &key |offset| |lat| |lon| |heading| |time|)
-  (setf (http-body response)
-        (with-output-to-string (s)
-          (let ((*read-default-float-format* 'double-float))
-            (let ((offset (read-from-string |offset|)))
-              (json s (twa (now)
-                           offset
-                           (make-latlng :lat (coerce (read-from-string |lat|) 'double-float)
-                                        :lng (coerce (read-from-string |lon|) 'double-float)) 
-                           (read-from-string |time|)
-                           +10min+)))))))
-|#
 
 ;; This must be done in the config file.
 ;; polarcl:reset deletes registered function,

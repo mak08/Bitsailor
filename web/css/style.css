@@ -26,6 +26,9 @@
     padding: 5px;
 }
 
+#googleMap img {
+    filter:Chroma(color=#123456)
+}
 .row {
 	display: flex;
 	flex-direction: row;

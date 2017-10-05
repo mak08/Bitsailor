@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Meteorological Data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-03 16:43:23>
+;;; Last Modified <michael 2017-10-05 19:47:01>
 
 (in-package :virtualhelm)
 
@@ -118,6 +118,10 @@
 
 (defclass constant-wind-forecast (forecast)
   ())
+
+
+(defmethod fcb-max-offset ((bundle constant-wind-bundle))
+  192)
 
 (defmethod get-forecast ((bundle constant-wind-bundle) (utc-time local-time:timestamp))
   (make-instance 'constant-wind-forecast))

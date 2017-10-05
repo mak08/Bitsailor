@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-03 20:47:56>
+;;; Last Modified <michael 2017-10-05 20:49:41>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -63,11 +63,11 @@
   (polars "VO65")
   (foils t)
   (fastmanoeuvres t)
-  (minwind 2.0578) ;; m/s !!
+  (minwind t) ;; m/s !!
   (start +lessables+)
   (dest +lacoruna+)
   (fan 75)
-  (angle-increment 2)
+  (angle-increment 5)
   (max-points-per-isochrone 100)
   (stepmax +24h+)
   (stepsize +10min+))
@@ -233,6 +233,8 @@
 (defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
   (multiple-value-bind (speed twa sail wind-dir wind-speed)
       (heading-boatspeed forecast polars-name (routepoint-position predecessor) heading)
+    (when (routing-minwind routing)
+      (setf speed (max 2.0578d0 speed)))
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
         (and (routing-foils routing)
@@ -343,7 +345,9 @@
                 (push (routepoint-position p) v))))
 
 (defun get-twa-path (routing
-                     &key 
+                     &key
+                       lat
+                       lng
                        (total-time +12h+)
                        (step-num (truncate total-time (routing-stepsize routing))))
   (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
@@ -356,7 +360,7 @@
     ;; Can't modify latlng!
     ;; (gm-to-grib! startpos)
     ;; (gm-to-grib! destpos)
-    (let* ((heading (course-angle startpos destpos))
+    (let* ((heading (course-angle startpos (make-latlng :lat lat :lng lng)))
            (curpos (copy-latlng startpos))
            (wind-dir (get-wind-forecast (get-forecast forecast-bundle start-time) startpos))
            (twa (heading-twa wind-dir heading))

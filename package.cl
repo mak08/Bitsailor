@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-26 22:17:30>
+;;; Last Modified <michael 2017-10-03 21:27:14>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -17,11 +17,10 @@
    ;; HTTP API
    "getSession"
    "getWind"
-   "getWindAt"
    "setRoute"
    "setParameter"
    "getRoute"
-   "getWindAtPosition"
+   "getTWAPath"
    ;; VH backend
    "*MAP-FILE*"
    "*GRIB-FOLDER*"

@@ -43,6 +43,8 @@ var trackMarkers = [];
 var oldLat = 0;
 var oldLng = 0;
 
+
+
 function setUp () {
 	
 	setupColors();
@@ -52,10 +54,32 @@ function setUp () {
 	geometry.width = mapRect.width;
 	geometry.height = mapRect.height;
 
+	// Map styles: hide everything by default, except landcover.
+	var mapStyles = [
+		{ //hide all fills
+			elementType: 'geometry.fill',
+			stylers: [
+				{ visibility: 'off' }
+			]
+		},
+		{ //hide all fills
+			featureType: 'landscape.natural.landcover',
+			elementType: 'geometry.fill',
+			stylers: [
+				{ visibility: 'on' }
+			]
+		}
+	];
+
+	// Create a map object, and include the MapTypeId to add
+	// to the map type control.
 	var mapProp = {
 		center:new google.maps.LatLng(49.187, 8.473),
 		zoom:5,
 		scaleControl: true,
+		styles: mapStyles,
+		backgroundColor: 'hsla(0, 0%, 0%, 0)',
+		noClear: true,
 		mapTypeId:google.maps.MapTypeId.ROADMAP,
 		draggableCursor: "crosshair"
 	};
@@ -73,6 +97,7 @@ function setUp () {
 
 	// Track cursor position
 	google.maps.event.addListener(googleMap, 'mousemove', updateWindInfo);
+	google.maps.event.addListener(googleMap, 'click', getTWAPath);
 
 	// Connect button events
 	$("#bt_inc").click(onAdjustIndex);
@@ -90,8 +115,11 @@ function setUp () {
 	$("#sel_forecastbundle").change(onSetParameter);
 	$("#sel_duration").change(onSetParameter);
 	$("#sel_searchangle").change(onSetParameter);
+	$("#sel_angleincrement").change(onSetParameter);
 	$("#sel_pointsperisochrone").change(onSetParameter);
+	$("#cb_usefoils").change(onSetParameter);
 	$("#cb_fastmanoeuvres").change(onSetParameter);
+	$("#cb_minwind").change(onSetParameter);
 
 	// Tracks & Isochrones display is handled by the client directly
 	$("#cb_tracks").change(onSetClientParameter);
@@ -231,6 +259,19 @@ function getSession () {
 		var selMaxPoints = $("#sel_pointsperisochrone")[0];
 		selMaxPoints.value = maxPoints;
 
+		var useFoils = session.routing.foils;
+		var cbUseFoils = $("#cb_usefoils")[0];
+		cbUseFoils.checked = useFoils;
+
+		var fastManoeuvres = session.routing.fastmanoeuvres;
+		var cbFastManoeuvres = $("#cb_fastmanoeuvres")[0];
+		cbFastManoeuvres.checked = fastManoeuvres;
+
+		var minWind = session.routing.minwind;
+		var cbMinWind = $("#cb_minwind")[0];
+		cbMinWind.checked = minWind;
+
+
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert('Error: ' + textStatus + ' ' + errorThrown);
 	});
@@ -245,7 +286,10 @@ function onSetClientParameter (event) {
 
 function onSetParameter (event) {
 	var paramName = event.currentTarget.name;
-	var paramValue = event.currentTarget.checked || event.currentTarget.value;
+	var paramValue = event.currentTarget.checked;
+	if ( paramValue === undefined ) {
+		paramValue = event.currentTarget.value;
+	}
 	$.ajax({ 
 		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
 		dataType: 'json'
@@ -265,7 +309,7 @@ function onSetParameter (event) {
 			redrawWind("offset", irIndex.value);
 		}
 		alert("OK");
-	}).fail( function (jqXHR, textStatus, errorThrown) {deg
+	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
 	});
 }
@@ -441,6 +485,22 @@ function getRoute () {
 	});
 }
 
+var twaPath = undefined;
+
+function drawTWAPath(data) {
+	if (twaPath !== undefined) {
+		twaPath.setMap(null);
+	}
+	twaPath = new google.maps.Polyline({
+		geodesic: true,
+		strokeColor: '#008020',
+		strokeOpacity: 0.8,
+		strokeWeight: 3
+	});
+	twaPath.setPath(data);
+	twaPath.setMap(googleMap);
+}
+
 function addInfo (isochrone, time, offset) {
 	isochrone.set("time", time);
 	isochrone.set("offset", offset);
@@ -483,6 +543,18 @@ function updateMap () {
 	redrawWind("offset", ir_index.value);
 }
 
+function getTWAPath(event) {
+	var lat = event.latLng.lat();
+	var lng = event.latLng.lng();
+	$.ajax({ 
+		url: "/function/vh:getTWAPath?lat=" + lat + "&lng=" + lng,
+		dataType: 'json'
+	}).done( function(data) {
+		drawTWAPath(data);
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		alert(textStatus + ' ' + errorThrown);
+	});
+}
 
 function redrawWind (timeParamName, timeParamValue) {
 	

@@ -31,6 +31,7 @@ var ir_index;
 var mapEvent;
 
 var startMarker = {};
+var twaAnchor = {};
 
 var destinationMarker = {};
 
@@ -42,7 +43,6 @@ var trackMarkers = [];
 
 var oldLat = 0;
 var oldLng = 0;
-
 
 
 function setUp () {
@@ -137,6 +137,7 @@ function setUp () {
 		title: 'Start',
 		draggable: true
 	});
+	startMarker.addListener('click', function () { markerClicked(startMarker) });
 
 	google.maps.event.addListener(startMarker,'dragend',function() {
 		setRoutePoint('start', startMarker.getPosition());
@@ -148,6 +149,8 @@ function setUp () {
 		title: 'Destination',
 		draggable: true
 	});
+	destinationMarker.addListener('click', function () { markerClicked(destinationMarker) });
+
 
 	google.maps.event.addListener(destinationMarker,'dragend',function() {
 		setRoutePoint('dest', destinationMarker.getPosition());
@@ -158,6 +161,10 @@ function setUp () {
 	google.maps.event.addListenerOnce(googleMap, 'idle', function(){
 		updateMap();
 	});
+}
+
+function markerClicked (marker) {
+	twaAnchor = marker.getPosition();
 }
 
 function updateStartPosition (lat, lng) {
@@ -333,7 +340,7 @@ function onMapRightClick (event) {
 		pageX = event.pixel.x;
 		pageY = event.pixel.y;
 	}
-		
+	
 	mapMenu.style.display = "block";
 	mapMenu.style.top = pageY + "px";
 	mapMenu.style.left = pageX + "px";
@@ -450,9 +457,9 @@ function getRoute () {
 				map: googleMap,
 				draggable: false
 			});
+			addMarkerListener(trackMarker);
 			addWaypointInfo(trackMarker, best[i], best[i+1]);
 			trackMarkers[i] = trackMarker;
-
 		}
 
 		var tracks = data.tracks;
@@ -483,6 +490,10 @@ function getRoute () {
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert("Error:" + textStatus + ' ' + errorThrown);
 	});
+}
+
+function addMarkerListener(marker) {
+	marker.addListener('click', function () { markerClicked(marker) });
 }
 
 var twaPath = undefined;
@@ -544,16 +555,23 @@ function updateMap () {
 }
 
 function getTWAPath(event) {
-	var lat = event.latLng.lat();
-	var lng = event.latLng.lng();
-	$.ajax({ 
-		url: "/function/vh:getTWAPath?lat=" + lat + "&lng=" + lng,
-		dataType: 'json'
-	}).done( function(data) {
-		drawTWAPath(data);
-	}).fail( function (jqXHR, textStatus, errorThrown) {
-		alert(textStatus + ' ' + errorThrown);
-	});
+	if ( twaAnchor.lat === undefined ) {
+		alert('Select TWA anchor point');
+	} else {
+		var latA = twaAnchor.lat();
+		var lngA = twaAnchor.lng();
+		var lat = event.latLng.lat();
+		var lng = event.latLng.lng();
+		$.ajax({ 
+			url: "/function/vh:getTWAPath?latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+			dataType: 'json'
+		}).done( function(data) {
+			drawTWAPath(data.path);
+			$("#lb_twa").text(data.twa);
+		}).fail( function (jqXHR, textStatus, errorThrown) {
+			alert(textStatus + ' ' + errorThrown);
+		});
+	}
 }
 
 function redrawWind (timeParamName, timeParamValue) {

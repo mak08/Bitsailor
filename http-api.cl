@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-05 20:22:26>
+;;; Last Modified <michael 2017-10-07 00:33:15>
 
 (in-package :virtualhelm)
 
@@ -210,16 +210,18 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
-(defun |getTWAPath| (location request response &key |lat| |lng|)
+(defun |getTWAPath| (location request response &key |latA| |lngA| |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (session (find-or-create-session request response))
              (routing (session-routing session))
+             (lat-a (read-from-string |latA|))
+             (lng-a (read-from-string |lngA|))
              (lat (read-from-string |lat|))
              (lng (read-from-string |lng|)))
         (setf (http-body response)
               (with-output-to-string (s)
-                (json s (get-twa-path routing :lat lat :lng lng)))))
+                (json s (get-twa-path routing :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

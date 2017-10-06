@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-05 20:49:41>
+;;; Last Modified <michael 2017-10-07 00:34:15>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -75,6 +75,8 @@
 (defstruct routeinfo best tracks isochrones)
 
 (defstruct isochrone time offset path)
+
+(defstruct twainfo twa path)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -171,7 +173,7 @@
             (make-routeinfo :best (construct-route isochrone)
                             :tracks (extract-tracks isochrone)
                             :isochrones isochrones))
-        (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
+        (log2:trace "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
              (lambda (routepoint)
@@ -346,6 +348,8 @@
 
 (defun get-twa-path (routing
                      &key
+                       lat-a
+                       lng-a
                        lat
                        lng
                        (total-time +12h+)
@@ -355,17 +359,19 @@
          (polars-name (routing-polars routing))
          (start-time (now))
          (step-time (routing-stepsize routing))
-         (startpos (routing-start routing))
-         (destpos (routing-dest routing)))
+         (startpos (make-latlng :lat lat-a :lng lng-a)))
     ;; Can't modify latlng!
     ;; (gm-to-grib! startpos)
     ;; (gm-to-grib! destpos)
     (let* ((heading (course-angle startpos (make-latlng :lat lat :lng lng)))
            (curpos (copy-latlng startpos))
            (wind-dir (get-wind-forecast (get-forecast forecast-bundle start-time) startpos))
-           (twa (heading-twa wind-dir heading))
+           (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
-      (dotimes (k step-num (reverse (push (copy-latlng curpos) path)))
+      (dotimes (k
+                 step-num
+                (make-twainfo :twa twa
+                              :path (reverse (push (copy-latlng curpos) path))))
         ;; Save current position
         (push (copy-latlng curpos) path)
         (adjust-timestamp! start-time (:offset :sec step-time))

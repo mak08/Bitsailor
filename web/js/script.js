@@ -32,6 +32,7 @@ var mapEvent;
 
 var startMarker = {};
 var twaAnchor = {};
+var twaTime = {};
 
 var destinationMarker = {};
 
@@ -165,6 +166,7 @@ function setUp () {
 
 function markerClicked (marker) {
 	twaAnchor = marker.getPosition();
+	twaTime = marker.get('time');
 }
 
 function updateStartPosition (lat, lng) {
@@ -409,6 +411,7 @@ function addWaypointInfo(trackMarker, point, nextPoint) {
 	var infowindow = new google.maps.InfoWindow({
 		content: makeWaypointInfo(point, nextPoint)
 	});
+	trackMarker.set('time', point.time);
 	trackMarker.addListener('mouseover', function() {
 		infowindow.open(googleMap, trackMarker);
 	});
@@ -418,13 +421,14 @@ function addWaypointInfo(trackMarker, point, nextPoint) {
 }
 function makeWaypointInfo(point, nextPoint) {
 	result =  "<div>";
-	result = result + "<b>Position</b>:" + formatPosition(point.position) + "<p>"
-		+ "<b>Time</b>: " + point.time + "<p>";
+	result = result 
+		+ "<b>Time</b>: " + point.time + "<p>" 
+		+ "<b>Position</b>: " + formatPosition(point.position) + "<p>";
 	if ( nextPoint !== undefined ) {
-		result = result + "<b>Heading</b>:" + nextPoint.heading + "°<p>"
-			+ "<b>Wind</b>:" + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°<p>"
-			+ "<b>Speed</b>:" + roundTo(ms2knots(nextPoint.speed), 2) + "kts" + "<b> TWA</b>:" + nextPoint.twa + "</p>"
-			+ "<b>Sail</b>:" + nextPoint.sail + "<p>";
+		result = result + "<p><b>Wind</b>: " + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°</p>"
+			+ "<p><b> TWA</b>: " + nextPoint.twa + "<b> Heading</b>: " + nextPoint.heading + "°</p>"
+			+ "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 2) + "kts</p>" 
+			+ "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
 	}
 	result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
 		+ "</div>";
@@ -496,20 +500,39 @@ function addMarkerListener(marker) {
 	marker.addListener('click', function () { markerClicked(marker) });
 }
 
-var twaPath = undefined;
+var twaPath = [];
 
 function drawTWAPath(data) {
-	if (twaPath !== undefined) {
-		twaPath.setMap(null);
+	for ( var i=0; i<twaPath.length; i++ ) {
+		twaPath[i].setMap(null);
 	}
-	twaPath = new google.maps.Polyline({
-		geodesic: true,
-		strokeColor: '#008020',
-		strokeOpacity: 0.8,
-		strokeWeight: 3
-	});
-	twaPath.setPath(data);
-	twaPath.setMap(googleMap);
+	twaPath = [];
+	var color = '#00a0c0';
+    var lineSymbol = {
+        path: google.maps.SymbolPath.CIRCLE
+    }
+	for ( var i=1; i<data.length; i++ ) {
+		var twaPathSegment;
+		if ( (i % 6) === 0 ) {
+			twaPathSegment = new google.maps.Polyline({
+				geodesic: true,
+				strokeColor: color,
+				strokeOpacity: 1,
+				strokeWeight: 4,
+				icons: [{icon: lineSymbol,	offset: '100%'}]
+			});
+		} else {
+			twaPathSegment = new google.maps.Polyline({
+				geodesic: true,
+				strokeColor: color,
+				strokeOpacity: 1,
+				strokeWeight: 4
+			});
+		}
+		twaPathSegment.setPath([data[i-1], data[i]]);
+		twaPathSegment.setMap(googleMap);
+		twaPath[i-1] = twaPathSegment;
+	}
 }
 
 function addInfo (isochrone, time, offset) {
@@ -542,6 +565,11 @@ function onAdjustIndex (event) {
 }
 
 function updateMap () {
+	if ( googleMap.zoom < 6 ) {
+		googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+	} else {
+		googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+	}
 	var mapBounds = googleMap.getBounds();
 	var sw = mapBounds.getSouthWest();
 	var ne = mapBounds.getNorthEast();
@@ -555,15 +583,15 @@ function updateMap () {
 }
 
 function getTWAPath(event) {
-	if ( twaAnchor.lat === undefined ) {
-		alert('Select TWA anchor point');
+	if ( twaAnchor.lat === undefined || twaTime === undefined ) {
+		console.log('No TWA anchor point selected');
 	} else {
 		var latA = twaAnchor.lat();
 		var lngA = twaAnchor.lng();
 		var lat = event.latLng.lat();
 		var lng = event.latLng.lng();
 		$.ajax({ 
-			url: "/function/vh:getTWAPath?latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+			url: "/function/vh:getTWAPath?time=" + twaTime + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
 			dataType: 'json'
 		}).done( function(data) {
 			drawTWAPath(data.path);

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-07 00:34:15>
+;;; Last Modified <michael 2017-10-07 23:23:22>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -136,14 +136,14 @@
             (elapsed0 start-time)
             ;; The initial isochrone is just the start point, heading towards destination
             (isochrone (list (make-routepoint :position start-pos
-                                              :time (format-rfc1123-timestring nil elapsed0)
+                                              :time (format-rfc3339-timestring nil elapsed0)
                                               :heading  dest-heading
                                               :destination-distance (course-distance start-pos dest-pos)))
                        next-isochrone)
             ;; The next isochrone - in addition we collect all hourly isochrones
             (successors-per-point (1+ (truncate (* (routing-fan routing) 2) angle-increment)))
-            (next-isochrone (make-array (* successors-per-point (length isochrone)))
-                            (make-array (* successors-per-point (length isochrone))))
+            (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
+                            (make-array 0 :adjustable t :fill-pointer 0))
             (index 0 0)
             ;; Get min and max heading of the point of each isochrone for sorting
             (min-heading 360 360)
@@ -151,8 +151,8 @@
             ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
             (step-time (adjust-timestamp start-time (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
-            (step-time-string (format-rfc1123-timestring nil step-time)
-                              (format-rfc1123-timestring nil step-time))
+            (step-time-string (format-rfc3339-timestring nil step-time)
+                              (format-rfc3339-timestring nil step-time))
             ;; Get wind data for simulation time
             (forecast (get-forecast forecast-bundle step-time)
                       (get-forecast forecast-bundle step-time)))
@@ -173,7 +173,7 @@
             (make-routeinfo :best (construct-route isochrone)
                             :tracks (extract-tracks isochrone)
                             :isochrones isochrones))
-        (log2:trace "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
+        (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
              (lambda (routepoint)
@@ -183,7 +183,6 @@
                       (left (normalize-heading (- dest-angle (routing-fan routing))))
                       (right (normalize-heading (+ dest-angle (routing-fan routing)))))
                  ;; Keep track of min and max heading of point in isochrone
-                 ;; -- Could be optimzed, don't the firt and last point always provide extreme headings?
                  (when (< left min-heading)
                    (setf min-heading left))
                  (when (> right max-heading)
@@ -195,32 +194,35 @@
                     :for heading = (normalize-heading heading-index)
                     :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
                             (get-penalized-avg-speed routing routepoint forecast polars-name heading)
-                          (let*
-                              ((new-pos (add-distance-exact (routepoint-position routepoint)
-                                                            (* speed step-size)
-                                                            (coerce heading 'double-float)))
-                               (dtf (course-distance new-pos dest-pos)))
-                            (incf pointnum)
-                            (setf (aref next-isochrone index)
-                                  (make-routepoint :position new-pos
-                                                   :time step-time-string
-                                                   :heading heading
-                                                   :twa (round twa)
-                                                   :speed speed
-                                                   :penalty reason
-                                                   :sail sail
-                                                   :wind-dir wind-dir
-                                                   :wind-speed wind-speed
-                                                   :is-land nil ;; compute this after filtering
-                                                   :predecessor routepoint
-                                                   :origin-angle (course-angle start-pos new-pos)
-                                                   :destination-angle "not computed"
-                                                   :destination-distance dtf))
-                            (incf index)
-                            (when (< dtf 10000)
-                              (unless reached
-                                (log2:info "Reached destination at ~a" step-time)
-                                (setf reached t))))))))
+                          (when (or (<= -175 twa -40)
+                                    (<= 40 twa 175))
+                            (let*
+                                ((new-pos (add-distance-exact (routepoint-position routepoint)
+                                                              (* speed step-size)
+                                                              (coerce heading 'double-float)))
+                                 (dtf (course-distance new-pos dest-pos)))
+                              (incf pointnum)
+                              (vector-push-extend
+                               (make-routepoint :position new-pos
+                                                :time step-time-string
+                                                :heading heading
+                                                :twa (round twa)
+                                                :speed speed
+                                                :penalty reason
+                                                :sail sail
+                                                :wind-dir wind-dir
+                                                :wind-speed wind-speed
+                                                :is-land nil ;; compute this after filtering
+                                                :predecessor routepoint
+                                                :origin-angle (course-angle start-pos new-pos)
+                                                :destination-angle "not computed"
+                                                :destination-distance dtf)
+                               next-isochrone)
+                              (incf index)
+                              (when (< dtf 10000)
+                                (unless reached
+                                  (log2:info "Reached destination at ~a" step-time)
+                                  (setf reached t)))))))))
              isochrone)
         (setf next-isochrone (filter-isochrone next-isochrone min-heading max-heading max-points))
         ;; Collect hourly isochrones

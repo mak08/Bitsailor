@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-07 23:23:22>
+;;; Last Modified <michael 2017-10-08 20:54:04>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -350,6 +350,7 @@
 
 (defun get-twa-path (routing
                      &key
+                       time
                        lat-a
                        lng-a
                        lat
@@ -359,7 +360,7 @@
   (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars-name (routing-polars routing))
-         (start-time (now))
+         (start-time (or time (now)))
          (step-time (routing-stepsize routing))
          (startpos (make-latlng :lat lat-a :lng lng-a)))
     ;; Can't modify latlng!

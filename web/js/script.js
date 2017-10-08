@@ -89,7 +89,6 @@ function setUp () {
 
 	mapContextMenu = $("#mymenu")[0];
 
-
 	// Connect map events
 	google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
 	// google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
@@ -108,7 +107,6 @@ function setUp () {
 	$("#ir_index").change(onAdjustIndex);
 
 	$("#bt_setstartlat").click(onStartDMSUpdated);
-	
 	$("#bt_setstartlng").click(onStartDMSUpdated);
 	
 	// Connect option selectors
@@ -152,16 +150,16 @@ function setUp () {
 	});
 	destinationMarker.addListener('click', function () { markerClicked(destinationMarker) });
 
-
 	google.maps.event.addListener(destinationMarker,'dragend',function() {
 		setRoutePoint('dest', destinationMarker.getPosition());
 	});
 	
-	getSession();
-
 	google.maps.event.addListenerOnce(googleMap, 'idle', function(){
 		updateMap();
 	});
+
+	getSession();
+
 }
 
 function markerClicked (marker) {
@@ -583,23 +581,27 @@ function updateMap () {
 }
 
 function getTWAPath(event) {
+	var latA, lngA, time ;
 	if ( twaAnchor.lat === undefined || twaTime === undefined ) {
-		console.log('No TWA anchor point selected');
+		latA = startMarker.getPosition().lat();
+		lngA = startMarker.getPosition().lng();
+		time = $('#lb_index').text();
 	} else {
-		var latA = twaAnchor.lat();
-		var lngA = twaAnchor.lng();
-		var lat = event.latLng.lat();
-		var lng = event.latLng.lng();
-		$.ajax({ 
-			url: "/function/vh:getTWAPath?time=" + twaTime + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
-			dataType: 'json'
-		}).done( function(data) {
-			drawTWAPath(data.path);
-			$("#lb_twa").text(data.twa);
-		}).fail( function (jqXHR, textStatus, errorThrown) {
-			alert(textStatus + ' ' + errorThrown);
-		});
+		latA = twaAnchor.lat();
+		lngA = twaAnchor.lng();
+		time = twaTime;
 	}
+	var lat = event.latLng.lat();
+	var lng = event.latLng.lng();
+	$.ajax({ 
+		url: "/function/vh:getTWAPath?time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+		dataType: 'json'
+	}).done( function(data) {
+		drawTWAPath(data.path);
+		$("#lb_twa").text(data.twa);
+	}).fail( function (jqXHR, textStatus, errorThrown) {
+		alert(textStatus + ' ' + errorThrown);
+	});
 }
 
 function redrawWind (timeParamName, timeParamValue) {

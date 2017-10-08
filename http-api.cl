@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-07 22:40:08>
+;;; Last Modified <michael 2017-10-08 20:54:25>
 
 (in-package :virtualhelm)
 
@@ -188,8 +188,8 @@
                 (with-output-to-string (s)
                   (json s
                         (list
-                         (format-rfc1123-timestring nil (fcb-time forecast-bundle) :timezone *default-timezone*)
-                         (format-rfc1123-timestring nil forecast-time :timezone *default-timezone*)
+                         (format-rfc3339-timestring nil (fcb-time forecast-bundle) :timezone *default-timezone*)
+                         (format-rfc3339-timestring nil forecast-time :timezone *default-timezone*)
                          (fcb-max-offset forecast-bundle)
                          (loop
                             :for lat :from north :downto south :by ddy
@@ -222,7 +222,7 @@
              (lng (read-from-string |lng|)))
         (setf (http-body response)
               (with-output-to-string (s)
-                (json s (get-twa-path routing :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+                (json s (get-twa-path routing :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

@@ -1,12 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-05 19:57:21>
+;;; Last Modified <michael 2017-10-08 20:52:41>
 
 (in-package :virtualhelm)
 
 (setf (log2:log-level "virtualhelm") log2:+info+)
-(setf (log2:log-level "polarcl") log2:+warning+)
+(setf (log2:log-level "polarcl") log2:+info+)
 (setf (log2:log-level "mbedtls") log2:+warning+)
 
 (defvar *server-config* 

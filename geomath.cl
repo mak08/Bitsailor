@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-20 23:38:15>
+;;; Last Modified <michael 2017-10-12 21:34:04>
 
 (in-package :virtualhelm)
 
@@ -38,17 +38,18 @@
 
 (defun bilinear (w a w0 w1 a0 a1 v00 v01 v10 v11)
   ;; Bilinear interpolation at P=(w a) given values f(w0, a0) = v00 etc.
+  ;; If a0=a1 (w0=w1) interpolate at the resp. midpoints of v00, v01, v10, v11
   (declare (double-float w a w0 w1 a0 a1 v00 v10 v01 v11))
   (assert (<= w0 w w1))
   (assert (<= a0 a a1))
   (let* ((dw
-          (if (= w0 w1) 0d0 (/ (- w w0) (- w1 w0))))
+          (if (= w0 w1) 0.5d0 (/ (- w w0) (- w1 w0))))
          (v0
           (+ v00 (* dw (- v01 v00))))
          (v1
           (+ v10 (* dw (- v11 v10))))
          (da
-          (if (= a0 a1) 0d0 (/ (- a a0) (- a1 a0))))
+          (if (= a0 a1) 0.5d0 (/ (- a a0) (- a1 a0))))
          (v
           (+ v0 (* da (- v1 v0)))))
     (declare (double-float dw v0 v1 da v))

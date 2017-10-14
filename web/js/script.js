@@ -175,7 +175,7 @@ function onDelayedStart (event) {
 			url: "/function/vh:setParameter" + "?name=" + 'starttime',
 			dataType: 'json'
 		}).done( function(data) {
-			alert("OK");
+			console.log("OK");
 		}).fail( function (jqXHR, textStatus, errorThrown) {
 			alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
 		});
@@ -313,7 +313,7 @@ function getSession () {
 
 
 	}).fail( function (jqXHR, textStatus, errorThrown) {
-		alert('Error: ' + textStatus + ' ' + errorThrown);
+		alert(textStatus + ' ' + errorThrown);
 	});
 }
 
@@ -355,7 +355,7 @@ function onSetParameter (event) {
 			}
 			redrawWind("offset", irIndex.value);
 		}
-		alert("OK");
+		console.log("OK");
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
 	});
@@ -423,6 +423,8 @@ function setRoute (point) {
 }
 
 function clearRoute() {
+	clearTWAPath();
+
 	for ( var i = 0; i<trackMarkers.length; i++ ) {
 		trackMarkers[i].setMap(undefined);
 	}
@@ -530,7 +532,9 @@ function getRoute () {
 			routeIsochrones[i] = isochrone;
 		}
 	}).fail( function (jqXHR, textStatus, errorThrown) {
-		alert("Error:" + textStatus + ' ' + errorThrown);
+		window.clearInterval(timer);
+		pgGetRoute.value = pgGetRoute.max;
+		alert(textStatus + ' ' + errorThrown);
 	});
 }
 
@@ -540,11 +544,15 @@ function addMarkerListener(marker) {
 
 var twaPath = [];
 
-function drawTWAPath(data) {
+function clearTWAPath() {
 	for ( var i=0; i<twaPath.length; i++ ) {
 		twaPath[i].setMap(null);
 	}
 	twaPath = [];
+}
+
+function drawTWAPath(data) {
+	clearTWAPath();
 	var color = '#00a0c0';
     var lineSymbol = {
         path: google.maps.SymbolPath.CIRCLE

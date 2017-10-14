@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-15 00:18:00>
+;;; Last Modified <michael 2017-10-15 00:49:01>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -247,6 +247,8 @@
              (< 80 twa 160)
              (< 8.23 wind-speed 18.00))
       (setf speed (* speed 1.04)))
+    (when (routing-polish routing)
+      (setf speed (* speed 1.003)))
     (let ((pspeed
            (if (routing-fastmanoeuvres routing)
                (* speed 0.9375)

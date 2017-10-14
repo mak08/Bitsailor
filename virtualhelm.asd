@@ -2,7 +2,7 @@
 ;;; Description
 ;;; Author         Michael Kappert
 ;;; Created        22/03/2000 11:15:16
-;;; Last Modified  <michael 2017-09-23 00:51:16>
+;;; Last Modified  <michael 2017-10-13 22:52:58>
 
 (defsystem "virtualhelm"
   :description "Sailing route optimization using isochrones search"
@@ -26,6 +26,7 @@
                (:file "json")
                (:file "http-api")
                (:file "virtualhelm")
+               (:file "util")
                (:file "test")))
 
 ;;; EOF

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-12 21:34:04>
+;;; Last Modified <michael 2017-10-13 22:46:38>
 
 (in-package :virtualhelm)
 
@@ -13,10 +13,6 @@
 (defconstant +radius+
   6371229d0
   "Assumed radius of Earth in metres")
-
-(defconstant +radius²+
-  (* +radius+ +radius+)
-  "Square of Earth radius")
 
 (defconstant +pi/180+
   (/ pi 180))

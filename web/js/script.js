@@ -117,6 +117,7 @@ function setUp () {
 	$("#sel_angleincrement").change(onSetParameter);
 	$("#sel_pointsperisochrone").change(onSetParameter);
 	$("#cb_usefoils").change(onSetParameter);
+	$("#cb_usepolish").change(onSetParameter);
 	$("#cb_fastmanoeuvres").change(onSetParameter);
 	$("#cb_minwind").change(onSetParameter);
 
@@ -265,6 +266,10 @@ function getSession () {
 		var maxPoints = session.routing["max-points-per-isochrone"];
 		var selMaxPoints = $("#sel_pointsperisochrone")[0];
 		selMaxPoints.value = maxPoints;
+
+		var angleIncrement = session.routing["angle-increment"];
+		var selAngleIncrement = $("#sel_angleincrement")[0];
+		selAngleIncrement.value = angleIncrement;
 
 		var useFoils = session.routing.foils;
 		var cbUseFoils = $("#cb_usefoils")[0];

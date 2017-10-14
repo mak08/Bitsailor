@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-08 20:54:25>
+;;; Last Modified <michael 2017-10-14 00:55:51>
 
 (in-package :virtualhelm)
 
@@ -89,6 +89,8 @@
          (setf (routing-polars routing) |value|))
         ((string= |name| "foils")
          (setf (routing-foils routing) (string= |value| "true")))
+        ((string= |name| "polish")
+         (setf (routing-polish routing) (string= |value| "true")))
         ((string= |name| "fastmanoeuvres")
          (setf (routing-fastmanoeuvres routing) (string= |value| "true")))
         ((string= |name| "minwind")

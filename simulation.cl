@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-08 20:54:04>
+;;; Last Modified <michael 2017-10-14 00:58:50>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -60,14 +60,15 @@
         
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)
-  (polars "VO65")
+  (polars "VO65id7.0")
   (foils t)
+  (polish t)
   (fastmanoeuvres t)
   (minwind t) ;; m/s !!
   (start +lessables+)
   (dest +lacoruna+)
   (fan 75)
-  (angle-increment 5)
+  (angle-increment 3)
   (max-points-per-isochrone 100)
   (stepmax +24h+)
   (stepsize +10min+))

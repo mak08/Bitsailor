@@ -89,16 +89,6 @@
 		</div>
 		<div class="cell"><label style="font-weight:bold">Settings</label></div>
 		<div class="cell">
-		  <label>Polars</label>
-		  <select id="sel_polars" name="polars">
-			<option value="VO65">Volvo Ocean 65</option>
-			<option value="IMOCA60">IMOCA 60</option>
-			<option value="IMOCA60VVOR17">IMOCA 60 - VR2017</option>
-			<option value="VO65id7.0">Volvo Ocean 65 - VR2017</option>
-			<option value="MINITRANSAT17">Mini Transat 2017</option>
-		  </select>
-		</div>
-		<div class="cell">
 		  <label>Duration</label>
 		  <select id="sel_duration" name="duration">
 			<option value="6">6 hours</option>
@@ -111,7 +101,17 @@
 		  </select>
 		</div>
 		<div class="cell">
-		  <label>Search angle</label>
+		  <label>Polars</label>
+		  <select id="sel_polars" name="polars">
+			<option value="VO65">Volvo Ocean 65</option>
+			<option value="IMOCA60">IMOCA 60</option>
+			<option value="IMOCA60VVOR17">IMOCA 60 - VR2017</option>
+			<option value="VO65id7.0">Volvo Ocean 65 - VR2017</option>
+			<option value="MINITRANSAT17">Mini Transat 2017</option>
+		  </select>
+		</div>
+		<div class="cell">
+		  <label>Search width</label>
 		  <select id="sel_searchangle" name="searchangle">
 			<option value="45">90°</option>
 			<option value="60">120°</option>
@@ -121,7 +121,7 @@
 		  </select>
 		</div>
 		<div class="cell">
-		  <label>Increment</label>
+		  <label>Angle increment</label>
 		  <select id="sel_angleincrement" name="angleincrement">
 			<option value="2">2</option>
 			<option value="3">3</option>
@@ -140,13 +140,16 @@
 		  </select>
 		</div>
 		<div class="cell">
-		  <label>Use foils</label><input id="cb_usefoils" name="foils" type="checkbox" checked="true">
+		  <label>With foils</label><input id="cb_usefoils" name="foils" type="checkbox" checked="true">
+		</div>
+		<div class="cell">
+		  <label>With polish</label><input id="cb_usepolish" name="polish" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
 		  <label>Fast manoeuvres</label><input id="cb_fastmanoeuvres" name="fastmanoeuvres" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
-		  <label>Minimal wind speed</label><input id="cb_minwind" name="minwind" type="checkbox" checked="true">
+		  <label>Min 4kts wind</label><input id="cb_minwind" name="minwind" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
 		  <button id="bt_getroute" style="width:300px; text-align:center; font-size:100%; font-weight:bold;" onclick="getRoute();">Calculate route</button>

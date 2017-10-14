@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-09-26 18:12:40>
+;;; Last Modified <michael 2017-10-13 23:19:21>
 
 (in-package :virtualhelm)
 
@@ -168,13 +168,16 @@
 
 (defstruct sail name speed)
 
-(defun load-polars-json (&key (filename  "/home/michael/Repository/VirtualHelm/polars/IMOCA60VVOR17.json"))
+(defun load-polars-json (&key
+                           (filename  "/home/michael/Repository/VirtualHelm/polars/IMOCA60VVOR17.json")
+                           (convert-speed t))
   ;;; Speed values are on knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (with-open-file (f filename :element-type 'character)
     (let ((json-string (make-string (file-length f))))
       (read-sequence json-string f)
-      (let* ((polar (joref (joref (parse-json json-string) "scriptData") "polar"))
+        (log2:info "Parsing json")
+        (let* ((polar (joref (joref (parse-json json-string) "scriptData") "polar"))
              (tws (joref polar "tws"))
              (twa (joref polar "twa"))
              (saildefs (joref polar "sail")))
@@ -186,17 +189,23 @@
                          :for speed :across tws
                          :for s :from 0
                          :do (setf (aref speeddata 0 (1+ s))
-                                   (knots-to-m/s (aref tws s))))
+                                   (if convert-speed
+                                       (knots-to-m/s (aref tws s))
+                                       (aref tws s))))
                       (loop
                          :for angle :across twa
                          :for a :from 0
                          :do (setf (aref speeddata (1+ a) 0)
-                                   (coerce (aref twa a) 'double-float))
+                                   (if convert-speed
+                                       (coerce (aref twa a) 'double-float)
+                                       (aref twa a)))
                          :do (loop
                                 :for speed :across tws
                                 :for s :from 0
                                 :do (setf (aref speeddata (1+ a) (1+ s))
-                                          (knots-to-m/s (aref (aref (joref saildef "speed") a) s)))))
+                                          (if convert-speed
+                                              (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
+                                              (aref (aref (joref saildef "speed") a) s)))))
                       (make-sail :name (joref saildef "name")
                                  :speed speeddata)))))))
 

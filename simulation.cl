@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-14 00:58:50>
+;;; Last Modified <michael 2017-10-15 00:18:00>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -61,6 +61,7 @@
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)
   (polars "VO65id7.0")
+  (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (foils t)
   (polish t)
   (fastmanoeuvres t)
@@ -101,7 +102,7 @@
   destination-angle
   destination-distance)
 
-(defun get-route (routing)
+(defun get-route (routing &key (start-time (now)))
   (let ((start-pos (routing-start routing))
         (dest-pos (routing-dest routing)))
     ;; Can't modify a latlng!
@@ -120,6 +121,7 @@
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
+         (start-time (parse-datetime-local (routing-starttime routing))) 
          (isochrones nil))
     
       (log2:info "Routing from ~a to ~a / course angle ~a" start-pos dest-pos dest-heading)
@@ -132,12 +134,11 @@
             (stepnum 0
                      (1+ stepnum))
             (pointnum 0)
-            (start-time (now))
             (start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
-            (elapsed0 start-time)
+            (elapsed0 (now))
             ;; The initial isochrone is just the start point, heading towards destination
             (isochrone (list (make-routepoint :position start-pos
-                                              :time (format-rfc3339-timestring nil elapsed0)
+                                              :time (format-rfc3339-timestring nil start-time)
                                               :heading  dest-heading
                                               :destination-distance (course-distance start-pos dest-pos)))
                        next-isochrone)
@@ -231,7 +232,7 @@
           (declare (ignore q))
           (when (zerop r)
             (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
-                                       :offset (+ start-offset (/ (* stepnum step-size) 3600))
+                                       :offset (truncate (+ start-offset (/ (* stepnum step-size) 3600)) 1.0)
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
 
@@ -413,6 +414,12 @@
       (multiple-value-bind (speed sail)
           (get-max-speed angle wind-speed polars)
         (values speed angle sail wind-dir wind-speed)))))
+
+
+(defun parse-datetime-local (time &key (timezone "02:00"))
+  (if (null time)
+      (now)
+      (parse-rfc3339-timestring (format () "~a:00+~a" time timezone))))
 
 ;;; Translate latitude coordinates of start and destination to [0..360)
 ;;; Can't SETF LATLNG-LNG!

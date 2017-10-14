@@ -41,6 +41,7 @@
     display: inline-flex;
     flex-direction: row;
 	justify-content: flex-start;
+	align-items: center;
     padding: 2px;
 }
 .cell label {

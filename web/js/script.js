@@ -106,8 +106,9 @@ function setUp () {
 	$("#bt_dec6").click(onAdjustIndex);
 	$("#ir_index").change(onAdjustIndex);
 
-	$("#bt_setstartlat").click(onStartDMSUpdated);
-	$("#bt_setstartlng").click(onStartDMSUpdated);
+	$("#cb_startdelayed").click(onDelayedStart);
+	$("#tb_starttime").change(onSetParameter);
+	$("#bt_setstartpos").click(onStartDMSUpdated);
 	
 	// Connect option selectors
 	$("#sel_polars").change(onSetParameter);
@@ -161,6 +162,24 @@ function setUp () {
 
 	getSession();
 
+}
+
+function onDelayedStart (event) {
+	if (event.target.checked === true) {
+		var d = new Date();
+		$("#tb_starttime")[0].value = d.toISOString().substring(0,16);
+	} else {
+		$("#tb_starttime")[0].value = null;
+		$.ajax({ 
+			// No paramValue == reset (value defaults to nil)
+			url: "/function/vh:setParameter" + "?name=" + 'starttime',
+			dataType: 'json'
+		}).done( function(data) {
+			alert("OK");
+		}).fail( function (jqXHR, textStatus, errorThrown) {
+			alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
+		});
+	}
 }
 
 function markerClicked (marker) {
@@ -237,6 +256,15 @@ function getSession () {
 			redrawWind("offset", irIndex.value);
 		}
 
+		var startDelayed = session.routing.startdelayed;
+		var cbStartDelayed = $("#cb_startdelayed")[0];
+		if ( startDelayed != null ) {
+			cbStartDelayed.checked = true;
+			$("#tb_starttime")[0].value = startDelayed;
+		} else {
+			cbStartDelayed.checked = false;
+		}
+
 		var polars = session.routing.polars;
 		var selPolars = $("#sel_polars")[0];
 		selPolars.value = polars;
@@ -298,9 +326,16 @@ function onSetClientParameter (event) {
 
 function onSetParameter (event) {
 	var paramName = event.currentTarget.name;
-	var paramValue = event.currentTarget.checked;
-	if ( paramValue === undefined ) {
+	var paramValue;
+	// tb starttime has a 'checked' field but we don't want to use it.
+	if ( paramName === 'starttime' ) {
 		paramValue = event.currentTarget.value;
+	} else {
+		// default: if there is a 'checked' field use it, otherwise use the value field.
+		paramValue = event.currentTarget.checked;
+		if ( paramValue === undefined ) {
+			paramValue = event.currentTarget.value;
+		}
 	}
 	$.ajax({ 
 		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,

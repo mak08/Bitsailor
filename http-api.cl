@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-14 00:55:51>
+;;; Last Modified <michael 2017-10-14 23:42:51>
 
 (in-package :virtualhelm)
 
@@ -70,7 +70,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setParameter
-(defun |setParameter| (location request response &key |name| |value|)
+(defun |setParameter| (location request response &key |name| (|value| nil))
   (declare (ignore location))
 
   (let* ((session (find-or-create-session request response)))
@@ -85,6 +85,8 @@
             (setf (routing-forecast-bundle routing) 'noaa-bundle))
            (t
             (error "Invalid forecast designator ~a" |value|))))
+        ((string= |name| "starttime")
+         (setf (routing-starttime routing) |value|))
         ((string= |name| "polars")
          (setf (routing-polars routing) |value|))
         ((string= |name| "foils")

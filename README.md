@@ -20,13 +20,20 @@ A geospatial index is computed off-line on the set of polygons. At runtime the i
 #### Prerequisites
 
 
-*	Install libgeos-3.4.2 (to automatically enable GEOS support in libgdal)
+*	Install libgeos-3.4.2 (or newer) and dev files
 	
 	```bash
-	$ sudo apt-get install libgeos-3.4.2
+	$ sudo apt-get install libgeos-3.5.0
+	$ sudo apt-get install libgeos-dev
 	```
 
-*	Install libgdal following [these instructions](https://trac.osgeo.org/gdal/wiki/BuildingOnUnix). Check that GEOS support is available.
+*	Install libgdal with GEOS support following [these instructions](https://trac.osgeo.org/gdal/wiki/BuildingOnUnix).
+
+	```bash
+	$ ./configure --with-geos=yes
+	```
+
+	Check that GEOS support is available.
 
 *	Download the Land polygons shapefile, WGS84 projection, split polygons from [openstreetmapdata](http://openstreetmapdata.com/data/land-polygons)
 

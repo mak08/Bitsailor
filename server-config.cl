@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2017-10-16 22:38:51>
+;;; Last Modified <michael 2017-10-16 23:31:36>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -69,11 +69,23 @@
 ;;; ----------------
 
 (handle
- :request (:prefix "/vh")
+ :request (:prefix "/js")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "js"))
                                      (make-pathname :directory (pathname-directory *load-pathname*))))
                    :authentication nil))
+(handle
+ :request (:prefix "/css")
+ :handler (:static (namestring
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "css"))
+                                     (make-pathname :directory (pathname-directory *load-pathname*))))
+                   :authentication nil))
+
+(handle
+ :request (:method :get
+           :path "/vh")
+ :handler (:dynamic 'vh:get-page
+                    :authentication nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

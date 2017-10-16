@@ -1,12 +1,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-14 23:42:51>
+;;; Last Modified <michael 2017-10-16 23:25:29>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; HTTP API
+
+;;; Return the main page (this is currently the only page)
+;;; This function is called as a dynamic handler. It is NOT registered.
+;;; Session handling is done later!
+(defun get-page (server handler request response)
+  (let ((path (merge-pathnames (make-pathname :name "index" :type "html")
+                               (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                 '("web"))))))
+    (handler-case 
+        (with-open-file (f path :element-type '(unsigned-byte 8))
+          (log2:debug "File ~a length ~d" path (file-length f))
+          (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
+            (read-sequence buffer f)
+            (setf (http-body response) buffer)))
+      (error (e)
+        (declare (ignore e))
+        (error "An error occurred while reading ~a" path)))
+    (setf (http-header response :|Content-Type|) "text/html")))
 
 ;;; Keep session table when reloading system!
 (defvar *session-ht* (make-hash-table :test #'equalp))

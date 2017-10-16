@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-16 00:57:44>
+;;; Last Modified <michael 2017-10-17 00:06:03>
 
 (in-package :virtualhelm)
 
@@ -29,17 +29,18 @@
     (polarcl:load-configuration *server-config*)
     (start-grib-updates)))
 
-(defun start-grib-updates (&key (bundles '(noaa-bundle)) (resolution "0.250"))
+(defun start-grib-updates (&key (bundles '(noaa-bundle dwd-icon-bundle)) (resolution "0.250"))
   "Check for new forecast data an remove old data periodically"
-  (flet ((run-updates ()
-           (loop
-              (dolist (bundle bundles)
-                (handler-case
-                    (update-forecast-bundle bundle :resolution resolution)
-                  (error (e)
-                    (log2:error "~a" e))))
-              (sleep 3600))))
-    (bordeaux-threads:make-thread #'run-updates :name "FORECASTS-UPDATER")))
+     (dolist (bundle bundles)
+         (flet ((run-update ()
+                  (loop
+                     (handler-case
+                         (update-forecast-bundle bundle :resolution resolution)
+                       (error (e)
+                         (log2:error "~a" e)))
+                     (sleep 3600))))
+           (bordeaux-threads:make-thread #'run-update
+                                         :name (format nil "~a-UPDATER" bundle)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

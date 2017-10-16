@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-03 21:27:14>
+;;; Last Modified <michael 2017-10-16 22:59:39>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -15,6 +15,7 @@
         "BABEL")
   (:export
    ;; HTTP API
+   "GET-PAGE"
    "getSession"
    "getWind"
    "setRoute"

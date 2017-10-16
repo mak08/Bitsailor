@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-03 18:07:46>
+;;; Last Modified <michael 2017-10-16 21:48:07>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -73,7 +73,16 @@
            (date (format-timestring nil new-timestamp :format '((:year 4) (:month 2) (:day 2))))
            (cycle (* 6 (truncate (timestamp-hour new-timestamp) 6)))
            (dummy (log2:info "At ~a, looking for cycle ~a-~a" (now) date  cycle))
-           (filenames (download-noaa-bundle date cycle)))
+           (filenames (loop
+                         :for filenames = (download-noaa-bundle date cycle)
+                         :for numfiles = (length filenames)
+                         :do (cond
+                               ((>= numfiles 41)
+                                (return filenames))
+                               (t
+                                (log2:info "Have ~a files, waiting 10min" numfiles)
+                                (sleep 600))))))
+      (log2:info "Have ~a files" (length filenames))
       (setf *noaa-forecast-bundle*
             (make-instance 'noaa-bundle
                            :data (read-noaa-wind-data filenames))))))

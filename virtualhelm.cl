@@ -1,9 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-08 20:52:41>
+;;; Last Modified <michael 2017-10-16 00:57:44>
 
 (in-package :virtualhelm)
+
+;;; Avoid line-breaks when printing log messages
+(setf *print-pretty* nil)
 
 (setf (log2:log-level "virtualhelm") log2:+info+)
 (setf (log2:log-level "polarcl") log2:+info+)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2017-10-03 21:26:46>
+;;; Last Modified <michael 2017-10-16 22:38:51>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -24,7 +24,7 @@
                          (make-pathname :directory (pathname-directory *load-pathname*))))
 
 ;;; Start one server on port 8080 
-(server :hostname "aguas-9"
+(server :hostname "aguas-10"
         :protocol :http
         :mt-method :ondemand
         :port "8080"
@@ -69,11 +69,12 @@
 ;;; ----------------
 
 (handle
- :request (:prefix "/wind")
+ :request (:prefix "/vh")
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web"))
                                      (make-pathname :directory (pathname-directory *load-pathname*))))
                    :authentication nil))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
 ;;; Administration

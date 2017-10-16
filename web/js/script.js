@@ -256,11 +256,11 @@ function getSession () {
 			redrawWind("offset", irIndex.value);
 		}
 
-		var startDelayed = session.routing.startdelayed;
+		var starttime = session.routing.starttime;
 		var cbStartDelayed = $("#cb_startdelayed")[0];
-		if ( startDelayed != null ) {
+		if ( starttime != false ) {
 			cbStartDelayed.checked = true;
-			$("#tb_starttime")[0].value = startDelayed;
+			$("#tb_starttime")[0].value = starttime;
 		} else {
 			cbStartDelayed.checked = false;
 		}

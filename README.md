@@ -12,6 +12,8 @@ A geospatial index is computed off-line on the set of polygons. At runtime the i
 
 #### Wind
 #### Polars
+Boat polars are provided as CSV files or in JSON format containing separate array for each sail. Data is interpolated to 0.1 degrees and 0.1 m/s. The resulting arrays are compressed into a single array returning both the best sail and the corresponding speed. 
+
 #### Filtering
 
 

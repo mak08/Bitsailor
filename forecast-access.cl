@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-12 23:00:36>
+;;; Last Modified <michael 2017-10-17 22:23:55>
 
 (in-package :virtualhelm)
 
@@ -22,53 +22,52 @@
 Data for offset (hour) is used and no time interpolation is done."
   (declare (double-float lat lon))
 
+  (when (>= offset (length (gribfile-data grib)))
+    (error "Out of forecasts"))
+
   (when (< lon 0d0)
     (incf lon 360d0))
   
-  (handler-case
-      (let ((i-inc (gribfile-i-inc grib))
-            (j-inc (gribfile-j-inc grib)))
-        (declare (double-float  i-inc j-inc))
-        (with-bindings
-            (((flat rlat) (ffloor lat j-inc))
-             ((flon rlon) (ffloor lon i-inc)))
-          (let*
-              ((lon0 (* (ffloor lon i-inc) i-inc))
-               (lon1 (+ lon0 i-inc))
-               (lat0 (* (ffloor lat j-inc) j-inc))
-               (lat1 (+ lat0 j-inc)))
-            (declare (double-float lon0 lon1 lat0 lat1))
-            (with-bindings (((u00 v00) (get-wind grib offset lat0 lon0))
-                            ((u01 v01) (get-wind grib offset lat0 lon1))
-                            ((u10 v10) (get-wind grib offset lat1 lon0))
-                            ((u11 v11) (get-wind grib offset lat1 lon1)))
-              (declare (double-float lon0 lon1 lat0 lat1 u00 u01 u10 u11 v00 v10 v01 v11))
-              (when (eql lon0 0d0)
-                (with-bindings (((u00.1 v00.1) (get-wind grib offset lat0 360d0))
-                                ((u10.1 v10.1) (get-wind grib offset lat1 360d0)))
-                  (setf u00 (/ (+ u00 u00.1) 2.0)
-                        v00 (/ (+ v00 v00.1) 2.0))
-                  (setf u10 (/ (+ u10 u10.1) 2.0)
-                        v10 (/ (+ v10 v10.1) 2.0))))
-              (when (eql lon1 360d0)
-                (with-bindings (((u01.1 v01.1) (get-wind grib offset lat0 0d0))
-                                ((u11.1 v11.1) (get-wind grib offset lat1 0d0)))
-                  (setf u01 (/ (+ u01 u01.1) 2.0)
-                        v01 (/ (+ v01 v01.1) 2.0))
-                  (setf u11 (/ (+ u11 u11.1) 2.0)
-                        v11 (/ (+ v11 v11.1) 2.0))))
-              (let* ((u (bilinear lon lat lon0 lon1 lat0 lat1 u00 u01 u10 u11))
-                     (v (bilinear lon lat lon0 lon1 lat0 lat1 v00 v01 v10 v11))
-                     (s (bilinear lon lat lon0 lon1 lat0 lat1
-                                  (enorm u00 v00)
-                                  (enorm u01 v01)
-                                  (enorm u10 v10)
-                                  (enorm u11 v11))))
-                (values (angle u v)
-                        s))))))
-    (error (e)
-      (log2:error "Could not retrieve interpolated wind: ~a~%" e)
-      (values 0d0 -1d0))))
+  (let ((i-inc (gribfile-i-inc grib))
+        (j-inc (gribfile-j-inc grib)))
+    (declare (double-float  i-inc j-inc))
+    (with-bindings
+        (((flat rlat) (ffloor lat j-inc))
+         ((flon rlon) (ffloor lon i-inc)))
+      (let*
+          ((lon0 (* (ffloor lon i-inc) i-inc))
+           (lon1 (+ lon0 i-inc))
+           (lat0 (* (ffloor lat j-inc) j-inc))
+           (lat1 (+ lat0 j-inc)))
+        (declare (double-float lon0 lon1 lat0 lat1))
+        (with-bindings (((u00 v00) (get-wind grib offset lat0 lon0))
+                        ((u01 v01) (get-wind grib offset lat0 lon1))
+                        ((u10 v10) (get-wind grib offset lat1 lon0))
+                        ((u11 v11) (get-wind grib offset lat1 lon1)))
+          (declare (double-float lon0 lon1 lat0 lat1 u00 u01 u10 u11 v00 v10 v01 v11))
+          (when (eql lon0 0d0)
+            (with-bindings (((u00.1 v00.1) (get-wind grib offset lat0 360d0))
+                            ((u10.1 v10.1) (get-wind grib offset lat1 360d0)))
+              (setf u00 (/ (+ u00 u00.1) 2.0)
+                    v00 (/ (+ v00 v00.1) 2.0))
+              (setf u10 (/ (+ u10 u10.1) 2.0)
+                    v10 (/ (+ v10 v10.1) 2.0))))
+          (when (eql lon1 360d0)
+            (with-bindings (((u01.1 v01.1) (get-wind grib offset lat0 0d0))
+                            ((u11.1 v11.1) (get-wind grib offset lat1 0d0)))
+              (setf u01 (/ (+ u01 u01.1) 2.0)
+                    v01 (/ (+ v01 v01.1) 2.0))
+              (setf u11 (/ (+ u11 u11.1) 2.0)
+                    v11 (/ (+ v11 v11.1) 2.0))))
+          (let* ((u (bilinear lon lat lon0 lon1 lat0 lat1 u00 u01 u10 u11))
+                 (v (bilinear lon lat lon0 lon1 lat0 lat1 v00 v01 v10 v11))
+                 (s (bilinear lon lat lon0 lon1 lat0 lat1
+                              (enorm u00 v00)
+                              (enorm u01 v01)
+                              (enorm u10 v10)
+                              (enorm u11 v11))))
+            (values (angle u v)
+                    s)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Grib values at grib coordinates
@@ -77,8 +76,8 @@ Data for offset (hour) is used and no time interpolation is done."
 
 (defun get-wind (grib offset lat lon)
   "Get u/v values at lat,lon (in GRIB coordinates)"
-  (declare (double-float lat lon))
-  (declare (ftype (function (array) (simple-array double-float)) grib-values-u-array grib-values-v-array))
+  (declare (double-float lat lon)
+           (ftype (function (array) (simple-array double-float)) grib-values-u-array grib-values-v-array))
   (let*
       ;; Get grib parameters to check if latlon is within grib range.
       ;; Also used for computing index into data array

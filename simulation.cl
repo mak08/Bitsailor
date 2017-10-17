@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-17 21:38:57>
+;;; Last Modified <michael 2017-10-17 22:29:29>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -298,6 +298,8 @@
                 (setf dmin (routepoint-destination-distance point))))
          :finally (progn
                     ;; (vector-push-extend (aref isochrone last) result)
+                    (when (zerop (length result))
+                      (error "Out of valid boat positions"))
                     (return result))))))
 
 (defun southbound-p (min-heading max-heading)

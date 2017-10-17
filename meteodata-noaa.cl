@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-17 00:08:17>
+;;; Last Modified <michael 2017-10-17 23:11:22>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -77,8 +77,9 @@
         :start
         (let* ((filenames (download-noaa-bundle date cycle))
                (numfiles (length filenames)))
-          (when (or (null  *noaa-forecast-bundle*)
-                    (>= numfiles 41))
+          (when (and (>= numfiles 1)
+                     (or (null *noaa-forecast-bundle*)
+                         (>= numfiles 41)))
             (setf *noaa-forecast-bundle*
                   (make-instance 'noaa-bundle
                                  :data (read-noaa-wind-data filenames))))

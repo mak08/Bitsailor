@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-17 21:23:10>
+;;; Last Modified <michael 2017-10-17 23:29:38>
 
 (in-package :virtualhelm)
 
@@ -32,6 +32,9 @@
 
 (defvar +GIBRALTAR+
   (make-latlng :lat 35.961877d0 :lng -5.570280d0))
+
+(defvar +PORTOSANTO+
+  (make-latlng :lat 33.005019d0 :lng -16.428084d0))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

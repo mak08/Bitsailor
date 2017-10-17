@@ -191,34 +191,33 @@ function updateStartPosition (lat, lng) {
 	var latLng = new google.maps.LatLng(lat, lng);
 	startMarker.setPosition(latLng);
 	var latDMS = toDeg(lat);
-	$("#tb_dstartlat")[0].value = latDMS.u * latDMS.g;
+	$("#sel_latsign")[0].value =  (latDMS.u === 1) ? 'N' : 'S'; 
+	$("#tb_dstartlat")[0].value = latDMS.g;
 	$("#tb_mstartlat")[0].value = latDMS.m;
 	$("#tb_sstartlat")[0].value = latDMS.s;
 	var lngDMS = toDeg(lng);
-	$("#tb_dstartlng")[0].value = lngDMS.u * lngDMS.g;
+	$("#sel_lngsign")[0].value =  (lngDMS.u === 1) ? 'E' : 'W'; 
+	$("#tb_dstartlng")[0].value = lngDMS.g;
 	$("#tb_mstartlng")[0].value = lngDMS.m;
 	$("#tb_sstartlng")[0].value = lngDMS.s;
 }
 
 function onStartDMSUpdated (component) {
-	var d = $("#tb_dstartlat")[0].value;
-	var u = sign(d);
-	var g = Math.abs(d);
+	var u;
+	u = $("#sel_latsign")[0].value;
 	var latDMS =  {
-		"u": u,
-		"g": g,
-		"m": $("#tb_mstartlat")[0].value,
-		"s": $("#tb_sstartlat")[0].value,
+		"u": (u==='N')? 1 : -1,
+		"g": Number($("#tb_dstartlat")[0].value),
+		"m": Number($("#tb_mstartlat")[0].value),
+		"s": Number($("#tb_sstartlat")[0].value),
 		"cs": 0
 	}
-	d = $("#tb_dstartlng")[0].value;
-	u = sign(d);
-	g = Math.abs(d);
+	u = $("#sel_lngsign")[0].value;
 	var lngDMS =  {
-		"u": u,
-		"g": g,
-		"m": $("#tb_mstartlng")[0].value,
-		"s": $("#tb_sstartlng")[0].value,
+		"u": (u ==='E')? 1 : -1,
+		"g": Number($("#tb_dstartlng")[0].value),
+		"m": Number($("#tb_mstartlng")[0].value),
+		"s": Number($("#tb_sstartlng")[0].value),
 		"cs": 0
 	}
 	var lat = fromDeg(latDMS);
@@ -767,9 +766,9 @@ function formatDeg (deg) {
 }
 
 function fromDeg (deg) {
-	var sign = deg.u || 1.0;
-	var abs = 0.0 + deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000);
-	return 1.0 * sign * abs
+	var sign = deg.u || 1;
+	var abs = deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000.0);
+	return sign * abs
 }
 
 function toDeg (number) {

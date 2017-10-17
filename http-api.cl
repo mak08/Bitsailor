@@ -1,65 +1,39 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-16 23:25:29>
+;;; Last Modified <michael 2017-10-17 21:33:07>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; HTTP API
 
-;;; Return the main page (this is currently the only page)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; get-page
+;;;
+;;; Return the main page (this is currently the only HTML page)
 ;;; This function is called as a dynamic handler. It is NOT registered.
-;;; Session handling is done later!
 (defun get-page (server handler request response)
-  (let ((path (merge-pathnames (make-pathname :name "index" :type "html")
-                               (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                 '("web"))))))
-    (handler-case 
-        (with-open-file (f path :element-type '(unsigned-byte 8))
-          (log2:debug "File ~a length ~d" path (file-length f))
-          (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
-            (read-sequence buffer f)
-            (setf (http-body response) buffer)))
-      (error (e)
-        (declare (ignore e))
-        (error "An error occurred while reading ~a" path)))
-    (setf (http-header response :|Content-Type|) "text/html")))
-
-;;; Keep session table when reloading system!
-(defvar *session-ht* (make-hash-table :test #'equalp))
-
-(defstruct session
-  (session-id (make-session-id))
-  (routing (make-routing)))
-
-(defun find-or-create-session (request response)
-  (let* ((session-cookie
-          (get-cookie request "SessionID"))
-         (session-id)
-         (session))
-    (cond (session-cookie
-           (setf session-id (cookie-value session-cookie))
-           (let ((stored-session (gethash session-id *session-ht*)))
-             (cond
-               ((null stored-session)
-                (setf session (setf (gethash session-id *session-ht*)
-                                    (make-session :session-id session-id)))
-                (log2:info "Session was lost for SessionID ~a." session-id))
-               (t
-                (setf session stored-session)
-                (log2:info "Session retrieved for SessionID ~a." session-id)))))
-          (t
-           (setf session-id (make-session-id))
-           (set-cookie response "SessionID" session-id)
-           (setf session (setf (gethash session-id *session-ht*)
-                               (make-session :session-id session-id)))
-           (log2:info "Session created for new SessionID ~a." session-id)))
-    session))
-
+  (handler-case 
+      (let ((session (find-or-create-session request response))
+            (path (merge-pathnames (make-pathname :name "index" :type "html")
+                                   (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                     '("web"))))))
+        (load-file path response)
+        (log2:info "Query: ~a " (parameters request))
+        (dolist (pair (parameters request))
+          ;; Currently the only paramters supported here are 'start' and 'dest', designated by a place name.
+          ;; See places.cl.
+          (destructuring-bind (name value)
+              pair
+            (set-routing-parameter session name (find-place value)))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
+ 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
-
 (defun |setRoute| (location request response &key |pointType| |lat| |lng|)
   (declare (ignore location))
   (handler-case
@@ -72,15 +46,10 @@
         (cond ((is-land lat lng)
                (error "Can't sail ~:[to~;from~] interior point ~a" (string= |pointType| "start") position ))
               (t
-               (let ((routing (session-routing session)))
-                 (cond
-                   ((string= |pointType| "start")
-                    (setf (routing-start routing) position))
-                   ((string= |pointType| "dest")
-                    (setf (routing-dest routing) position)))
-                 (setf (http-body response)
-                       (with-output-to-string (s)
-                         (json s session)))))))
+               (set-routing-parameter session |pointType| position)
+               (setf (http-body response)
+                     (with-output-to-string (s)
+                       (json s session))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -90,57 +59,14 @@
 ;;; setParameter
 (defun |setParameter| (location request response &key |name| (|value| nil))
   (declare (ignore location))
-
   (let* ((session (find-or-create-session request response)))
-    (log2:info "Session ~a: ~a=~a" (session-session-id session) |name| |value|)
-    (let ((routing (session-routing session)))
-      (cond
-        ((string= |name| "forecastbundle")
-         (cond
-           ((string= |value| "DWD-ICON-BUNDLE")
-            (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
-           ((string= |value| "NOAA-BUNDLE")
-            (setf (routing-forecast-bundle routing) 'noaa-bundle))
-           (t
-            (error "Invalid forecast designator ~a" |value|))))
-        ((string= |name| "starttime")
-         (setf (routing-starttime routing) |value|))
-        ((string= |name| "polars")
-         (setf (routing-polars routing) |value|))
-        ((string= |name| "foils")
-         (setf (routing-foils routing) (string= |value| "true")))
-        ((string= |name| "polish")
-         (setf (routing-polish routing) (string= |value| "true")))
-        ((string= |name| "fastmanoeuvres")
-         (setf (routing-fastmanoeuvres routing) (string= |value| "true")))
-        ((string= |name| "minwind")
-         (setf (routing-minwind routing) (string= |value| "true")))
-        ((string= |name| "duration")
-         (let ((duration-hrs
-                (read-from-string |value|)))
-           (setf (routing-stepmax routing)
-                 (* duration-hrs 3600))))
-        ((string= |name| "searchangle")
-         (let ((fan (read-from-string |value|)))
-           (setf (routing-fan routing) fan)))
-        ((string= |name| "angleincrement")
-         (let ((increment (read-from-string |value|)))
-           (setf (routing-angle-increment routing) increment)))
-        ((string= |name| "pointsperisochrone")
-         (let ((points-per-isochrone
-                (read-from-string |value|)))
-           (setf (routing-max-points-per-isochrone routing)
-                 points-per-isochrone)))
-        (t
-         (log2:error "Unsupported parameter ~a ~a" |name| |value|)
-         (error "unsupported")))
-      (setf (http-body response)
-            (with-output-to-string (s)
-              (json s session))))))
+    (set-routing-parameter session |name| |value|) 
+    (setf (http-body response)
+          (with-output-to-string (s)
+            (json s session)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
-
 (defun |getRoute| (location request response)
   (declare (ignore location))
   (handler-case
@@ -160,7 +86,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getSession
-
 (defun |getSession| (location request response)
   (declare (ignore location))
   (let* ((session
@@ -168,20 +93,12 @@
       (setf (http-body response)
             (with-output-to-string (s)
               (json s session)))))
-         
-(defun make-session-id ()
-  (create-uuid))
-
-(defun create-uuid ()
-  (with-open-file (f "/proc/sys/kernel/random/uuid")
-    (read-line f)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
-
-;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
-;; Returns (0d0, -1d0) for unavailable values.
-;; Does not work if date line is in longitude range.
+;;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
+;;; Returns (0d0, -1d0) for unavailable values.
+;;; Does not work if date line is in longitude range.
 (defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5"))
   (declare (ignore location request))
   (handler-case
@@ -250,9 +167,102 @@
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
 
-;; This must be done in the config file.
-;; polarcl:reset deletes registered function,
-;; (register-function 'dwd:|getWind|)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helper functions
+
+;;; Keep session table when reloading system!
+(defvar *session-ht* (make-hash-table :test #'equalp))
+
+(defstruct session
+  (session-id (make-session-id))
+  (routing (make-routing)))
+
+(defun find-or-create-session (request response)
+  (let* ((session-cookie
+          (get-cookie request "SessionID"))
+         (session-id)
+         (session))
+    (cond (session-cookie
+           (setf session-id (cookie-value session-cookie))
+           (let ((stored-session (gethash session-id *session-ht*)))
+             (cond
+               ((null stored-session)
+                (setf session (setf (gethash session-id *session-ht*)
+                                    (make-session :session-id session-id)))
+                (log2:info "Session was lost for SessionID ~a." session-id))
+               (t
+                (setf session stored-session)
+                (log2:info "Session retrieved for SessionID ~a." session-id)))))
+          (t
+           (setf session-id (make-session-id))
+           (set-cookie response "SessionID" session-id)
+           (setf session (setf (gethash session-id *session-ht*)
+                               (make-session :session-id session-id)))
+           (log2:info "Session created for new SessionID ~a." session-id)))
+    session))
+
+
+(defun load-file (path response)
+  (with-open-file (f path :element-type '(unsigned-byte 8))
+    (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
+      (read-sequence buffer f)
+      (setf (http-body response) buffer)))
+  (setf (http-header response :|Content-Type|) "text/html"))
+
+(defun set-routing-parameter (session name value)
+  (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
+  (let ((routing (session-routing session)))
+    (cond
+      ((string= name "forecastbundle")
+       (cond
+         ((string= value "DWD-ICON-BUNDLE")
+          (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
+         ((string= value "NOAA-BUNDLE")
+          (setf (routing-forecast-bundle routing) 'noaa-bundle))
+         (t
+          (error "Invalid forecast designator ~a" value))))
+      ((string= name "starttime")
+       (setf (routing-starttime routing) value))
+      ((string= name "polars")
+       (setf (routing-polars routing) value))
+      ((string= name "foils")
+       (setf (routing-foils routing) (string= value "true")))
+      ((string= name "polish")
+       (setf (routing-polish routing) (string= value "true")))
+      ((string= name "fastmanoeuvres")
+       (setf (routing-fastmanoeuvres routing) (string= value "true")))
+      ((string= name "minwind")
+       (setf (routing-minwind routing) (string= value "true")))
+      ((string= name "duration")
+       (let ((duration-hrs
+              (read-from-string value)))
+         (setf (routing-stepmax routing)
+               (* duration-hrs 3600))))
+      ((string= name "searchangle")
+       (let ((fan (read-from-string value)))
+         (setf (routing-fan routing) fan)))
+      ((string= name "angleincrement")
+       (let ((increment (read-from-string value)))
+         (setf (routing-angle-increment routing) increment)))
+      ((string= name "pointsperisochrone")
+       (let ((points-per-isochrone
+              (read-from-string value)))
+         (setf (routing-max-points-per-isochrone routing)
+               points-per-isochrone)))
+      ((string= name "start")
+       (setf (routing-start routing) value))
+      ((string= name "dest")
+       (setf (routing-dest routing) value))
+      (t
+       (log2:error "Unhandled parameter ~a ~a" name value)
+       (error "Unhandled parameter ~a ~a" name value)))))
+         
+(defun make-session-id ()
+  (create-uuid))
+
+(defun create-uuid ()
+  (with-open-file (f "/proc/sys/kernel/random/uuid")
+    (read-line f)))
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

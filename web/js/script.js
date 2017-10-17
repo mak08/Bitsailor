@@ -236,6 +236,9 @@ function getSession () {
 
 		updateStartPosition(session.routing.start.lat, session.routing.start.lng);
 
+		var start  = new google.maps.LatLng(session.routing.start.lat, session.routing.start.lng);
+		googleMap.setCenter(start);
+		
 		var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
 		destinationMarker.setPosition(dest);
 

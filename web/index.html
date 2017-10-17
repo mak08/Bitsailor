@@ -1,11 +1,4 @@
 <!doctype html>
-
-<!--
-	Useful CSS reference:
-	https://www.w3schools.com/css/css_rwd_grid.asp
-	https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Flexible_Box_Layout/Using_CSS_flexible_boxes
-  -->
-
 <html lang="de">
 
   <head>
@@ -44,7 +37,7 @@
 		  <label style="font-weight:bold">Forecast data</label>
 		  <select id="sel_forecastbundle" name="forecastbundle">
 			<option value="DWD-ICON-BUNDLE">DWD GDS ICON 0.25</option>
-			<option value="NOAA-BUNDLE">NOAA GFS 1.00</option>
+			<option value="NOAA-BUNDLE" selected>NOAA GFS 1.00</option>
 		  </select>
 		  <label></label>
 		  <label id="lb_fcmax">---</label>
@@ -59,7 +52,7 @@
 		  <label></label>
           <button id="bt_dec6" type="button">-6</button>
           <button id="bt_dec" type="button">-1</button>
-          <input id="ir_index" type = "range" min="0" max="72" step="1" value="0"/>
+          <input id="ir_index" type="range" min="0" max="72" step="1" value="0"/>
           <button id="bt_inc" type="button">+1</button>
           <button id="bt_inc6" type="button">+6</button>
         </div>
@@ -73,15 +66,23 @@
 		</div>
 		<div class="cell">
 		  <label>Latitude:</label>
+		  <select id="sel_latsign" name="latsign">
+			<option value="N">N</option>
+			<option value="S">S</option>
+	      </select>	
 		  <input id="tb_dstartlat" type="text" maxlength="3" style="width:3em"/>°
 		  <input id="tb_mstartlat" type="text" maxlength="2" style="width:2em"/>'
-		  <input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot N 
+		  <input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot 
 		</div>
  		<div class="cell">
 		  <label>Longitude:</label>
+		  <select id="sel_lngsign" name="lngsign">
+			<option value="E">E</option>
+			<option value="W">W</option>
+	      </select>	
 		  <input id="tb_dstartlng" type="text" maxlength="3" style="width:3em"/>°
 		  <input id="tb_mstartlng" type="text" maxlength="2" style="width:2em"/>'
-		  <input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot E
+		  <input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot
 		</div>
    		<div class="cell">
 		  <label></label>

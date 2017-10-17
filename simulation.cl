@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-15 00:49:01>
+;;; Last Modified <michael 2017-10-17 21:38:57>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -10,23 +10,17 @@
 ;; -- use CIS ?
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-;;; Todo: User setting
+;;; Todo: User settings
 ;;; Wind & Boat
-;;; - select map [NOAA]|DWD
-;;; - select polars [IMOCA60]|
-;;; - sail change penalty [10%]
-;;; - tack/gybe penalty [10%]
+;;; - sail change penalty 
+;;; - tack/gybe penalty 
 ;;; Search parameters
 ;;; - land check [on]|off
-;;; - long-step-threshold 3h|[6h]|12h|24h (?)
+;;; - long-step-threshold 12h|24h (?)
 ;;; - long-step-value 30min|[60min]
-;;; - fan 25..85
 ;;; Display
 ;;; - display isochrones [on]|off
 ;;; - display tracks on|[off]
-;;; Search fine-tuning
-
 
 
 (in-package :virtualhelm)
@@ -43,20 +37,8 @@
 (defconstant +48h+ (* 48 60 60))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; A routing stores the start and destination of the route as well as
-;;; routing parameters
-
-(defvar +LACORUNA+
-  (make-latlng :lat 43.484812d0 :lng -8.5897636d0))
-
-(defvar +LESSABLES+
-  (make-latlng :lat 46.479120d0 :lng -1.7941526d0))
-
-(defvar +FEHMARN+
-  (make-latlng :lat 54.434403d0 :lng 11.361632d0))
-
-(defvar +YSTAD+
-  (make-latlng :lat 55.391123d0 :lng 13.792635d0))
+;;; A routing stores the start and destination of the route
+;;; and other routing parameters.
         
 (defstruct routing
   (forecast-bundle 'dwd-icon-bundle)

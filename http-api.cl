@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-17 21:33:07>
+;;; Last Modified <michael 2017-10-18 21:42:54>
 
 (in-package :virtualhelm)
 
@@ -26,7 +26,7 @@
           ;; See places.cl.
           (destructuring-bind (name value)
               pair
-            (set-routing-parameter session name (find-place value)))))
+            (set-routing-parameter session name value))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -250,9 +250,9 @@
          (setf (routing-max-points-per-isochrone routing)
                points-per-isochrone)))
       ((string= name "start")
-       (setf (routing-start routing) value))
+       (setf (routing-start routing) (find-place value)))
       ((string= name "dest")
-       (setf (routing-dest routing) value))
+       (setf (routing-dest routing) (find-place value)))
       (t
        (log2:error "Unhandled parameter ~a ~a" name value)
        (error "Unhandled parameter ~a ~a" name value)))))

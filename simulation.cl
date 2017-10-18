@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-17 22:29:29>
+;;; Last Modified <michael 2017-10-19 01:09:48>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -296,11 +296,32 @@
                ((< (routepoint-destination-distance point) dmin)
                 (setf kmin k)
                 (setf dmin (routepoint-destination-distance point))))
-         :finally (progn
-                    ;; (vector-push-extend (aref isochrone last) result)
-                    (when (zerop (length result))
-                      (error "Out of valid boat positions"))
-                    (return result))))))
+         :finally (return (clip-isochrone result))))))
+
+(defun clip-isochrone (isochrone)
+  (let ((length (length isochrone)))
+    (case length
+      (0
+       (error "Out of valid boat positions"))
+      (1
+       isochrone)
+      (otherwise
+       (loop
+          :with left = 0
+          :with right = length
+          :for first :from 0 :to (- length 2)
+          :for second = (1+ first)
+          :for delta = (- (routepoint-destination-distance (aref isochrone second))
+                          (routepoint-destination-distance (aref isochrone first)))
+          :do (progn
+                (when (> delta 5000)
+                  ;; Big distance increase - clip forward
+                  (setf right second)
+                  (return (subseq isochrone left right)))
+                (when (< delta -5000)
+                  ;; Big distance decrease - clip backward
+                  (setf left second)))
+          :finally (return (subseq isochrone left right)))))))
 
 (defun southbound-p (min-heading max-heading)
   (< min-heading 180 max-heading))

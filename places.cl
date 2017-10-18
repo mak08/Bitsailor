@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-17 23:29:38>
+;;; Last Modified <michael 2017-10-18 22:37:19>
 
 (in-package :virtualhelm)
 
@@ -25,7 +25,7 @@
   (make-latlng :lat 55.391123d0 :lng 13.792635d0))
 
 (defvar +ALICANTE+
-  (make-latlng :lat 38.301413d0 :lng -0.444544d0))
+  (make-latlng :lat 38.322222d0 :lng  -0.48444d0))
 
 (defvar +LISBON+
   (make-latlng :lat 38.561906d0 :lng -9.379930d0))
@@ -35,6 +35,7 @@
 
 (defvar +PORTOSANTO+
   (make-latlng :lat 33.005019d0 :lng -16.428084d0))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

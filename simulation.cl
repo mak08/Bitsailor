@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-19 01:09:48>
+;;; Last Modified <michael 2017-10-21 23:30:46>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -56,11 +56,12 @@
   (stepmax +24h+)
   (stepsize +10min+))
 
-(defstruct routeinfo best tracks isochrones)
-
+(defstruct routeinfo best stats tracks isochrones)
+(defstruct routestats sails min-wind max-wind min-twa max-twa)
+  
 (defstruct isochrone time offset path)
 
-(defstruct twainfo twa path)
+(defstruct twainfo twa heading path)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.
@@ -153,10 +154,11 @@
                          (/ pointnum elapsed)
                          (/ elapsed stepnum)
                          (coerce (/ pointnum stepnum) 'float)))
-
-            (make-routeinfo :best (construct-route isochrone)
-                            :tracks (extract-tracks isochrone)
-                            :isochrones isochrones))
+            (let ((best-route (construct-route isochrone)))
+              (make-routeinfo :best best-route
+                              :stats (get-statistics best-route)
+                              :tracks (extract-tracks isochrone)
+                              :isochrones isochrones)))
         (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
@@ -347,6 +349,32 @@
           (setf (routepoint-predecessor next-point) nil)
           (push next-point route))))))
 
+(defun get-statistics (track)
+  (let ((sails nil)
+        (min-wind 100)
+        (max-wind 0)
+        (min-twa 180)
+        (max-twa 0))
+    (dolist (point track)
+      (when (routepoint-sail point)
+        (pushnew (routepoint-sail point) sails))
+      (setf min-wind
+            (min (m/s-to-knots
+                  (or (routepoint-wind-speed point) 100))
+                 min-wind))
+      (setf max-wind
+            (max (m/s-to-knots
+                  (or (routepoint-wind-speed point) 0)) max-wind))
+      (setf min-twa
+            (min (abs (or (routepoint-twa point) 180)) min-twa))
+      (setf max-twa
+            (max (abs (or (routepoint-twa point) 0)) max-twa)))
+    (make-routestats :sails sails
+                     :min-wind min-wind
+                     :max-wind max-wind
+                     :min-twa min-twa
+                     :max-twa max-twa)))
+
 (defun extract-tracks (isochrone)
   (loop
      :for point :across isochrone
@@ -383,6 +411,7 @@
       (dotimes (k
                  step-num
                 (make-twainfo :twa twa
+                              :heading (round heading)
                               :path (reverse (push (copy-latlng curpos) path))))
         ;; Save current position
         (push (copy-latlng curpos) path)

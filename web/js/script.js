@@ -514,6 +514,9 @@ function getRoute () {
 			addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
 			routeIsochrones[i] = isochrone;
 		}
+
+		$("#lb_stats").text(JSON.stringify(data.stats));
+
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		window.clearInterval(timer);
 		pgGetRoute.value = pgGetRoute.max;
@@ -630,6 +633,7 @@ function getTWAPath(event) {
 	}).done( function(data) {
 		drawTWAPath(data.path);
 		$("#lb_twa").text(data.twa);
+		$("#lb_twa_heading").text(data.heading);
 	}).fail( function (jqXHR, textStatus, errorThrown) {
 		alert(textStatus + ' ' + errorThrown);
 	});

@@ -32,7 +32,7 @@
     </div>
 
 	<div class="row">
-	  <div class="col-3">
+	  <div class="col-4">
 		<div class="cell">
 		  <label style="font-weight:bold">Forecast data</label>
 		  <select id="sel_forecastbundle" name="forecastbundle">
@@ -169,8 +169,18 @@
 		  <label>TWA</label>
 		  <nobr><label id="lb_twa" style="font-size:90%">&lt;Click on route marker&gt;</label></nobr>
 		</div>
+		<div class="cell" style="align-self:bottom">
+		  <label>Heading</label>
+		  <nobr><label id="lb_twa_heading" style="font-size:90%">-.-.-.-</label></nobr>
+		</div>
+		<div class="cell" style="align-self:top">
+		  <label>Statistics</label>
+		</div>
+		<div class="cell" style="align-self:top">
+		  <label id="lb_stats" style="font-size:75%">-.-.-.-</label>
+		</div>
       </div>
-      <div class="col-9" style="height:820px;">
+      <div class="col-8" style="height:820px;">
         <div id="googleMap" style="position:absolute; width:1104px; height:804px; border:solid 2px black; border-radius:4px;">
 		</div>
 		<div id="player_area" style="position:absolute; width:1104px; height:804px;  border: 2px solid #505056; background:none; pointer-events:none; ">

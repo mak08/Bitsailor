@@ -55,32 +55,12 @@ function setUp () {
 	geometry.width = mapRect.width;
 	geometry.height = mapRect.height;
 
-	// Map styles: hide everything by default, except landcover.
-	var mapStyles = [
-		{ //hide all fills
-			elementType: 'geometry.fill',
-			stylers: [
-				{ visibility: 'off' }
-			]
-		},
-		{ //hide all fills
-			featureType: 'landscape.natural.landcover',
-			elementType: 'geometry.fill',
-			stylers: [
-				{ visibility: 'on' }
-			]
-		}
-	];
-
 	// Create a map object, and include the MapTypeId to add
 	// to the map type control.
 	var mapProp = {
 		center:new google.maps.LatLng(49.187, 8.473),
 		zoom:5,
 		scaleControl: true,
-		styles: mapStyles,
-		backgroundColor: 'hsla(0, 0%, 0%, 0)',
-		noClear: true,
 		mapTypeId:google.maps.MapTypeId.ROADMAP,
 		draggableCursor: "crosshair"
 	};
@@ -88,7 +68,8 @@ function setUp () {
 	googleMap = new google.maps.Map(mapDiv, mapProp);
 
 	mapContextMenu = $("#mymenu")[0];
-
+	infoBox = $("#infoBox")[0];
+	
 	// Connect map events
 	google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
 	// google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
@@ -450,15 +431,15 @@ function updateGetRouteProgress () {
 
 
 function addWaypointInfo(trackMarker, point, nextPoint) {
-	var infowindow = new google.maps.InfoWindow({
+	var infoWindow = new google.maps.InfoWindow({
 		content: makeWaypointInfo(point, nextPoint)
 	});
 	trackMarker.set('time', point.time);
 	trackMarker.addListener('mouseover', function() {
-		infowindow.open(googleMap, trackMarker);
+		infoWindow.open(googleMap, trackMarker);
 	});
 	trackMarker.addListener('mouseout', function() {
-		infowindow.close();
+		infoWindow.close();
 	});
 }
 function makeWaypointInfo(point, nextPoint) {

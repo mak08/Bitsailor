@@ -171,16 +171,18 @@
 		</div>
       </div>
       <div class="col-9" style="height:820px;">
+        <div id="googleMap" style="position:absolute; width:1104px; height:804px; border:solid 2px black; border-radius:4px;">
+		</div>
 		<div id="player_area" style="position:absolute; width:1104px; height:804px;  border: 2px solid #505056; background:none; pointer-events:none; ">
 		  <canvas id="map_canvas" style="background:none;pointer-events:none; border: 0px solid green; " width="1100px" height="800px"></canvas>
-		</div>
-        <div id="googleMap" style="position:absolute; width:1104px; height:804px; border:solid 2px black; border-radius:4px;">
 		</div>
 		<div id="mapMenu" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:140px; height:90px; display:none;">
 		  <button id="bt_setstart" style="width:130px; text-align:left;" onclick="setRoute('start');">Set Start</button>
 		  <button id="bt_setdest"  style="width:130px; text-align:left;" onclick="setRoute('dest');">Set Destination</button>
 		  <button id="bt_ltpmark"  style="width:130px; text-align:left;" onclick="setRoute('ltp);">Add port mark</button>
 		  <button id="bt_ltsmark"  style="width:130px; text-align:left;" onclick="setRoute('lts');">Add stbd mark</button>
+		</div>
+		<div id="infoBox" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:200px; height:120px; display:none;">
 		</div>
       </div>
     </div>

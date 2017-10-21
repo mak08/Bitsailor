@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-18 21:42:54>
+;;; Last Modified <michael 2017-10-21 16:59:02>
 
 (in-package :virtualhelm)
 
@@ -41,7 +41,7 @@
              (lat (coerce (read-from-string |lat|) 'double-float))
              (lng (coerce (read-from-string |lng|) 'double-float))
              (position (make-latlng :lat lat :lng lng)))
-        (log2:info "~a: lat ~a, lng ~a." |pointType| |lat| |lng|)
+        (log2:info "~a: Position=~a" |pointType| position)
         (log2:trace "Session: ~a, Request: ~a" session request)
         (cond ((is-land lat lng)
                (error "Can't sail ~:[to~;from~] interior point ~a" (string= |pointType| "start") position ))
@@ -250,9 +250,15 @@
          (setf (routing-max-points-per-isochrone routing)
                points-per-isochrone)))
       ((string= name "start")
-       (setf (routing-start routing) (find-place value)))
+       (setf (routing-start routing)
+             (etypecase value
+               (latlng value)
+               (string (find-place value)))))
       ((string= name "dest")
-       (setf (routing-dest routing) (find-place value)))
+       (setf (routing-dest routing)
+             (etypecase value
+               (latlng value)
+               (string (find-place value)))))
       (t
        (log2:error "Unhandled parameter ~a ~a" name value)
        (error "Unhandled parameter ~a ~a" name value)))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-18 22:37:19>
+;;; Last Modified <michael 2017-10-20 00:10:21>
 
 (in-package :virtualhelm)
 
@@ -34,8 +34,10 @@
   (make-latlng :lat 35.961877d0 :lng -5.570280d0))
 
 (defvar +PORTOSANTO+
-  (make-latlng :lat 33.005019d0 :lng -16.428084d0))
+  (make-latlng :lat 33.005019d0 :lng -16.42808d0))
 
+;; Point Nemo
+;; 48°52.6′S 123°23.6′W
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

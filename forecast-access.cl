@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-17 22:23:55>
+;;; Last Modified <michael 2017-10-21 18:49:03>
 
 (in-package :virtualhelm)
 
@@ -41,24 +41,10 @@ Data for offset (hour) is used and no time interpolation is done."
            (lat1 (+ lat0 j-inc)))
         (declare (double-float lon0 lon1 lat0 lat1))
         (with-bindings (((u00 v00) (get-wind grib offset lat0 lon0))
-                        ((u01 v01) (get-wind grib offset lat0 lon1))
+                        ((u01 v01) (get-wind grib offset lat0 (mod lon1 360d0)))
                         ((u10 v10) (get-wind grib offset lat1 lon0))
-                        ((u11 v11) (get-wind grib offset lat1 lon1)))
+                        ((u11 v11) (get-wind grib offset lat1 (mod lon1 360d0))))
           (declare (double-float lon0 lon1 lat0 lat1 u00 u01 u10 u11 v00 v10 v01 v11))
-          (when (eql lon0 0d0)
-            (with-bindings (((u00.1 v00.1) (get-wind grib offset lat0 360d0))
-                            ((u10.1 v10.1) (get-wind grib offset lat1 360d0)))
-              (setf u00 (/ (+ u00 u00.1) 2.0)
-                    v00 (/ (+ v00 v00.1) 2.0))
-              (setf u10 (/ (+ u10 u10.1) 2.0)
-                    v10 (/ (+ v10 v10.1) 2.0))))
-          (when (eql lon1 360d0)
-            (with-bindings (((u01.1 v01.1) (get-wind grib offset lat0 0d0))
-                            ((u11.1 v11.1) (get-wind grib offset lat1 0d0)))
-              (setf u01 (/ (+ u01 u01.1) 2.0)
-                    v01 (/ (+ v01 v01.1) 2.0))
-              (setf u11 (/ (+ u11 u11.1) 2.0)
-                    v11 (/ (+ v11 v11.1) 2.0))))
           (let* ((u (bilinear lon lat lon0 lon1 lat0 lat1 u00 u01 u10 u11))
                  (v (bilinear lon lat lon0 lon1 lat0 lat1 v00 v01 v10 v11))
                  (s (bilinear lon lat lon0 lon1 lat0 lat1

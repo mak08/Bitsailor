@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-17 23:11:22>
+;;; Last Modified <michael 2017-10-26 01:00:35>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -23,6 +23,9 @@
 
 (defvar *noaa-forecast-bundle* nil)
 
+;;; Offset (in minutes) of the forecast used at a given time
+(defparameter +noaa-offset+ 0)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API Functions
 
@@ -38,12 +41,11 @@
 
 (defmethod fcb-max-offset ((bundle noaa-bundle))
   (let ((grib (noaa-data bundle)))
-    (* 3 (1- (length (gribfile-data grib))))))
+    (1- (length (gribfile-data grib)))))
 
 (defclass noaa-forecast (forecast)
   ((noaa-bundle :reader noaa-bundle :initarg :bundle)
    (fc-time :reader fc-time :initarg :time)))
-
 
 (defmethod get-forecast ((bundle noaa-bundle) (utc-time local-time:timestamp))
   (make-instance 'noaa-forecast :bundle bundle :time utc-time))
@@ -55,15 +57,17 @@
           (noaa-data bundle))
          (offset
           ;; NOAA forecasts are 3-hourly
-          (truncate
-           (/ (timestamp-difference (fc-time forecast) (fcb-time bundle))
-              (* 3 3600)))))  
+          ;; ... but interpolated to 1 hour steps
+          (- (truncate
+              (/ (timestamp-difference (fc-time forecast) (fcb-time bundle))
+                 (* (fcb-stepwidth bundle) 3600)))
+             +noaa-offset+)))
     (get-interpolated-wind grib offset (latlng-lat latlng) (latlng-lng latlng))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Update data
 
-(defmethod update-forecast-bundle ((bundle (eql 'noaa-bundle)) &key)
+(defmethod update-forecast-bundle ((bundle (eql 'noaa-bundle)) &key (stepwidth 1))
   ;; If we don't have files, or if newer files than we have should be available,
   ;; update to the latest available files.
   (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))
@@ -80,9 +84,15 @@
           (when (and (>= numfiles 1)
                      (or (null *noaa-forecast-bundle*)
                          (>= numfiles 41)))
-            (setf *noaa-forecast-bundle*
-                  (make-instance 'noaa-bundle
-                                 :data (read-noaa-wind-data filenames))))
+            (let ((data (read-noaa-wind-data filenames)))
+              (ecase stepwidth
+                (1
+                 (setf data (insert-interpolated-forecasts data)))
+                (3))
+              (setf *noaa-forecast-bundle*
+                    (make-instance 'noaa-bundle
+                                   :data data
+                                   :stepwidth stepwidth))))
           (when (< numfiles 81)
             (log2:info "Have ~a files, waiting 10min" numfiles)
             (sleep 600)
@@ -176,6 +186,53 @@
       (log2:info "Add file ~a~%" filename)
       (grib-index-add-file index filename))
     (get-values-from-index index)))
+
+
+(defun insert-interpolated-forecasts (gribfile)
+  (let* ((forecasts (gribfile-data gribfile))
+         (interpolated-forecasts
+          (make-array (* (length forecasts) 3))))
+    (loop
+       :for i :below (1- (length forecasts))
+       :do (progn
+             (setf (aref interpolated-forecasts i)
+                   (aref forecasts i))
+             (setf (aref interpolated-forecasts (+ (* i 3) 1))
+                   (interpolate-forecast (aref forecasts i) (aref forecasts (1+ i)) (/ 1 3)))
+             (setf (aref interpolated-forecasts (+ (* i 3) 2))
+                   (interpolate-forecast (aref forecasts i) (aref forecasts (1+ i)) (/ 2 3)))))
+    (setf (gribfile-data gribfile)
+          interpolated-forecasts)
+    gribfile))
+
+(defun interpolate-forecast (t0 t1 fraction)
+  (let* ((t0-u (grib-values-u-array t0))
+         (t0-v (grib-values-v-array t0))
+         (t1-u (grib-values-u-array t1))
+         (t1-v (grib-values-v-array t1))
+         (dimensions (array-dimensions t0-u))
+         (result-u (make-array dimensions))
+         (result-v (make-array dimensions)))
+    (log2:info "dim:~a t=~a"
+               dimensions
+               (+ (grib-values-forecast-time t0)
+                                        (* fraction (- (grib-values-forecast-time t1)
+                                                       (grib-values-forecast-time t0)))))
+    (loop
+       :for u0 :across t0-u
+       :for u1 :across t1-u
+       :for v0 :across t0-v
+       :for v1 :across t1-v
+       :for i :from 0
+       :do (setf (aref result-u i)
+                 (+ u0 (* fraction (- u1 u0)))
+                 (aref result-v i)
+                 (+ v0 (* fraction (- v1 v0)))))
+    (make-grib-values :forecast-time (+ (grib-values-forecast-time t0)
+                                        (* fraction (- (grib-values-forecast-time t1)
+                                                       (grib-values-forecast-time t0))))
+                      :u-array result-u
+                      :v-array result-v)))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-15 00:07:57>
+;;; Last Modified <michael 2017-10-27 23:57:22>
 
 (in-package :virtualhelm)
 
@@ -68,6 +68,25 @@
                (ogr-f-destroy feature)
                (when found
                  (return-from is-land t)))))))
+
+
+(let ((segment (ogr-g-create-geometry wkbLineString)))
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (defun intersects-land-p (start end)
+    (bordeaux-threads:with-lock-held (+map-lock+)
+      (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
+      (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
+      (ogr-l-set-spatial-filter *map* segment)
+      (ogr-l-reset-reading *map*)
+      (loop
+         :for feature = (ogr-l-get-next-feature *map*)
+         :while (not (null-pointer-p feature))
+         :do (let* ((polygon (ogr-f-get-geometry-ref feature))
+                    (found (ogr-g-intersects polygon segment)))
+               (ogr-f-destroy feature)
+               (when found
+                 (return-from intersects-land-p t)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialize map on load -

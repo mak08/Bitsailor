@@ -1,11 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-14 23:44:57>
+;;; Last Modified <michael 2017-10-27 23:51:28>
 
 (in-package :virtualhelm)
 
 (defvar wkbPoint 1)
+(defvar wkbLineString 2)
 (defvar GDAL_OF_VECTOR 4)
 (defvar OLCFastSpatialFilter "FastSpatialFilter")
 
@@ -77,11 +78,23 @@
   (container :pointer)
   (geom :pointer))
 
+(defcfun ("OGR_G_Intersects"  ogr-g-intersects) :int
+  (this-geom :pointer)
+  (other-geom :pointer))
+
+(defcfun ("OGR_G_AddPoint_2D" ogr-g-add-point-2d) :void
+  (geom :pointer)
+  (lon :double)
+  (lat :double))
+
 (defcfun ("OGR_G_SetPoint_2D" ogr-g-set-point-2d) :void
   (geom :pointer)
   (index :int)
   (lon :double)
   (lat :double))
+
+
+
 
 ;;; Geometry type
 

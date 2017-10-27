@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description   Meteorological Data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-05 19:47:01>
+;;; Last Modified <michael 2017-10-25 21:47:03>
 
 (in-package :virtualhelm)
 
@@ -57,7 +57,7 @@
 ;;; for a "rectangular" area (usually the whole world). 
 
 (defclass forecast-bundle ()
-  ())
+  ((stepwidth :accessor fcb-stepwidth :initarg :stepwidth :initform 1)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

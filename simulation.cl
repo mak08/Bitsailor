@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-21 23:30:46>
+;;; Last Modified <michael 2017-10-28 00:03:16>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -156,7 +156,7 @@
                          (coerce (/ pointnum stepnum) 'float)))
             (let ((best-route (construct-route isochrone)))
               (make-routeinfo :best best-route
-                              :stats (get-statistics best-route)
+                              :stats nil ;;(get-statistics best-route)
                               :tracks (extract-tracks isochrone)
                               :isochrones isochrones)))
         (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
@@ -216,7 +216,7 @@
           (declare (ignore q))
           (when (zerop r)
             (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
-                                       :offset (truncate (+ start-offset (/ (* stepnum step-size) 3600)) 1.0)
+                                       :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
 
@@ -286,9 +286,11 @@
          :do (cond
                ((>= (abs (- a a0)) delta-angle)
                 ;; Sector scanned, record best distance...
-                (unless (is-land (latlng-lat (routepoint-position (aref isochrone kmin)))
-                                 (latlng-lng (routepoint-position (aref isochrone kmin))))
-                  (vector-push-extend (aref isochrone kmin) result))
+                (let* ((pmin (aref isochrone kmin))
+                       (pmin-pred (routepoint-predecessor pmin)))
+                  (unless (intersects-land-p (routepoint-position pmin)
+                                             (routepoint-position pmin-pred))
+                    (vector-push-extend (aref isochrone kmin) result)))
                 ;; ... and reset.
                 (when (< k last)
                   (setf kmin k)
@@ -411,7 +413,8 @@
       (dotimes (k
                  step-num
                 (make-twainfo :twa twa
-                              :heading (round heading)
+                              :heading (normalize-heading
+                                        (round heading))
                               :path (reverse (push (copy-latlng curpos) path))))
         ;; Save current position
         (push (copy-latlng curpos) path)

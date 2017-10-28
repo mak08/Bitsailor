@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-26 01:00:35>
+;;; Last Modified <michael 2017-10-28 20:51:50>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -41,7 +41,8 @@
 
 (defmethod fcb-max-offset ((bundle noaa-bundle))
   (let ((grib (noaa-data bundle)))
-    (1- (length (gribfile-data grib)))))
+    (* (fcb-stepwidth bundle)
+       (1- (length (gribfile-data grib))))))
 
 (defclass noaa-forecast (forecast)
   ((noaa-bundle :reader noaa-bundle :initarg :bundle)
@@ -67,7 +68,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Update data
 
-(defmethod update-forecast-bundle ((bundle (eql 'noaa-bundle)) &key (stepwidth 1))
+(defmethod update-forecast-bundle ((bundle (eql 'noaa-bundle)) &key (stepwidth 3))
   ;; If we don't have files, or if newer files than we have should be available,
   ;; update to the latest available files.
   (let ((timestamp (when *noaa-forecast-bundle* (fcb-time *noaa-forecast-bundle*))))

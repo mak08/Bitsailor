@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-28 00:03:16>
+;;; Last Modified <michael 2017-10-28 21:50:21>
 
 ;; -- stats: min/max points per isochrone
 ;; -- delete is-land after filtering isochrone
@@ -100,7 +100,6 @@
         ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars-name (routing-polars routing))
-         (step-size (routing-stepsize routing))
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
@@ -111,11 +110,12 @@
 
       (do* ( ;; Iteration stops when destination was reached
             (reached nil)
+            (error nil)
             ;; Iteration stops when stepmax seconds have elapsed
-            (stepsum 0
-                     (+ stepsum step-size))
             (stepnum 0
                      (1+ stepnum))
+            (stepsum 0
+                     (+ stepsum (step-size routing stepnum)))
             (pointnum 0)
             (start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
             (elapsed0 (now))
@@ -134,8 +134,8 @@
             (min-heading 360 360)
             (max-heading 0 0)
             ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
-            (step-time (adjust-timestamp start-time (:offset :sec step-size))
-                       (adjust-timestamp step-time (:offset :sec step-size)))
+            (step-time (adjust-timestamp start-time (:offset :sec (step-size routing stepnum)))
+                       (adjust-timestamp step-time (:offset :sec (step-size routing stepnum))))
             (step-time-string (format-rfc3339-timestring nil step-time)
                               (format-rfc3339-timestring nil step-time))
             ;; Get wind data for simulation time
@@ -145,6 +145,7 @@
            ;; When the maximum number of iterations is reached, construct the best path
            ;; from the most advanced point's predecessor chain.
            ((or reached
+                error
                 (>= stepsum (routing-stepmax routing)))
             (let* ((elapsed (timestamp-difference (now) elapsed0)))
               (log2:info "Elapsed ~2$, Positions ~a, Isochrones ~a | p/s=~2$ | s/i=~4$ | tpi=~2$ |"
@@ -184,7 +185,7 @@
                                     (<= 40 twa 175))
                             (let*
                                 ((new-pos (add-distance-exact (routepoint-position routepoint)
-                                                              (* speed step-size)
+                                                              (* speed (step-size routing stepnum))
                                                               (coerce heading 'double-float)))
                                  (dtf (course-distance new-pos dest-pos)))
                               (incf pointnum)
@@ -210,7 +211,12 @@
                                   (log2:info "Reached destination at ~a" step-time)
                                   (setf reached t)))))))))
              isochrone)
-        (setf next-isochrone (filter-isochrone next-isochrone min-heading max-heading max-points))
+        (let ((candidate (filter-isochrone next-isochrone min-heading max-heading max-points)))
+          (cond
+            (candidate
+             (setf next-isochrone candidate))
+            (t
+             (setf error t)))) 
         ;; Collect hourly isochrones
         (multiple-value-bind (q r) (truncate stepsum 3600)
           (declare (ignore q))
@@ -219,6 +225,17 @@
                                        :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
                                        :path (map 'vector #'routepoint-position next-isochrone))))
               (push iso isochrones))))))))
+
+(defun step-size (routing stepnum)
+  (* (routing-stepsize routing)
+     (cond ((<= stepnum 36)
+            1)
+           ((<= stepnum 72)
+            2)
+           ((<= stepnum 144)
+            3)
+           (t
+            6))))
 
 (defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
   (multiple-value-bind (speed twa sail wind-dir wind-speed)
@@ -306,7 +323,8 @@
   (let ((length (length isochrone)))
     (case length
       (0
-       (error "Out of valid boat positions"))
+       ;; (error "Out of valid boat positions")
+       nil)
       (1
        isochrone)
       (otherwise

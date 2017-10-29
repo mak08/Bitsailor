@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-27 23:57:22>
+;;; Last Modified <michael 2017-10-30 00:39:17>
 
 (in-package :virtualhelm)
 
@@ -79,6 +79,8 @@
       (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
       (ogr-l-set-spatial-filter *map* segment)
       (ogr-l-reset-reading *map*)
+      ;; setSpatialFilter may return too many features. Scanning the result may be necessary.
+      ;; See http://www.gdal.org/ogr__api_8h.html#a678d1735bc82533614ac005691d1138c
       (loop
          :for feature = (ogr-l-get-next-feature *map*)
          :while (not (null-pointer-p feature))
@@ -87,6 +89,20 @@
                (ogr-f-destroy feature)
                (when found
                  (return-from intersects-land-p t)))))))
+
+;;; Same as above, but without scanning the result.
+;;; In practive this looked correct but is only slightly faster.
+(let ((segment (ogr-g-create-geometry wkbLineString)))
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (ogr-g-add-point-2d segment 0d0 0d0)
+  (defun intersects-land-noscan-p (start end)
+    (bordeaux-threads:with-lock-held (+map-lock+)
+      (ogr-g-set-point-2d segment 0 (latlng-lng start) (latlng-lat start))
+      (ogr-g-set-point-2d segment 1 (latlng-lng end) (latlng-lat end))
+      (ogr-l-set-spatial-filter *map* segment)
+      (ogr-l-reset-reading *map*)
+      (let ((feature (ogr-l-get-next-feature *map*)))
+        (not (null-pointer-p feature))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Initialize map on load -

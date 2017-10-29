@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-14 03:09:54>
+;;; Last Modified <michael 2017-10-29 22:46:18>
 
 (in-package :virtualhelm)
 
@@ -35,7 +35,17 @@
                 :for speed :below speed-length
                 :do (format file "~a," (aref (sail-speed saildef) twa speed)))
              (format file "~%")))))
-              
+
+(defun probe-wind (time lat lng)
+  (multiple-value-bind (angle speed)
+      (get-wind-forecast
+       (get-forecast
+        (get-forecast-bundle 'noaa-bundle)
+        (parse-rfc3339-timestring time))
+       (make-latlng :lat (coerce lat 'double-float)
+                    :lng (coerce lng 'double-float)))
+    (values angle
+            (m/s-to-knots speed))))
        
 
 

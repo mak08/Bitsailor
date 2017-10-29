@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-28 20:51:50>
+;;; Last Modified <michael 2017-10-30 00:43:00>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -192,11 +192,11 @@
 (defun insert-interpolated-forecasts (gribfile)
   (let* ((forecasts (gribfile-data gribfile))
          (interpolated-forecasts
-          (make-array (* (length forecasts) 3))))
+          (make-array (* (1- (length forecasts)) 3))))
     (loop
        :for i :below (1- (length forecasts))
        :do (progn
-             (setf (aref interpolated-forecasts i)
+             (setf (aref interpolated-forecasts (* i 3))
                    (aref forecasts i))
              (setf (aref interpolated-forecasts (+ (* i 3) 1))
                    (interpolate-forecast (aref forecasts i) (aref forecasts (1+ i)) (/ 1 3)))
@@ -212,8 +212,8 @@
          (t1-u (grib-values-u-array t1))
          (t1-v (grib-values-v-array t1))
          (dimensions (array-dimensions t0-u))
-         (result-u (make-array dimensions))
-         (result-v (make-array dimensions)))
+         (result-u (make-array dimensions :element-type 'double-float))
+         (result-v (make-array dimensions :element-type 'double-float)))
     (log2:info "dim:~a t=~a"
                dimensions
                (+ (grib-values-forecast-time t0)

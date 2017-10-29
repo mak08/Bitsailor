@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-17 00:06:03>
+;;; Last Modified <michael 2017-10-29 20:46:58>
 
 (in-package :virtualhelm)
 
@@ -35,7 +35,7 @@
          (flet ((run-update ()
                   (loop
                      (handler-case
-                         (update-forecast-bundle bundle :resolution resolution)
+                         (update-forecast-bundle bundle :resolution resolution :stepwidth 1)
                        (error (e)
                          (log2:error "~a" e)))
                      (sleep 3600))))

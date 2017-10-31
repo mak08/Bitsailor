@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-30 00:43:00>
+;;; Last Modified <michael 2017-10-31 00:49:16>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -136,9 +136,9 @@
       (noaa-spec-and-destfile date :cycle cycle :offset offset)
     (let ((destpath (format () "~a/~a" *grib-folder* destfile)))
       (if (probe-file destpath)
-          (log2:info "File (~a:~a) exists: ~a)" date cycle destpath)
+          (log2:info "File exists: ~a(~a:~a))" destpath date cycle)
           (progn
-            (log2:info "Downloading file (~a:~a) ~a" date cycle destpath)
+            (log2:info "~a(~a:~a)" destpath date cycle)
             (multiple-value-bind
                   (out error-out status)
                 (download-noaa-file% directory spec destfile)

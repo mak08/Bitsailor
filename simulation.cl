@@ -1,10 +1,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-28 21:50:21>
+;;; Last Modified <michael 2017-10-31 00:51:48>
 
-;; -- stats: min/max points per isochrone
-;; -- delete is-land after filtering isochrone
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
@@ -44,6 +42,7 @@
   (forecast-bundle 'dwd-icon-bundle)
   (polars "VO65id7.0")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (starttimezone "+01:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (foils t)
   (polish t)
   (fastmanoeuvres t)
@@ -78,7 +77,6 @@
   sail
   wind-dir
   wind-speed
-  is-land
   predecessor
   origin-angle
   sort-angle%
@@ -103,7 +101,8 @@
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
-         (start-time (parse-datetime-local (routing-starttime routing))) 
+         (start-time (parse-datetime-local (routing-starttime routing)
+                                           :timezone (routing-starttimezone routing))) 
          (isochrones nil))
     
       (log2:info "Routing from ~a to ~a / course angle ~a" start-pos dest-pos dest-heading)
@@ -157,7 +156,7 @@
                          (coerce (/ pointnum stepnum) 'float)))
             (let ((best-route (construct-route isochrone)))
               (make-routeinfo :best best-route
-                              :stats nil ;;(get-statistics best-route)
+                              :stats (get-statistics best-route)
                               :tracks (extract-tracks isochrone)
                               :isochrones isochrones)))
         (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
@@ -199,7 +198,6 @@
                                                 :sail sail
                                                 :wind-dir wind-dir
                                                 :wind-speed wind-speed
-                                                :is-land nil ;; compute this after filtering
                                                 :predecessor routepoint
                                                 :origin-angle (course-angle start-pos new-pos)
                                                 :destination-angle "not computed"
@@ -299,7 +297,6 @@
          :for k :from 0
          :for a = (routepoint-origin-angle point)
          :for d = (routepoint-destination-distance point)
-         ;; :initially (vector-push-extend (aref isochrone 0) result)
          :do (cond
                ((>= (abs (- a a0)) delta-angle)
                 ;; Sector scanned, record best distance...
@@ -317,7 +314,7 @@
                ((< (routepoint-destination-distance point) dmin)
                 (setf kmin k)
                 (setf dmin (routepoint-destination-distance point))))
-         :finally (return (clip-isochrone result))))))
+         :finally (return result)))))
 
 (defun clip-isochrone (isochrone)
   (let ((length (length isochrone)))
@@ -336,11 +333,11 @@
           :for delta = (- (routepoint-destination-distance (aref isochrone second))
                           (routepoint-destination-distance (aref isochrone first)))
           :do (progn
-                (when (> delta 5000)
+                (when (> delta 20000)
                   ;; Big distance increase - clip forward
                   (setf right second)
                   (return (subseq isochrone left right)))
-                (when (< delta -5000)
+                (when (< delta -20000)
                   ;; Big distance decrease - clip backward
                   (setf left second)))
           :finally (return (subseq isochrone left right)))))))
@@ -473,10 +470,10 @@
         (values speed angle sail wind-dir wind-speed)))))
 
 
-(defun parse-datetime-local (time &key (timezone "02:00"))
+(defun parse-datetime-local (time &key (timezone "+01:00"))
   (if (null time)
       (now)
-      (parse-rfc3339-timestring (format () "~a:00+~a" time timezone))))
+      (parse-rfc3339-timestring (format () "~a:00~a" time timezone))))
 
 ;;; Translate latitude coordinates of start and destination to [0..360)
 ;;; Can't SETF LATLNG-LNG!

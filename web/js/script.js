@@ -89,6 +89,7 @@ function setUp () {
 
 	$("#cb_startdelayed").click(onDelayedStart);
 	$("#tb_starttime").change(onSetParameter);
+	$("#sel_starttimezone").change(onSetParameter);
 	$("#bt_setstartpos").click(onStartDMSUpdated);
 	
 	// Connect option selectors
@@ -239,11 +240,14 @@ function getSession () {
 			redrawWind("offset", irIndex.value);
 		}
 
+		var starttimezone = session.routing.starttimezone;
+		$("#sel_starttimezone")[0].value = starttimezone;
 		var starttime = session.routing.starttime;
 		var cbStartDelayed = $("#cb_startdelayed")[0];
 		if ( starttime != false ) {
 			cbStartDelayed.checked = true;
 			$("#tb_starttime")[0].value = starttime;
+
 		} else {
 			cbStartDelayed.checked = false;
 		}
@@ -285,6 +289,10 @@ function getSession () {
 		var useFoils = session.routing.foils;
 		var cbUseFoils = $("#cb_usefoils")[0];
 		cbUseFoils.checked = useFoils;
+
+		var usePolish = session.routing.polish;
+		var cbUsePolish = $("#cb_usepolish")[0];
+		cbUsePolish.checked = usePolish;
 
 		var fastManoeuvres = session.routing.fastmanoeuvres;
 		var cbFastManoeuvres = $("#cb_fastmanoeuvres")[0];

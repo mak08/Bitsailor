@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-20 00:10:21>
+;;; Last Modified <michael 2017-10-30 22:48:57>
 
 (in-package :virtualhelm)
 
@@ -38,6 +38,12 @@
 
 ;; Point Nemo
 ;; 48°52.6′S 123°23.6′W
+
+(defvar +capetown+
+  (make-latlng :lat -33.91028d0 :lng 18.300278d0))
+
+(defvar +freemantle+
+  (make-latlng :lat -32.060833d0 :lng 115.72361d0))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

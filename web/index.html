@@ -62,8 +62,13 @@
 		<div class="cell">
 		  <label>Delayed:</label>
 		  <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
-		  <input id="tb_starttime" name ="starttime" type="datetime-local"/>
-		</div>
+		  <input id="tb_starttime" name="starttime" type="datetime-local"/>
+		  <select id="sel_starttimezone" name="starttimezone">
+			<option value="+00:00">UTC</option>
+			<option value="+01:00">MET</option>
+			<option value="+02:00">MEST</option>
+		  </select>											
+		 </div>
 		<div class="cell">
 		  <label>Latitude:</label>
 		  <select id="sel_latsign" name="latsign">
@@ -105,6 +110,7 @@
 			<option value="IMOCA60">IMOCA 60</option>
 			<option value="IMOCA60VVOR17">IMOCA 60 - VR2017</option>
 			<option value="VO65id7.0">Volvo Ocean 65 - VR2017</option>
+			<option value="clipper_70_v2">Clipper</option>
 			<option value="MINITRANSAT17">Mini Transat 2017</option>
 		  </select>
 		</div>

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-31 00:51:48>
+;;; Last Modified <michael 2017-11-01 18:08:06>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -180,8 +180,8 @@
                     :for heading = (normalize-heading heading-index)
                     :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
                             (get-penalized-avg-speed routing routepoint forecast polars-name heading)
-                          (when (or (<= -175 twa -40)
-                                    (<= 40 twa 175))
+                          (when (or (<= -165 twa -40)
+                                    (<= 40 twa 165))
                             (let*
                                 ((new-pos (add-distance-exact (routepoint-position routepoint)
                                                               (* speed (step-size routing stepnum))

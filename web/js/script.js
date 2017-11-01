@@ -256,23 +256,9 @@ function getSession () {
 		var selPolars = $("#sel_polars")[0];
 		selPolars.value = polars;
 
-		var duration = session.routing.stepmax;
+		var duration = session.routing.stepmax/3600;
 		var selDuration = $("#sel_duration")[0];
-		if ( duration === 21600 ) {
-			selDuration.value = 6;
-		} else if ( duration === 43200 ) {
-			selDuration.value = 12;
-		} else if ( duration === 86400 ) {
-			selDuration.value = 24;
-		} else if ( duration === 129600 ) {
-			selDuration.value = 36;
-		} else if ( duration === 172800 ) {
-			selDuration.value = 48;
-		} else if ( duration === 345600 ) {
-			selDuration.value = 96;
-		} else if ( duration === 518400 ) {
-			selDuration.value = 144;
-		}
+		selDuration.value = duration;
 
 		var searchAngle = session.routing.fan;
 		var selSearchAngle = $("#sel_searchangle")[0];

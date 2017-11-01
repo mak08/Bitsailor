@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description    Download, process and provide DWD ICON wind data
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-03 16:45:06>
+;;; Last Modified <michael 2017-11-01 17:06:45>
 
 (in-package :virtualhelm)
 
@@ -141,10 +141,10 @@
   "Load U_10M and V_10M data from the DWD ICON files specified by timestamp and resolution"
   (let* ((u10-path (format nil "~a/~a" directory (grib-file-name "U_10M" timestamp :resolution resolution)))
          (v10-path (format nil "~a/~a" directory (grib-file-name "V_10M" timestamp :resolution resolution)))
-         (index (grib-index-new '("step" "shortName"))))
+         (index (codes-index-new '("step" "shortName"))))
     
-    (log2:info "Add file ~a  => ~a~%" u10-path (grib-index-add-file index u10-path))
-    (log2:info "Add file ~a  => ~a~%" v10-path (grib-index-add-file index v10-path))
+    (log2:info "Add file ~a  => ~a~%" u10-path (codes-index-add-file index u10-path))
+    (log2:info "Add file ~a  => ~a~%" v10-path (codes-index-add-file index v10-path))
 
     (get-values-from-index index)))
 

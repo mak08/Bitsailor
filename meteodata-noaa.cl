@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-31 00:49:16>
+;;; Last Modified <michael 2017-11-01 17:07:35>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -182,10 +182,10 @@
   "Read GRIB data into U and V arrays. Assumes the GRIB file contains U-GRD and V-GRD values"
   (when (null filenames)
     (error "No input files"))
-  (let ((index (grib-index-new '("step" "shortName"))))
+  (let ((index (codes-index-new '("step" "shortName"))))
     (dolist (filename filenames)
       (log2:info "Add file ~a~%" filename)
-      (grib-index-add-file index filename))
+      (codes-index-add-file index filename))
     (get-values-from-index index)))
 
 

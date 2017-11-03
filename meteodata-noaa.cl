@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-01 17:07:35>
+;;; Last Modified <michael 2017-11-02 22:23:29>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -225,15 +225,29 @@
        :for v0 :across t0-v
        :for v1 :across t1-v
        :for i :from 0
-       :do (setf (aref result-u i)
-                 (+ u0 (* fraction (- u1 u0)))
-                 (aref result-v i)
-                 (+ v0 (* fraction (- v1 v0)))))
+       :for s0 = (enorm u0 v0)
+       :for s1 = (enorm u1 v1)
+       :for s = (+ s0 (* fraction (- s1 s0)))
+       :for u = (+ u0 (* fraction (- u1 u0)))
+       :for v = (+ v0 (* fraction (- v1 v0)))
+       :for a = (atan u v)
+       :do (multiple-value-bind (u v)
+               (p2c a s)
+             (setf (aref result-u i)
+                   u
+                   (aref result-v i)
+                   v)))
     (make-grib-values :forecast-time (+ (grib-values-forecast-time t0)
                                         (* fraction (- (grib-values-forecast-time t1)
                                                        (grib-values-forecast-time t0))))
                       :u-array result-u
                       :v-array result-v)))
+
+(defun p2c (a r)
+  (let ((c (cis a)))
+    (values 
+     (* r (imagpart c))
+     (* r (realpart c)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

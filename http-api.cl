@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-21 16:59:02>
+;;; Last Modified <michael 2017-11-03 22:52:29>
 
 (in-package :virtualhelm)
 
@@ -76,9 +76,10 @@
               (session-routing session))
              (routeinfo
               (get-route routing)))
+        (setf (http-header response :|Content-Encoding|) "gzip")
         (setf (http-body response)
-              (with-output-to-string (s)
-                (json s routeinfo))))
+              (zlib:gzip (with-output-to-string (s)
+                           (json s routeinfo)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

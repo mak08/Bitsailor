@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2017-10-15 00:09:50>
+;;; Last Modified  <michael 2017-11-03 21:02:11>
  
 (in-package :virtualhelm)
 
@@ -26,6 +26,9 @@
   (format stream "~a" thing))
 
 (defmethod json% (stream (thing double-float))
+  (format stream "~4$" thing))
+
+(defmethod json% (stream (thing single-float))
   (format stream "~4$" thing))
 
 (defmethod json% (stream (thing string))

@@ -3,6 +3,7 @@
 
 var googleMap = null;
 var mapContextMenu = null;
+
 // The SVG element used for drawing tracking data
 var svgArea = {};
 
@@ -45,6 +46,8 @@ var trackMarkers = [];
 var oldLat = 0;
 var oldLng = 0;
 
+
+var pageURL = '//';
 
 function setUp () {
 	
@@ -213,7 +216,10 @@ function getSession () {
 	$.ajax({ 
 		url: "/function/vh:getSession",
 		dataType: 'json'
-	}).done( function(session) {
+	}).done( function(session, status, xhr) {
+		pageURL = xhr.getResponseHeader('Content-Location');
+		var copyText = document.getElementById("tb_pageURL");
+		copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
 
 		updateStartPosition(session.routing.start.lat, session.routing.start.lng);
 
@@ -244,7 +250,7 @@ function getSession () {
 		$("#sel_starttimezone")[0].value = starttimezone;
 		var starttime = session.routing.starttime;
 		var cbStartDelayed = $("#cb_startdelayed")[0];
-		if ( starttime != false ) {
+		if ( starttime != false && starttime != 'NIL' ) {
 			cbStartDelayed.checked = true;
 			$("#tb_starttime")[0].value = starttime;
 
@@ -317,7 +323,11 @@ function onSetParameter (event) {
 	$.ajax({ 
 		url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
 		dataType: 'json'
-	}).done( function(data) {
+	}).done( function(data, status, xhr ) {
+		pageURL = xhr.getResponseHeader('Content-Location');
+		var copyText = document.getElementById("tb_pageURL");
+		copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
+
 		if ( paramName === "forecastbundle" ) {
 			var selForecast = $("#sel_forecastbundle")[0];
 			var irIndex = $("#ir_index")[0];
@@ -516,6 +526,12 @@ function getRoute () {
 		pgGetRoute.value = pgGetRoute.max;
 		alert(textStatus + ' ' + errorThrown);
 	});
+}
+
+function copyURL () {
+  var copyText = document.getElementById("tb_pageURL");
+  copyText.select();
+  document.execCommand("Copy");
 }
 
 function addMarkerListener(marker) {

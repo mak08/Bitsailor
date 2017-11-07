@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-03 22:52:29>
+;;; Last Modified <michael 2017-11-06 23:28:34>
 
 (in-package :virtualhelm)
 
@@ -15,18 +15,24 @@
 ;;; This function is called as a dynamic handler. It is NOT registered.
 (defun get-page (server handler request response)
   (handler-case 
-      (let ((session (find-or-create-session request response))
-            (path (merge-pathnames (make-pathname :name "index" :type "html")
-                                   (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                     '("web"))))))
-        (load-file path response)
-        (log2:info "Query: ~a " (parameters request))
+      (let* ((session (find-or-create-session request response))
+             (query (parameters request))
+             (mainpage (or (cadr (assoc "mainpage" query :test #'equal))
+                           "index"))
+             (path (merge-pathnames (make-pathname :name mainpage :type "html")
+                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                      '("web"))))))
+        (log2:info "Query: ~a " query)
         (dolist (pair (parameters request))
           ;; Currently the only paramters supported here are 'start' and 'dest', designated by a place name.
           ;; See places.cl.
           (destructuring-bind (name value)
               pair
-            (set-routing-parameter session name value))))
+            (unless (string= name "mainpage")
+              (set-routing-parameter session name value))))
+        (setf (http-header response :|Content-Location|)
+              (get-routing-url session))
+        (load-file path response))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -57,10 +63,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setParameter
+
 (defun |setParameter| (location request response &key |name| (|value| nil))
   (declare (ignore location))
   (let* ((session (find-or-create-session request response)))
     (set-routing-parameter session |name| |value|) 
+    (setf (http-header response :|Content-Location|)
+          (get-routing-url session))
     (setf (http-body response)
           (with-output-to-string (s)
             (json s session)))))
@@ -91,9 +100,11 @@
   (declare (ignore location))
   (let* ((session
           (find-or-create-session request response)))
-      (setf (http-body response)
-            (with-output-to-string (s)
-              (json s session)))))
+    (setf (http-header response :|Content-Location|)
+          (get-routing-url session))
+    (setf (http-body response)
+          (with-output-to-string (s)
+            (json s session)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -210,10 +221,28 @@
       (setf (http-body response) buffer)))
   (setf (http-header response :|Content-Type|) "text/html"))
 
+
+(defun get-routing-url (session)
+  (let ((routing (session-routing session)))
+    (format nil "/vh?~@{~a=~a~^&~}"
+            "forecastbundle" (routing-forecast-bundle routing)
+            "starttime" (routing-starttime routing)
+            "polars" (routing-polars routing)
+            "foils"  (if (routing-foils routing) "true" "false")
+            "polish" (if (routing-polish routing) "true" "false")
+            "fastmanoeuvres" (if (routing-fastmanoeuvres routing) "true" "false")
+            "minwind" (if (routing-minwind routing) "true" "false")
+            "duration" (/ (routing-stepmax routing) 3600)
+            "searchangle" (routing-fan routing)
+            "angleincrement" (routing-angle-increment routing)
+            "pointsperisochrone" (routing-max-points-per-isochrone routing))))
+
 (defun set-routing-parameter (session name value)
   (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
   (let ((routing (session-routing session)))
     (cond
+      ((string= name "race")
+       (log2:warning "Parameter 'race' not implemented yet"))
       ((string= name "forecastbundle")
        (cond
          ((string= value "DWD-ICON-BUNDLE")
@@ -255,15 +284,23 @@
              (etypecase value
                (latlng value)
                (string (find-place value)))))
+      ((string= name "startlat")
+       (setf (routing-start routing)
+             (make-latlng :lat (coerce (read-from-string value) 'double-float)
+                          :lng (latlng-lng (routing-start routing)))))
+      ((string= name "startlon")
+       (setf (routing-start routing)
+             (make-latlng :lat (latlng-lat (routing-start routing))
+                          :lng (coerce (read-from-string value) 'double-float))))
       ((string= name "dest")
        (setf (routing-dest routing)
              (etypecase value
                (latlng value)
                (string (find-place value)))))
       (t
-       (log2:error "Unhandled parameter ~a ~a" name value)
-       (error "Unhandled parameter ~a ~a" name value)))))
-         
+       (log2:error "Unhandled parameter ~a=~a" name value)
+       (error "Unhandled parameter ~a=~a" name value)))))
+
 (defun make-session-id ()
   (create-uuid))
 

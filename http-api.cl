@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-06 23:28:34>
+;;; Last Modified <michael 2017-11-26 00:08:19>
 
 (in-package :virtualhelm)
 
@@ -237,12 +237,23 @@
             "angleincrement" (routing-angle-increment routing)
             "pointsperisochrone" (routing-max-points-per-isochrone routing))))
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Predefined races
+
+
+(defun get-parameter-group (name)
+  (cdr (assoc name +parameter-groups+ :test #'string=)))
+
 (defun set-routing-parameter (session name value)
   (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
   (let ((routing (session-routing session)))
     (cond
       ((string= name "race")
-       (log2:warning "Parameter 'race' not implemented yet"))
+       (loop
+          :for (name-i value-i)
+          :in (get-parameter-group value)
+          :do (set-routing-parameter session name-i value-i)))
       ((string= name "forecastbundle")
        (cond
          ((string= value "DWD-ICON-BUNDLE")
@@ -297,6 +308,14 @@
              (etypecase value
                (latlng value)
                (string (find-place value)))))
+      ((string= name "destlat")
+       (setf (routing-dest routing)
+             (make-latlng :lat (coerce (read-from-string value) 'double-float)
+                          :lng (latlng-lng (routing-dest routing)))))
+      ((string= name "destlon")
+       (setf (routing-dest routing)
+             (make-latlng :lat (latlng-lat (routing-dest routing))
+                          :lng (coerce (read-from-string value) 'double-float))))
       (t
        (log2:error "Unhandled parameter ~a=~a" name value)
        (error "Unhandled parameter ~a=~a" name value)))))

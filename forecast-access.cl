@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-21 18:49:03>
+;;; Last Modified <michael 2017-11-26 21:57:47>
 
 (in-package :virtualhelm)
 
@@ -22,14 +22,17 @@
 Data for offset (hour) is used and no time interpolation is done."
   (declare (double-float lat lon))
 
-  (when (>= offset (length (gribfile-data grib)))
-    (error "Out of forecasts"))
+  (when (>= offset (grib-values-forecast-time
+                    (aref (gribfile-data grib)
+                          (1- (length (gribfile-data grib))))))
+    (error "No data for offset ~amin" offset))
 
   (when (< lon 0d0)
     (incf lon 360d0))
   
   (let ((i-inc (gribfile-i-inc grib))
-        (j-inc (gribfile-j-inc grib)))
+        (j-inc (gribfile-j-inc grib))
+        (index (offset-index grib offset)))
     (declare (double-float  i-inc j-inc))
     (with-bindings
         (((flat rlat) (ffloor lat j-inc))
@@ -40,10 +43,10 @@ Data for offset (hour) is used and no time interpolation is done."
            (lat0 (* (ffloor lat j-inc) j-inc))
            (lat1 (+ lat0 j-inc)))
         (declare (double-float lon0 lon1 lat0 lat1))
-        (with-bindings (((u00 v00) (get-wind grib offset lat0 lon0))
-                        ((u01 v01) (get-wind grib offset lat0 (mod lon1 360d0)))
-                        ((u10 v10) (get-wind grib offset lat1 lon0))
-                        ((u11 v11) (get-wind grib offset lat1 (mod lon1 360d0))))
+        (with-bindings (((u00 v00) (get-wind grib index lat0 lon0))
+                        ((u01 v01) (get-wind grib index lat0 (mod lon1 360d0)))
+                        ((u10 v10) (get-wind grib index lat1 lon0))
+                        ((u11 v11) (get-wind grib index lat1 (mod lon1 360d0))))
           (declare (double-float lon0 lon1 lat0 lat1 u00 u01 u10 u11 v00 v10 v01 v11))
           (let* ((u (bilinear lon lat lon0 lon1 lat0 lat1 u00 u01 u10 u11))
                  (v (bilinear lon lat lon0 lon1 lat0 lat1 v00 v01 v10 v11))
@@ -55,12 +58,19 @@ Data for offset (hour) is used and no time interpolation is done."
             (values (angle u v)
                     s)))))))
 
+(defun offset-index (grib offset)
+  (loop
+     :for k :below (length (gribfile-data grib))
+     :while (>= offset (grib-values-forecast-time
+                       (aref (gribfile-data grib) (1+ k))))
+     :finally (return k)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Grib values at grib coordinates
 
 (declaim (ftype (function (t integer double-float double-float) (values double-float double-float)) get-wind))
 
-(defun get-wind (grib offset lat lon)
+(defun get-wind (grib index lat lon)
   "Get u/v values at lat,lon (in GRIB coordinates)"
   (declare (double-float lat lon)
            (ftype (function (array) (simple-array double-float)) grib-values-u-array grib-values-v-array))
@@ -76,7 +86,7 @@ Data for offset (hour) is used and no time interpolation is done."
        (lonpoints (gribfile-lon-points grib))
        ;; Use forecast data at offset (hour). No time interpolation.
        (grib-values
-        (aref (gribfile-data grib) offset)))
+        (aref (gribfile-data grib) index)))
     (declare (double-float lat0 lat1 lon0 lon1))
     (declare ((unsigned-byte 16) lonpoints latpoints))
     ;; 0 - Check if latlon is within grib coordinates

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-02 22:23:29>
+;;; Last Modified <michael 2017-11-26 22:09:49>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -24,7 +24,6 @@
 (defvar *noaa-forecast-bundle* nil)
 
 ;;; Offset (in minutes) of the forecast used at a given time
-(defparameter +noaa-offset+ 0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API Functions
@@ -41,8 +40,10 @@
 
 (defmethod fcb-max-offset ((bundle noaa-bundle))
   (let ((grib (noaa-data bundle)))
-    (* (fcb-stepwidth bundle)
-       (1- (length (gribfile-data grib))))))
+    (/
+     (grib-values-forecast-time (aref (gribfile-data grib)
+                                      (1- (length (gribfile-data grib)))))
+     60)))
 
 (defclass noaa-forecast (forecast)
   ((noaa-bundle :reader noaa-bundle :initarg :bundle)
@@ -57,12 +58,10 @@
          (grib
           (noaa-data bundle))
          (offset
-          ;; NOAA forecasts are 3-hourly
-          ;; ... but interpolated to 1 hour steps
-          (- (truncate
-              (/ (timestamp-difference (fc-time forecast) (fcb-time bundle))
-                 (* (fcb-stepwidth bundle) 3600)))
-             +noaa-offset+)))
+          ;; Minute offset 
+          (truncate
+           (/ (timestamp-difference (fc-time forecast) (fcb-time bundle))
+              60))))
     (get-interpolated-wind grib offset (latlng-lat latlng) (latlng-lng latlng))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -107,14 +106,25 @@
 ;;; Example URL:
 ;;;    http://nomads.ncep.noaa.gov/cgi-bin/filter_gfs_1p00.pl?file=gfs.t12z.pgrb2.1p00.f000&lev_10_m_above_ground=on&var_UGRD=on&var_VGRD=on&leftlon=0&rightlon=360&toplat=90&bottomlat=-90&dir=%2Fgfs.2017091712
 
+(defvar +noaa-forecast-offsets+
+  #(0 3 6 9 12 15 18 21 24
+    27 30 33 36 39 42 45 48 51
+    54 57 60 63 66 69 72 75 78 81
+    84 87 90 93 96 99 102 105 108 111
+    114 117 120 123 126 129 132 135 138 141
+    144 147 150 153 156 159 162 165 168 171
+    174 177 180 183 186 189 192 195 198 201
+    204 207 210 213 216 219 222 225 228 231
+    234 237 240 252 264 276 288 300 312 324
+    336 348 360 372 384))
+
 (defun download-noaa-bundle (date cycle)
   ;; Date: yyyymmdd 
   ;; Cycle: 00|06|12|18
   ;; 3hourly forecasts will be downloaded (offsets 0..240)
   (ecase cycle ((or 0 6 12 18)))
   (loop
-     :for k :from 1
-     :for offset :from 0 :to 240 :by 3
+     :for offset :across +noaa-forecast-offsets+
      :for file = (ignore-errors
                    (download-noaa-file date cycle offset))
      :while file

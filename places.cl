@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-30 22:48:57>
+;;; Last Modified <michael 2017-11-16 23:01:13>
 
 (in-package :virtualhelm)
 
@@ -42,8 +42,35 @@
 (defvar +capetown+
   (make-latlng :lat -33.91028d0 :lng 18.300278d0))
 
-(defvar +freemantle+
+(defvar +fremantle+
   (make-latlng :lat -32.060833d0 :lng 115.72361d0))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Predefined races
+
+(defparameter +parameter-groups+
+  '(("t650"
+     ("dest" +capetown+)
+     ("forecastbundle" "NOAA-BUNDLE")
+     ("polars" "MINITRANSAT17")
+     ("minwind" "true"))
+    ("clipper"
+     ("dest" +fremantle+)
+     ("forecastbundle" "NOAA-BUNDLE")
+     ("polars" "clipper_70_v2")
+     ("minwind" "true"))
+    ("vor"
+     ("dest" +capetown+)
+     ("forecastbundle" "NOAA-BUNDLE")
+     ("polars" "VO65id7.0")
+     ("minwind" "true"))
+    ("tjv"
+     ("dest" +capetown+)
+     ("forecastbundle" "NOAA-BUNDLE")
+     ("polars" "maxi_trimaran_id8.0")
+     ("minwind" "true"))))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

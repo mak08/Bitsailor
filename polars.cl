@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-13 23:19:21>
+;;; Last Modified <michael 2017-11-27 23:26:45>
 
 (in-package :virtualhelm)
 
@@ -9,35 +9,57 @@
   (append (pathname-directory (asdf:system-source-directory :virtualhelm)) '("polars")))
 
 (defparameter +sail-names+
-    #("Jib" "Gennaker" "Jib 2" "Jib 3" "Code 0" "Heavy Gennaker" "Light Gennaker"))
+    #("Jib" "Spi" "Staysail" "Light Jib" "Code 0" "Heavy Gennaker" "Light Gennaker"))
 
 (defparameter +polar-file-names+
   #("vpp_1_1.csv" "vpp_1_2.csv" "vpp_1_4.csv" "vpp_1_8.csv" "vpp_1_16.csv" "vpp_1_32.csv" "vpp_1_64.csv"))
 
-(defun get-max-speed (angle wind-speed polars-name &key (fast t))
+(defvar +jib+ 0)
+(defvar +spi+ 1)
+(defvar +sty+ 2)
+(defvar +ljb+ 3)
+(defvar +cd0+ 4)
+(defvar +hgn+ 5)
+(defvar +lgn+ 6)
+(defvar +allsails+ 127)
+
+(defun encode-options (option-list)
+  (let ((options 3))
+    (when (member "light" option-list :test #'string=)
+      (setf options (dpb 1 (byte 1 +ljb+) options))
+      (setf options (dpb 1 (byte 1 +lgn+) options)))
+    (when (member "heavy" option-list :test #'string=)
+      (setf options (dpb 1 (byte 1 +sty+) options))
+      (setf options (dpb 1 (byte 1 +hgn+) options)))
+    (when (member "reach" option-list :test #'string=)
+      (setf options (dpb 1 (byte 1 +cd0+) options)))
+    options))
+
+(defun get-max-speed (angle wind-speed polars-name &key (fast t) (options +allsails+))
   ;; angle: difference between boat heading and wind direction
   (if fast
-      (let ((polars (get-combined-polars polars-name)))
+      (let ((polars (get-combined-polars polars-name options)))
         (values-list (aref polars
                            (round (polars-angle angle) 0.1)
                            (round wind-speed 0.1))))
       (let ((polars (get-polars polars-name)))
-        (get-max-speed% angle wind-speed polars))))
+        (get-max-speed% angle wind-speed polars options))))
 
-(defun get-max-speed% (angle wind-speed polars)
-  (loop
-     :with imax = 0
-     :with vmax = 0
-     :for i :below 7
-     :for v = (get-boat-speed (polars-angle angle)
-                              wind-speed
-                              (sail-speed (aref polars i)))
-     :do (when (>= v vmax)
-           (setf imax i
-                 vmax v))
-     :finally (return
-                (values vmax
-                        (sail-name (aref polars imax))))))
+(defun get-max-speed% (angle wind-speed polars options)
+  (do
+      ((imax 0)
+       (vmax 0)
+       (i 0 (1+ i)))
+      ((= i 7)
+       (values vmax
+               (sail-name (aref polars imax))))
+    (when (= (ldb (byte 1 i) options) 1)
+      (let ((v (get-boat-speed (polars-angle angle)
+                               wind-speed
+                               (sail-speed (aref polars i)))))
+        (when (>= v vmax)
+          (setf imax i
+                vmax v))))))
 
 (defun get-boat-speed (angle wind-speed polars)
   (let* ((w-max-index (- (array-dimension polars 1) 1))
@@ -50,13 +72,11 @@
                (t
                 (loop
                    :for k :from 1 :to (1- w-max-index)
-                   :for c = (aref polars 0 k)
-                   :while (<=  c wind-speed)
+                   :while (<=  (aref polars 0 k) wind-speed)
                    :finally (return k)))))
          (a1 (loop
                 :for k :from 1 :to (1- a-max-index)
-                :for r = (aref polars k 0)
-                :while (<=  r angle)
+                :while (<= (aref polars k 0) angle)
                 :finally (return k)))
          (w0 (if (= wind-speed w-max) w1 (1- w1)))
          (a0 (if (= angle a-max) a1 (1- a1))))
@@ -83,12 +103,17 @@
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
 
-(defun get-combined-polars (name)
-  (or (gethash name *combined-polars-ht*)
-      (setf (gethash name *combined-polars-ht*)
-            (preprocess-polars name))))
+(defun get-combined-polars (name options)
+  (let ((polars-ht
+         (or (gethash name *combined-polars-ht*)
+             (setf (gethash name *combined-polars-ht*)
+                   (make-hash-table :test 'eql)))))
+    (or (gethash options polars-ht)
+        (setf (gethash options polars-ht)
+              (preprocess-polars name options)))))
 
-(defun preprocess-polars (name)
+(defun preprocess-polars (name options)
+  (log2:info "Preprocessing polars for ~a/~a" name options)
   (let* ((polars (get-polars name))
          (first-sail (aref polars 0))
          (first-sail-speed (sail-speed first-sail))
@@ -100,7 +125,7 @@
              :collect (loop
                          :for wind :from 0d0 :to (- max-wind 0.1d0) :by 0.1d0
                          :collect (multiple-value-list
-                                   (get-max-speed% angle wind polars))))))
+                                   (get-max-speed% angle wind polars options))))))
     (make-array (list (length precomputed)
                       (length (car precomputed)))
                 :initial-contents precomputed)))

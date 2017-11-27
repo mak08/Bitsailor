@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-01 18:08:06>
+;;; Last Modified <michael 2017-11-27 23:46:15>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -43,6 +43,7 @@
   (polars "VO65id7.0")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+01:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (options ())
   (foils t)
   (polish t)
   (fastmanoeuvres t)
@@ -98,6 +99,7 @@
         ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars-name (routing-polars routing))
+         (sails (encode-options (routing-options routing)))
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
@@ -132,9 +134,10 @@
             ;; Get min and max heading of the point of each isochrone for sorting
             (min-heading 360 360)
             (max-heading 0 0)
-            ;; Advance the simulation time BEFORE each iteration - this is most likely what GE does
-            (step-time (adjust-timestamp start-time (:offset :sec (step-size routing stepnum)))
-                       (adjust-timestamp step-time (:offset :sec (step-size routing stepnum))))
+            (step-size (step-size routing stepnum) (step-size routing stepnum))
+            ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
+            (step-time start-time
+                       (adjust-timestamp step-time (:offset :sec step-size)))
             (step-time-string (format-rfc3339-timestring nil step-time)
                               (format-rfc3339-timestring nil step-time))
             ;; Get wind data for simulation time
@@ -179,12 +182,12 @@
                     :for heading-index :from left :to right :by angle-increment
                     :for heading = (normalize-heading heading-index)
                     :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
-                            (get-penalized-avg-speed routing routepoint forecast polars-name heading)
+                            (get-penalized-avg-speed routing routepoint forecast polars-name sails heading)
                           (when (or (<= -165 twa -40)
                                     (<= 40 twa 165))
                             (let*
                                 ((new-pos (add-distance-exact (routepoint-position routepoint)
-                                                              (* speed (step-size routing stepnum))
+                                                              (* speed step-size)
                                                               (coerce heading 'double-float)))
                                  (dtf (course-distance new-pos dest-pos)))
                               (incf pointnum)
@@ -235,9 +238,9 @@
            (t
             6))))
 
-(defun get-penalized-avg-speed (routing predecessor forecast polars-name heading)
+(defun get-penalized-avg-speed (routing predecessor forecast polars-name sails heading)
   (multiple-value-bind (speed twa sail wind-dir wind-speed)
-      (heading-boatspeed forecast polars-name (routepoint-position predecessor) heading)
+      (heading-boatspeed forecast polars-name sails (routepoint-position predecessor) heading)
     (when (routing-minwind routing)
       (setf speed (max 2.0578d0 speed)))
     (when
@@ -414,6 +417,7 @@
   (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars-name (routing-polars routing))
+         (sails (encode-options (routing-options routing)))
          (start-time (or time (now)))
          (step-time (routing-stepsize routing))
          (startpos (make-latlng :lat lat-a :lng lng-a)))
@@ -436,7 +440,7 @@
         (adjust-timestamp! start-time (:offset :sec step-time))
         (let ((forecast (get-forecast forecast-bundle start-time)))
           (multiple-value-bind (speed heading)
-              (twa-boatspeed forecast polars-name curpos twa)
+              (twa-boatspeed forecast polars-name sails curpos twa)
             (setf curpos (add-distance-exact curpos (* speed step-time) heading))))))))
 
 (defun twa-heading (wind-dir angle)
@@ -449,24 +453,24 @@
   "Compute TWA resulting from HEADING in WIND"
   (normalize-angle (- wind-dir heading)))
 
-(defun twa-boatspeed (forecast polars latlon angle)
+(defun twa-boatspeed (forecast polars sails latlon angle)
   (check-type angle angle)
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
     (multiple-value-bind (speed sail)
-        (get-max-speed (abs angle) wind-speed polars)
+        (get-max-speed (abs angle) wind-speed polars :options sails)
       (values speed
               (twa-heading wind-dir angle)
               sail
               wind-speed))))
 
-(defun heading-boatspeed (forecast polars latlon heading)
+(defun heading-boatspeed (forecast polars sails latlon heading)
   (check-type heading heading)
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
     (let ((angle (heading-twa wind-dir heading)))
       (multiple-value-bind (speed sail)
-          (get-max-speed angle wind-speed polars)
+          (get-max-speed angle wind-speed polars :options sails)
         (values speed angle sail wind-dir wind-speed)))))
 
 

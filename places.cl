@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-11-16 23:01:13>
+;;; Last Modified <michael 2017-11-27 20:29:34>
 
 (in-package :virtualhelm)
 
@@ -50,27 +50,8 @@
 ;;; Predefined races
 
 (defparameter +parameter-groups+
-  '(("t650"
-     ("dest" +capetown+)
-     ("forecastbundle" "NOAA-BUNDLE")
-     ("polars" "MINITRANSAT17")
-     ("minwind" "true"))
-    ("clipper"
-     ("dest" +fremantle+)
-     ("forecastbundle" "NOAA-BUNDLE")
-     ("polars" "clipper_70_v2")
-     ("minwind" "true"))
-    ("vor"
-     ("dest" +capetown+)
-     ("forecastbundle" "NOAA-BUNDLE")
-     ("polars" "VO65id7.0")
-     ("minwind" "true"))
-    ("tjv"
-     ("dest" +capetown+)
-     ("forecastbundle" "NOAA-BUNDLE")
-     ("polars" "maxi_trimaran_id8.0")
-     ("minwind" "true"))))
-
+  ;; No race specific parameter definitions
+  '())
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

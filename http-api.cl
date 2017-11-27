@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-26 00:08:19>
+;;; Last Modified <michael 2017-11-27 23:30:37>
 
 (in-package :virtualhelm)
 
@@ -241,9 +241,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races
 
-
 (defun get-parameter-group (name)
-  (cdr (assoc name +parameter-groups+ :test #'string=)))
+  (or (cdr (assoc name +parameter-groups+ :test #'string=))
+      '(("forecastbundle" "NOAA-BUNDLE")
+        ("minwind" "true")
+        ("searchangle" "90")
+        ("angleincrement" "2")
+        ("pointsperisochrone" "300"))))
 
 (defun set-routing-parameter (session name value)
   (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
@@ -251,8 +255,7 @@
     (cond
       ((string= name "race")
        (loop
-          :for (name-i value-i)
-          :in (get-parameter-group value)
+          :for (name-i value-i) :in (get-parameter-group value)
           :do (set-routing-parameter session name-i value-i)))
       ((string= name "forecastbundle")
        (cond
@@ -266,6 +269,8 @@
        (setf (routing-starttime routing) value))
       ((string= name "polars")
        (setf (routing-polars routing) value))
+      ((string= name "options")
+       (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
       ((string= name "foils")
        (setf (routing-foils routing) (string= value "true")))
       ((string= name "polish")

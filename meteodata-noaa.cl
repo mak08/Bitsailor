@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-26 22:09:49>
+;;; Last Modified <michael 2017-11-30 21:01:39>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -157,8 +157,9 @@
                  (let ((download-size
                         (with-open-file (f (format () "~a/~a" *grib-folder* destfile))
                           (file-length f))))
-                   (when (< download-size 90000)
-                     (uiop:delete-file-if-exists destpath)
+                   (when (< download-size 50000)
+                     ;; (uiop:delete-file-if-exists destpath)
+                     (log2:warning  "Short file ~a. Deleting." destpath)
                      (error "Short file. Forecast ~a:~a not available yet?" date spec))))
                 (otherwise
                  (error "cURL error ~a" status))))))

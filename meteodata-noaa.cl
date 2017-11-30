@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-30 21:01:39>
+;;; Last Modified <michael 2017-12-01 00:55:57>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -80,7 +80,8 @@
       (tagbody
         :start
         (let* ((filenames (download-noaa-bundle date cycle))
-               (numfiles (length filenames)))
+               (numfiles (length filenames))
+               (allfiles (length +noaa-forecast-offsets+)))
           (when (and (>= numfiles 1)
                      (or (null *noaa-forecast-bundle*)
                          (>= numfiles 41)))
@@ -93,8 +94,9 @@
                     (make-instance 'noaa-bundle
                                    :data data
                                    :stepwidth stepwidth))))
-          (when (< numfiles 81)
-            (log2:info "Have ~a files, waiting 10min" numfiles)
+          (log2:info "Have ~a/~a files" numfiles allfiles)
+          (when (< numfiles allfiles)
+            (log2:info "Retrying in 10min")
             (sleep 600)
             (go :start))
           (log2:info "Done"))))))
@@ -158,7 +160,7 @@
                         (with-open-file (f (format () "~a/~a" *grib-folder* destfile))
                           (file-length f))))
                    (when (< download-size 50000)
-                     ;; (uiop:delete-file-if-exists destpath)
+                     (uiop:delete-file-if-exists destpath)
                      (log2:warning  "Short file ~a. Deleting." destpath)
                      (error "Short file. Forecast ~a:~a not available yet?" date spec))))
                 (otherwise

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-27 23:26:45>
+;;; Last Modified <michael 2017-12-04 20:49:30>
 
 (in-package :virtualhelm)
 
@@ -201,38 +201,64 @@
   (with-open-file (f filename :element-type 'character)
     (let ((json-string (make-string (file-length f))))
       (read-sequence json-string f)
-        (log2:info "Parsing json")
-        (let* ((polar (joref (joref (parse-json json-string) "scriptData") "polar"))
-             (tws (joref polar "tws"))
-             (twa (joref polar "twa"))
-             (saildefs (joref polar "sail")))
-        (log2:info "Reading sail data")
-        (loop
-           :for saildef :across saildefs
-           :collect (let ((speeddata (make-array (list (1+ (length twa)) (1+ (length tws))))))
-                      (loop
-                         :for speed :across tws
-                         :for s :from 0
-                         :do (setf (aref speeddata 0 (1+ s))
-                                   (if convert-speed
-                                       (knots-to-m/s (aref tws s))
-                                       (aref tws s))))
-                      (loop
-                         :for angle :across twa
-                         :for a :from 0
-                         :do (setf (aref speeddata (1+ a) 0)
-                                   (if convert-speed
-                                       (coerce (aref twa a) 'double-float)
-                                       (aref twa a)))
-                         :do (loop
-                                :for speed :across tws
-                                :for s :from 0
-                                :do (setf (aref speeddata (1+ a) (1+ s))
-                                          (if convert-speed
-                                              (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
-                                              (aref (aref (joref saildef "speed") a) s)))))
-                      (make-sail :name (joref saildef "name")
-                                 :speed speeddata)))))))
+      (log2:info "Parsing json")
+      (let* ((polar
+              (joref (joref (parse-json json-string) "scriptData") "polar"))
+             (tws
+              (joref polar "tws"))
+             (twa
+              (joref polar "twa"))
+             (saildefs
+              (progn
+                (log2:info "Reading sail data")
+                (loop
+                   :for saildef :across (joref polar "sail")
+                   :collect (let ((speeddata (make-array (list (1+ (length twa)) (1+ (length tws))))))
+                              (loop
+                                 :for speed :across tws
+                                 :for s :from 0
+                                 :do (setf (aref speeddata 0 (1+ s))
+                                           (if convert-speed
+                                               (knots-to-m/s (aref tws s))
+                                               (aref tws s))))
+                              (loop
+                                 :for angle :across twa
+                                 :for a :from 0
+                                 :do (setf (aref speeddata (1+ a) 0)
+                                           (if convert-speed
+                                               (coerce (aref twa a) 'double-float)
+                                               (aref twa a)))
+                                 :do (loop
+                                        :for speed :across tws
+                                        :for s :from 0
+                                        :do (setf (aref speeddata (1+ a) (1+ s))
+                                                  (if convert-speed
+                                                      (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
+                                                      (aref (aref (joref saildef "speed") a) s)))))
+                              (make-sail :name (joref saildef "name")
+                                         :speed speeddata))))))
+        saildefs))))
+
+
+(defun find-vmg-angles (polars)
+  (loop
+     :for saildef :in polars
+     :collect
+     (destructuring-bind (twa-len tws-len)
+         (array-dimensions (sail-speed saildef))
+       (loop
+          :for speed :below tws-len
+          :collect (loop
+                      :with best-speed = 0
+                      :with best-angle = 0
+                      :for angle :below twa-len
+                      :when (> (* (aref (sail-speed saildef) angle speed) (cos angle))
+                               best-speed)
+                      :do (setf best-angle angle)
+                      :finally (return best-angle))))))
+
+  
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

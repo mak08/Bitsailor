@@ -1,8 +1,19 @@
 +-------------------------------------------------------------------------------
 | Description
 | Author         Michael Kappert 2017
-| Last Modified <michael 2017-10-17 00:32:21>
+| Last Modified <michael 2017-12-01 21:25:54>
 +-------------------------------------------------------------------------------
+
+
+*   Alternative search algorithm
+
+-   
+
+
+
+
+
+
 
 p/s
     Positions per second

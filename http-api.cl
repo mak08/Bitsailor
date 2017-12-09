@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-11-27 23:30:37>
+;;; Last Modified <michael 2017-12-02 23:28:14>
 
 (in-package :virtualhelm)
 
@@ -228,9 +228,7 @@
             "forecastbundle" (routing-forecast-bundle routing)
             "starttime" (routing-starttime routing)
             "polars" (routing-polars routing)
-            "foils"  (if (routing-foils routing) "true" "false")
-            "polish" (if (routing-polish routing) "true" "false")
-            "fastmanoeuvres" (if (routing-fastmanoeuvres routing) "true" "false")
+            "options" (format nil "~{~a~^,~}" (routing-options routing))
             "minwind" (if (routing-minwind routing) "true" "false")
             "duration" (/ (routing-stepmax routing) 3600)
             "searchangle" (routing-fan routing)
@@ -271,12 +269,6 @@
        (setf (routing-polars routing) value))
       ((string= name "options")
        (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
-      ((string= name "foils")
-       (setf (routing-foils routing) (string= value "true")))
-      ((string= name "polish")
-       (setf (routing-polish routing) (string= value "true")))
-      ((string= name "fastmanoeuvres")
-       (setf (routing-fastmanoeuvres routing) (string= value "true")))
       ((string= name "minwind")
        (setf (routing-minwind routing) (string= value "true")))
       ((string= name "duration")

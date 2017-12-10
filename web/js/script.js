@@ -102,9 +102,6 @@ function setUp () {
     $("#sel_searchangle").change(onSetParameter);
     $("#sel_angleincrement").change(onSetParameter);
     $("#sel_pointsperisochrone").change(onSetParameter);
-    $("#cb_usefoils").change(onSetParameter);
-    $("#cb_usepolish").change(onSetParameter);
-    $("#cb_fastmanoeuvres").change(onSetParameter);
     $("#cb_minwind").change(onSetParameter);
 
     // Tracks & Isochrones display is handled by the client directly
@@ -277,18 +274,6 @@ function getSession () {
         var angleIncrement = session.routing["angle-increment"];
         var selAngleIncrement = $("#sel_angleincrement")[0];
         selAngleIncrement.value = angleIncrement;
-
-        var useFoils = session.routing.foils;
-        var cbUseFoils = $("#cb_usefoils")[0];
-        cbUseFoils.checked = useFoils;
-
-        var usePolish = session.routing.polish;
-        var cbUsePolish = $("#cb_usepolish")[0];
-        cbUsePolish.checked = usePolish;
-
-        var fastManoeuvres = session.routing.fastmanoeuvres;
-        var cbFastManoeuvres = $("#cb_fastmanoeuvres")[0];
-        cbFastManoeuvres.checked = fastManoeuvres;
 
         var minWind = session.routing.minwind;
         var cbMinWind = $("#cb_minwind")[0];

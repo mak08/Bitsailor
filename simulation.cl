@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-04 20:08:41>
+;;; Last Modified <michael 2017-12-10 22:06:11>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -54,7 +54,7 @@
   (stepsize +10min+))
 
 (defun routing-foils (routing)
-  (member "foils" (routing-options routing) :test #'string=))
+  (member "foil" (routing-options routing) :test #'string=))
 (defun routing-hull (routing)
   (member "hull" (routing-options routing) :test #'string=))
 (defun routing-winches (routing)
@@ -142,7 +142,7 @@
             (max-heading 0 0)
             (step-size (step-size routing stepnum) (step-size routing stepnum))
             ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-            (step-time start-time
+            (step-time (adjust-timestamp start-time (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
             (step-time-string (format-rfc3339-timestring nil step-time)
                               (format-rfc3339-timestring nil step-time))
@@ -251,6 +251,29 @@
            (t
             6))))
 
+(defvar +foil-speeds+ (map 'vector #'knots-to-m/s
+                           #(0.0 11.0 16.0 35.0 40.0 70.0)) )
+(defvar +foil-angles+ #(0.0 70.0 80.0 160.0 170.0 180.0))
+(defvar +foil-matrix+ #2a((1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.04 1.04 1.00 1.00)
+                          (1.00 1.00 1.04 1.04 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)))
+(defun foiling-factor (speed twa)
+  (multiple-value-bind
+        (speed-index speed-fraction)
+      (fraction-index speed +foil-speeds+)
+    (multiple-value-bind
+          (angle-index angle-fraction)
+        (fraction-index (abs twa) +foil-angles+)
+      (bilinear-unit speed-fraction
+                     angle-fraction
+                     (aref +foil-matrix+ speed-index angle-index)
+                     (aref +foil-matrix+ (1+ speed-index) angle-index)
+                     (aref +foil-matrix+ speed-index (1+ angle-index))
+                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
+         
 (defun get-penalized-avg-speed (routing predecessor forecast polars-name sails heading)
   (multiple-value-bind (speed twa sail wind-dir wind-speed)
       (heading-boatspeed forecast polars-name sails (routepoint-position predecessor) heading)
@@ -258,10 +281,8 @@
       (setf speed (max 2.0578d0 speed)))
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
-        (and (routing-foils routing)
-             (< 80 twa 160)
-             (< 8.23 wind-speed 18.00))
-      (setf speed (* speed 1.04)))
+        (routing-foils routing)
+      (setf speed (* speed (foiling-factor speed twa))))
     (when (routing-hull routing)
       (setf speed (* speed 1.003)))
     (let ((pspeed

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-10-13 22:46:38>
+;;; Last Modified <michael 2017-12-10 21:12:53>
 
 (in-package :virtualhelm)
 
@@ -51,6 +51,21 @@
     (declare (double-float dw v0 v1 da v))
     v))
 
+(defun fraction-index (value steps)
+  (loop
+     :for step :across steps
+     :for index :from 0
+     :while (and (< index (length steps))
+                 (<= step value))
+     :finally (return (values (1- index)
+                              (/ (- value (aref steps (1- index)))
+                                 (- step (aref steps (1- index))))))))
+
+(defun bilinear-unit (x y f00 f10 f01 f11)
+  (+ (* f00 (- 1 x) (- 1 y))
+     (* f10 x (- 1 y))
+     (* f01 (- 1 x) y)
+     (* f11 x y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Trigonometric units

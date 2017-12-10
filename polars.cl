@@ -1,18 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-04 20:49:30>
+;;; Last Modified <michael 2017-12-10 21:12:17>
 
 (in-package :virtualhelm)
 
 (defvar *polars-dir*
   (append (pathname-directory (asdf:system-source-directory :virtualhelm)) '("polars")))
-
-(defparameter +sail-names+
-    #("Jib" "Spi" "Staysail" "Light Jib" "Code 0" "Heavy Gennaker" "Light Gennaker"))
-
-(defparameter +polar-file-names+
-  #("vpp_1_1.csv" "vpp_1_2.csv" "vpp_1_4.csv" "vpp_1_8.csv" "vpp_1_16.csv" "vpp_1_32.csv" "vpp_1_64.csv"))
 
 (defvar +jib+ 0)
 (defvar +spi+ 1)
@@ -47,56 +41,44 @@
 
 (defun get-max-speed% (angle wind-speed polars options)
   (do
-      ((imax 0)
-       (vmax 0)
-       (i 0 (1+ i)))
-      ((= i 7)
+   ((tws (polars-tws polars))
+    (twa (polars-twa polars))
+    (imax 0)
+    (vmax 0)
+    (i 0 (1+ i)))
+   ((= i 7)
        (values vmax
-               (sail-name (aref polars imax))))
+               (sail-name (aref (polars-sails polars) imax))))
     (when (= (ldb (byte 1 i) options) 1)
       (let ((v (get-boat-speed (polars-angle angle)
                                wind-speed
-                               (sail-speed (aref polars i)))))
+                               tws
+                               twa
+                               (sail-speed (aref (polars-sails polars) i)))))
         (when (>= v vmax)
           (setf imax i
                 vmax v))))))
-
-(defun get-boat-speed (angle wind-speed polars)
-  (let* ((w-max-index (- (array-dimension polars 1) 1))
-         (w-max (aref polars 0 w-max-index))
-         (a-max-index (- (array-dimension polars 0) 1))
-         (a-max 180)
-         (w1 (cond
-               ((> wind-speed w-max)
-                (error "Cannot interpolate wind beyond ~a" w-max))
-               (t
-                (loop
-                   :for k :from 1 :to (1- w-max-index)
-                   :while (<=  (aref polars 0 k) wind-speed)
-                   :finally (return k)))))
-         (a1 (loop
-                :for k :from 1 :to (1- a-max-index)
-                :while (<= (aref polars k 0) angle)
-                :finally (return k)))
-         (w0 (if (= wind-speed w-max) w1 (1- w1)))
-         (a0 (if (= angle a-max) a1 (1- a1))))
-    (when (>= w1 w-max) (decf w1))
-    (when (>= a1 a-max) (decf a1))  
-    (bilinear wind-speed angle
-              (aref polars 0 w0)
-              (aref polars 0 w1)
-              (aref polars a0 0)
-              (aref polars a1 0)
-              (aref polars a0 w0)
-              (aref polars a0 w1)
-              (aref polars a1 w0)
-              (aref polars a1 w1))))
 
 (defun polars-angle (heading)
   (let ((angle (if (> heading 180)
                    (- heading 360)
                    heading)))
     (abs angle)))
+
+(defun get-boat-speed (angle wind-speed tws twa sailspeeds)
+  (multiple-value-bind
+        (speed-index speed-fraction)
+      (fraction-index wind-speed tws)
+    (multiple-value-bind
+          (angle-index angle-fraction)
+        (fraction-index angle twa)
+      (bilinear-unit speed-fraction
+                     angle-fraction
+                     (aref sailspeeds angle-index speed-index)
+                     (aref sailspeeds (1+ angle-index) speed-index)
+                     (aref sailspeeds angle-index (1+ speed-index))
+                     (aref sailspeeds (1+ angle-index) (1+ speed-index))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
@@ -115,10 +97,9 @@
 (defun preprocess-polars (name options)
   (log2:info "Preprocessing polars for ~a/~a" name options)
   (let* ((polars (get-polars name))
-         (first-sail (aref polars 0))
-         (first-sail-speed (sail-speed first-sail))
-         (wind-values (array-dimension first-sail-speed 1))
-         (max-wind (aref first-sail-speed 0 (1- wind-values)))
+         (tws (polars-tws polars))
+         (twa (polars-twa polars))
+         (max-wind (aref tws (1- (length tws))))
          (precomputed
           (loop
              :for angle :of-type double-float :from 0d0 :to 180d0 :by 0.1d0
@@ -141,56 +122,17 @@
             (fetch-polars name))))
 
 (defun fetch-polars (polars)
-  (let ((polars-dir (merge-pathnames (make-pathname :directory (list :relative polars))
-                                     (make-pathname :directory *polars-dir*))))
-    (cond
-      ((probe-file polars-dir)
-       (log2:info "Loading polars from ~a~%" polars-dir)
-       (map 'vector
-            (lambda (filename sailname)
-              (make-sail :name sailname
-                         :speed (parse-polars
-                                 (load-polars (merge-pathnames (make-pathname :name filename)
-                                                               polars-dir)))))
-            +polar-file-names+
-            +sail-names+))
-      (t
-       (let ((polars-file (merge-pathnames (make-pathname :name polars :type "json")
-                                           (make-pathname :directory *polars-dir*))))
-         (log2:info "Loading polars from ~a~%" polars-file)
-         (let ((sails (load-polars-json :filename polars-file)))
-           (make-array (length sails) :initial-contents sails)))))))
-
-(defun load-polars (polars-filename)
-  (cond
-    ((null (probe-file polars-filename))
-     (error "Missing file ~a" polars-filename))
-    (t
-     (with-open-file (f polars-filename :element-type '(unsigned-byte 8))
-       (let ((octets (make-array (file-length f) :element-type  '(unsigned-byte 8))))
-         (read-sequence octets f)
-         octets)))))
-
-
-(defun parse-polars (octets)
-  (let ((*read-default-float-format* 'double-float))
-    (let* ((string (octets-to-string octets))
-           (values
-            (mapcar (lambda (s)
-                      (mapcar (lambda (x) (unless (string= x "TWA")
-                                            (coerce (read-from-string x) 'double-float)))
-                              (cl-utilities:split-sequence #\; s)))
-                    (cl-utilities:split-sequence #\newline string))))
-      (make-array (list (length values)
-                        (length (car values)))
-                  :initial-contents values))))
+  (let ((polars-file (merge-pathnames (make-pathname :name polars :type "json")
+                                      (make-pathname :directory *polars-dir*))))
+    (log2:info "Loading polars from ~a~%" polars-file)
+    (load-polars-json :filename polars-file)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
 ;;;
 ;;; JSON polars are in deg and kts!
 
-
+(defstruct polars tws twa sails)
 (defstruct sail name speed)
 
 (defun load-polars-json (&key
@@ -209,36 +151,39 @@
              (twa
               (joref polar "twa"))
              (saildefs
-              (progn
-                (log2:info "Reading sail data")
-                (loop
-                   :for saildef :across (joref polar "sail")
-                   :collect (let ((speeddata (make-array (list (1+ (length twa)) (1+ (length tws))))))
-                              (loop
-                                 :for speed :across tws
-                                 :for s :from 0
-                                 :do (setf (aref speeddata 0 (1+ s))
-                                           (if convert-speed
-                                               (knots-to-m/s (aref tws s))
-                                               (aref tws s))))
-                              (loop
-                                 :for angle :across twa
-                                 :for a :from 0
-                                 :do (setf (aref speeddata (1+ a) 0)
-                                           (if convert-speed
-                                               (coerce (aref twa a) 'double-float)
-                                               (aref twa a)))
-                                 :do (loop
-                                        :for speed :across tws
-                                        :for s :from 0
-                                        :do (setf (aref speeddata (1+ a) (1+ s))
-                                                  (if convert-speed
-                                                      (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
-                                                      (aref (aref (joref saildef "speed") a) s)))))
-                              (make-sail :name (joref saildef "name")
-                                         :speed speeddata))))))
-        saildefs))))
-
+              (make-array (length (joref polar "sail")))))
+        (log2:info "Reading sail data")
+        (loop
+           :for saildef :across (joref polar "sail")
+           :for k :from 0
+           :do (let ((speeddata (make-array (list (length twa) (length tws)))))
+                 (loop
+                    :for angle :across twa
+                    :for a :from 0
+                    :do (loop
+                           :for speed :across tws
+                           :for s :from 0
+                           :do (setf (aref speeddata a s)
+                                     (if convert-speed
+                                         (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
+                                         (aref (aref (joref saildef "speed") a) s)))))
+                 (setf (aref saildefs k)
+                       (make-sail :name (joref saildef "name")
+                                  :speed speeddata))))
+        (when convert-speed
+          (loop
+             :for speed :across tws
+             :for s :from 0
+             :do (setf (aref tws s)
+                       (knots-to-m/s (aref tws s)))))
+        (loop
+           :for angle :across twa
+           :for a :from 0
+           :do (setf (aref twa a)
+                     (coerce (aref twa a) 'double-float)))
+        (make-polars :tws tws
+                     :twa twa
+                     :sails saildefs)))))
 
 (defun find-vmg-angles (polars)
   (loop
@@ -256,9 +201,6 @@
                                best-speed)
                       :do (setf best-angle angle)
                       :finally (return best-angle))))))
-
-  
-
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -58,7 +58,7 @@
 (defun routing-hull (routing)
   (member "hull" (routing-options routing) :test #'string=))
 (defun routing-winches (routing)
-  (member "winches" (routing-options routing) :test #'string=))
+  (member "winch" (routing-options routing) :test #'string=))
 
 (defstruct routeinfo best stats tracks isochrones)
 (defstruct routestats sails min-wind max-wind min-twa max-twa)

@@ -495,11 +495,12 @@ function getRoute () {
             path: google.maps.SymbolPath.CIRCLE
         }
         for ( var i = 0; i < isochrones.length; i++ ) {
+            var h = new Date(isochrones[i].time).getHours();
             var isochrone = new google.maps.Polyline({
                 geodesic: true,
-                strokeColor: '#8080a0',
+                strokeColor: (h%12)?'#8080a0':'#000000',
                 strokeOpacity: 0.8,
-                strokeWeight: 2,
+                strokeWeight: (h%6)?2:4,
                 icons: [{icon: startSymbol,  offset: '0%'}]
             });
             isochrone.setPath(isochrones[i].path);

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-10 22:06:11>
+;;; Last Modified <michael 2017-12-13 01:49:28>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -50,8 +50,7 @@
   (fan 75)
   (angle-increment 3)
   (max-points-per-isochrone 100)
-  (stepmax +24h+)
-  (stepsize +10min+))
+  (stepmax +24h+))
 
 (defun routing-foils (routing)
   (member "foil" (routing-options routing) :test #'string=))
@@ -89,12 +88,9 @@
   destination-angle
   destination-distance)
 
-(defun get-route (routing &key (start-time (now)))
+(defun get-route (routing)
   (let ((start-pos (routing-start routing))
         (dest-pos (routing-dest routing)))
-    ;; Can't modify a latlng!
-    ;; (gm-to-grib! start-pos)
-    ;; (gm-to-grib! dest-pos)
     (if (>= (- (latlng-lng dest-pos) (latlng-lng start-pos)) 180)
         (setf dest-pos
               (make-latlng :lat (latlng-lat dest-pos)
@@ -108,8 +104,10 @@
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
-         (start-time (parse-datetime-local (routing-starttime routing)
-                                           :timezone (routing-starttimezone routing))) 
+         (start-time
+          ;; Start time NIL is parsed as NOW
+          (parse-datetime-local (routing-starttime routing)
+                                :timezone (routing-starttimezone routing))) 
          (isochrones nil))
     
       (log2:info "Routing from ~a to ~a / course angle ~a" start-pos dest-pos dest-heading)
@@ -121,7 +119,9 @@
             (stepnum 0
                      (1+ stepnum))
             (stepsum 0
-                     (+ stepsum (step-size routing stepnum)))
+                     (+ stepsum step-size))
+            (step-size (step-size start-time)
+                       (step-size start-time step-time))
             (pointnum 0)
             (start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
             (elapsed0 (now))
@@ -140,7 +140,6 @@
             ;; Get min and max heading of the point of each isochrone for sorting
             (min-heading 360 360)
             (max-heading 0 0)
-            (step-size (step-size routing stepnum) (step-size routing stepnum))
             ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
             (step-time (adjust-timestamp start-time (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
@@ -227,7 +226,7 @@
             (t
              (setf error t)))) 
         ;; Collect hourly isochrones
-        (multiple-value-bind (q r) (truncate stepsum 3600)
+        (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
           (declare (ignore q))
           (when (zerop r)
             (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
@@ -240,16 +239,23 @@
   (let ((points (loop :for p :across isochrone :when p :collect p)))
     (make-array (length points) :initial-contents points)))
 
-(defun step-size (routing stepnum)
-  (* (routing-stepsize routing)
-     (cond ((<= stepnum 36)
-            1)
-           ((<= stepnum 72)
-            2)
-           ((<= stepnum 144)
-            3)
-           (t
-            6))))
+(defun step-size (start-time &optional (step-time nil))
+  (cond
+    ((null step-time)
+     ;; First step - runs up to full 10min 
+     (let* ((time (timestamp-to-unix start-time)))
+       (- (* 600 (truncate (+ time 600) 600))
+          time)))
+    (t
+     (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour))))
+       (cond ((<= delta-t (* 36 600))
+              600)
+             ((<= delta-t (* 72 600))
+              1200)
+             ((<= delta-t (* 144 600))
+              1800)
+             (t
+              3600))))))
 
 (defvar +foil-speeds+ (map 'vector #'knots-to-m/s
                            #(0.0 11.0 16.0 35.0 40.0 70.0)) )
@@ -299,32 +305,6 @@
          (values twa sail pspeed "Tack/Gybe" wind-dir wind-speed))
         (t
          (values twa sail speed nil wind-dir wind-speed))))))
-
-(defun clip-isochrone (isochrone)
-  (let ((length (length isochrone)))
-    (case length
-      (0
-       ;; (error "Out of valid boat positions")
-       nil)
-      (1
-       isochrone)
-      (otherwise
-       (loop
-          :with left = 0
-          :with right = length
-          :for first :from 0 :to (- length 2)
-          :for second = (1+ first)
-          :for delta = (- (routepoint-destination-distance (aref isochrone second))
-                          (routepoint-destination-distance (aref isochrone first)))
-          :do (progn
-                (when (> delta 20000)
-                  ;; Big distance increase - clip forward
-                  (setf right second)
-                  (return (subseq isochrone left right)))
-                (when (< delta -20000)
-                  ;; Big distance decrease - clip backward
-                  (setf left second)))
-          :finally (return (subseq isochrone left right)))))))
 
 (defun southbound-p (min-heading max-heading)
   (< min-heading 180 max-heading))
@@ -394,13 +374,13 @@
                        lat
                        lng
                        (total-time +12h+)
-                       (step-num (truncate total-time (routing-stepsize routing))))
+                       (step-num (truncate total-time +10min+)))
   (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars-name (routing-polars routing))
          (sails (encode-options (routing-options routing)))
          (start-time (or time (now)))
-         (step-time (routing-stepsize routing))
+         (step-time +10min+)
          (startpos (make-latlng :lat lat-a :lng lng-a)))
     (let* ((heading (course-angle startpos (make-latlng :lat lat :lng lng)))
            (curpos (copy-latlng startpos))

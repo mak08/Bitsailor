@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-10 10:26:56>
+;;; Last Modified <michael 2017-12-12 21:27:54>
 
 (in-package :virtualhelm)
 
@@ -80,6 +80,33 @@
                 (setf kmin k)
                 (setf dmin (routepoint-destination-distance point))))
          :finally (return result)))))
+
+
+(defun clip-isochrone (isochrone)
+  (let ((length (length isochrone)))
+    (case length
+      (0
+       ;; (error "Out of valid boat positions")
+       nil)
+      (1
+       isochrone)
+      (otherwise
+       (loop
+          :with left = 0
+          :with right = length
+          :for first :from 0 :to (- length 2)
+          :for second = (1+ first)
+          :for delta = (- (routepoint-destination-distance (aref isochrone second))
+                          (routepoint-destination-distance (aref isochrone first)))
+          :do (progn
+                (when (> delta 20000)
+                  ;; Big distance increase - clip forward
+                  (setf right second)
+                  (return (subseq isochrone left right)))
+                (when (< delta -20000)
+                  ;; Big distance decrease - clip backward
+                  (setf left second)))
+          :finally (return (subseq isochrone left right)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

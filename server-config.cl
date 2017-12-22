@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2017-10-16 23:31:36>
+;;; Last Modified <michael 2017-12-21 22:39:54>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -99,12 +99,12 @@
  :request (:method :get
            :path "/quit")
  :handler (:dynamic (lambda (server handler request response)
-                                       (declare (ignore response))
-                                       (if (string= (http-authenticated-user handler request)
-                                                    "admin")
-                                           (progn (stop-all-servers)
-                                                  "<!DOCTYPE html><html><body><b><em>Goodby</em></b></body><html>")
-                                           "<!DOCTYPE html><html><body><b><em>Not authorized.</em></b></body><html>"))
+                      (declare (ignore server response))
+                      (if (string= (http-authenticated-user handler request)
+                                   "admin")
+                          (progn (stop-all-servers)
+                                 "<!DOCTYPE html><html><body><b><em>Goodby</em></b></body><html>")
+                          "<!DOCTYPE html><html><body><b><em>Not authorized.</em></b></body><html>"))
                     :realm "admin"))
 
 ;;; EOF

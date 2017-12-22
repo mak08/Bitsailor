@@ -32,22 +32,24 @@ var ir_index;
 var mapEvent;
 
 var startMarker = {};
+var destinationMarker = {};
 var twaAnchor = {};
 var twaTime = {};
 
-var destinationMarker = {};
-
-var windData = [];
-
+var courseGCLine = null;
 var routeTracks = [];
 var routeIsochrones = [];
 var trackMarkers = [];
 
-var oldLat = 0;
-var oldLng = 0;
+var boatPath = new google.maps.Polyline({
+    geodesic: true,
+    strokeColor: '#FF0000',
+    strokeOpacity: 1.0,
+    strokeWeight: 2
+});
 
 
-var pageURL = '//';
+var windData = [];
 
 function setUp () {
     
@@ -214,7 +216,7 @@ function getSession () {
         url: "/function/vh:getSession",
         dataType: 'json'
     }).done( function(session, status, xhr) {
-        pageURL = xhr.getResponseHeader('Content-Location');
+        var pageURL = xhr.getResponseHeader('Content-Location');
         var copyText = document.getElementById("tb_pageURL");
         copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
 
@@ -309,7 +311,7 @@ function onSetParameter (event) {
         url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
         dataType: 'json'
     }).done( function(data, status, xhr ) {
-        pageURL = xhr.getResponseHeader('Content-Location');
+        var pageURL = xhr.getResponseHeader('Content-Location');
         var copyText = document.getElementById("tb_pageURL");
         copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
 
@@ -359,13 +361,6 @@ function onMapRightClick (event) {
     return false;
 }
 
-var boatPath = new google.maps.Polyline({
-    geodesic: true,
-    strokeColor: '#FF0000',
-    strokeOpacity: 1.0,
-    strokeWeight: 2
-});
-
 function setRoutePoint(point, latlng) {
     var lat =  latlng.lat();
     var lng =  latlng.lng();
@@ -383,6 +378,18 @@ function setRoutePoint(point, latlng) {
         } else if ( point === 'dest' ) {
             destinationMarker.setPosition(latlng);
         }
+        if (courseGCLine) {
+            courseGCLine.setMap(null);
+        };
+        courseGCLine = new google.maps.Polyline({
+            geodesic: true,
+            strokeColor: '#d00000',
+            strokeOpacity: 1.0,
+            strokeWeight: 1
+        });
+        courseGCLine.setMap(googleMap);
+        courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+
     }).fail( function (jqXHR, textStatus, errorThrown) {
         alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
     });

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-12 21:27:54>
+;;; Last Modified <michael 2017-12-14 20:10:56>
 
 (in-package :virtualhelm)
 
@@ -59,7 +59,7 @@
                          (check-type angle angle)
                          (if (and southbound (< angle 0)) (+ angle 360) angle))))))
       (setf isochrone (sort isochrone #'< :key #'routepoint-sort-key))
-      (loop
+      (let ((iso (loop
          :for point :across isochrone
          :for k :from 0
          :do (cond
@@ -79,8 +79,8 @@
                ((< (routepoint-destination-distance point) dmin)
                 (setf kmin k)
                 (setf dmin (routepoint-destination-distance point))))
-         :finally (return result)))))
-
+                    :finally (return result))))
+        iso))))
 
 (defun clip-isochrone (isochrone)
   (let ((length (length isochrone)))

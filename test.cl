@@ -1,27 +1,51 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-09-05 23:09:48>
+;;; Last Modified <michael 2017-12-21 20:25:19>
 
 (in-package :virtualhelm)
 
-(defun test-getWind ()
-  (let ((request (polarcl:make-http-get))
-        (response (polarcl::make-http-response))
-        (location nil))
-    (|getWind| location request response :|north| "55.0" :|south| "45.0" :|west| "5.0" :|east| "15.0" :|ddx| "0.2")
-    (http-body response)))
+(eval-when (:load-toplevel :execute)
+  (defmacro check-equal (form result)
+    `(progn
+       (assert (equal ,form ,result))
+       t)
+    )
+  )
 
-#|
-(COURSE-ANGLE
-      #S(LATLNG
-         :LAT 54.434403d0
-         :LNG 11.361632d0)
-      #S(LATLNG
-         :LAT 54.44400124404393d0
-         :LNG 11.361632d0))
-|#
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng 1d0))
+ 44.99563645533813d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 0d0 :lng 1d0))
+ 90.0d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng 1d0))
+ 135.00436354466189d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng 0d0))
+ 180.0d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng -1d0))
+ -135.00436354466189d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 0d0 :lng -1d0))
+ -90.0d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng -1d0))
+ -44.99563645533813d0)
+
+(check-equal
+ (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng 0d0))
+ 0.0d0)
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(- 11.361632d0 11.361631409815484d0)
+

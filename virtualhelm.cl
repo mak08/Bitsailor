@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-29 20:46:58>
+;;; Last Modified <michael 2017-12-14 00:33:56>
 
 (in-package :virtualhelm)
 
@@ -29,7 +29,7 @@
     (polarcl:load-configuration *server-config*)
     (start-grib-updates)))
 
-(defun start-grib-updates (&key (bundles '(noaa-bundle dwd-icon-bundle)) (resolution "0.250"))
+(defun start-grib-updates (&key (bundles '(noaa-bundle)) (resolution "0.250"))
   "Check for new forecast data an remove old data periodically"
      (dolist (bundle bundles)
          (flet ((run-update ()

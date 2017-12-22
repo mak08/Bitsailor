@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-13 01:49:28>
+;;; Last Modified <michael 2017-12-21 23:32:23>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -34,6 +34,8 @@
 (defconstant +24h+ (* 24 60 60))
 (defconstant +48h+ (* 48 60 60))
 
+(defvar *isochrones* nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route
 ;;; and other routing parameters.
@@ -62,7 +64,7 @@
 (defstruct routeinfo best stats tracks isochrones)
 (defstruct routestats sails min-wind max-wind min-twa max-twa)
   
-(defstruct isochrone time offset path)
+(defstruct isochrone center time offset path)
 
 (defstruct twainfo twa heading path)
 
@@ -88,6 +90,11 @@
   destination-angle
   destination-distance)
 
+(defmethod print-object ((thing routepoint) stream)
+  (format stream " ~a@~a"
+          (routepoint-position thing)
+          (routepoint-time thing)))
+                          
 (defun get-route (routing)
   (let ((start-pos (routing-start routing))
         (dest-pos (routing-dest routing)))
@@ -133,7 +140,6 @@
                                               :destination-distance (course-distance start-pos dest-pos)))
                        next-isochrone)
             ;; The next isochrone - in addition we collect all hourly isochrones
-            (successors-per-point (1+ (truncate (* (routing-fan routing) 2) angle-increment)))
             (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
                             (make-array 0 :adjustable t :fill-pointer 0))
             (index 0 0)
@@ -163,10 +169,17 @@
                          (/ elapsed stepnum)
                          (coerce (/ pointnum stepnum) 'float)))
             (let ((best-route (construct-route (extract-points isochrone))))
+              (setf *isochrones*  isochrones)
               (make-routeinfo :best best-route
                               :stats (get-statistics best-route)
                               :tracks (extract-tracks isochrone)
-                              :isochrones isochrones)))
+                              :isochrones (loop
+                                             :for i :in isochrones
+                                             :collect (make-isochrone :time (isochrone-time i)
+                                                                      :offset (isochrone-offset i)
+                                                                      :path (loop
+                                                                               :for r :across (isochrone-path i)
+                                                                               :collect (routepoint-position r)))))))
         (log2:info "Isochrone ~a at ~a, ~a points" stepnum step-time-string (length isochrone))
         ;; Iterate over each point in the current isochrone
         (map nil
@@ -229,10 +242,10 @@
         (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
           (declare (ignore q))
           (when (zerop r)
-            (let ((iso (make-isochrone :time (to-rfc3339-timestring step-time)
+            (let ((iso (make-isochrone :center start-pos
+                                       :time (to-rfc3339-timestring step-time)
                                        :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
-                                       :path (map 'vector #'routepoint-position
-                                                  (extract-points next-isochrone)))))
+                                       :path (extract-points next-isochrone))))
               (push iso isochrones))))))))
 
 (defun extract-points (isochrone)

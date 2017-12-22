@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-21 23:32:23>
+;;; Last Modified <michael 2017-12-23 00:42:32>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -41,7 +41,7 @@
 ;;; and other routing parameters.
         
 (defstruct routing
-  (forecast-bundle 'dwd-icon-bundle)
+  (forecast-bundle 'noaa-bundle)
   (polars "VO65id7.0")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+01:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
@@ -49,9 +49,10 @@
   (minwind t) ;; m/s !!
   (start +lessables+)
   (dest +lacoruna+)
-  (fan 75)
+  (mode +max-origin+)
+  (fan 90)
   (angle-increment 3)
-  (max-points-per-isochrone 100)
+  (max-points-per-isochrone 300)
   (stepmax +24h+))
 
 (defun routing-foils (routing)
@@ -232,7 +233,7 @@
                                     (log2:info "Reached destination at ~a" step-time)
                                     (setf reached t))))))))))
              isochrone)
-        (let ((candidate (filter-isochrone next-isochrone max-points)))
+        (let ((candidate (filter-isochrone next-isochrone max-points :criterion (routing-mode routing))))
           (cond
             (candidate
              (setf next-isochrone candidate))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-14 20:10:56>
+;;; Last Modified <michael 2017-12-22 23:54:53>
 
 (in-package :virtualhelm)
 
@@ -28,9 +28,19 @@
              (setf (aref result k) point))
        :finally (return result))))
 
-(defun filter-isochrone (isochrone max-points
-                         &key (goalfn (lambda (p q)
-                                        ())))
+
+(defstruct criterion distfn compfn)
+
+(defvar +max-origin+
+  (make-criterion :distfn #'routepoint-origin-distance
+                  :compfn #'>))
+(defvar +min-destination+
+  (make-criterion :distfn #'routepoint-destination-distance
+                  :compfn #'<))
+
+(defun filter-isochrone (isochrone
+                         max-points
+                         &key (criterion +max-origin+))
   (let* ((last
           (1- (length isochrone)))
          (a-start
@@ -46,7 +56,7 @@
          (a0
           a-start)
          (dmin 
-          (routepoint-destination-distance (aref isochrone 0)))
+          (funcall (criterion-distfn criterion) (aref isochrone 0)))
          (kmin
           0)
          (result
@@ -56,30 +66,33 @@
              (or (routepoint-sort-angle% routepoint)
                  (setf (routepoint-sort-angle% routepoint)
                        (let ((angle (routepoint-origin-angle routepoint)))
-                         (check-type angle angle)
+                         ;; (check-type angle angle)
                          (if (and southbound (< angle 0)) (+ angle 360) angle))))))
       (setf isochrone (sort isochrone #'< :key #'routepoint-sort-key))
-      (let ((iso (loop
-         :for point :across isochrone
-         :for k :from 0
-         :do (cond
-               ((>= (abs (- (routepoint-origin-angle point) a0)) delta-angle)
-                ;; Sector scanned, record best distance...
-                (let* ((pmin (aref isochrone kmin))
-                       (pmin-pred (routepoint-predecessor pmin)))
-                  (unless (intersects-land-p (routepoint-position pmin)
-                                             (routepoint-position pmin-pred))
-                    (vector-push-extend (aref isochrone kmin) result)))
-                ;; ... and reset.
-                (when (< k last)
-                  (setf kmin k)
-                  (let ((next-point (aref isochrone kmin)))
-                    (setf a0 (routepoint-origin-angle next-point))
-                    (setf dmin (routepoint-destination-distance next-point)))))
-               ((< (routepoint-destination-distance point) dmin)
-                (setf kmin k)
-                (setf dmin (routepoint-destination-distance point))))
-                    :finally (return result))))
+      (let ((iso
+             (loop
+                :for point :across isochrone
+                :for k :from 0
+                :do (cond
+                      ((>= (abs (- (routepoint-origin-angle point) a0)) delta-angle)
+                       ;; Sector scanned, record best distance...
+                       (let* ((pmin (aref isochrone kmin))
+                              (pmin-pred (routepoint-predecessor pmin)))
+                         (unless (intersects-land-p (routepoint-position pmin)
+                                                    (routepoint-position pmin-pred))
+                           (vector-push-extend (aref isochrone kmin) result)))
+                       ;; ... and reset.
+                       (when (< k last)
+                         (setf kmin k)
+                         (let ((next-point (aref isochrone kmin)))
+                           (setf a0 (routepoint-origin-angle next-point))
+                           (setf dmin (funcall (criterion-distfn criterion) next-point)))))
+                      ((funcall (criterion-compfn criterion)
+                                (funcall (criterion-distfn criterion) point)
+                         dmin)
+                       (setf kmin k)
+                       (setf dmin (funcall (criterion-distfn criterion) point))))
+                :finally (return result))))
         iso))))
 
 (defun clip-isochrone (isochrone)

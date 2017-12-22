@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-10 21:12:53>
+;;; Last Modified <michael 2017-12-22 02:18:09>
 
 (in-package :virtualhelm)
 
@@ -11,7 +11,8 @@
 ;;; Constants
 
 (defconstant +radius+
-  6371229d0
+  ;; 6371229d0
+  6218884d0
   "Assumed radius of Earth in metres")
 
 (defconstant +pi/180+
@@ -20,8 +21,6 @@
 (defconstant +deg-length+
   (/ (* 2 pi +radius+) 360)
   "Distance of 1° at the equator")
-
-(defconstant +eps+ 1d-6)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; 
@@ -114,14 +113,6 @@
         (eql lat1 lat2)
         (eql lon1 lon2))
        (error "Distance is zero between ~a and ~a" origin target))
-      ((< (abs (- lat1 lat2)) +eps+)
-       (if (< lon1 lon2)
-           90d0
-           -90d0))
-      ((< (abs (- lon1 lon2)) +eps+)
-       (if (< lat1 lat2)
-           0d0
-           180d0))
       (t
        (let ((dist (or dist (course-distance origin target))))
          (when (eql dist 0d0)
@@ -133,12 +124,14 @@
                  (/ (- (sin lat2) (* sin-lat1 (cos e)))
                     (* cos-lat1 (sin e))))
                 (omega
-                 (acos cos-omega))
+                 (let ((omega%
+                        (acos cos-omega)))
+                   (if (complexp omega%)
+                       (realpart omega%)
+                       omega%)))
                 (delta
                  (- lon2 lon1)))
            (declare (double-float cos-omega omega delta))
-           (when (complexp omega)
-             (error "Invalid cos-omega ~a for origin=~a target=~a" cos-omega origin target))
            (deg
             (if (or (< delta 0d0)
                     (> delta 180d0))

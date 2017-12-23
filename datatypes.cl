@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-10-17 21:53:54>
+;;; Last Modified <michael 2017-12-23 01:46:07>
 
 (in-package :virtualhelm)
 
@@ -104,6 +104,25 @@
   (format-timestring stream
                      (adjust-timestamp timestamp (offset :hour offset))
                      :format '((:year 4) "-" (:month 2) "-" (:day 2) ", " (:hour 2) "Uhr") :timezone timezone))  
+
+(defun format-time (stream timestamp)
+  (format stream "~2,'0d:~2,'0dZ"
+          (timestamp-hour timestamp :timezone +utc-zone+)
+          (timestamp-minute timestamp :timezone +utc-zone+)))
+
+(defun format-date (stream timestamp)
+  (format stream "~4,'0d-~2,'0d-~2,'0d"
+          (timestamp-year timestamp :timezone +utc-zone+)
+          (timestamp-month timestamp :timezone +utc-zone+)
+          (timestamp-day timestamp :timezone +utc-zone+)))
+
+(defun format-datetime (stream timestamp &key (timezone +utc-zone+))
+  (format stream "~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0dZ"
+          (timestamp-year timestamp :timezone timezone)
+          (timestamp-month timestamp :timezone timezone)
+          (timestamp-day timestamp :timezone timezone)
+          (timestamp-hour timestamp :timezone timezone)
+          (timestamp-minute timestamp :timezone timezone)))
 
 (defmethod print-object ((thing timestamp) stream)
   (format-rfc1123-timestring stream thing))

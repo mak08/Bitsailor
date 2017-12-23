@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-23 00:42:32>
+;;; Last Modified <michael 2017-12-23 01:37:29>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -135,7 +135,7 @@
             (elapsed0 (now))
             ;; The initial isochrone is just the start point, heading towards destination
             (isochrone (list (make-routepoint :position start-pos
-                                              :time (format-rfc3339-timestring nil start-time)
+                                              :time (format-datetime nil start-time)
                                               :heading  dest-heading
                                               :origin-distance 0
                                               :destination-distance (course-distance start-pos dest-pos)))
@@ -150,8 +150,8 @@
             ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
             (step-time (adjust-timestamp start-time (:offset :sec step-size))
                        (adjust-timestamp step-time (:offset :sec step-size)))
-            (step-time-string (format-rfc3339-timestring nil step-time)
-                              (format-rfc3339-timestring nil step-time))
+            (step-time-string (format-datetime nil step-time)
+                              (format-datetime nil step-time))
             ;; Get wind data for simulation time
             (forecast (get-forecast forecast-bundle step-time)
                       (get-forecast forecast-bundle step-time)))

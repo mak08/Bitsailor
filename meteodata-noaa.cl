@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-01 00:55:57>
+;;; Last Modified <michael 2017-12-24 17:48:18>
 
 (in-package :virtualhelm)
 ;; (declaim (optimize speed (debug 0) (space 0) (safety 0)))
@@ -148,9 +148,9 @@
       (noaa-spec-and-destfile date :cycle cycle :offset offset)
     (let ((destpath (format () "~a/~a" *grib-folder* destfile)))
       (if (probe-file destpath)
-          (log2:info "File exists: ~a(~a:~a))" destpath date cycle)
+          (log2:trace "File exists: ~a(~a:~a))" destpath date cycle)
           (progn
-            (log2:info "~a(~a:~a)" destpath date cycle)
+            (log2:trace "~a(~a:~a)" destpath date cycle)
             (multiple-value-bind
                   (out error-out status)
                 (download-noaa-file% directory spec destfile)
@@ -197,7 +197,7 @@
     (error "No input files"))
   (let ((index (codes-index-new '("step" "shortName"))))
     (dolist (filename filenames)
-      (log2:info "Add file ~a~%" filename)
+      (log2:trace "Add file ~a~%" filename)
       (codes-index-add-file index filename))
     (get-values-from-index index)))
 
@@ -227,7 +227,7 @@
          (dimensions (array-dimensions t0-u))
          (result-u (make-array dimensions :element-type 'double-float))
          (result-v (make-array dimensions :element-type 'double-float)))
-    (log2:info "dim:~a t=~a"
+    (log2:trace "dim:~a t=~a"
                dimensions
                (+ (grib-values-forecast-time t0)
                                         (* fraction (- (grib-values-forecast-time t1)

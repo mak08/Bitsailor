@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-23 01:46:07>
+;;; Last Modified <michael 2017-12-26 10:41:52>
 
 (in-package :virtualhelm)
 
@@ -123,6 +123,25 @@
           (timestamp-day timestamp :timezone timezone)
           (timestamp-hour timestamp :timezone timezone)
           (timestamp-minute timestamp :timezone timezone)))
+
+(defun parse-datetime (string)
+  (destructuring-bind (date time)
+      (cl-utilities:split-sequence #\T string)
+    (destructuring-bind (y m d)
+        (cl-utilities:split-sequence #\- date)
+      (destructuring-bind (utime &optional (tz ""))
+          (cl-utilities:split-sequence #\Z time)
+        (destructuring-bind (hr min &optional (sec "0"))
+            (cl-utilities:split-sequence #\: utime)
+          (assert (equal tz ""))
+          (encode-timestamp 0
+                            (read-from-string sec)
+                            (read-from-string min)
+                            (read-from-string hr)
+                            (read-from-string d)
+                            (read-from-string m)
+                            (read-from-string y)
+                            :timezone +utc-zone+))))))
 
 (defmethod print-object ((thing timestamp) stream)
   (format-rfc1123-timestring stream thing))

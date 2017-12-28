@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-23 01:37:45>
+;;; Last Modified <michael 2017-12-23 19:15:39>
 
 (in-package :virtualhelm)
 
@@ -166,7 +166,7 @@
       (let* ((*read-default-float-format* 'double-float)
              (session (find-or-create-session request response))
              (routing (session-routing session))
-             (time (parse-rfc3339-timestring |time|))
+             (time (parse-datetime |time|))
              (lat-a (read-from-string |latA|))
              (lng-a (read-from-string |lngA|))
              (lat (read-from-string |lat|))

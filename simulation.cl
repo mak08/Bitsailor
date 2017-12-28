@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-23 01:37:29>
+;;; Last Modified <michael 2017-12-28 19:03:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -42,7 +42,7 @@
         
 (defstruct routing
   (forecast-bundle 'noaa-bundle)
-  (polars "VO65id7.0")
+  (polars "vo65")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+01:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (options ())
@@ -118,7 +118,11 @@
                                 :timezone (routing-starttimezone routing))) 
          (isochrones nil))
     
-      (log2:info "Routing from ~a to ~a / course angle ~a" start-pos dest-pos dest-heading)
+      (log2:info "Routing from ~a to ~a / course angle ~a searching +/-~a"
+                 start-pos
+                 dest-pos
+                 dest-heading
+                 (routing-fan routing))
 
       (do* ( ;; Iteration stops when destination was reached
             (reached nil)
@@ -189,8 +193,8 @@
                  (let* ((dest-angle (normalize-angle
                                      (round
                                       (course-angle (routepoint-position routepoint) dest-pos))))
-                        (left (normalize-heading (- dest-angle (routing-fan routing))))
-                        (right (normalize-heading (+ dest-angle (routing-fan routing)))))
+                        (left (normalize-heading (- dest-heading (routing-fan routing))))
+                        (right (normalize-heading (+ dest-heading (routing-fan routing)))))
                    ;; Keep track of min and max heading of point in isochrone
                    (when (< left min-heading)
                      (setf min-heading left))
@@ -208,8 +212,7 @@
                               (let*
                                   ((new-pos (add-distance-exact (routepoint-position routepoint)
                                                                 (* speed step-size)
-                                                                (coerce heading 'double-float)))
-                                   (dtf (course-distance new-pos dest-pos)))
+                                                                (coerce heading 'double-float))))
                                 (incf pointnum)
                                 (vector-push-extend
                                  (make-routepoint :position new-pos
@@ -225,20 +228,26 @@
                                                   :origin-angle (course-angle start-pos new-pos)
                                                   :origin-distance (course-distance new-pos start-pos)
                                                   :destination-angle "not computed"
-                                                  :destination-distance dtf)
+                                                  :destination-distance nil)
                                  next-isochrone)
-                                (incf index)
-                                (when (< dtf 10000)
-                                  (unless reached
-                                    (log2:info "Reached destination at ~a" step-time)
-                                    (setf reached t))))))))))
+                                (incf index))))))))
              isochrone)
         (let ((candidate (filter-isochrone next-isochrone max-points :criterion (routing-mode routing))))
           (cond
             (candidate
+             (loop
+                :for p :across candidate
+                :when p
+                :do (progn
+                      (setf (routepoint-destination-distance p)
+                            (course-distance (routepoint-position p) dest-pos))
+                      (when (< (routepoint-destination-distance p) 10000)
+                        (setf reached t))))
              (setf next-isochrone candidate))
             (t
-             (setf error t)))) 
+             (setf error t)))
+          (when reached
+            (log2:info "Reached destination at ~a" step-time)))
         ;; Collect hourly isochrones
         (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
           (declare (ignore q))

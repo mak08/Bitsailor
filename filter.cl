@@ -1,32 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-22 23:54:53>
+;;; Last Modified <michael 2017-12-25 23:51:26>
 
 (in-package :virtualhelm)
-
-(defun filter-isochrone-nosort (isochrone max-points)
-  (let*
-      ((min-angle
-        (loop :for p :across isochrone :minimize (routepoint-origin-angle p)))
-       (max-angle
-        (loop :for p :across isochrone :maximize (routepoint-origin-angle p)))
-       (size
-        (length isochrone))
-       (result
-        (make-array (* (1+ max-points) 2) :initial-element nil)))
-    (loop :for p :across isochrone :do (decf (routepoint-origin-angle p) min-angle))
-    (loop
-       :with delta-angle = (/ (- max-angle min-angle) max-points 2)
-       :for point :across isochrone
-       :for a = (routepoint-origin-angle point)
-       :for d = (routepoint-origin-distance point)
-       :for k = (truncate (abs a) delta-angle)
-       :for best = (aref result k)
-       :do (when (or (null best)
-                     (> d (routepoint-origin-distance best)))
-             (setf (aref result k) point))
-       :finally (return result))))
 
 
 (defstruct criterion distfn compfn)
@@ -37,6 +14,50 @@
 (defvar +min-destination+
   (make-criterion :distfn #'routepoint-destination-distance
                   :compfn #'<))
+
+#+()(defun filter-isochrone (isochrone
+                         max-points
+                         &key (criterion +max-origin+))
+  (let* ((last
+          (1- (length isochrone)))
+         (a-start
+          (routepoint-origin-angle (aref isochrone 0)))
+         (a-end
+          (routepoint-origin-angle (aref isochrone last)))
+         (southbound
+          (< a-end a-start))
+         (h-end
+          (if southbound  (+ a-end 360) a-end))
+         (delta-angle
+          (/ (- h-end a-start) max-points))
+         (result
+          (make-array (+ max-points 10) :initial-element nil)))
+    (assert (plusp delta-angle))
+    (flet ((bucket (routepoint)
+             (let ((key-angle
+                    (or (routepoint-sort-angle% routepoint)
+                        (setf (routepoint-sort-angle% routepoint)
+                              (let ((angle (routepoint-origin-angle routepoint)))
+                                ;; (check-type angle angle)
+                                (if (and southbound (< angle 0)) (+ angle 360) angle))))))
+               (max 0 (truncate (- key-angle a-start) delta-angle)))))
+      (loop
+         :for point :across isochrone
+         :do (let ((bucket (bucket point)))
+               (when (or (null (aref result bucket))
+                         (funcall (criterion-compfn criterion)
+                                  (funcall (criterion-distfn criterion) point)
+                                  (funcall (criterion-distfn criterion) (aref result bucket))))
+                 (setf (aref result bucket) point)))))
+    (let ((filtered
+           (loop
+              :for p :across result
+              :unless (and  p
+                            (intersects-land-p (routepoint-position p)
+                                               (routepoint-position (routepoint-predecessor p))))
+              :collect p)))
+      (values (make-array (length filtered) :initial-contents filtered)))))
+
 
 (defun filter-isochrone (isochrone
                          max-points

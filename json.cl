@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2017-11-03 21:02:11>
+;;; Last Modified  <michael 2018-01-18 22:18:39>
  
 (in-package :virtualhelm)
 
@@ -30,6 +30,12 @@
 
 (defmethod json% (stream (thing single-float))
   (format stream "~4$" thing))
+
+(defmethod json% (stream (thing timestamp))
+  (format stream "\"~a\"" (format-datetime nil thing)))
+
+(defmethod json% (stream (thing duration))
+  (format stream "\"~s\"" thing))
 
 (defmethod json% (stream (thing string))
   (format stream "\"~a\"" thing))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-23 19:15:39>
+;;; Last Modified <michael 2018-01-19 01:03:34>
 
 (in-package :virtualhelm)
 
@@ -174,6 +174,25 @@
         (setf (http-body response)
               (with-output-to-string (s)
                 (json s (get-twa-path routing :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Batch routing
+
+(defun |checkWindow| (location request response &key (|logfile| "checkWindow.log"))
+  (handler-case
+      (let ((result
+             (check-window  (adjust-timestamp (now) (:offset :hour 2))
+                            (adjust-timestamp (now) (:offset :day 3))
+                            :options '("winch" "foil" "heavy" "reach" "hull")
+                            :logfile |logfile|)))
+        (setf (http-body response)
+              (with-output-to-string (s)
+                (json s result))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

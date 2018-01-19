@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-11-27 20:29:34>
+;;; Last Modified <michael 2018-01-18 22:28:06>
 
 (in-package :virtualhelm)
 
@@ -45,6 +45,12 @@
 (defvar +fremantle+
   (make-latlng :lat -32.060833d0 :lng 115.72361d0))
 
+
+(defvar +MARSEILLE+
+  (make-latlng :lat 43.2456d0 :lng 5.30359d0))
+
+(defvar +CARTHAGO+
+  (make-latlng :lat 36.795d0 :lng 10.392d0))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races

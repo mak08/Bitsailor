@@ -1,15 +1,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-11-01 16:03:47>
+;;; Last Modified <michael 2018-01-19 01:06:20>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
   (:use "COMMON-LISP"
         #+sbcl "SB-MOP"
         "POLARCL"
-        "CL-ECCODES"
-        "CFFI"
+        "CL-MAP"
+        "CL-WEATHER"
         "LOCAL-TIME"
         "RDPARSE"
         "BABEL")
@@ -22,6 +22,7 @@
    "setParameter"
    "getRoute"
    "getTWAPath"
+   "checkWindow"
    ;; VH backend
    "*MAP-FILE*"
    "*GRIB-FOLDER*"

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-22 02:18:09>
+;;; Last Modified <michael 2018-01-13 23:29:22>
 
 (in-package :virtualhelm)
 
@@ -71,10 +71,6 @@
 
 (defun deg (x)
   (* 360 (/ x (* 2 pi))))
-
-(defun rad (x)
-  (declare (double-float x))
-  (* (* 2d0 pi) (/ x 360d0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Navigation
@@ -209,24 +205,6 @@
       (make-latlng :lat (/ (+ lat-r d-lat-r) +pi/180+)
                    :lng (/ (+ lon-r d-lon-r) +pi/180+)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Converting GRIB U/V values to DEG
-
-(defun angle (u v)
-  (declare (double-float u v))
-  (let ((angle
-         (+ 180d0 (* 180d0 (/ (atan u v) pi)))))
-    angle))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Euclidian Norm
-
-(defun enorm (x y)
-  (declare (double-float x y))
-  (sqrt (+ (* x x) (* y y))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

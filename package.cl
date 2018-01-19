@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-19 01:06:20>
+;;; Last Modified <michael 2018-01-19 22:26:28>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -14,6 +14,7 @@
         "RDPARSE"
         "BABEL")
   (:export
+   "*SERVER-CONFIG*"
    ;; HTTP API
    "GET-PAGE"
    "getSession"
@@ -24,8 +25,6 @@
    "getTWAPath"
    "checkWindow"
    ;; VH backend
-   "*MAP-FILE*"
-   "*GRIB-FOLDER*"
    "RUN-VIRTUAL-HELM"))
 
 ;;; EOF

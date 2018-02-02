@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-01-18 22:34:01>
+;;; Last Modified <michael 2018-01-25 22:37:05>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -194,9 +194,7 @@
       (map nil
            (lambda (routepoint)
              (when routepoint 
-               (let* ((dest-angle (normalize-angle
-                                   (round
-                                    (course-angle (routepoint-position routepoint) dest-pos))))
+               (let* ((point-heading (routepoint-heading routepoint))
                       (left (normalize-heading (- dest-heading (routing-fan routing))))
                       (right (normalize-heading (+ dest-heading (routing-fan routing)))))
                  ;; Keep track of min and max heading of point in isochrone
@@ -281,7 +279,7 @@
              ((<= delta-t (* 144 600))
               1800)
              (t
-              3600))))))
+              1800))))))
 
 (defvar +foil-speeds+ (map 'vector #'knots-to-m/s
                            #(0.0 11.0 16.0 35.0 40.0 70.0)) )

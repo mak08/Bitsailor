@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-13 21:35:00>
+;;; Last Modified <michael 2018-01-24 23:56:52>
 
 (in-package :virtualhelm)
 
@@ -10,6 +10,7 @@
 
 (setf (log2:log-level "virtualhelm") log2:+info+)
 (setf (log2:log-level "polarcl") log2:+info+)
+(setf (log2:log-level "cl-weather") log2:+trace+)
 (setf (log2:log-level "mbedtls") log2:+warning+)
 
 (defvar *server-config* 

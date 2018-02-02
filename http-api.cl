@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-01-19 01:03:34>
+;;; Last Modified <michael 2018-01-25 00:10:19>
 
 (in-package :virtualhelm)
 
@@ -139,8 +139,8 @@
                 (with-output-to-string (s)
                   (json s
                         (list
-                         (format-datetime nil (fcb-time forecast-bundle) :timezone *default-timezone*)
-                         (format-datetime nil forecast-time :timezone *default-timezone*)
+                         (format-datetime nil (fcb-time forecast-bundle))
+                         (format-datetime nil forecast-time)
                          (fcb-max-offset forecast-bundle)
                          (loop
                             :for lat :from north :downto south :by ddy

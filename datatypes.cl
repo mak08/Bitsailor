@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-18 23:56:24>
+;;; Last Modified <michael 2018-01-25 00:42:13>
 
 (in-package :virtualhelm)
 
@@ -74,12 +74,13 @@
           (timestamp-day timestamp :timezone +utc-zone+)))
 
 (defun format-datetime (stream timestamp &key (timezone +utc-zone+))
-  (format stream "~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0dZ"
+  (format stream "~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0dZ"
           (timestamp-year timestamp :timezone timezone)
           (timestamp-month timestamp :timezone timezone)
           (timestamp-day timestamp :timezone timezone)
           (timestamp-hour timestamp :timezone timezone)
-          (timestamp-minute timestamp :timezone timezone)))
+          (timestamp-minute timestamp :timezone timezone)
+          (timestamp-second timestamp :timezone timezone)))
 
 (defun parse-datetime (string)
   (destructuring-bind (date time)

@@ -1,12 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2018-01-19 01:04:31>
+;;; Last Modified <michael 2018-01-20 20:04:34>
 
 (in-package :virtualhelm)
 
 (defun check-window (first last &key
                                   (logfile "startwindow.log")
+                                  (increment 60)
                                   (start +marseille+)
                                   (dest +carthago+)
                                   (polars "maxi_trimaran_x10percent")
@@ -15,7 +16,7 @@
   (adjust-timestamp! last (:set :minute 0) (:set :sec 0))
   (with-open-file (f logfile :direction :output :if-exists :supersede)
     (do ((starttime first
-                    (adjust-timestamp starttime (:offset :hour 1)))
+                    (adjust-timestamp starttime (:offset :minute increment)))
          (result (list)))
         ((timestamp> starttime last)
          result)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2017-12-25 23:51:26>
+;;; Last Modified <michael 2018-01-25 22:46:00>
 
 (in-package :virtualhelm)
 
@@ -15,7 +15,7 @@
   (make-criterion :distfn #'routepoint-destination-distance
                   :compfn #'<))
 
-#+()(defun filter-isochrone (isochrone
+(defun filter-isochrone (isochrone
                          max-points
                          &key (criterion +max-origin+))
   (let* ((last
@@ -58,8 +58,7 @@
               :collect p)))
       (values (make-array (length filtered) :initial-contents filtered)))))
 
-
-(defun filter-isochrone (isochrone
+#+()(defun filter-isochrone (isochrone
                          max-points
                          &key (criterion +max-origin+))
   (let* ((last
@@ -99,8 +98,10 @@
                        ;; Sector scanned, record best distance...
                        (let* ((pmin (aref isochrone kmin))
                               (pmin-pred (routepoint-predecessor pmin)))
-                         (unless (intersects-land-p (routepoint-position pmin)
-                                                    (routepoint-position pmin-pred))
+                         (unless
+                             #+nil(intersects-land-p (routepoint-position pmin) (routepoint-position pmin-pred))
+                             (is-land (latlng-lat (routepoint-position pmin))
+                                      (latlng-lng (routepoint-position pmin)))
                            (vector-push-extend (aref isochrone kmin) result)))
                        ;; ... and reset.
                        (when (< k last)

@@ -650,6 +650,8 @@ function redrawWind (timeParamName, timeParamValue) {
     
     var lat0 = north + ((north - south) / ySteps)/2;
     var lon0 = east + ((east - west) / xSteps)/2;
+    var ddx = roundTo((east-west)/xSteps, 8);
+    var ddy = roundTo((north-south)/ySteps, 8);
 
     $.ajax({ 
         url: "/function/vh:getWind"
@@ -658,8 +660,8 @@ function redrawWind (timeParamName, timeParamValue) {
             + "&south=" + roundTo(south, 6)
             + "&west=" + roundTo(west, 6)
             + "&east=" + roundTo(lon0, 6)
-            + "&ddx=" + roundTo((east-west)/xSteps, 8)
-            + "&ddy=" + roundTo((north-south)/ySteps, 8),
+            + "&ddx=" + ddx
+            + "&ddy=" + ddy,
         dataType: 'json'
     }).done( function(data) {
         drawWind(data)

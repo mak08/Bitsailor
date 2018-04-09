@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2017-12-30 01:52:49>
+;;; Last Modified <michael 2018-03-26 23:22:11>
 
 (in-package :virtualhelm)
 
@@ -173,22 +173,29 @@
                        :twa twa
                        :sails saildefs))))))
 
-(defun find-vmg-angles (polars)
-  (loop
-     :for saildef :in polars
-     :collect
-     (destructuring-bind (twa-len tws-len)
-         (array-dimensions (sail-speed saildef))
-       (loop
-          :for speed :below tws-len
-          :collect (loop
-                      :with best-speed = 0
-                      :with best-angle = 0
-                      :for angle :below twa-len
-                      :when (> (* (aref (sail-speed saildef) angle speed) (cos angle))
-                               best-speed)
-                      :do (setf best-angle angle)
-                      :finally (return best-angle))))))
+(defmethod find-vmg-angles ((polars polars))
+  (let ((tws (polars-tws polars)))
+    (loop
+       :for windspeed :across tws
+       :for tws-index :from 0
+       :collect (best-vmg ))))
+
+(defun best-vmg (windspeed polars)
+  (let ((sails (polars-sails polars))
+        (tws (polars-tws polars))
+        (twa (polars-twa polars)))
+    (loop
+       :for saildef :across sails
+       :collect (loop
+                   :with best-vmg = 0.0
+                   :with best-twa = 0.0
+                   :for angle :across twa
+                   :for twa-index :from 0
+                   :for vmg = (* (aref (sail-speed saildef) twa-index tws-index) (cos (rad angle)))
+                   :when (> vmg best-vmg)
+                   :do (setf best-twa angle
+                             best-vmg vmg)
+                   :finally (return (list windspeed best-vmg best-twa))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

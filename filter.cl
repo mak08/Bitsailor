@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-25 22:46:00>
+;;; Last Modified <michael 2018-03-27 19:43:55>
 
 (in-package :virtualhelm)
 
@@ -18,6 +18,9 @@
 (defun filter-isochrone (isochrone
                          max-points
                          &key (criterion +max-origin+))
+  (log2:debug "Filter: ~a points" (length isochrone))
+  (when (= 0 (length isochrone))
+    (return-from filter-isochrone nil))
   (let* ((last
           (1- (length isochrone)))
          (a-start
@@ -44,11 +47,17 @@
       (loop
          :for point :across isochrone
          :do (let ((bucket (bucket point)))
-               (when (or (null (aref result bucket))
-                         (funcall (criterion-compfn criterion)
-                                  (funcall (criterion-distfn criterion) point)
-                                  (funcall (criterion-distfn criterion) (aref result bucket))))
-                 (setf (aref result bucket) point)))))
+               (if (>= bucket (length result))
+                   (log2:debug "Invalid bucket ~a, angle ~a, ~a, ~a"
+                               bucket
+                               (routepoint-sort-angle% point)
+                               a-start
+                               h-end)
+                   (when (or (null (aref result bucket))
+                             (funcall (criterion-compfn criterion)
+                                      (funcall (criterion-distfn criterion) point)
+                                      (funcall (criterion-distfn criterion) (aref result bucket))))
+                     (setf (aref result bucket) point))))))
     (let ((filtered
            (loop
               :for p :across result

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-01-25 22:37:05>
+;;; Last Modified <michael 2018-03-27 19:44:59>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -235,7 +235,7 @@
            isochrone)
       (let ((candidate (filter-isochrone next-isochrone max-points :criterion (routing-mode routing))))
         (cond
-          (candidate
+          ((and candidate (> (length candidate) 0))
            (loop
               :for p :across candidate
               :when p

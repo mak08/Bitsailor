@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-01-25 00:10:19>
+;;; Last Modified <michael 2018-03-14 21:58:12>
 
 (in-package :virtualhelm)
 
@@ -76,6 +76,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
+
 (defun |getRoute| (location request response)
   (declare (ignore location))
   (handler-case
@@ -111,7 +112,7 @@
 ;;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
 ;;; Returns (0d0, -1d0) for unavailable values.
 ;;; Does not work if date line is in longitude range.
-(defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5"))
+(defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore location request))
   (handler-case
       (let ((*read-default-float-format* 'double-float))

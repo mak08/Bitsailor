@@ -1,14 +1,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-03-26 23:22:11>
+;;; Last Modified <michael 2018-04-15 00:40:47>
 
 (in-package :virtualhelm)
 
-(defstruct cpolars twa speed)
-(defstruct polars tws twa sails)
+(defstruct cpolars name twa speed)
+(defstruct polars name tws twa sails)
 (defstruct sail name speed)
 
+(defmethod print-object ((thing cpolars) stream)
+  (format stream "[Compiled polars ~a]" (cpolars-name thing)))
+(defmethod print-object ((thing polars) stream)
+  (format stream "[Polars ~a]" (polars-name thing)))
 
 (defvar *polars-dir*
   (append (pathname-directory (asdf:system-source-directory :virtualhelm)) '("polars")))
@@ -35,10 +39,10 @@
     options))
 
 (defun get-max-speed (polars twa wind-speed)
-  (check-type twa angle)
-  (values-list (aref (cpolars-speed polars)
-                     (round (abs twa) 0.1)
-                     (round wind-speed 0.1))))
+  ;; (check-type twa angle)
+  (aref (cpolars-speed polars)
+        (round (abs twa) 0.1)
+        (round wind-speed 0.1)))
 
 (defun get-max-speed% (angle wind-speed polars options)
   (do
@@ -101,7 +105,8 @@
                          :for wind :from 0d0 :to (- max-wind 0.1d0) :by 0.1d0
                          :collect (multiple-value-list
                                    (get-max-speed% angle wind polars options))))))
-    (make-cpolars :twa twa
+    (make-cpolars :name name
+                  :twa twa
                   :speed (make-array (list (length precomputed)
                                            (length (car precomputed)))
                                      :initial-contents precomputed))))
@@ -169,7 +174,8 @@
              :for a :from 0
              :do (setf (aref twa a)
                        (coerce (aref twa a) 'double-float)))
-          (make-polars :tws tws
+          (make-polars :name polars
+                       :tws tws
                        :twa twa
                        :sails saildefs))))))
 

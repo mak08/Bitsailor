@@ -445,13 +445,24 @@ function makeWaypointInfo(point, nextPoint) {
         + "<b>Position</b>: " + formatPosition(point.position) + "<p>";
     if ( nextPoint !== undefined ) {
         result = result + "<p><b>Wind</b>: " + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°</p>"
-            + "<p><b> TWA</b>: " + nextPoint.twa + "<b> Heading</b>: " + nextPoint.heading + "°</p>"
-            + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 2) + "kts</p>" 
+            + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + nextPoint.heading + "°</p>"
+            + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>" 
             + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
     }
     result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
         + "</div>";
     return result;
+}
+
+function routepointTWA (point) {
+    var angle = point["wind-dir"] - point.heading;
+    if ( angle <= -180 ) {
+        return angle + 180;
+    } else if (angle > 180) {
+        return angle -180;
+    } else {
+        return angle;
+    }
 }
 
 function getRoute () {

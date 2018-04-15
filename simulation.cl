@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-03-27 19:44:59>
+;;; Last Modified <michael 2018-04-15 00:33:59>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -25,14 +25,8 @@
 
 ;;; time in seconds
 (defconstant +10min+ (* 10 60))
-(defconstant +20min+ (* 20 60))
-(defconstant +30min+ (* 30 60))
-(defconstant +60min+ (* 60 60))
-(defconstant +3h+ (* 3 60 60))
-(defconstant +6h+ (* 6 60 60))
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
-(defconstant +48h+ (* 48 60 60))
 
 (defvar *isochrones* nil)
 
@@ -81,21 +75,14 @@
 ;;;
 ;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
 
-(defstruct routepoint
-  position
-  time
-  heading
-  twa
-  speed
-  penalty
-  sail
-  wind-dir
-  wind-speed
-  predecessor
-  origin-angle
-  origin-distance
-  sort-angle%
-  destination-distance)
+(defstruct (routepoint
+             (:constructor create-routepoint (predecessor position time heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
+  predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance sort-angle%)
+
+(defun routepoint-twa (rp)
+  (if (routepoint-wind-dir rp)
+      (round (heading-twa (routepoint-wind-dir rp)
+                          (routepoint-heading rp)))))
 
 (defmethod print-object ((thing routepoint) stream)
   (format stream " ~a@~a"
@@ -144,16 +131,11 @@
           (start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
           (elapsed0 (now))
           ;; The initial isochrone is just the start point, heading towards destination
-          (isochrone (list (make-routepoint :position start-pos
-                                            :time start-time
-                                            :heading  dest-heading
-                                            :origin-distance 0
-                                            :destination-distance (course-distance start-pos dest-pos)))
+          (isochrone (list (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos)))
                      next-isochrone)
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
                           (make-array 0 :adjustable t :fill-pointer 0))
-          (index 0 0)
           ;; Get min and max heading of the point of each isochrone for sorting
           (min-heading 360 360)
           (max-heading 0 0)
@@ -182,56 +164,40 @@
             (make-routeinfo :best best-route
                             :stats (get-statistics best-route)
                             :tracks (extract-tracks isochrone)
-                            :isochrones (loop
-                                           :for i :in isochrones
-                                           :collect (make-isochrone :time (isochrone-time i)
-                                                                    :offset (isochrone-offset i)
-                                                                    :path (loop
-                                                                             :for r :across (isochrone-path i)
-                                                                             :collect (routepoint-position r)))))))
+                            :isochrones (strip-routepoints isochrones))))
       (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
       ;; Iterate over each point in the current isochrone
       (map nil
            (lambda (routepoint)
              (when routepoint 
-               (let* ((point-heading (routepoint-heading routepoint))
-                      (left (normalize-heading (- dest-heading (routing-fan routing))))
-                      (right (normalize-heading (+ dest-heading (routing-fan routing)))))
-                 ;; Keep track of min and max heading of point in isochrone
-                 (when (< left min-heading)
-                   (setf min-heading left))
-                 (when (> right max-heading)
-                   (setf max-heading right))
-                 (when (> left right)
-                   (incf right 360))
-                 (loop
-                    :for heading-index :from left :to right :by angle-increment
-                    :for heading = (normalize-heading heading-index)
-                    :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
-                            (get-penalized-avg-speed routing routepoint forecast polars heading)
-                          (when (or (<= -165 twa -40)
-                                    (<= 40 twa 165))
-                            (let*
-                                ((new-pos (add-distance-exact (routepoint-position routepoint)
-                                                              (* speed step-size)
-                                                              (coerce heading 'double-float))))
-                              (incf pointnum)
-                              (vector-push-extend
-                               (make-routepoint :position new-pos
-                                                :time step-time
-                                                :heading heading
-                                                :twa (round twa)
-                                                :speed speed
-                                                :penalty reason
-                                                :sail sail
-                                                :wind-dir wind-dir
-                                                :wind-speed wind-speed
-                                                :predecessor routepoint
-                                                :origin-angle (course-angle start-pos new-pos)
-                                                :origin-distance (course-distance new-pos start-pos)
-                                                :destination-distance nil)
-                               next-isochrone)
-                              (incf index))))))))
+               (let* ((left (normalize-heading (- dest-heading (routing-fan routing))))
+                      (right (normalize-heading (+ dest-heading (routing-fan routing))))
+                      (cur-twa (routepoint-twa routepoint))
+                      (cur-sail (routepoint-sail routepoint)))
+                 (multiple-value-bind (wind-dir wind-speed)
+                     (get-wind-forecast forecast (routepoint-position routepoint))
+                   ;; Keep track of min and max heading of point in isochrone
+                   (when (< left min-heading)
+                     (setf min-heading left))
+                   (when (> right max-heading)
+                     (setf max-heading right))
+                   (when (> left right)
+                     (incf right 360))
+                   (loop
+                      :for heading-index :from left :to right :by angle-increment
+                      :for heading = (normalize-heading heading-index)
+                      :do (multiple-value-bind (twa sail speed reason wind-dir wind-speed)
+                              (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars heading)
+                            (when (or (<= -165 twa -40)
+                                      (<= 40 twa 165))
+                              (let*
+                                  ((new-pos (add-distance-exact (routepoint-position routepoint)
+                                                                (* speed step-size)
+                                                                (coerce heading 'double-float))))
+                                (incf pointnum)
+                                (vector-push-extend
+                                 (create-routepoint routepoint new-pos step-time heading nil speed sail reason wind-dir wind-speed (course-angle start-pos new-pos) (course-distance start-pos new-pos))
+                                 next-isochrone)))))))))
            isochrone)
       (let ((candidate (filter-isochrone next-isochrone max-points :criterion (routing-mode routing))))
         (cond
@@ -258,6 +224,15 @@
                                      :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
                                      :path (extract-points next-isochrone))))
             (push iso isochrones)))))))
+
+(defun strip-routepoints (isochrones)
+  (loop
+     :for i :in isochrones
+     :collect (make-isochrone :time (isochrone-time i)
+                              :offset (isochrone-offset i)
+                              :path (loop
+                                       :for r :across (isochrone-path i)
+                                       :collect (routepoint-position r)))))
 
 (defun extract-points (isochrone)
   (let ((points (loop :for p :across isochrone :when p :collect p)))
@@ -303,10 +278,10 @@
                      (aref +foil-matrix+ (1+ speed-index) angle-index)
                      (aref +foil-matrix+ speed-index (1+ angle-index))
                      (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
-         
-(defun get-penalized-avg-speed (routing predecessor forecast polars heading)
-  (multiple-value-bind (speed twa sail wind-dir wind-speed)
-      (heading-boatspeed forecast polars (routepoint-position predecessor) heading)
+
+(defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars heading)
+  (multiple-value-bind (speed twa sail)
+      (heading-boatspeed polars wind-dir wind-speed heading)
     (when (routing-minwind routing)
       (setf speed (max 2.0578d0 speed)))
     (when
@@ -321,11 +296,11 @@
                (* speed 0.75))))
       (cond
         ((and
-          (not (equal sail (routepoint-sail predecessor)))
-          (not (equal twa (routepoint-twa predecessor))))
+          (not (equal sail cur-sail))
+          (not (equal twa cur-twa)))
          (values twa sail pspeed "Sail Change" wind-dir wind-speed))
-        ((or (< twa 0 (routepoint-twa predecessor))
-             (< (routepoint-twa predecessor) 0 twa))
+        ((or (< twa 0 cur-twa)
+             (< cur-twa 0 twa))
          (values twa sail pspeed "Tack/Gybe" wind-dir wind-speed))
         (t
          (values twa sail speed nil wind-dir wind-speed))))))
@@ -455,22 +430,19 @@
   (check-type angle angle)
   (multiple-value-bind (wind-dir wind-speed)
       (get-wind-forecast forecast latlon)
-    (multiple-value-bind (speed sail)
+    (destructuring-bind (speed sail)
         (get-max-speed polars angle wind-speed)
       (values speed
               (twa-heading wind-dir angle)
               sail
               wind-speed))))
 
-(defun heading-boatspeed (forecast polars latlon heading)
+(defun heading-boatspeed (polars wind-dir wind-speed heading)
   (check-type heading heading)
-  (multiple-value-bind (wind-dir wind-speed)
-      (get-wind-forecast forecast latlon)
-    (let ((angle (heading-twa wind-dir heading)))
-      (multiple-value-bind (speed sail)
-          (get-max-speed polars angle wind-speed)
-        (values speed angle sail wind-dir wind-speed)))))
-
+  (let ((angle (heading-twa wind-dir heading)))
+    (destructuring-bind (speed sail)
+        (get-max-speed polars angle wind-speed)
+      (values speed angle sail))))
 
 (defun parse-datetime-local (time &key (timezone "+01:00"))
   (etypecase time

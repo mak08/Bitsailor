@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-04-15 00:33:59>
+;;; Last Modified <michael 2018-04-15 13:46:27>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -88,20 +88,14 @@
   (format stream " ~a@~a"
           (routepoint-position thing)
           (routepoint-time thing)))
-                          
+
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
-         (dest-pos 
-          (if (>= (- (latlng-lng (routing-dest routing))
-                     (latlng-lng start-pos))
-                  180)
-              (make-latlng :lat (latlng-lat (routing-dest routing))
-                           :lng (- (latlng-lng (routing-dest routing)) 360))
-              (routing-dest routing)))
+         (dest-pos (normalized-dest-pos routing))
          (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (sails (encode-options (routing-options routing)))
-         (polars (get-combined-polars (routing-polars routing) sails))
+         (polars (get-routing--polars routing))
          (angle-increment (routing-angle-increment routing))
          (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
@@ -225,18 +219,8 @@
                                      :path (extract-points next-isochrone))))
             (push iso isochrones)))))))
 
-(defun strip-routepoints (isochrones)
-  (loop
-     :for i :in isochrones
-     :collect (make-isochrone :time (isochrone-time i)
-                              :offset (isochrone-offset i)
-                              :path (loop
-                                       :for r :across (isochrone-path i)
-                                       :collect (routepoint-position r)))))
-
-(defun extract-points (isochrone)
-  (let ((points (loop :for p :across isochrone :when p :collect p)))
-    (make-array (length points) :initial-contents points)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Stepping
 
 (defun step-size (start-time &optional (step-time nil))
   (cond
@@ -256,28 +240,8 @@
              (t
               1800))))))
 
-(defvar +foil-speeds+ (map 'vector #'knots-to-m/s
-                           #(0.0 11.0 16.0 35.0 40.0 70.0)) )
-(defvar +foil-angles+ #(0.0 70.0 80.0 160.0 170.0 180.0))
-(defvar +foil-matrix+ #2a((1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.04 1.04 1.00 1.00)
-                          (1.00 1.00 1.04 1.04 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)))
-(defun foiling-factor (speed twa)
-  (multiple-value-bind
-        (speed-index speed-fraction)
-      (fraction-index speed +foil-speeds+)
-    (multiple-value-bind
-          (angle-index angle-fraction)
-        (fraction-index (abs twa) +foil-angles+)
-      (bilinear-unit speed-fraction
-                     angle-fraction
-                     (aref +foil-matrix+ speed-index angle-index)
-                     (aref +foil-matrix+ (1+ speed-index) angle-index)
-                     (aref +foil-matrix+ speed-index (1+ angle-index))
-                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Speed
 
 (defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars heading)
   (multiple-value-bind (speed twa sail)
@@ -305,9 +269,67 @@
         (t
          (values twa sail speed nil wind-dir wind-speed))))))
 
-(defun southbound-p (min-heading max-heading)
-  (< min-heading 180 max-heading))
+(defvar +foil-speeds+ (map 'vector #'knots-to-m/s
+                           #(0.0 11.0 16.0 35.0 40.0 70.0)) )
+(defvar +foil-angles+ #(0.0 70.0 80.0 160.0 170.0 180.0))
+(defvar +foil-matrix+ #2a((1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.04 1.04 1.00 1.00)
+                          (1.00 1.00 1.04 1.04 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)
+                          (1.00 1.00 1.00 1.00 1.00 1.00)))
+(defun foiling-factor (speed twa)
+  (multiple-value-bind
+        (speed-index speed-fraction)
+      (fraction-index speed +foil-speeds+)
+    (multiple-value-bind
+          (angle-index angle-fraction)
+        (fraction-index (abs twa) +foil-angles+)
+      (bilinear-unit speed-fraction
+                     angle-fraction
+                     (aref +foil-matrix+ speed-index angle-index)
+                     (aref +foil-matrix+ (1+ speed-index) angle-index)
+                     (aref +foil-matrix+ speed-index (1+ angle-index))
+                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
            
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Aux functions
+
+(defun get-routing-polars (routing)
+  (let ((sails (encode-options (routing-options routing))))
+    (get-combined-polars (routing-polars routing) sails)))
+
+(defun normalized-dest-pos (routing)
+  (if (>= (- (latlng-lng (routing-dest routing))
+             (latlng-lng (routing-start routing)))
+          180)
+      (make-latlng :lat (latlng-lat (routing-dest routing))
+                   :lng (- (latlng-lng (routing-dest routing)) 360))
+      (routing-dest routing)))
+
+(defun strip-routepoints (isochrones)
+  (loop
+     :for i :in isochrones
+     :collect (make-isochrone :time (isochrone-time i)
+                              :offset (isochrone-offset i)
+                              :path (loop
+                                       :for r :across (isochrone-path i)
+                                       :collect (routepoint-position r)))))
+
+(defun extract-points (isochrone)
+  (let ((points (loop :for p :across isochrone :when p :collect p)))
+    (make-array (length points) :initial-contents points)))
+
+(defun extract-tracks (isochrone)
+  (loop
+     :for point :across isochrone
+     :for k :from 0
+     :collect (do ((p point (routepoint-predecessor p))
+                   (v (list)))
+                  ((null p)
+                   v)
+                (push (routepoint-position p) v))))
+
 (defun construct-route (isochrone)
   (let ((min-dtf nil)
         (min-point nil)
@@ -371,15 +393,8 @@
                        :minutes minutes
                        :seconds rest-seconds)))))
 
-(defun extract-tracks (isochrone)
-  (loop
-     :for point :across isochrone
-     :for k :from 0
-     :collect (do ((p point (routepoint-predecessor p))
-                   (v (list)))
-                  ((null p)
-                   v)
-                (push (routepoint-position p) v))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TWA tool
 
 (defun get-twa-path (routing
                      &key

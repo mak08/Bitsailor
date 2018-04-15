@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-03-27 19:43:55>
+;;; Last Modified <michael 2018-04-15 13:45:23>
 
 (in-package :virtualhelm)
 
@@ -125,6 +125,10 @@
                        (setf dmin (funcall (criterion-distfn criterion) point))))
                 :finally (return result))))
         iso))))
+
+
+(defun southbound-p (min-heading max-heading)
+  (< min-heading 180 max-heading))
 
 (defun clip-isochrone (isochrone)
   (let ((length (length isochrone)))

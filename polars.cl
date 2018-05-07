@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-04-15 00:40:47>
+;;; Last Modified <michael 2018-05-06 23:19:19>
 
 (in-package :virtualhelm)
 
@@ -44,40 +44,6 @@
         (round (abs twa) 0.1)
         (round wind-speed 0.1)))
 
-(defun get-max-speed% (angle wind-speed polars options)
-  (do
-   ((tws (polars-tws polars))
-    (twa (polars-twa polars))
-    (imax 0)
-    (vmax 0)
-    (i 0 (1+ i)))
-   ((= i 7)
-       (values vmax
-               (sail-name (aref (polars-sails polars) imax))))
-    (when (= (ldb (byte 1 i) options) 1)
-      (let ((v (get-boat-speed (abs angle)
-                               wind-speed
-                               tws
-                               twa
-                               (sail-speed (aref (polars-sails polars) i)))))
-        (when (>= v vmax)
-          (setf imax i
-                vmax v))))))
-
-(defun get-boat-speed (angle wind-speed tws twa sailspeeds)
-  (multiple-value-bind
-        (speed-index speed-fraction)
-      (fraction-index wind-speed tws)
-    (multiple-value-bind
-          (angle-index angle-fraction)
-        (fraction-index angle twa)
-      (bilinear-unit speed-fraction
-                     angle-fraction
-                     (aref sailspeeds angle-index speed-index)
-                     (aref sailspeeds (1+ angle-index) speed-index)
-                     (aref sailspeeds angle-index (1+ speed-index))
-                     (aref sailspeeds (1+ angle-index) (1+ speed-index))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
 
@@ -111,15 +77,49 @@
                                            (length (car precomputed)))
                                      :initial-contents precomputed))))
 
+(defun get-max-speed% (angle wind-speed polars options)
+  (do
+   ((tws (polars-tws polars))
+    (twa (polars-twa polars))
+    (imax 0)
+    (vmax 0)
+    (i 0 (1+ i)))
+   ((= i 7)
+       (values vmax
+               (sail-name (aref (polars-sails polars) imax))))
+    (when (= (ldb (byte 1 i) options) 1)
+      (let ((v (get-boat-speed (abs angle)
+                               wind-speed
+                               tws
+                               twa
+                               (sail-speed (aref (polars-sails polars) i)))))
+        (when (>= v vmax)
+          (setf imax i
+                vmax v))))))
+
+(defun get-boat-speed (angle wind-speed tws twa sailspeeds)
+  (multiple-value-bind
+        (speed-index speed-fraction)
+      (fraction-index wind-speed tws)
+    (multiple-value-bind
+          (angle-index angle-fraction)
+        (fraction-index angle twa)
+      (bilinear-unit speed-fraction
+                     angle-fraction
+                     (aref sailspeeds angle-index speed-index)
+                     (aref sailspeeds angle-index (1+ speed-index))
+                     (aref sailspeeds (1+ angle-index) speed-index)
+                     (aref sailspeeds (1+ angle-index) (1+ speed-index))))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from file
 
 (defvar *polars-ht* (make-hash-table :test 'equal))
 
-(defun get-polars (name)
+(defun get-polars (name &key (convert-speed t))
   (or (gethash name *polars-ht*)
       (setf (gethash name *polars-ht*)
-            (load-polars name))))
+            (load-polars name :convert-speed convert-speed))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
@@ -179,29 +179,27 @@
                        :twa twa
                        :sails saildefs))))))
 
-(defmethod find-vmg-angles ((polars polars))
-  (let ((tws (polars-tws polars)))
-    (loop
-       :for windspeed :across tws
-       :for tws-index :from 0
-       :collect (best-vmg ))))
-
 (defun best-vmg (windspeed polars)
-  (let ((sails (polars-sails polars))
-        (tws (polars-tws polars))
-        (twa (polars-twa polars)))
-    (loop
-       :for saildef :across sails
-       :collect (loop
-                   :with best-vmg = 0.0
-                   :with best-twa = 0.0
-                   :for angle :across twa
-                   :for twa-index :from 0
-                   :for vmg = (* (aref (sail-speed saildef) twa-index tws-index) (cos (rad angle)))
-                   :when (> vmg best-vmg)
-                   :do (setf best-twa angle
-                             best-vmg vmg)
-                   :finally (return (list windspeed best-vmg best-twa))))))
+  (loop
+     :with best-vmg-up = 0.0
+     :with best-twa-up = 0.0
+     :with best-sail-up = nil
+     :with best-vmg-down = 0.0
+     :with best-twa-down = 0.0
+     :with best-sail-down = nil
+     :for angle :from 20.0d0 :to 170.0d0
+     :for (speed sail) = (multiple-value-list (get-max-speed% angle windspeed polars +allsails+))
+     :for vmg = (* speed (cos (rad angle)))
+     :when (< vmg best-vmg-down)
+     :do (setf best-twa-down angle
+               best-vmg-down vmg
+               best-sail-down sail)
+     :when (> vmg best-vmg-up)
+     :do (setf best-twa-up angle
+               best-vmg-up vmg
+               best-sail-up sail)
+     :finally (return (values (list best-vmg-up best-sail-up best-twa-up)
+                              (list (abs best-vmg-down) best-sail-down best-twa-down)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

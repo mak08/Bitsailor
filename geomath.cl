@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-01-13 23:29:22>
+;;; Last Modified <michael 2018-05-06 23:22:01>
 
 (in-package :virtualhelm)
 
@@ -60,10 +60,10 @@
                               (/ (- value (aref steps (1- index)))
                                  (- step (aref steps (1- index))))))))
 
-(defun bilinear-unit (x y f00 f10 f01 f11)
+(defun bilinear-unit (x y f00 f01 f10 f11)
   (+ (* f00 (- 1 x) (- 1 y))
-     (* f10 x (- 1 y))
-     (* f01 (- 1 x) y)
+     (* f01 x (- 1 y))
+     (* f10 (- 1 x) y)
      (* f11 x y)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

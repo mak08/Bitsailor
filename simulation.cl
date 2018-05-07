@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-04-15 21:20:59>
+;;; Last Modified <michael 2018-05-06 23:27:04>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -258,8 +258,8 @@
       (bilinear-unit speed-fraction
                      angle-fraction
                      (aref +foil-matrix+ speed-index angle-index)
-                     (aref +foil-matrix+ (1+ speed-index) angle-index)
                      (aref +foil-matrix+ speed-index (1+ angle-index))
+                     (aref +foil-matrix+ (1+ speed-index) angle-index)
                      (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-21 02:19:40>
+;;; Last Modified <michael 2018-05-16 20:51:18>
 
 (in-package :virtualhelm)
 
@@ -51,6 +51,12 @@
 
 (defvar +CARTHAGO+
   (make-latlng :lat 36.795d0 :lng 10.392d0))
+
+(defvar +NEW-YORK+
+  (make-latlng :lat 40.43943d0 :lng -73.92772d0))
+
+(defvar +LIZARD-POINT+
+  (make-latlng :lat 48.37852d0 :lng -4.489018d0))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races

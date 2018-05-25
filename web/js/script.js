@@ -455,14 +455,13 @@ function makeWaypointInfo(point, nextPoint) {
 }
 
 function routepointTWA (point) {
-    var angle = point["wind-dir"] - point.heading;
+    var angle =  point.heading - point["wind-dir"];
     if ( angle <= -180 ) {
-        return angle + 180;
+        angle += 360;
     } else if (angle > 180) {
-        return angle -180;
-    } else {
-        return angle;
+        angle -= 360;
     }
+    return angle;
 }
 
 function getRoute () {

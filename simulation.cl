@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-05-06 23:27:04>
+;;; Last Modified <michael 2018-05-16 21:07:54>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -171,7 +171,7 @@
                 :do (progn
                       (setf (routepoint-destination-distance p)
                             (course-distance (routepoint-position p) dest-pos))
-                      (when (< (routepoint-destination-distance p) 10000)
+                      (when (< (routepoint-destination-distance p) 30000)
                         (setf reached t))))
              (setf next-isochrone candidate))
             (t

@@ -94,7 +94,6 @@ function setUp () {
 
     $("#cb_startdelayed").click(onDelayedStart);
     $("#tb_starttime").change(onSetParameter);
-    $("#sel_starttimezone").change(onSetParameter);
     $("#bt_setstartpos").click(onStartDMSUpdated);
     
     // Connect option selectors
@@ -245,8 +244,6 @@ function getSession () {
             redrawWind("offset", irIndex.value);
         }
 
-        var starttimezone = session.routing.starttimezone;
-        $("#sel_starttimezone")[0].value = starttimezone;
         var starttime = session.routing.starttime;
         var cbStartDelayed = $("#cb_startdelayed")[0];
         if ( starttime != false && starttime != 'NIL' ) {
@@ -445,7 +442,7 @@ function makeWaypointInfo(point, nextPoint) {
         + "<b>Position</b>: " + formatPosition(point.position) + "<p>";
     if ( nextPoint !== undefined ) {
         result = result + "<p><b>Wind</b>: " + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°</p>"
-            + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + nextPoint.heading + "°</p>"
+            + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
             + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>" 
             + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
     }
@@ -454,8 +451,9 @@ function makeWaypointInfo(point, nextPoint) {
     return result;
 }
 
+// Routepoint does not store TWA
 function routepointTWA (point) {
-    var angle =  point.heading - point["wind-dir"];
+    var angle =  point["wind-dir"] - point.heading;
     if ( angle <= -180 ) {
         angle += 360;
     } else if (angle > 180) {

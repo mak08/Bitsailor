@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-05-06 23:22:01>
+;;; Last Modified <michael 2018-10-27 18:02:49>
 
 (in-package :virtualhelm)
 
@@ -30,25 +30,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Interpolation
-
-(defun bilinear (w a w0 w1 a0 a1 v00 v01 v10 v11)
-  ;; Bilinear interpolation at P=(w a) given values f(w0, a0) = v00 etc.
-  ;; If a0=a1 (w0=w1) interpolate at the resp. midpoints of v00, v01, v10, v11
-  (declare (double-float w a w0 w1 a0 a1 v00 v10 v01 v11))
-  (assert (<= w0 w w1))
-  (assert (<= a0 a a1))
-  (let* ((dw
-          (if (= w0 w1) 0.5d0 (/ (- w w0) (- w1 w0))))
-         (v0
-          (+ v00 (* dw (- v01 v00))))
-         (v1
-          (+ v10 (* dw (- v11 v10))))
-         (da
-          (if (= a0 a1) 0.5d0 (/ (- a a0) (- a1 a0))))
-         (v
-          (+ v0 (* da (- v1 v0)))))
-    (declare (double-float dw v0 v1 da v))
-    v))
 
 (defun fraction-index (value steps)
   (loop
@@ -80,6 +61,7 @@
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
 (defun course-distance (origin target)
+  (declare (ftype (function (t) double-float) latlng-latr latlng-lngr))
   (let* ((lat1 (latlng-latr origin))
          (lon1 (latlng-lngr origin))
          (lat2 (latlng-latr target))

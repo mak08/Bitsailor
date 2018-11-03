@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-03-27 19:33:58>
+;;; Last Modified <michael 2018-11-01 21:22:38>
 
 (in-package :virtualhelm)
 
@@ -11,7 +11,7 @@
 (setf (log2:log-level "virtualhelm") log2:+info+)
 (setf (log2:log-level "polarcl") log2:+info+)
 (setf (log2:log-level "cl-weather") log2:+trace+)
-(setf (log2:log-level "mbedtls") log2:+warning+)
+(setf (log2:log-level "mbedtls") log2:+info+)
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
@@ -28,20 +28,15 @@
     (ensure-map)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
-    (start-grib-updates)))
+    (load-forecast-bundle 'noaa-bundle)
+    (update-forecast-bundle 'noaa-bundle)))
 
-(defun start-grib-updates (&key (bundles '(noaa-bundle)) (resolution "0.250"))
-  "Check for new forecast data an remove old data periodically"
-     (dolist (bundle bundles)
-         (flet ((run-update ()
-                  (loop
-                     (handler-case
-                         (update-forecast-bundle bundle :resolution resolution :stepwidth 1)
-                       (error (e)
-                         (log2:error "~a" e)))
-                     (sleep 3600))))
-           (bordeaux-threads:make-thread #'run-update
-                                         :name (format nil "~a-UPDATER" bundle)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helpers
+
+(defparameter *fc* nil)
+(defun get-fc ()
+  (setf *fc* (get-forecast (get-forecast-bundle 'noaa-bundle) (now))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

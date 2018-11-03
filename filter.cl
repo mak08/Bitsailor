@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-04-15 13:45:23>
+;;; Last Modified <michael 2018-10-28 15:01:53>
 
 (in-package :virtualhelm)
 
@@ -16,43 +16,41 @@
                   :compfn #'<))
 
 (defun filter-isochrone (isochrone
+                         left
+                         right
                          max-points
                          &key (criterion +max-origin+))
+  ;; (return-from filter-isochrone isochrone)
   (log2:debug "Filter: ~a points" (length isochrone))
   (when (= 0 (length isochrone))
     (return-from filter-isochrone nil))
-  (let* ((last
+  (let* ((fan 180.0)
+         (last
           (1- (length isochrone)))
-         (a-start
-          (routepoint-origin-angle (aref isochrone 0)))
-         (a-end
-          (routepoint-origin-angle (aref isochrone last)))
-         (southbound
-          (< a-end a-start))
-         (h-end
-          (if southbound  (+ a-end 360) a-end))
          (delta-angle
-          (/ (- h-end a-start) max-points))
+          (/ fan max-points))
          (result
-          (make-array (+ max-points 10) :initial-element nil)))
+          (make-array (+ max-points) :initial-element nil))) 
     (assert (plusp delta-angle))
     (flet ((bucket (routepoint)
              (let ((key-angle
                     (or (routepoint-sort-angle% routepoint)
                         (setf (routepoint-sort-angle% routepoint)
-                              (let ((angle (routepoint-origin-angle routepoint)))
-                                ;; (check-type angle angle)
-                                (if (and southbound (< angle 0)) (+ angle 360) angle))))))
-               (max 0 (truncate (- key-angle a-start) delta-angle)))))
+                              (let ((angle (normalize-heading
+                                            (routepoint-origin-angle routepoint))))
+                                angle)))))
+               (max 0
+                    (truncate (normalize-heading (- key-angle left))
+                              delta-angle)))))
       (loop
          :for point :across isochrone
          :do (let ((bucket (bucket point)))
                (if (>= bucket (length result))
-                   (log2:debug "Invalid bucket ~a, angle ~a, ~a, ~a"
+                   (log2:error "Invalid bucket ~a, angle ~a, left ~a, right ~a"
                                bucket
                                (routepoint-sort-angle% point)
-                               a-start
-                               h-end)
+                               left
+                               right)
                    (when (or (null (aref result bucket))
                              (funcall (criterion-compfn criterion)
                                       (funcall (criterion-distfn criterion) point)
@@ -62,8 +60,8 @@
            (loop
               :for p :across result
               :unless (and  p
-                            (intersects-land-p (routepoint-position p)
-                                               (routepoint-position (routepoint-predecessor p))))
+                            (intersects-land-p (routepoint-position (routepoint-predecessor p))
+                                               (routepoint-position p)))
               :collect p)))
       (values (make-array (length filtered) :initial-contents filtered)))))
 

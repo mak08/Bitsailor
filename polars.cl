@@ -1,11 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-05-06 23:19:19>
+;;; Last Modified <michael 2018-10-27 22:54:09>
+
+(declaim (optimize speed (safety 1)))
 
 (in-package :virtualhelm)
 
-(defstruct cpolars name twa speed)
+(defstruct cpolars name twa vmg speed)
 (defstruct polars name tws twa sails)
 (defstruct sail name speed)
 
@@ -38,11 +40,16 @@
       (setf options (dpb 1 (byte 1 +cd0+) options)))
     options))
 
-(defun get-max-speed (polars twa wind-speed)
+(defun get-max-speed (cpolars-speed twa wind-speed)
+  (declare (double-float twa wind-speed))
   ;; (check-type twa angle)
-  (aref (cpolars-speed polars)
-        (round (abs twa) 0.1)
-        (round wind-speed 0.1)))
+  (aref cpolars-speed
+        (round (* (abs twa) 10))
+        (round (* wind-speed 10))))
+
+(defun get-step (value resolution)
+  (round (* value resolution)))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
@@ -50,6 +57,7 @@
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
 
 (defun get-combined-polars (name options)
+  ;; cpolar speeds are in m/s, not kts!
   (let ((polars-ht
          (or (gethash name *combined-polars-ht*)
              (setf (gethash name *combined-polars-ht*)
@@ -59,7 +67,6 @@
               (preprocess-polars name options)))))
 
 (defun preprocess-polars (name options)
-  (log2:info "Preprocessing polars for ~a/~a" name options)
   (let* ((polars (get-polars name))
          (tws (polars-tws polars))
          (twa (polars-twa polars))
@@ -70,12 +77,48 @@
              :collect (loop
                          :for wind :from 0d0 :to (- max-wind 0.1d0) :by 0.1d0
                          :collect (multiple-value-list
-                                   (get-max-speed% angle wind polars options))))))
+                                   (get-max-speed% angle wind polars options)))))
+         (speed (make-array (list (length precomputed)
+                                  (length (car precomputed)))
+                            :initial-contents precomputed)))
     (make-cpolars :name name
                   :twa twa
-                  :speed (make-array (list (length precomputed)
-                                           (length (car precomputed)))
-                                     :initial-contents precomputed))))
+                  :speed speed
+                  :vmg (get-best-vmg speed max-wind))))
+
+(defun best-vmg (cpolars windspeed)
+  (values-list (aref (cpolars-vmg cpolars) (round (* windspeed 10)))))
+
+(defun get-best-vmg (cpolars-speed max-wind)
+  (let ((precomputed
+         (loop
+            :for windspeed :from 2.0d0 :to (- max-wind 0.1) :by 0.1
+            :collect (multiple-value-list
+                      (best-vmg% windspeed cpolars-speed)))))
+    (make-array (length precomputed)
+                :initial-contents precomputed)))
+
+(defun best-vmg% (windspeed cpolars-speed)
+  (loop
+     :with best-vmg-up = 0.0
+     :with best-twa-up = 0.0
+     :with best-sail-up = nil
+     :with best-vmg-down = 0.0
+     :with best-twa-down = 0.0
+     :with best-sail-down = nil
+     :for angle :from 20.0d0 :to 170.0d0
+     :for (speed sail) = (get-max-speed cpolars-speed angle windspeed)
+     :for vmg = (* speed (cos (rad angle)))
+     :when (< vmg best-vmg-down)
+     :do (setf best-twa-down angle
+               best-vmg-down vmg
+               best-sail-down sail)
+     :when (> vmg best-vmg-up)
+     :do (setf best-twa-up angle
+               best-vmg-up vmg
+               best-sail-up sail)
+     :finally (return (values (list best-vmg-up best-sail-up best-twa-up)
+                              (list (abs best-vmg-down) best-sail-down best-twa-down)))))
 
 (defun get-max-speed% (angle wind-speed polars options)
   (do
@@ -117,14 +160,16 @@
 (defvar *polars-ht* (make-hash-table :test 'equal))
 
 (defun get-polars (name &key (convert-speed t))
-  (or (gethash name *polars-ht*)
-      (setf (gethash name *polars-ht*)
-            (load-polars name :convert-speed convert-speed))))
+  (let ((key (cons name convert-speed)))
+    (or (gethash key *polars-ht*)
+        (setf (gethash key *polars-ht*)
+              (load-polars name :convert-speed convert-speed)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
 ;;;
-;;; JSON polars are in deg and kts!
+;;; JSON polars are in deg and kts, while GRIB data is in m/s!
+
 
 (defun load-polars (polars
                     &key (convert-speed t))
@@ -179,27 +224,16 @@
                        :twa twa
                        :sails saildefs))))))
 
-(defun best-vmg (windspeed polars)
-  (loop
-     :with best-vmg-up = 0.0
-     :with best-twa-up = 0.0
-     :with best-sail-up = nil
-     :with best-vmg-down = 0.0
-     :with best-twa-down = 0.0
-     :with best-sail-down = nil
-     :for angle :from 20.0d0 :to 170.0d0
-     :for (speed sail) = (multiple-value-list (get-max-speed% angle windspeed polars +allsails+))
-     :for vmg = (* speed (cos (rad angle)))
-     :when (< vmg best-vmg-down)
-     :do (setf best-twa-down angle
-               best-vmg-down vmg
-               best-sail-down sail)
-     :when (> vmg best-vmg-up)
-     :do (setf best-twa-up angle
-               best-vmg-up vmg
-               best-sail-up sail)
-     :finally (return (values (list best-vmg-up best-sail-up best-twa-up)
-                              (list (abs best-vmg-down) best-sail-down best-twa-down)))))
+
+(defun boat-performance (name)
+  (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))
+    (values
+     (round
+      (loop
+         :for windspeed :from 2d0 :to 25d0 :by 5d0
+         :sum (loop :for twa :from 40d0 :to 150d0 :by 5d0
+                 :sum (car (get-max-speed (cpolars-speed polars) twa windspeed))))
+      10))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

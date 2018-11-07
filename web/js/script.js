@@ -168,6 +168,7 @@ function onDelayedStart (event) {
 function markerClicked (marker) {
     twaAnchor = marker.getPosition();
     twaTime = marker.get('time');
+    redrawWind("time", twaTime);
 }
 
 function updateStartPosition (lat, lng) {
@@ -439,15 +440,15 @@ function makeWaypointInfo(point, nextPoint) {
     result =  "<div>";
     result = result 
         + "<b>Time</b>: " + point.time + "<p>" 
-        + "<b>Position</b>: " + formatPosition(point.position) + "<p>";
+        + "<b>Position</b>: " + formatPosition(point.position) + "<p>"
+        + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
     if ( nextPoint !== undefined ) {
-        result = result + "<p><b>Wind</b>: " + roundTo(ms2knots(nextPoint["wind-speed"]), 2) + "kts / " + roundTo(nextPoint["wind-dir"], 0) + "°</p>"
-            + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
+        result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
             + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>" 
             + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
     }
     result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
-        + "</div>";
+    result = result + "</div>";
     return result;
 }
 

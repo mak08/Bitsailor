@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-01 21:22:38>
+;;; Last Modified <michael 2018-11-06 00:23:33>
 
 (in-package :virtualhelm)
 
@@ -28,8 +28,14 @@
     (ensure-map)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
+    ;; Load latest complete bundle and possbily update (synchronous)
     (load-forecast-bundle 'noaa-bundle)
-    (update-forecast-bundle 'noaa-bundle)))
+    ;; Start asynchronous updates
+    (timers:add-timer (lambda ()
+                        (let ((bundle (get-forecast-bundle 'noaa-bundle)))
+                          (update-forecast-bundle bundle)))
+                      :hours '(3 9 15 21)
+                      :minutes '(30))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helpers

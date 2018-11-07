@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-06 00:23:33>
+;;; Last Modified <michael 2018-11-07 22:31:42>
 
 (in-package :virtualhelm)
 
@@ -33,7 +33,7 @@
     ;; Start asynchronous updates
     (timers:add-timer (lambda ()
                         (let ((bundle (get-forecast-bundle 'noaa-bundle)))
-                          (update-forecast-bundle bundle)))
+                          (update-forecast-bundle 'noaa-bundle)))
                       :hours '(3 9 15 21)
                       :minutes '(30))))
 

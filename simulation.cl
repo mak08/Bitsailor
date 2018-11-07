@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-10-28 22:01:21>
+;;; Last Modified <michael 2018-11-07 22:53:13>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -111,86 +111,88 @@
                dest-pos
                dest-heading
                (routing-fan routing))
-    (flet ((initial-isochrone ()
-             (list (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos)))))
+    (do* ( ;; Iteration stops when destination was reached
+          (reached nil)
+          (error nil)
+          ;; Iteration stops when stepmax seconds have elapsed
+          (stepnum 0 (1+ stepnum))
+          (stepsum 0 (+ stepsum step-size))
+          (step-size (step-size start-time)
+                     (step-size start-time step-time))
+          (pointnum 0)
+          (elapsed0 (now))
 
-      (do* ( ;; Iteration stops when destination was reached
-            (reached nil)
-            (error nil)
-            ;; Iteration stops when stepmax seconds have elapsed
-            (stepnum 0 (1+ stepnum))
-            (stepsum 0 (+ stepsum step-size))
-            (step-size (step-size start-time)
-                       (step-size start-time step-time))
-            (pointnum 0)
-            (elapsed0 (now))
-            ;; The initial isochrone is just the start point, heading towards destination
-            (isochrone (initial-isochrone)
-                       next-isochrone)
-            ;; The next isochrone - in addition we collect all hourly isochrones
-            (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
-                            (make-array 0 :adjustable t :fill-pointer 0))
-            ;; Get min and max heading of the point of each isochrone for sorting
-            (min-heading 360 360)
-            (max-heading 0 0)
-            ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-            (step-time (adjust-timestamp start-time (:offset :sec step-size))
-                       (adjust-timestamp step-time (:offset :sec step-size)))
-            ;; Get wind data for simulation time
-            (forecast (get-forecast forecast-bundle step-time)
-                      (get-forecast forecast-bundle step-time)))
+          ;; Get min and max heading of the point of each isochrone for sorting
+          (min-heading 360 360)
+          (max-heading 0 0)
+          ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
+          (step-time (adjust-timestamp start-time (:offset :sec step-size))
+                     (adjust-timestamp step-time (:offset :sec step-size)))
+          ;; Get wind data for simulation time
+          (forecast (get-forecast forecast-bundle step-time)
+                    (get-forecast forecast-bundle step-time))
+          ;; The initial isochrone is just the start point, heading towards destination
+          (isochrone
+           (multiple-value-bind (wind-dir wind-speed) 
+               (get-wind-forecast forecast start-pos)
+             (list
+              (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed)))
+           next-isochrone)
+          ;; The next isochrone - in addition we collect all hourly isochrones
+          (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
+                          (make-array 0 :adjustable t :fill-pointer 0)))
         
-           ;; When the maximum number of iterations is reached, construct the best path
-           ;; from the most advanced point's predecessor chain.
-           ((or reached
-                error
-                (>= stepsum (routing-stepmax routing)))
-            (log-stats elapsed0 stepnum pointnum)
-            (let ((best-route (construct-route isochrone)))
-              (setf *best-route* best-route)
-              (setf *isochrones*  isochrones)
-              (make-routeinfo :best best-route
-                              :stats (get-statistics best-route)
-                              :tracks (extract-tracks isochrone)
-                              :isochrones (strip-routepoints isochrones))))
+         ;; When the maximum number of iterations is reached, construct the best path
+         ;; from the most advanced point's predecessor chain.
+         ((or reached
+              error
+              (>= stepsum (routing-stepmax routing)))
+          (log-stats elapsed0 stepnum pointnum)
+          (let ((best-route (construct-route isochrone)))
+            (setf *best-route* best-route)
+            (setf *isochrones*  isochrones)
+            (make-routeinfo :best best-route
+                            :stats (get-statistics best-route)
+                            :tracks (extract-tracks isochrone)
+                            :isochrones (strip-routepoints isochrones))))
         
-        (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
+      (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
-        ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
-        ;;          Add new points to next-isochrone. 
-        (map nil (lambda (rp)
-                   (let ((new-point-num
-                          (expand-routepoint routing rp start-pos left right step-size step-time forecast polars next-isochrone)))
-                     (incf pointnum new-point-num)))
-             isochrone)
+      ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
+      ;;          Add new points to next-isochrone. 
+      (map nil (lambda (rp)
+                 (let ((new-point-num
+                        (expand-routepoint routing rp start-pos left right step-size step-time forecast polars next-isochrone)))
+                   (incf pointnum new-point-num)))
+           isochrone)
         
-        ;; Step 2 - Filter isochrone. 
-        (let ((candidate (filter-isochrone next-isochrone left right max-points :criterion (routing-mode routing))))
-          (cond
-            ((and candidate (> (length candidate) 0))
-             (loop
-                :for p :across candidate
-                :when p
-                :do (progn
-                      (setf (routepoint-destination-distance p)
-                            (course-distance (routepoint-position p) dest-pos))
-                      (when (< (routepoint-destination-distance p) 10000)
-                        (setf reached t))))
-             (setf next-isochrone candidate))
-            (t
-             (setf error t)))
-          (when reached
-            (log2:info "Reached destination at ~a" step-time)))
-        ;; Collect hourly isochrones
-        (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
-          (declare (ignore q))
-          (when (zerop r)
-            (let* ((start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
-                   (iso (make-isochrone :center start-pos
-                                       :time step-time
-                                       :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
-                                       :path (extract-points next-isochrone))))
-              (push iso isochrones))))))))
+      ;; Step 2 - Filter isochrone. 
+      (let ((candidate (filter-isochrone next-isochrone left right max-points :criterion (routing-mode routing))))
+        (cond
+          ((and candidate (> (length candidate) 0))
+           (loop
+              :for p :across candidate
+              :when p
+              :do (progn
+                    (setf (routepoint-destination-distance p)
+                          (course-distance (routepoint-position p) dest-pos))
+                    (when (< (routepoint-destination-distance p) 10000)
+                      (setf reached t))))
+           (setf next-isochrone candidate))
+          (t
+           (setf error t)))
+        (when reached
+          (log2:info "Reached destination at ~a" step-time)))
+      ;; Collect hourly isochrones
+      (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
+        (declare (ignore q))
+        (when (zerop r)
+          (let* ((start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
+                 (iso (make-isochrone :center start-pos
+                                      :time step-time
+                                      :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
+                                      :path (extract-points next-isochrone))))
+            (push iso isochrones)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping

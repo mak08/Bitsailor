@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-11 21:10:41>
+;;; Last Modified <michael 2018-11-11 22:43:05>
 
 (declaim (optimize speed (safety 1)))
 
@@ -81,7 +81,7 @@
           (loop
              :for angle :of-type double-float :from 0d0 :to 180d0 :by 0.1d0
              :collect (loop
-                         :for wind :from 0d0 :to (- max-wind 0.1d0) :by 0.1d0
+                         :for wind :from 0d0 :to max-wind :by 0.1d0
                          :collect (multiple-value-list
                                    (get-max-speed% angle wind polars options)))))
          (speed (make-array (list (length precomputed)
@@ -95,7 +95,7 @@
 (defun precompute-vmg (cpolars-speed max-wind)
   (let ((precomputed
          (loop
-            :for windspeed :from 0d0 :to (- max-wind 0.1) :by 0.1
+            :for windspeed :from 0d0 :to max-wind :by 0.1
             :collect (multiple-value-list
                       (best-vmg% windspeed cpolars-speed)))))
     (make-array (length precomputed)

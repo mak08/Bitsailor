@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2018-01-18 22:18:39>
+;;; Last Modified  <michael 2018-11-11 16:35:51>
  
 (in-package :virtualhelm)
 
@@ -166,14 +166,14 @@
     :rules ((_json
              (:alt _number _string _object _array))
             (_object
-             (:seq "{" _fieldseq "}"))
+             (:seq "{" (:opt _fieldseq) "}"))
             (_fieldseq
              (:alt (:seq _fieldassign "," _fieldseq)
                    _fieldassign))
             (_fieldassign
              (:seq :dq-string ":" _json))
             (_array
-             (:seq "[" _jsonseq "]"))
+             (:seq "[" (:opt _jsonseq) "]"))
             (_jsonseq
              (:alt (:seq _json "," _jsonseq)
                    _json))))

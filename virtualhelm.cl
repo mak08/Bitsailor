@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-07 22:31:42>
+;;; Last Modified <michael 2018-11-11 23:02:14>
 
 (in-package :virtualhelm)
 
@@ -44,5 +44,9 @@
 (defun get-fc ()
   (setf *fc* (get-forecast (get-forecast-bundle 'noaa-bundle) (now))))
 
+(defun get-route-for-session (session-id)
+  (let ((session (gethash session-id *session-ht*)))
+    (get-route (session-routing session))))
+    
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

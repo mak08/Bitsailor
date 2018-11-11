@@ -64,27 +64,6 @@
 		  <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
 		  <input id="tb_starttime" name="starttime" type="datetime-local"/>
 		 </div>
-		<div class="cell">
-		  <label>Latitude:</label>
-		  <select id="sel_latsign" name="latsign">
-			<option value="N">N</option>
-			<option value="S">S</option>
-	      </select>	
-		  <input id="tb_dstartlat" type="text" maxlength="3" style="width:3em"/>°
-		  <input id="tb_mstartlat" type="text" maxlength="2" style="width:2em"/>'
-		  <input id="tb_sstartlat" type="text" maxlength="2" style="width:2em"/>&quot 
-		</div>
- 		<div class="cell">
-		  <label>Longitude:</label>
-		  <select id="sel_lngsign" name="lngsign">
-			<option value="E">E</option>
-			<option value="W">W</option>
-	      </select>	
-		  <input id="tb_dstartlng" type="text" maxlength="3" style="width:3em"/>°
-		  <input id="tb_mstartlng" type="text" maxlength="2" style="width:2em"/>'
-		  <input id="tb_sstartlng" type="text" maxlength="2" style="width:2em"/>&quot
-		  <button id="bt_setstartpos" style="text-align:center;">Set position</button>
-		</div>
 		<div class="cell"><label style="font-weight:bold">Settings</label></div>
 		<div class="cell">
 		  <label>Duration</label>
@@ -129,26 +108,7 @@
 		  </select>
 		</div>
 		<div class="cell">
-		  <label>Angle increment</label>
-		  <select id="sel_angleincrement" name="angleincrement">
-			<option value="2">2</option>
-			<option value="3">3</option>
-			<option value="4" selected>4</option>
-			<option value="5">5</option>
-		  </select>
-		</div>
-		<div class="cell">
-		  <label>Points per isochrone</label>
-		  <select id="sel_pointsperisochrone"  name="pointsperisochrone">
-			<option value="100" selected>100</option>
-			<option value="150">150</option>
-			<option value="200">200</option>
-			<option value="300">300</option>
-			<option value="400">400</option>
-		  </select>
-		</div>
-		<div class="cell">
-		  <label>Min 4kts wind</label><input id="cb_minwind" name="minwind" type="checkbox" checked="true">
+		  <label>Min 2kts wind</label><input id="cb_minwind" name="minwind" type="checkbox" checked="true">
 		</div>
 		<div class="cell">
 		  <button id="bt_getroute" style="width:300px; text-align:center; font-size:100%; font-weight:bold;" onclick="getRoute();">Calculate route</button>
@@ -173,10 +133,6 @@
 		<div class="cell" style="align-self:bottom">
 		  <label>Heading</label>
 		  <nobr><label id="lb_twa_heading" style="font-size:90%">-.-.-.-</label></nobr>
-		</div>
-		<div class="cell">
-		  <input id="tb_pageURL" type="text"></input>
-		  <button id="bt_geturl" onclick="copyURL()">Get URL</button>
 		</div>
 		<div class="cell" style="align-self:top">
 		  <label>Statistics</label>

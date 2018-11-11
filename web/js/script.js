@@ -94,14 +94,12 @@ function setUp () {
 
     $("#cb_startdelayed").click(onDelayedStart);
     $("#tb_starttime").change(onSetParameter);
-    $("#bt_setstartpos").click(onStartDMSUpdated);
     
     // Connect option selectors
     $("#sel_polars").change(onSetParameter);
     $("#sel_forecastbundle").change(onSetParameter);
     $("#sel_duration").change(onSetParameter);
     $("#sel_searchangle").change(onSetParameter);
-    $("#sel_angleincrement").change(onSetParameter);
     $("#sel_pointsperisochrone").change(onSetParameter);
     $("#cb_minwind").change(onSetParameter);
 
@@ -174,40 +172,6 @@ function markerClicked (marker) {
 function updateStartPosition (lat, lng) {
     var latLng = new google.maps.LatLng(lat, lng);
     startMarker.setPosition(latLng);
-    var latDMS = toDeg(lat);
-    $("#sel_latsign")[0].value =  (latDMS.u === 1) ? 'N' : 'S'; 
-    $("#tb_dstartlat")[0].value = latDMS.g;
-    $("#tb_mstartlat")[0].value = latDMS.m;
-    $("#tb_sstartlat")[0].value = latDMS.s;
-    var lngDMS = toDeg(lng);
-    $("#sel_lngsign")[0].value =  (lngDMS.u === 1) ? 'E' : 'W'; 
-    $("#tb_dstartlng")[0].value = lngDMS.g;
-    $("#tb_mstartlng")[0].value = lngDMS.m;
-    $("#tb_sstartlng")[0].value = lngDMS.s;
-}
-
-function onStartDMSUpdated (component) {
-    var u;
-    u = $("#sel_latsign")[0].value;
-    var latDMS =  {
-        "u": (u==='N')? 1 : -1,
-        "g": Number($("#tb_dstartlat")[0].value),
-        "m": Number($("#tb_mstartlat")[0].value),
-        "s": Number($("#tb_sstartlat")[0].value),
-        "cs": 0
-    }
-    u = $("#sel_lngsign")[0].value;
-    var lngDMS =  {
-        "u": (u ==='E')? 1 : -1,
-        "g": Number($("#tb_dstartlng")[0].value),
-        "m": Number($("#tb_mstartlng")[0].value),
-        "s": Number($("#tb_sstartlng")[0].value),
-        "cs": 0
-    }
-    var lat = fromDeg(latDMS);
-    var lng = fromDeg(lngDMS);
-    var latLng = new google.maps.LatLng(lat, lng);
-    setRoutePoint('start', latLng);
 }
 
 
@@ -216,9 +180,6 @@ function getSession () {
         url: "/function/vh:getSession",
         dataType: 'json'
     }).done( function(session, status, xhr) {
-        var pageURL = xhr.getResponseHeader('Content-Location');
-        var copyText = document.getElementById("tb_pageURL");
-        copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
 
         updateStartPosition(session.routing.start.lat, session.routing.start.lng);
 
@@ -266,14 +227,6 @@ function getSession () {
         var searchAngle = session.routing.fan;
         var selSearchAngle = $("#sel_searchangle")[0];
         selSearchAngle.value = searchAngle;
-
-        var maxPoints = session.routing["max-points-per-isochrone"];
-        var selMaxPoints = $("#sel_pointsperisochrone")[0];
-        selMaxPoints.value = maxPoints;
-
-        var angleIncrement = session.routing["angle-increment"];
-        var selAngleIncrement = $("#sel_angleincrement")[0];
-        selAngleIncrement.value = angleIncrement;
 
         var minWind = session.routing.minwind;
         var cbMinWind = $("#cb_minwind")[0];
@@ -470,11 +423,9 @@ function getRoute () {
     var that = this;
     var pgGetRoute = $("#pg_getroute")[0];
     pgGetRoute.value = 5;
-    var selMaxPoints = $("#sel_pointsperisochrone")[0];
-    var maxPoints = selMaxPoints.value;
     var selDuration = $("#sel_duration")[0];
     var duration = selDuration.value; 
-    var timer = window.setInterval(updateGetRouteProgress, maxPoints * duration / 6);
+    var timer = window.setInterval(updateGetRouteProgress, 500 * duration / 6);
     $.ajax({ 
         url: "/function/vh:getRoute",
         dataType: 'json'

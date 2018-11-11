@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-03-14 21:58:12>
+;;; Last Modified <michael 2018-11-11 00:30:16>
 
 (in-package :virtualhelm)
 
@@ -250,10 +250,7 @@
             "polars" (routing-polars routing)
             "options" (format nil "~{~a~^,~}" (routing-options routing))
             "minwind" (if (routing-minwind routing) "true" "false")
-            "duration" (/ (routing-stepmax routing) 3600)
-            "searchangle" (routing-fan routing)
-            "angleincrement" (routing-angle-increment routing)
-            "pointsperisochrone" (routing-max-points-per-isochrone routing))))
+            "duration" (/ (routing-stepmax routing) 3600))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -263,9 +260,7 @@
   (or (cdr (assoc name +parameter-groups+ :test #'string=))
       '(("forecastbundle" "NOAA-BUNDLE")
         ("minwind" "true")
-        ("searchangle" "90")
-        ("angleincrement" "2")
-        ("pointsperisochrone" "300"))))
+        ("searchangle" "90"))))
 
 (defun set-routing-parameter (session name value)
   (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
@@ -309,14 +304,6 @@
       ((string= name "searchangle")
        (let ((fan (read-from-string value)))
          (setf (routing-fan routing) fan)))
-      ((string= name "angleincrement")
-       (let ((increment (read-from-string value)))
-         (setf (routing-angle-increment routing) increment)))
-      ((string= name "pointsperisochrone")
-       (let ((points-per-isochrone
-              (read-from-string value)))
-         (setf (routing-max-points-per-isochrone routing)
-               points-per-isochrone)))
       ((string= name "start")
        (setf (routing-start routing)
              (etypecase value

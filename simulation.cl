@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-07 22:53:13>
+;;; Last Modified <michael 2018-11-11 00:44:40>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -46,8 +46,6 @@
   (dest +lacoruna+)
   (mode +max-origin+)
   (fan 90)
-  (angle-increment 3)
-  (max-points-per-isochrone 300)
   (stepmax +24h+))
 
 (defstruct duration days hours minutes seconds)
@@ -97,7 +95,6 @@
                               (get-forecast-bundle 'constant-wind-bundle)))
          (sails (encode-options (routing-options routing)))
          (polars (get-routing-polars routing))
-         (max-points (routing-max-points-per-isochrone routing))
          (dest-heading (round (normalize-heading (course-angle start-pos dest-pos))))
          (left (normalize-heading (- dest-heading (routing-fan routing))))
          (right (normalize-heading (+ dest-heading (routing-fan routing))))
@@ -125,6 +122,8 @@
           ;; Get min and max heading of the point of each isochrone for sorting
           (min-heading 360 360)
           (max-heading 0 0)
+          ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
+          (max-points 100 (min 1500 (+ max-points 5)))
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
                      (adjust-timestamp step-time (:offset :sec step-size)))
@@ -205,11 +204,11 @@
        (- (* 600 (truncate (+ time 600) 600))
           time)))
     (t
-     (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour))))
+     (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 36 600))
               600)
              ((<= delta-t (* 72 600))
-              1200)
+              900)
              ((<= delta-t (* 144 600))
               1800)
              (t
@@ -222,7 +221,7 @@
   (multiple-value-bind (speed heading sail)
       (twa-boatspeed polars wind-dir wind-speed (normalize-angle twa))
     (when (routing-minwind routing)
-      (setf speed (max 2.0578d0 speed)))
+      (setf speed (max 1.0289d0 speed)))
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
         (routing-foils routing)

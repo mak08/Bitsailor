@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-10-27 22:54:09>
+;;; Last Modified <michael 2018-11-11 21:10:41>
 
 (declaim (optimize speed (safety 1)))
 
@@ -28,6 +28,15 @@
 (defvar +lgn+ 6)
 (defvar +allsails+ 127)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
+
+(defvar *combined-polars-ht* (make-hash-table :test 'equal))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; API
+
+
 (defun encode-options (option-list)
   (let ((options 3))
     (when (member "light" option-list :test #'string=)
@@ -47,15 +56,6 @@
         (round (* (abs twa) 10))
         (round (* wind-speed 10))))
 
-(defun get-step (value resolution)
-  (round (* value resolution)))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
-
-(defvar *combined-polars-ht* (make-hash-table :test 'equal))
-
 (defun get-combined-polars (name options)
   ;; cpolar speeds are in m/s, not kts!
   (let ((polars-ht
@@ -65,6 +65,12 @@
     (or (gethash options polars-ht)
         (setf (gethash options polars-ht)
               (preprocess-polars name options)))))
+
+(defun best-vmg (cpolars windspeed)
+  (values-list (aref (cpolars-vmg cpolars) (round (* windspeed 10)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Implementation
 
 (defun preprocess-polars (name options)
   (let* ((polars (get-polars name))
@@ -84,15 +90,12 @@
     (make-cpolars :name name
                   :twa twa
                   :speed speed
-                  :vmg (get-best-vmg speed max-wind))))
+                  :vmg (precompute-vmg speed max-wind))))
 
-(defun best-vmg (cpolars windspeed)
-  (values-list (aref (cpolars-vmg cpolars) (round (* windspeed 10)))))
-
-(defun get-best-vmg (cpolars-speed max-wind)
+(defun precompute-vmg (cpolars-speed max-wind)
   (let ((precomputed
          (loop
-            :for windspeed :from 2.0d0 :to (- max-wind 0.1) :by 0.1
+            :for windspeed :from 0d0 :to (- max-wind 0.1) :by 0.1
             :collect (multiple-value-list
                       (best-vmg% windspeed cpolars-speed)))))
     (make-array (length precomputed)
@@ -159,11 +162,10 @@
 
 (defvar *polars-ht* (make-hash-table :test 'equal))
 
-(defun get-polars (name &key (convert-speed t))
-  (let ((key (cons name convert-speed)))
-    (or (gethash key *polars-ht*)
-        (setf (gethash key *polars-ht*)
-              (load-polars name :convert-speed convert-speed)))))
+(defun get-polars (name)
+  (or (gethash name *polars-ht*)
+      (setf (gethash name *polars-ht*)
+            (load-polars name))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
@@ -171,59 +173,46 @@
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
 
-(defun load-polars (polars
-                    &key (convert-speed t))
+(defun load-polars (polars-name)
   ;;; Speed values are on knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
-  (let ((filename (merge-pathnames (make-pathname :name polars :type "json")
-                                   (make-pathname :directory *polars-dir*))))
-    (log2:info "Loading polars from ~a~%" filename)
-    (with-open-file (f filename :element-type 'character)
-      (let ((json-string (make-string (file-length f))))
-        (read-sequence json-string f)
-        (log2:info "Parsing json")
-        (let* ((polar
-                (joref (joref (parse-json json-string) "scriptData") "polar"))
-               (tws
-                (joref polar "tws"))
-               (twa
-                (joref polar "twa"))
-               (saildefs
-                (make-array (length (joref polar "sail")))))
-          (log2:info "Reading sail data")
-          (loop
-             :for saildef :across (joref polar "sail")
-             :for k :from 0
-             :do (let ((speeddata (make-array (list (length twa) (length tws)))))
-                   (loop
-                      :for angle :across twa
-                      :for a :from 0
-                      :do (loop
-                             :for speed :across tws
-                             :for s :from 0
-                             :do (setf (aref speeddata a s)
-                                       (if convert-speed
-                                           (knots-to-m/s (aref (aref (joref saildef "speed") a) s))
-                                           (aref (aref (joref saildef "speed") a) s)))))
-                   (setf (aref saildefs k)
-                         (make-sail :name (joref saildef "name")
-                                    :speed speeddata))))
-          (when convert-speed
-            (loop
-               :for speed :across tws
-               :for s :from 0
-               :do (setf (aref tws s)
-                         (knots-to-m/s (aref tws s)))))
-          (loop
-             :for angle :across twa
-             :for a :from 0
-             :do (setf (aref twa a)
-                       (coerce (aref twa a) 'double-float)))
-          (make-polars :name polars
-                       :tws tws
-                       :twa twa
-                       :sails saildefs))))))
-
+  (let* ((polars
+          (joref (joref (parse-json-file polars-name) "scriptData") "polar"))
+         (tws
+          (joref polars "tws"))
+         (twa
+          (joref polars "twa"))
+         (sail
+          (joref polars "sail"))
+         (saildefs
+          (make-array (length sail))))
+    (log2:info "Reading ~a sail definitions for TWS=~a TWA=~a" (length sail) tws twa)
+    (loop
+       :for saildef :across sail
+       :for k :from 0
+       :do (let ((speeddata (make-array (list (length twa) (length tws)))))
+             (loop
+                :for angle-index :below (length twa)
+                :do (loop
+                       :for speed-index :below (length tws)
+                       :do (setf (aref speeddata angle-index speed-index)
+                                 (knots-to-m/s (aref (aref (joref saildef "speed") angle-index) speed-index)))))
+             (setf (aref saildefs k)
+                   (make-sail :name (joref saildef "name")
+                              :speed speeddata))))
+    ;; Convert TWS values to m/s
+    (loop
+       :for speed-index :below (length tws)
+       :do (setf (aref tws speed-index)
+                 (knots-to-m/s (aref tws speed-index))))
+    (loop
+       :for angle-index :below (length twa)
+       :do (setf (aref twa angle-index)
+                 (coerce (aref twa angle-index) 'double-float)))
+    (make-polars :name polars-name
+                 :tws tws
+                 :twa twa
+                 :sails saildefs)))
 
 (defun boat-performance (name)
   (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))

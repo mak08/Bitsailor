@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-11 00:44:40>
+;;; Last Modified <michael 2018-11-11 17:48:36>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -297,11 +297,14 @@
          (vector-push-extend (third up-vmg) all-twa-points)
          (vector-push-extend (third down-vmg) all-twa-points)
          (loop
+            :with up-vmg-angle = (third up-vmg)
+            :with down-vmg-angle = (third down-vmg)
             :for pointnum :from 0
             :for twa :across all-twa-points
             :for heading-stbd = (twa-heading wind-dir twa)
             :for heading-port = (twa-heading wind-dir (- twa))
             :when (and (> twa 0)
+                       (<= up-vmg-angle twa down-vmg-angle)
                        (or (between-heading left right heading-stbd)
                            (between-heading left right heading-port)))
             :do (flet ((add-point (heading twa)

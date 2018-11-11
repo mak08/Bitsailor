@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2018-11-11 16:35:51>
+;;; Last Modified  <michael 2018-11-11 20:41:19>
  
 (in-package :virtualhelm)
 
@@ -159,6 +159,16 @@
 (defun _fieldassign (name tree &rest args)
   (make-json-field :name (read-from-string (token-value (car tree))) :value (caddr tree)))
 )
+
+(defun parse-json-file (name)
+  (let ((filename (merge-pathnames (make-pathname :name name :type "json")
+                                   (make-pathname :directory *polars-dir*))))
+    (log2:info "Loading polars from ~a~%" filename)
+    (with-open-file (f filename :element-type 'character)
+      (let ((json-string (make-string (file-length f))))
+        (read-sequence json-string f)
+        (log2:info "Parsing json")
+        (parse-json json-string)))))
 
 (defparser parse-json
     :tokens ((_string (:alt :sq-string :dq-string))

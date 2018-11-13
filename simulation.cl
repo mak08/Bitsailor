@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-12 00:17:46>
+;;; Last Modified <michael 2018-11-12 22:10:41>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -93,7 +93,6 @@
          (dest-pos (normalized-dest-pos routing))
          (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
-         (sails (encode-options (routing-options routing)))
          (polars (get-routing-polars routing))
          (dest-heading (round (normalize-heading (course-angle start-pos dest-pos))))
          (left (normalize-heading (- dest-heading (routing-fan routing))))

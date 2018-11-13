@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-11 23:02:14>
+;;; Last Modified <michael 2018-11-13 22:12:40>
 
 (in-package :virtualhelm)
 
@@ -34,6 +34,7 @@
     (timers:add-timer (lambda ()
                         (let ((bundle (get-forecast-bundle 'noaa-bundle)))
                           (update-forecast-bundle 'noaa-bundle)))
+                      :id "WEATHER-UPDATER"
                       :hours '(3 9 15 21)
                       :minutes '(30))))
 

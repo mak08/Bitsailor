@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-11 00:30:16>
+;;; Last Modified <michael 2018-11-17 21:47:34>
 
 (in-package :virtualhelm)
 
@@ -50,7 +50,8 @@
         (log2:info "~a: Position=~a" |pointType| position)
         (log2:trace "Session: ~a, Request: ~a" session request)
         (cond ((is-land lat lng)
-               (error "Can't sail ~:[to~;from~] interior point ~a" (string= |pointType| "start") position ))
+               (setf (status-code response) 400)
+               (setf (status-text response) "Point is on land"))
               (t
                (set-routing-parameter session |pointType| position)
                (setf (http-body response)

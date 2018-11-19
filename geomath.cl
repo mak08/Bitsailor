@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-10-27 18:02:49>
+;;; Last Modified <michael 2018-11-14 23:57:49>
 
 (in-package :virtualhelm)
 
@@ -50,9 +50,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Trigonometric units
 
+(declaim (inline deg))
 (defun deg (x)
+  (declare (double-float x))
   (* 360 (/ x (* 2 pi))))
-
+(declaim (notinline deg))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Navigation
 
@@ -77,7 +79,7 @@
        (acos (+ (* sin-lat1 sin-lat2)
                 (* cos-lat1 cos-lat2 (cos (- lon2 lon1))))))))
 
-(defun course-angle (origin target &optional (dist nil))
+(defun course-angle (origin target &optional (dist -1d0))
   (let* ((lat1 (latlng-latr origin))
          (cis-lat1 (cis lat1))
          (cos-lat1 (realpart cis-lat1))
@@ -85,36 +87,37 @@
          (lat2 (latlng-latr target))
          (lon1 (latlng-lngr origin))
          (lon2 (latlng-lngr target)))
-    (declare (double-float lat1 cos-lat1 sin-lat1 lon1 lat2 lon2))
+    (declare (double-float dist lat1 cos-lat1 sin-lat1 lon1 lat2 lon2))
     (cond
       ((and
         (eql lat1 lat2)
         (eql lon1 lon2))
        (error "Distance is zero between ~a and ~a" origin target))
       (t
-       (let ((dist (or dist (course-distance origin target))))
-         (when (eql dist 0d0)
-           (error "Distance is zero between ~a and ~a" origin target))
-         (when (complexp dist)
-           (error "Invalid distance |~a ~a|" origin target))
-         (let* ((e (/ dist +radius+))
-                (cos-omega
-                 (/ (- (sin lat2) (* sin-lat1 (cos e)))
-                    (* cos-lat1 (sin e))))
-                (omega
-                 (let ((omega%
-                        (acos cos-omega)))
-                   (if (complexp omega%)
-                       (realpart omega%)
-                       omega%)))
-                (delta
-                 (- lon2 lon1)))
-           (declare (double-float cos-omega omega delta))
-           (deg
-            (if (or (< delta 0d0)
-                    (> delta 180d0))
-                (- omega)
-                omega))))))))
+       (when (eql dist -1d0)
+         (setf dist (course-distance origin target)))
+       (when (eql dist 0d0)
+         (error "Distance is zero between ~a and ~a" origin target))
+       (when (complexp dist)
+         (error "Invalid distance |~a ~a|" origin target))
+       (let* ((e (/ dist +radius+))
+              (cos-omega
+               (/ (- (sin lat2) (* sin-lat1 (cos e)))
+                  (* cos-lat1 (sin e))))
+              (omega
+               (let ((omega%
+                      (acos cos-omega)))
+                 (if (complexp omega%)
+                     (realpart omega%)
+                     omega%)))
+              (delta
+               (- lon2 lon1)))
+         (declare (double-float cos-omega omega delta))
+         (deg
+          (if (or (< delta 0d0)
+                  (> delta 180d0))
+              (- omega)
+              omega)))))))
 
 (defun gc-angle (origin target)
   ;; Angle between origin and target on the GC defined by these points (symmetric)
@@ -127,7 +130,8 @@
      (acos
       (+ (* (sin lat1) (sin lat2))
          (* (cos lat1) (cos lat2) (cos d)))))))
-                     
+
+
 (defun add-distance-exact (pos distance alpha)
   ;; Exact calculation on the spherical Earth
   (let ((lat (latlng-lat pos))

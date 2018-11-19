@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-12 22:10:41>
+;;; Last Modified <michael 2018-11-17 17:08:53>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -371,6 +371,7 @@
   (loop
      :for point :across isochrone
      :for k :from 0
+     :when point ; Don't send NULL entries
      :collect (do ((p point (routepoint-predecessor p))
                    (v (list)))
                   ((null p)
@@ -459,12 +460,12 @@
                               (get-forecast-bundle 'constant-wind-bundle)))
          (sails (encode-options (routing-options routing)))
          (polars (get-combined-polars (routing-polars routing) sails))
-         (start-time (or time (now)))
-         (step-time +10min+)
+         (time (or time (now)))
+         (time-increment +10min+)
          (startpos (make-latlng :lat lat-a :lng lng-a)))
     (let* ((heading (course-angle startpos (make-latlng :lat lat :lng lng)))
            (curpos (copy-latlng startpos))
-           (wind-dir (get-wind-forecast (get-forecast forecast-bundle start-time) startpos))
+           (wind-dir (get-wind-forecast (get-forecast forecast-bundle time) startpos))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
       (dotimes (k
@@ -472,16 +473,16 @@
                 (make-twainfo :twa twa
                               :heading (normalize-heading
                                         (round heading))
-                              :path (reverse (push (copy-latlng curpos) path))))
+                              :path (reverse (push (list time (copy-latlng curpos)) path))))
         ;; Save current position
-        (push (copy-latlng curpos) path)
-        (adjust-timestamp! start-time (:offset :sec step-time))
-        (let ((forecast (get-forecast forecast-bundle start-time)))
+        (push (list time (copy-latlng curpos)) path)
+        (setf time (adjust-timestamp time (:offset :sec time-increment)))
+        (let ((forecast (get-forecast forecast-bundle time)))
           (multiple-value-bind (wind-dir wind-speed)
               (get-wind-forecast forecast curpos)
             (multiple-value-bind (speed heading)
                 (twa-boatspeed polars wind-dir wind-speed twa)
-              (setf curpos (add-distance-exact curpos (* speed step-time) heading)))))))))
+              (setf curpos (add-distance-exact curpos (* speed time-increment) heading)))))))))
 
 (defun twa-heading (wind-dir angle)
   "Compute HEADING resulting from TWA in WIND"

@@ -1,15 +1,15 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// VirtualHelm UI
-
+ 
 var googleMap = null;
 var mapContextMenu = null;
-
+ 
 // The SVG element used for drawing tracking data
 var svgArea = {};
-
+ 
 // Bounds and width from the map are kept here for convenience
 var geometry = {};
-
+ 
 // Number of wind arrows
 var xSteps = 40;
 var ySteps = 25;
@@ -19,47 +19,47 @@ var dy = 800;
 // Increments
 var ddx = dx / xSteps;
 var ddy = dy / ySteps;
-
+ 
 // Map bounds
 var north;
 var south;
 var west;
 var east;
-
+ 
 // Time index
 var ir_index;
-
+ 
 var mapEvent;
-
+ 
 var startMarker = {};
 var destinationMarker = {};
 var twaAnchor = {};
 var twaTime = {};
-
+ 
 var courseGCLine = null;
 var routeTracks = [];
 var routeIsochrones = [];
 var trackMarkers = [];
-
+ 
 var boatPath = new google.maps.Polyline({
     geodesic: true,
     strokeColor: '#FF0000',
     strokeOpacity: 1.0,
     strokeWeight: 2
 });
-
-
+ 
+ 
 var windData = [];
-
+ 
 function setUp () {
-    
+   
     setupColors();
-
+ 
     mapCanvas = document.getElementById('map_canvas');
     var mapRect = mapCanvas.getBoundingClientRect();
     geometry.width = mapRect.width;
     geometry.height = mapRect.height;
-
+ 
     // Create a map object, and include the MapTypeId to add
     // to the map type control.
     var mapProp = {
@@ -71,30 +71,30 @@ function setUp () {
     };
     var mapDiv = $("#googleMap")[0];
     googleMap = new google.maps.Map(mapDiv, mapProp);
-
+ 
     mapContextMenu = $("#mymenu")[0];
     infoBox = $("#infoBox")[0];
-    
+   
     // Connect map events
     google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
     // google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
     google.maps.event.addListener(googleMap, 'dragend', updateMap);
     google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
-
+ 
     // Track cursor position
     google.maps.event.addListener(googleMap, 'mousemove', updateWindInfo);
     google.maps.event.addListener(googleMap, 'click', getTWAPath);
-
+ 
     // Connect button events
     $("#bt_inc").click(onAdjustIndex);
     $("#bt_dec").click(onAdjustIndex);
     $("#bt_inc6").click(onAdjustIndex);
     $("#bt_dec6").click(onAdjustIndex);
-    $("#ir_index").change(onAdjustIndex);
-
+   $("#ir_index").change(onAdjustIndex);
+ 
     $("#cb_startdelayed").click(onDelayedStart);
     $("#tb_starttime").change(onSetParameter);
-    
+   
     // Connect option selectors
     $("#sel_polars").change(onSetParameter);
     $("#sel_forecastbundle").change(onSetParameter);
@@ -102,17 +102,17 @@ function setUp () {
     $("#sel_searchangle").change(onSetParameter);
     $("#sel_pointsperisochrone").change(onSetParameter);
     $("#cb_minwind").change(onSetParameter);
-
+ 
     // Tracks & Isochrones display is handled by the client directly
     $("#cb_tracks").change(onSetClientParameter);
     $("#cb_isochrones").change(onSetClientParameter);
-
+ 
     // Connect menu events
     var mapMenu = $("#mapMenu")[0];
     mapMenu.onmouseleave = onMapMenuMouseLeave;
-
+ 
     ir_index = $("#ir_index")[0];
-
+ 
     startMarker = new google.maps.Marker({
         position: {"lat": 54.434403, "lng": 11.361632},
         map: googleMap,
@@ -120,11 +120,11 @@ function setUp () {
         draggable: true
     });
     startMarker.addListener('click', function () { markerClicked(startMarker) });
-
+ 
     google.maps.event.addListener(startMarker,'dragend',function() {
         setRoutePoint('start', startMarker.getPosition());
     });
-
+ 
     destinationMarker = new google.maps.Marker({
         position: {"lat": 55.391123, "lng": 13.792635},
         map: googleMap,
@@ -132,26 +132,26 @@ function setUp () {
         draggable: true
     });
     destinationMarker.addListener('click', function () { markerClicked(destinationMarker) });
-
+ 
     google.maps.event.addListener(destinationMarker,'dragend',function() {
         setRoutePoint('dest', destinationMarker.getPosition());
     });
-    
+   
     google.maps.event.addListenerOnce(googleMap, 'idle', function(){
         updateMap();
     });
-
+ 
     getSession();
-
+ 
 }
-
+ 
 function onDelayedStart (event) {
     if (event.target.checked === true) {
         var d = new Date();
         $("#tb_starttime")[0].value = d.toISOString().substring(0,16);
     } else {
         $("#tb_starttime")[0].value = null;
-        $.ajax({ 
+        $.ajax({
             // No paramValue == reset (value defaults to nil)
             url: "/function/vh:setParameter" + "?name=" + 'starttime',
             dataType: 'json'
@@ -162,33 +162,33 @@ function onDelayedStart (event) {
         });
     }
 }
-
+ 
 function markerClicked (marker) {
     twaAnchor = marker.getPosition();
     twaTime = marker.get('time');
     redrawWind("time", twaTime);
 }
-
+ 
 function updateStartPosition (lat, lng) {
     var latLng = new google.maps.LatLng(lat, lng);
     startMarker.setPosition(latLng);
 }
-
-
+ 
+ 
 function getSession () {
-    $.ajax({ 
+    $.ajax({
         url: "/function/vh:getSession",
         dataType: 'json'
     }).done( function(session, status, xhr) {
-
+ 
         updateStartPosition(session.routing.start.lat, session.routing.start.lng);
-
+ 
         var start  = new google.maps.LatLng(session.routing.start.lat, session.routing.start.lng);
         googleMap.setCenter(start);
-        
+       
         var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
         destinationMarker.setPosition(dest);
-
+ 
         var forecast = session.routing["forecast-bundle"];
         var selForecast = $("#sel_forecastbundle")[0];
         var irIndex = $("#ir_index")[0];
@@ -205,46 +205,46 @@ function getSession () {
             selForecast.value = forecast;
             redrawWind("offset", irIndex.value);
         }
-
+ 
         var starttime = session.routing.starttime;
         var cbStartDelayed = $("#cb_startdelayed")[0];
         if ( starttime != false && starttime != 'NIL' ) {
             cbStartDelayed.checked = true;
             $("#tb_starttime")[0].value = starttime;
-
+ 
         } else {
             cbStartDelayed.checked = false;
         }
-
+ 
         var polars = session.routing.polars;
         var selPolars = $("#sel_polars")[0];
         selPolars.value = polars;
-
+ 
         var duration = session.routing.stepmax/3600;
         var selDuration = $("#sel_duration")[0];
         selDuration.value = duration;
-
+ 
         var searchAngle = session.routing.fan;
         var selSearchAngle = $("#sel_searchangle")[0];
         selSearchAngle.value = searchAngle;
-
+ 
         var minWind = session.routing.minwind;
         var cbMinWind = $("#cb_minwind")[0];
         cbMinWind.checked = minWind;
-
-
+ 
+ 
     }).fail( function (jqXHR, textStatus, errorThrown) {
         alert(textStatus + ' ' + errorThrown);
     });
 }
-
+ 
 function onSetClientParameter (event) {
     if ( event.currentTarget === 'foo' ) {
     } else {
         alert('later.');
     }
 }
-
+ 
 function onSetParameter (event) {
     var paramName = event.currentTarget.name;
     var paramValue;
@@ -258,14 +258,14 @@ function onSetParameter (event) {
             paramValue = event.currentTarget.value;
         }
     }
-    $.ajax({ 
+    $.ajax({
         url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
         dataType: 'json'
     }).done( function(data, status, xhr ) {
         var pageURL = xhr.getResponseHeader('Content-Location');
         var copyText = document.getElementById("tb_pageURL");
         copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
-
+ 
         if ( paramName === "forecastbundle" ) {
             var selForecast = $("#sel_forecastbundle")[0];
             var irIndex = $("#ir_index")[0];
@@ -285,13 +285,13 @@ function onSetParameter (event) {
         alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
     });
 }
-
-
+ 
+ 
 function onMapMenuMouseLeave (event) {
     var mapMenu=$("#mapMenu")[0];
     mapMenu.style.display = "none";
 }
-
+ 
 function onMapRightClick (event) {
     mapEvent = event;
     var windowEvent = window.event;
@@ -305,18 +305,18 @@ function onMapRightClick (event) {
         pageX = event.pixel.x;
         pageY = event.pixel.y;
     }
-    
+   
     mapMenu.style.display = "block";
     mapMenu.style.top = pageY + "px";
     mapMenu.style.left = pageX + "px";
     return false;
 }
-
+ 
 function setRoutePoint(point, latlng) {
     var lat =  latlng.lat();
     var lng =  latlng.lng();
     var that = this;
-    $.ajax({ 
+    $.ajax({
         url: "/function/vh:setRoute"
             + "?pointType=" + point
             + "&lat=" + lat
@@ -340,21 +340,21 @@ function setRoutePoint(point, latlng) {
         });
         courseGCLine.setMap(googleMap);
         courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-
+ 
     }).fail( function (jqXHR, textStatus, errorThrown) {
         alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
     });
 }
-
+ 
 function setRoute (point) {
     var mapMenu=$("#mapMenu")[0];
     mapMenu.style.display = "none";
     setRoutePoint(point, mapEvent.latLng);
 }
-
+ 
 function clearRoute() {
     clearTWAPath();
-
+ 
     for ( var i = 0; i<trackMarkers.length; i++ ) {
         trackMarkers[i].setMap(undefined);
     }
@@ -368,15 +368,15 @@ function clearRoute() {
     }
     routeIsochrones = [];
 }
-
+ 
 function updateGetRouteProgress () {
     var pgGetRoute = $("#pg_getroute")[0];
-    if ( pgGetRoute.value < pgGetRoute.max ) { 
+    if ( pgGetRoute.value < pgGetRoute.max ) {
         pgGetRoute.value = pgGetRoute.value + 10;
     }
 }
-
-
+ 
+ 
 function addWaypointInfo(trackMarker, point, nextPoint) {
     var infoWindow = new google.maps.InfoWindow({
         content: makeWaypointInfo(point, nextPoint)
@@ -391,20 +391,20 @@ function addWaypointInfo(trackMarker, point, nextPoint) {
 }
 function makeWaypointInfo(point, nextPoint) {
     result =  "<div>";
-    result = result 
-        + "<b>Time</b>: " + point.time + "<p>" 
+    result = result
+        + "<b>Time</b>: " + point.time + "<p>"
         + "<b>Position</b>: " + formatPosition(point.position) + "<p>"
         + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
     if ( nextPoint !== undefined ) {
         result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
-            + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>" 
+            + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>"
             + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
     }
     result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
     result = result + "</div>";
     return result;
 }
-
+ 
 // Routepoint does not store TWA
 function routepointTWA (point) {
     var angle =  point["wind-dir"] - point.heading;
@@ -415,7 +415,7 @@ function routepointTWA (point) {
     }
     return angle;
 }
-
+ 
 function getRoute () {
     var mapMenu=$("#mapMenu")[0];
     var windowEvent = window.event;
@@ -424,9 +424,9 @@ function getRoute () {
     var pgGetRoute = $("#pg_getroute")[0];
     pgGetRoute.value = 5;
     var selDuration = $("#sel_duration")[0];
-    var duration = selDuration.value; 
-    var timer = window.setInterval(updateGetRouteProgress, 500 * duration / 6);
-    $.ajax({ 
+    var duration = selDuration.value;
+    var timer = window.setInterval(updateGetRouteProgress, 3 * duration);
+    $.ajax({
         url: "/function/vh:getRoute",
         dataType: 'json'
     }).done( function(data) {
@@ -444,7 +444,7 @@ function getRoute () {
             addWaypointInfo(trackMarker, best[i], best[i+1]);
             trackMarkers[i] = trackMarker;
         }
-
+ 
         var tracks = data.tracks;
         for ( var i = 0; i < tracks.length; i++ ) {
             var track = new google.maps.Polyline({
@@ -462,12 +462,18 @@ function getRoute () {
             path: google.maps.SymbolPath.CIRCLE
         }
         for ( var i = 0; i < isochrones.length; i++ ) {
-            var h = new Date(isochrones[i].time).getHours();
+            var h = new Date(isochrones[i].time).getUTCHours();
+            var color;
+            if (h%6 === 4) {
+                color = '#D00000';
+            } else {
+                color = (h%12)?'#8080a0':'#000000';
+            }
             var isochrone = new google.maps.Polyline({
                 geodesic: true,
-                strokeColor: (h%12)?'#8080a0':'#000000',
+                strokeColor: color,
                 strokeOpacity: 0.8,
-                strokeWeight: (h%6)?2:4,
+                strokeWeight: (h%6)?1:3,
                 icons: [{icon: startSymbol,  offset: '0%'}]
             });
             isochrone.setPath(isochrones[i].path);
@@ -475,35 +481,35 @@ function getRoute () {
             addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
             routeIsochrones[i] = isochrone;
         }
-
+ 
         $("#lb_stats").text(JSON.stringify(data.stats));
-
+ 
     }).fail( function (jqXHR, textStatus, errorThrown) {
         window.clearInterval(timer);
         pgGetRoute.value = pgGetRoute.max;
         alert(textStatus + ' ' + errorThrown);
     });
 }
-
+ 
 function copyURL () {
   var copyText = document.getElementById("tb_pageURL");
   copyText.select();
   document.execCommand("Copy");
 }
-
+ 
 function addMarkerListener(marker) {
     marker.addListener('click', function () { markerClicked(marker) });
 }
-
+ 
 var twaPath = [];
-
+ 
 function clearTWAPath() {
     for ( var i=0; i<twaPath.length; i++ ) {
         twaPath[i].setMap(null);
     }
     twaPath = [];
 }
-
+ 
 function drawTWAPath(data) {
     clearTWAPath();
     var color = '#00a0c0';
@@ -528,12 +534,12 @@ function drawTWAPath(data) {
                 strokeWeight: 4
             });
         }
-        twaPathSegment.setPath([data[i-1], data[i]]);
+        twaPathSegment.setPath([data[i-1][1], data[i][1]]);
         twaPathSegment.setMap(googleMap);
         twaPath[i-1] = twaPathSegment;
     }
 }
-
+ 
 function addInfo (isochrone, time, offset) {
     isochrone.set("time", time);
     isochrone.set("offset", offset);
@@ -542,17 +548,17 @@ function addInfo (isochrone, time, offset) {
         onSelectIsochrone(iso);
     });
 }
-
+ 
 function onSelectIsochrone (isochrone) {
     var offset = isochrone.get('offset');
     $("#ir_index")[0].value = offset;
     var time = isochrone.get('time');
     redrawWind("time", time);
 }
-
+ 
 function onAdjustIndex (event) {
     var source = event.target.id;
-    if (source == "bt_dec6") 
+    if (source == "bt_dec6")
         ir_index.valueAsNumber = ir_index.valueAsNumber - 6;
     else if (source == "bt_dec")
         ir_index.valueAsNumber = ir_index.valueAsNumber - 1;
@@ -562,7 +568,7 @@ function onAdjustIndex (event) {
         ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
     redrawWind("offset", ir_index.value);
 }
-
+ 
 function updateMap () {
     if ( googleMap.zoom < 6 ) {
         googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
@@ -576,11 +582,11 @@ function updateMap () {
     south = sw.lat();
     west = sw.lng();
     east = ne.lng();
-    var label = "⌊" + formatLatLng(sw) + " \\ " +  formatLatLng(ne) + "⌉"; 
+    var label = "⌊" + formatLatLng(sw) + " \\ " +  formatLatLng(ne) + "⌉";
     $("#lb_map_bounds").text("Kartenausschnitt: " + label);
     redrawWind("offset", ir_index.value);
 }
-
+ 
 function getTWAPath(event) {
     var latA, lngA, time ;
     if ( twaAnchor.lat === undefined || twaTime === undefined ) {
@@ -594,7 +600,7 @@ function getTWAPath(event) {
     }
     var lat = event.latLng.lat();
     var lng = event.latLng.lng();
-    $.ajax({ 
+    $.ajax({
         url: "/function/vh:getTWAPath?time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
         dataType: 'json'
     }).done( function(data) {
@@ -605,15 +611,15 @@ function getTWAPath(event) {
         alert(textStatus + ' ' + errorThrown);
     });
 }
-
+ 
 function redrawWind (timeParamName, timeParamValue) {
-    
+   
     var lat0 = north + ((north - south) / ySteps)/2;
     var lon0 = east + ((east - west) / xSteps)/2;
     var ddx = roundTo((east-west)/xSteps, 8);
     var ddy = roundTo((north-south)/ySteps, 8);
-
-    $.ajax({ 
+ 
+    $.ajax({
         url: "/function/vh:getWind"
             + "?" + timeParamName + "=" + timeParamValue
             + "&north=" + roundTo(lat0, 6)
@@ -629,7 +635,7 @@ function redrawWind (timeParamName, timeParamValue) {
         console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
     });
 }
-
+ 
 function drawWind (data) {
     $("#lb_modelrun").text(data[0]);
     $("#lb_index").text(data[1]);
@@ -646,22 +652,22 @@ function drawWind (data) {
         }
     }
 }
-
+ 
 function updateWindInfo (event) {
-
+ 
     var zoom = googleMap.getZoom();
     var lat = roundTo(event.latLng.lat(), Math.floor(zoom/5));
     var lng = roundTo(event.latLng.lng(), Math.floor(zoom/5));
-
+ 
     var gN = 'N';
     if ( lat < 0 ) { gN = 'S'; lat = -lat; }
     var gE = 'E';
     if ( lng < 0 ) { gE = 'W'; lng = -lng; }
-
+ 
     $("#lb_position").text(formatLatLng(event.latLng));
-
+ 
     var mapBounds = googleMap.getBounds();
-
+ 
     var sw = mapBounds.getSouthWest();
     var ne = mapBounds.getNorthEast();
     north = ne.lat();
@@ -674,12 +680,12 @@ function updateWindInfo (event) {
     var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
     $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kts");
 }
-
+ 
 function drawWindArrow(ctx, x, y, direction, speed) {
     direction = direction + 90;
     if (direction > 360) {
         direction = direction - 360;
-    } 
+    }
     ctx.fillStyle = colors[ms2bf(speed)];
     ctx.strokeStyle = colors[ms2bf(speed)];
     ctx.save();
@@ -697,34 +703,34 @@ function drawWindArrow(ctx, x, y, direction, speed) {
     ctx.stroke();
     ctx.restore();
 }
-
+ 
 function m2nm (dist) {
     return dist / 1852;
 }
-
+ 
 function ms2knots (speed) {
     return 900.0 * speed / 463.0;
 }
-
+ 
 function formatLatLng (latlng) {
     return formatDeg(toDeg(latlng.lat())) + "N | " + formatDeg(toDeg(latlng.lng())) +"E";
 }
-
+ 
 function formatPosition (latlng) {
     return formatDeg(toDeg(latlng.lat)) + "N | " + formatDeg(toDeg(latlng.lng)) + "E";
 }
-
+ 
 function formatDeg (deg) {
     var val = deg.g + "°" + deg.m + "'" + deg.s;
     return (deg.u < 0) ? "-" + val : val;
 }
-
+ 
 function fromDeg (deg) {
     var sign = deg.u || 1;
     var abs = deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000.0);
     return sign * abs
 }
-
+ 
 function toDeg (number) {
     var u = sign(number);
     number = Math.abs(number);
@@ -740,12 +746,12 @@ function toDeg (number) {
     }
     return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
 }
-
+ 
 function roundTo (number, digits) {
     var scale = Math.pow(10, digits);
     return Math.round(number * scale) / scale;
 }
-
+ 
 function sign (x) {
     if (x < 0) {
         return -1;
@@ -753,6 +759,6 @@ function sign (x) {
         return 1;
     }
 }
-
+ 
 /// EOF
 ////////////////////////////////////////////////////////////////////////////////

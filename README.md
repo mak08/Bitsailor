@@ -59,11 +59,11 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 
 In addition, VirtualHelm requires 
 
-*	[PolarCL](PolarCL)
+*	[PolarCL](https://github.com/mak08/PolarCL)
 
-*	[cl-grib2](cl-grib2)
+*	[cl-grib2](https://github.com/mak08/cl-grib2)
 
-*	[log2](log2)
+*	[log2](https://github.com/mak08/log2)
 	
 and	the [quickloadable](https://www.quicklisp.org/beta/) systems
 

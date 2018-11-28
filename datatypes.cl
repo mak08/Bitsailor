@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-01-25 00:42:13>
+;;; Last Modified <michael 2018-11-25 22:05:24>
 
 (in-package :virtualhelm)
 
@@ -39,22 +39,7 @@
           value)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Structs
-
-(defstruct dms (degrees 0) (minutes 0) (seconds 0))
-
-(defun dms2decimal (dms)
-  (+ (dms-degrees dms)
-     (/ (dms-minutes dms) 60)
-     (/ (dms-seconds dms) 3600)))
-
-(defun decimal2dms (dec)
-  (multiple-value-bind (d r1)
-      (truncate dec)
-    (multiple-value-bind (m r2)
-        (truncate (* r1 60))
-      (make-dms :degrees d :minutes m :seconds (* r2 60)))))
-
+;;; Time
 
 (defun format-timespec-datehh (stream timestamp &key (timezone +utc-zone+) (offset 0))
   "Format timestamp as YYYY-MM-DD, HH Uhr"

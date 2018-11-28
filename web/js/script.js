@@ -90,7 +90,7 @@ function setUp () {
     $("#bt_dec").click(onAdjustIndex);
     $("#bt_inc6").click(onAdjustIndex);
     $("#bt_dec6").click(onAdjustIndex);
-   $("#ir_index").change(onAdjustIndex);
+    $("#ir_index").change(onAdjustIndex);
  
     $("#cb_startdelayed").click(onDelayedStart);
     $("#tb_starttime").change(onSetParameter);
@@ -99,8 +99,6 @@ function setUp () {
     $("#sel_polars").change(onSetParameter);
     $("#sel_forecastbundle").change(onSetParameter);
     $("#sel_duration").change(onSetParameter);
-    $("#sel_searchangle").change(onSetParameter);
-    $("#sel_pointsperisochrone").change(onSetParameter);
     $("#cb_minwind").change(onSetParameter);
  
     // Tracks & Isochrones display is handled by the client directly
@@ -223,11 +221,7 @@ function getSession () {
         var duration = session.routing.stepmax/3600;
         var selDuration = $("#sel_duration")[0];
         selDuration.value = duration;
- 
-        var searchAngle = session.routing.fan;
-        var selSearchAngle = $("#sel_searchangle")[0];
-        selSearchAngle.value = searchAngle;
- 
+  
         var minWind = session.routing.minwind;
         var cbMinWind = $("#cb_minwind")[0];
         cbMinWind.checked = minWind;

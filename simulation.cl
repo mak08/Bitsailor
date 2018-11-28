@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-17 17:08:53>
+;;; Last Modified <michael 2018-11-26 00:27:12>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -63,6 +63,15 @@
   (member "winch" (routing-options routing) :test #'string=))
 
 (defstruct routeinfo best stats tracks isochrones)
+
+(defmethod print-object ((thing routeinfo) stream)
+  (let ((stats (or (routeinfo-stats thing)
+                   (make-routestats))))
+    (format stream "#<RouteInfo Start ~a Duration ~a Isochrones ~a>"
+            (routestats-start stats)
+            (routestats-duration stats)
+            (length (routeinfo-isochrones thing)))))
+
 (defstruct routestats start duration sails min-wind max-wind min-twa max-twa)
   
 (defstruct isochrone center time offset path)
@@ -201,7 +210,7 @@
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 36 600))
-              600)
+              300)
              ((<= delta-t (* 72 600))
               900)
              ((<= delta-t (* 144 600))

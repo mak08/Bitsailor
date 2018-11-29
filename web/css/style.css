@@ -5,8 +5,19 @@
     box-sizing: border-box;
 }
 
+#wrapper {
+	width: auto;
+}
+
+header, footer {
+	color: #ffffff;
+	background-color:#505056;
+	display: flex;
+	flex-direction: row;
+}
+
 .col-1 {width: 8.33%;}
-.col-2 {width: 16.66%;}
+.col-2 {width: 16.66%; min-width:25em;}
 .col-3 {width: 25%;}
 .col-4 {width: 33.33%;}
 .col-5 {width: 41.66%;}
@@ -26,29 +37,35 @@
     padding: 5px;
 }
 
-#googleMap {
-	position:absolute;
-	width:1250px;
-	height:810px;
-	border:solid 2px black;
-	border-radius:4px;
+#display {
+	width: 1520px;
+	height: 820px;
+	padding: 0px;
 }
 
-#leafletMap {
+#googleMap {
 	position:absolute;
-	width:1250px;
-	height:810px;
-	border:solid 2px black;
-	border-radius:4px;
+	width: 1520px;
+	height: 820px;
+	border: 0px solid black;
+	border-radius: 4px;
 }
 
 #player_area {
 	position:absolute;
-	width:1250px;
-	height:810px;
-	border: 2px solid #505056;
+	width: 1520px;
+	height: 820px;
+	border: 0px solid #505056;
+	background: none;
+	pointer-events: none;
+}
+
+#map_canvas {
+	width: 1520px;
+	height: 820px;
 	background:none;
 	pointer-events:none;
+	border: 0px solid green;
 }
 
 .row {

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2018-01-19 01:05:09>
+;;; Last Modified <michael 2018-11-28 01:00:07>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -35,8 +35,10 @@
 ;;; Users
 ;;; -----
 
-(user :username "admin" :realm "admin" :password "admin")
-(user :username "guest" :realm "localhost" :password "guest")
+(user :username "admin" :realm "virtualhelm" :password "_admin_01")
+(user :username "admin" :realm "admin" :password "_admin_admin_")
+(user :username "user01" :realm "virtualhelm" :password "_user_01")
+(user :username "guest" :realm "virtualhelm" :password "_guest_")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----------
@@ -54,7 +56,7 @@
 
 (handle
  :request (:prefix "/function")
- :handler (:query-function t :authentication nil))
+ :handler (:query-function t :realm "virtualhelm"))
 
 (register-function 'vh:|getSession|)
 (register-function 'vh:|getWind|)

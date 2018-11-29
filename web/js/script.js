@@ -2,7 +2,6 @@
 /// VirtualHelm UI
  
 var googleMap = null;
-var mapContextMenu = null;
  
 // The SVG element used for drawing tracking data
 var svgArea = {};
@@ -14,8 +13,8 @@ var geometry = {};
 var xSteps = 40;
 var ySteps = 25;
 // Screen resolution
-var dx = 1100;
-var dy = 800;
+var dx = 1500;
+var dy = 820;
 // Increments
 var ddx = dx / xSteps;
 var ddy = dy / ySteps;
@@ -72,9 +71,6 @@ function setUp () {
     var mapDiv = $("#googleMap")[0];
     googleMap = new google.maps.Map(mapDiv, mapProp);
  
-    mapContextMenu = $("#mymenu")[0];
-    infoBox = $("#infoBox")[0];
-   
     // Connect map events
     google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
     // google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
@@ -191,18 +187,6 @@ function getSession () {
         var selForecast = $("#sel_forecastbundle")[0];
         var irIndex = $("#ir_index")[0];
         var lbFCMax = $("#lb_fcmax")[0];
-        if  ( selForecast.value !== forecast ) {
-            irIndex.value = 0;
-            if ( forecast === "DWD-ICON-BUNDLE" ) {
-                irIndex.max = 72;
-                lbFCMax.innerText = '' + 72;
-            } else if ( forecast === "NOAA-BUNDLE" ) {
-                irIndex.max = 240;
-                lbFCMax.innerText = '' + 240;
-            }
-            selForecast.value = forecast;
-            redrawWind("offset", irIndex.value);
-        }
  
         var starttime = session.routing.starttime;
         var cbStartDelayed = $("#cb_startdelayed")[0];

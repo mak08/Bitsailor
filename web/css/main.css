@@ -1,0 +1,201 @@
+/*******************************************************************************
+ * General properties
+ *******************************************************************************/
+
+/*******************************************************************************
+ * Colors 
+ *
+ *  Warm black 004242
+ *  Coffee     6f4e37
+ *******************************************************************************/
+
+* {
+    font-family: Arial, sans-serif;
+	margin: 0px;
+	padding: 0px;
+	color: #e8e8ff;
+}
+
+html, body {
+	margin: 0px;
+	padding: 0px;
+}
+
+button, select, option {
+	background-color: black;
+	border: 2px solid #e0e0ff;
+}
+
+p, b {
+	background-color: white;
+	color: black;
+}
+
+/*******************************************************************************
+ * Page layout
+ *******************************************************************************/
+.grid-container {
+	display: grid;
+	grid-template-areas: 'header menu menu menu menu menu'
+							 'controls main main main main main'
+							 'footer-left footer footer footer footer footer';
+	grid-template-rows: 40px 1fr 30px;
+	grid-template-columns: 400px 1fr;
+	grid-gap: 1px;
+	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
+	height: calc(100vh - 12px);
+	background-color: white;
+	padding: 2px;
+}
+
+.grid-container > div {
+    /* defining a background-color here makes the canvas intransparent */
+    text-align: left;
+    padding: 4px;
+}
+
+.header {
+    grid-area: header;
+	margin: 0px;
+	padding: 0px;
+    background-color: #004242;
+}
+.menu {
+    grid-area: menu;
+    background-color: #004242;
+}
+.map {
+    grid-area: main;
+    z-index: 100;
+    background: none;
+}
+.map-overlay {
+    grid-area: main;
+    z-index: 200;
+    background: none;
+    pointer-events:none;
+}
+.controls {
+    grid-area: controls;
+	display: grid;
+	max-content: 40px;
+	grid-template-columns: 150px 1fr;
+	grid-template-rows: repeat(8, minmax(25px, 30px));
+    background-color: #004242;
+	align-items: center;
+}
+
+
+.footer-left {
+    grid-area: footer-left;
+    background-color: #004242; 
+}
+.footer {
+    grid-area: footer;
+    background-color: #004242; 
+}
+
+#wind-canvas {
+    position: relative;
+    height: 100%;
+    width:  100%;
+	
+    pointer-events:none;
+}
+
+/*******************************************************************************
+ * Controls
+ *******************************************************************************/
+
+select, option, input, button {
+	background-color: black;
+	margin: 1px 1px;
+	border: 2px solid #203040;
+}
+label {
+}
+
+input[type=checkbox] {
+	-webkit-transform: scale(1.4); /* Safari and Chrome */
+}
+
+/* Forecast slider*/
+
+.forecast-header {
+	grid-row: 1;
+	grid-column: 1;
+}
+.forecast-slider-label {
+	grid-row: 1;
+	grid-column: 2;
+}
+.forecast-slider {
+	grid-row: 2;
+	grid-column: 2;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+}
+
+/* Start deleyed */
+.delayed-label {
+	grid-row: 3;
+	grid-column: 1;
+}
+.delayed-entry {
+	grid-row: 3;
+	grid-column: 2;
+
+}
+
+/* Routing duration */
+.duration-label {
+	grid-row: 4;
+	grid-column: 1;
+
+}
+.duration-selector {
+	grid-row: 4;
+	grid-column: 2;
+}
+
+/* Polars selection */
+.polars-label {
+	grid-row: 5;
+	grid-column: 1;
+
+}
+.polars-selector {
+	grid-row: 5;
+	grid-column: 2;
+
+}
+
+/* Minwind */
+.minwind-label {
+	grid-row: 6;
+	grid-column: 1;
+
+}
+.minwind-checkbox {
+	grid-row: 6;
+	grid-column: 2;
+
+}
+
+/* Execute */
+.execute-button {
+	grid-row: 7;
+	grid-column: 1/2;
+
+}
+
+/* Progress bar */
+.progress-bar {
+	grid-row: 8;
+	grid-column: 1;
+
+}
+
+
+

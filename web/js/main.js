@@ -7,14 +7,8 @@ var googleMap = null;
 var geometry = {};
  
 // Number of wind arrows
-var xSteps = 40;
-var ySteps = 25;
-// Screen resolution
-var dx = 1500;
-var dy = 820;
-// Increments
-var ddx = dx / xSteps;
-var ddy = dy / ySteps;
+var xSteps = 70;
+var ySteps = 40;
  
 // Map bounds
 var north;
@@ -51,10 +45,12 @@ function setUp () {
    
     setupColors();
  
-    mapCanvas = document.getElementById('map');
+    mapCanvas = document.getElementById('wind-canvas');
     var mapRect = mapCanvas.getBoundingClientRect();
-    geometry.width = mapRect.width;
-    geometry.height = mapRect.height;
+    geometry.width = mapRect.width * 6;
+    geometry.height = mapRect.height * 6;
+    mapCanvas.width = geometry.width;
+    mapCanvas.height = geometry.height;
  
     // Create a map object, and include the MapTypeId to add
     // to the map type control.
@@ -65,7 +61,7 @@ function setUp () {
         mapTypeId:google.maps.MapTypeId.ROADMAP,
         draggableCursor: "crosshair"
     };
-    var mapDiv = $("#googleMap")[0];
+    var mapDiv = $("#map")[0];
     googleMap = new google.maps.Map(mapDiv, mapProp);
  
     // Connect map events
@@ -282,6 +278,7 @@ function onMapRightClick (event) {
     }
    
     mapMenu.style.display = "block";
+    mapMenu.style["z-index"] = 400;
     mapMenu.style.top = pageY + "px";
     mapMenu.style.left = pageX + "px";
     return false;
@@ -365,10 +362,10 @@ function addWaypointInfo(trackMarker, point, nextPoint) {
     });
 }
 function makeWaypointInfo(point, nextPoint) {
-    result =  "<div>";
+    result =  "<div style='color:#000;'>";
     result = result
-        + "<b>Time</b>: " + point.time + "<p>"
-        + "<b>Position</b>: " + formatPosition(point.position) + "<p>"
+        + "<p><b>Time</b>: " + point.time + "</p>"
+        + "<p><b>Position</b>: " + formatPosition(point.position) + "</p>"
         + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
     if ( nextPoint !== undefined ) {
         result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
@@ -610,24 +607,49 @@ function redrawWind (timeParamName, timeParamValue) {
         console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
     });
 }
- 
+
 function drawWind (data) {
+
+    // Update time 
     $("#lb_modelrun").text(data[0]);
     $("#lb_index").text(data[1]);
     $("#lb_fcmax").text(' ' + data[2] + 'hrs');
+
+    // Keep new wind data in global var for displaying wind data at mouse position
     windData = data[3];
+
     var ctx = mapCanvas.getContext("2d");
     ctx.globalAlpha = 0.6;
     ctx.clearRect(0, 0, geometry.width, geometry.height);
-    for ( var y = 0; y < ySteps; y++ ) {
-        var yOffset = y * ddy + (ddy / 2);
-        for ( var x = 0; x < xSteps; x++ ) {
-            var xOffset = x * ddx + (ddx / 2);
-            drawWindArrow(ctx, xOffset, yOffset, windData[y][x][0], windData[y][x][1]);
+
+    // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
+    var mapProjection = googleMap.getProjection();
+    var nwLatLng =  new google.maps.LatLng(north, west);
+    var seLatLng =  new google.maps.LatLng(south, east);
+    var nwPoint = mapProjection.fromLatLngToPoint(nwLatLng);
+    var sePoint = mapProjection.fromLatLngToPoint(seLatLng);
+    var mapWidth = (sePoint.x - nwPoint.x);
+    var mapHeight = (sePoint.y - nwPoint.y);
+
+    // Wind values are at evenly distributed lat/lng values
+    var width = (east-west);
+    var height = (south-north);
+    var dlng = roundTo(width/xSteps, 8);
+    var dlat = roundTo(height/ySteps, 8);
+
+    // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
+    for ( var lat = north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
+        for ( var lng = west+dlng/4, x=0; x < xSteps; lng += dlng, x++ ) {
+            var latLng = new google.maps.LatLng(lat, lng);
+            var mapPoint = mapProjection.fromLatLngToPoint(latLng);
+            var pointX = (mapPoint.x - nwPoint.x) / mapWidth * ctx.canvas.width;
+            var pointY = (mapPoint.y - nwPoint.y) / mapHeight * ctx.canvas.height;
+            drawWindArrow(ctx, pointX, pointY, windData[y][x][0], windData[y][x][1]);
         }
     }
 }
- 
+
+
 function updateWindInfo (event) {
  
     var zoom = googleMap.getZoom();
@@ -664,15 +686,15 @@ function drawWindArrow(ctx, x, y, direction, speed) {
     ctx.fillStyle = colors[ms2bf(speed)];
     ctx.strokeStyle = colors[ms2bf(speed)];
     ctx.save();
-    ctx.translate(x, y);
+    ctx.translate(x , y);
     ctx.rotate((direction*Math.PI/180));
     var scale = (speed>0)?0.4 + speed/30:0;
     ctx.scale(scale, scale);
     ctx.beginPath();
     ctx.moveTo(-0, 0);
-    ctx.lineTo(-15, 12);
-    ctx.lineTo(18, 0);
-    ctx.lineTo(-15, -12);
+    ctx.lineTo(-15 * 6, 12 * 6);
+    ctx.lineTo(18 * 6, 0);
+    ctx.lineTo(-15 * 6, -12 * 6);
     ctx.closePath()
     ctx.fill();
     ctx.stroke();

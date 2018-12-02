@@ -101,7 +101,7 @@
         </div>
 
 	    <div class="minwind-label">
-          <label>Min 2kts wind</label>
+          <label>Min 2kn wind</label>
 		</div>
 		<div class="minwind-checkbox">
 		  <input id="cb_minwind" name="minwind" type="checkbox" checked="true"></input>
@@ -113,18 +113,80 @@
 		<div class="progress-bar">
           <progress id="pg_getroute" style="width:300px" max="300" value="0"></progress>
         </div>
+
+
+        <div class="current-wind-label">
+          <label>Wind</label>
+		</div>
+		<div class="current-wind">
+          <label id="lb_windatposition">-.-.-.-</label>
+        </div>
+		
+        <div class="current-twa-label">
+          <label>TWA</label>
+		</div>
+		<div class="current-twa">
+          <nobr><label id="lb_twa">&lt;Click on route marker&gt;</label></nobr>
+        </div>
+
+        <div class="current-heading-label">
+          <label>Heading</label>
+		</div>
+		<div class="current-heading">		
+          <nobr><label id="lb_twa_heading">-.-.-.-</label></nobr>
+        </div>
+
+        <div class="statistics-label">
+          <label>Statistics</label>
+        </div>
+
+        <div class="statistics-from-label">
+          <label>From</label>
+        </div>
+        <div class="statistics-from">
+          <label id="lb_from">-.-.-.-</label>
+        </div>
+
+        <div class="statistics-duration-label">
+          <label>Duration</label>
+        </div>
+        <div class="statistics-duration">
+          <label id="lb_duration">-.-.-.-</label>
+        </div>
+
+        <div class="statistics-sails-label">
+          <label>Sails</label>
+        </div>
+        <div class="statistics-sails">
+          <label id="lb_sails">-.-.-.-</label>
+        </div>
+
+        <div class="statistics-min-wind-label">
+          <label>Wind</label>
+        </div>
+        <div class="statistics-min-wind">
+          <label id="lb_minwind">-.-.-.-</label>
+        </div>
+
+        <div class="statistics-min-twa-label">
+          <label>TWA</label>
+        </div>
+        <div class="statistics-min-twa">
+          <label id="lb_mintwa">-.-.-.-</label>
+        </div>
+
 		
 	  </div>
 
       <div class="footer-left">
         <div>
-          <label>Stand:</label> <label id="lb_modelrun"></label>
+          <label>Forecast run:</label> <label id="lb_modelrun"></label>
         </div>
 	  </div>
 	  
       <div class="footer">
 	    <div class="legend">
-          Windskala 
+          <label style="margin: 2px 10px 2px 2px;">Wind scale</label>
           <div class="colorbox" style="background-color:#0080ff;"> 0</div>
           <div class="colorbox" style="background-color:#00ffff;"> 1</div>
           <div class="colorbox" style="background-color:#00ffa0;"> 2</div>
@@ -138,7 +200,7 @@
           <div class="colorbox" style="background-color:#d020ff;">10</div>
           <div class="colorbox" style="background-color:#8020ff;">11</div>
           <div class="colorbox" style="background-color:#0000ff;">12</div>
-          Beaufort
+          <label style="margin: 2px 2px 2px 10px;">Bft</label>
         </div>
 	  </div>
 

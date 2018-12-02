@@ -225,12 +225,7 @@ function onSetParameter (event) {
         url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
         dataType: 'json'
     }).done( function(data, status, xhr ) {
-        var pageURL = xhr.getResponseHeader('Content-Location');
-        var copyText = document.getElementById("tb_pageURL");
-        copyText.value = document.location.protocol +'//' + document.location.host + pageURL;
- 
         if ( paramName === "forecastbundle" ) {
-            var selForecast = $("#sel_forecastbundle")[0];
             var irIndex = $("#ir_index")[0];
             var lbFCMax = $("#lb_fcmax")[0];
             irIndex.value = 0;
@@ -447,7 +442,11 @@ function getRoute () {
             routeIsochrones[i] = isochrone;
         }
  
-        $("#lb_stats").text(JSON.stringify(data.stats));
+        $("#lb_from").text(JSON.stringify(data.stats.start));
+        $("#lb_duration").text(JSON.stringify(data.stats.duration));
+        $("#lb_sails").text(JSON.stringify(data.stats.sails));
+        $("#lb_minwind").text(roundTo(data.stats["min-wind"], 1) + " - " + roundTo(data.stats["max-wind"], 1));
+        $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
  
     }).fail( function (jqXHR, textStatus, errorThrown) {
         window.clearInterval(timer);
@@ -668,7 +667,7 @@ function updateWindInfo (event) {
     var iLng = xSteps - Math.round((event.latLng.lng() - east) / (west - east) * xSteps);
     var windDir = roundTo(windData[iLat][iLng][0], 0);
     var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
-    $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kts");
+    $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
 }
  
 function drawWindArrow(ctx, x, y, direction, speed) {

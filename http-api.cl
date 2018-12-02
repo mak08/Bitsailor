@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-17 21:47:34>
+;;; Last Modified <michael 2018-12-02 16:54:21>
 
 (in-package :virtualhelm)
 
@@ -141,7 +141,12 @@
                 (with-output-to-string (s)
                   (json s
                         (list
-                         (format-datetime nil (fcb-time forecast-bundle))
+                         (let ((time
+                                (cl-weather::grib-cycle
+                                 (cl-weather::noaa-data forecast-bundle))))
+                           (format-timestring nil
+                                              time
+                                              :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+))
                          (format-datetime nil forecast-time)
                          (fcb-max-offset forecast-bundle)
                          (loop

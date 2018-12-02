@@ -197,5 +197,21 @@ input[type=checkbox] {
 
 }
 
+/* Legend */
+
+.legend {
+	display: flex;
+	flex-direction: row;
+	font-size:80%;
+}
+
+.colorbox {
+	width:20px; 
+	height:16px; 
+	margin-left: 0px;
+	margin-right: 0px;
+	padding: 1px;
+	text-align:center;
+}
 
 

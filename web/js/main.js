@@ -30,15 +30,7 @@ var courseGCLine = null;
 var routeTracks = [];
 var routeIsochrones = [];
 var trackMarkers = [];
- 
-var boatPath = new google.maps.Polyline({
-    geodesic: true,
-    strokeColor: '#FF0000',
-    strokeOpacity: 1.0,
-    strokeWeight: 2
-});
- 
- 
+  
 var windData = [];
  
 function setUp () {
@@ -317,7 +309,8 @@ function setRoutePoint(point, latlng) {
         alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
     });
 }
- 
+
+// Event handler for context menu mapMenu 
 function setRoute (point) {
     var mapMenu=$("#mapMenu")[0];
     mapMenu.style.display = "none";

@@ -353,7 +353,7 @@ function makeWaypointInfo(point, nextPoint) {
     result =  "<div style='color:#000;'>";
     result = result
         + "<p><b>Time</b>: " + point.time + "</p>"
-        + "<p><b>Position</b>: " + formatPosition(point.position) + "</p>"
+        + "<p><b>Position</b>: " + formatPointPosition(point.position) + "</p>"
         + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
     if ( nextPoint !== undefined ) {
         result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
@@ -546,7 +546,7 @@ function updateMap () {
     south = sw.lat();
     west = sw.lng();
     east = ne.lng();
-    var label = "⌊" + formatLatLng(sw) + " \\ " +  formatLatLng(ne) + "⌉";
+    var label = "⌊" + formatLatLngPosition(sw) + " \\ " +  formatLatLngPosition(ne) + "⌉";
     $("#lb_map_bounds").text("Kartenausschnitt: " + label);
     redrawWind("offset", ir_index.value);
 }
@@ -580,9 +580,9 @@ function redrawWind (timeParamName, timeParamValue) {
    
     var lat0 = north + ((north - south) / ySteps)/2;
     var lon0 = east + ((east - west) / xSteps)/2;
-    var ddx = roundTo((east-west)/xSteps, 8);
+    var ddx = roundTo(arcLength(west, east)/xSteps, 8);
     var ddy = roundTo((north-south)/ySteps, 8);
- 
+
     $.ajax({
         url: "/function/vh:getWind"
             + "?" + timeParamName + "=" + timeParamValue
@@ -653,7 +653,7 @@ function updateWindInfo (event) {
     var gE = 'E';
     if ( lng < 0 ) { gE = 'W'; lng = -lng; }
  
-    $("#lb_position").text(formatLatLng(event.latLng));
+    $("#lb_position").text(formatLatLngPosition(event.latLng));
  
     var mapBounds = googleMap.getBounds();
  
@@ -664,12 +664,19 @@ function updateWindInfo (event) {
     west = sw.lng();
     east = ne.lng();
     var iLat = Math.round((event.latLng.lat() - north) / (south - north) * ySteps);
-    var iLng = xSteps - Math.round((event.latLng.lng() - east) / (west - east) * xSteps);
+    var iLng = xSteps - Math.round(arcLength(west, event.latLng.lng()) / arcLength(west, east) * xSteps);
     var windDir = roundTo(windData[iLat][iLng][0], 0);
     var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
     $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
 }
- 
+
+function arcLength(a, b) {
+    if ( a < 0 ) a += 360;
+    if ( b < 0 ) b += 360;
+    if ( b < a ) b += 360;
+    return b - a;
+}
+
 function drawWindArrow(ctx, x, y, direction, speed) {
     direction = direction + 90;
     if (direction > 360) {
@@ -701,19 +708,51 @@ function ms2knots (speed) {
     return 900.0 * speed / 463.0;
 }
  
-function formatLatLng (latlng) {
-    return formatDeg(toDeg(latlng.lat())) + "N | " + formatDeg(toDeg(latlng.lng())) +"E";
+function formatLatLngPosition (latlng) {
+    return formatPosition(latlng.lat(), latlng.lng());
 }
  
-function formatPosition (latlng) {
-    return formatDeg(toDeg(latlng.lat)) + "N | " + formatDeg(toDeg(latlng.lng)) + "E";
+function formatPointPosition (point) {
+    return formatPosition(point.lat, point.lng);
 }
- 
-function formatDeg (deg) {
-    var val = deg.g + "°" + deg.m + "'" + deg.s;
-    return (deg.u < 0) ? "-" + val : val;
+
+function sign(x) {
+    return (x < 0) ? -1 : 1;
 }
- 
+
+
+function pad0(val) {
+    if (val < 10) {
+        val = "0" + val;
+    }
+    return val;
+}
+
+function toDMS(number) {
+    var u = sign(number);
+    number = Math.abs(number);
+    var g = Math.floor(number);
+    var frac = number - g;
+    var m = Math.floor(frac * 60);
+    frac = frac - m / 60;
+    var s = Math.floor(frac * 3600);
+    var cs = roundTo(360000 * (frac - s / 3600), 0);
+    while (cs >= 100) {
+        cs = cs - 100;
+        s = s + 1;
+    }
+    return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
+}
+
+function formatPosition(lat, lon) {
+    var latDMS = toDMS(lat);
+    var lonDMS = toDMS(lon);
+    var latString = latDMS.g + "°" + pad0(latDMS.m) + "'" + pad0(latDMS.s) + '"';
+    var lonString = lonDMS.g + "°" + pad0(lonDMS.m) + "'" + pad0(lonDMS.s) + '"';
+    return latString + ((latDMS.u == 1) ? "N" : "S") + " | " + lonString + ((lonDMS.u == 1) ? "E" : "W");
+}
+
+
 function fromDeg (deg) {
     var sign = deg.u || 1;
     var abs = deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000.0);

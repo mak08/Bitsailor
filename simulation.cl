@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-26 00:27:12>
+;;; Last Modified <michael 2018-12-03 18:30:05>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -138,8 +138,9 @@
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
                (get-wind-forecast forecast start-pos)
-             (list
-              (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed))))
+             (make-array 1 :initial-contents
+                         (list
+                          (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
                           (make-array 0 :adjustable t :fill-pointer 0)))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-02 16:54:21>
+;;; Last Modified <michael 2018-12-03 22:53:46>
 
 (in-package :virtualhelm)
 
@@ -134,6 +134,11 @@
                (south (read-from-string |south|))
                (east (read-from-string |east|))
                (west (read-from-string |west|)))
+
+          (when (< west 0d0) (incf west 360d0))
+          (when (< east 0d0) (incf east 360d0))
+          (when (< east west) (incf east 360d0))
+          
           (assert (and (plusp ddx)
                        (plusp ddy)
                        (< south north)))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-03 18:30:05>
+;;; Last Modified <michael 2018-12-04 00:59:08>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -286,6 +286,10 @@
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time forecast polars next-isochrone)
   (cond
     ((null routepoint)
+     (return-from expand-routepoint 0))
+    ((not (and
+           (<= -75d0 (latlng-lat (routepoint-position routepoint)) 85d0)
+           (<= -180d0 (latlng-lng (routepoint-position routepoint)) 180d0)))
      (return-from expand-routepoint 0))
     (t
      (let* ((cur-twa (routepoint-twa routepoint))

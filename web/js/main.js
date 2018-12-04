@@ -645,13 +645,6 @@ function drawWind (data) {
 function updateWindInfo (event) {
  
     var zoom = googleMap.getZoom();
-    var lat = roundTo(event.latLng.lat(), Math.floor(zoom/5));
-    var lng = roundTo(event.latLng.lng(), Math.floor(zoom/5));
- 
-    var gN = 'N';
-    if ( lat < 0 ) { gN = 'S'; lat = -lat; }
-    var gE = 'E';
-    if ( lng < 0 ) { gE = 'W'; lng = -lng; }
  
     $("#lb_position").text(formatLatLngPosition(event.latLng));
  
@@ -664,7 +657,7 @@ function updateWindInfo (event) {
     west = sw.lng();
     east = ne.lng();
     var iLat = Math.round((event.latLng.lat() - north) / (south - north) * ySteps);
-    var iLng = xSteps - Math.round(arcLength(west, event.latLng.lng()) / arcLength(west, east) * xSteps);
+    var iLng = Math.round(arcLength(west, event.latLng.lng()) / arcLength(west, east) * xSteps);
     var windDir = roundTo(windData[iLat][iLng][0], 0);
     var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
     $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
@@ -778,14 +771,6 @@ function toDeg (number) {
 function roundTo (number, digits) {
     var scale = Math.pow(10, digits);
     return Math.round(number * scale) / scale;
-}
- 
-function sign (x) {
-    if (x < 0) {
-        return -1;
-    } else {
-        return 1;
-    }
 }
  
 /// EOF

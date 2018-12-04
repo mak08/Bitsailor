@@ -31,6 +31,9 @@
     var trackMarkers = [];
     
     var windData = [];
+
+    var twaPath = [];
+    
     
     function setUp () {
         
@@ -88,10 +91,10 @@
         $("#cb_isochrones").change(onSetClientParameter);
         
         // Connect menu events
-        $("#bt_setstart" ).click(function () { setRoute('start') });
-        $("#bt_setdest"  ).click(function () { setRoute('dest') });
-        $("#bt_ltpmark"  ).click(function () { setRoute('ltp') });
-        $("#bt_ltsmark"  ).click(function () { setRoute('lts') });
+        $("#bt_setstart" ).click(function () { onContextMenu('start') });
+        $("#bt_setdest"  ).click(function () { onContextMenu('dest') });
+        $("#bt_ltpmark"  ).click(function () { onContextMenu('ltp') });
+        $("#bt_ltsmark"  ).click(function () { onContextMenu('lts') });
         
         var mapMenu = $("#mapMenu")[0];
         mapMenu.onmouseleave = onMapMenuMouseLeave;
@@ -104,7 +107,7 @@
             title: 'Start',
             draggable: true
         });
-        startMarker.addListener('click', function () { markerClicked(startMarker) });
+        startMarker.addListener('click', function () { onMarkerClicked(startMarker) });
         
         google.maps.event.addListener(startMarker,'dragend',function() {
             setRoutePoint('start', startMarker.getPosition());
@@ -116,7 +119,7 @@
             title: 'Destination',
             draggable: true
         });
-        destinationMarker.addListener('click', function () { markerClicked(destinationMarker) });
+        destinationMarker.addListener('click', function () { onMarkerClicked(destinationMarker) });
         
         google.maps.event.addListener(destinationMarker,'dragend',function() {
             setRoutePoint('dest', destinationMarker.getPosition());
@@ -128,6 +131,33 @@
         
         getSession();
         
+    }
+
+    // Event handler for context menu mapMenu 
+    function onContextMenu (point) {
+        var mapMenu=$("#mapMenu")[0];
+        mapMenu.style.display = "none";
+        setRoutePoint(point, mapEvent.latLng);
+    }
+    
+    function onSelectIsochrone (isochrone) {
+        var offset = isochrone.get('offset');
+        $("#ir_index")[0].value = offset;
+        var time = isochrone.get('time');
+        redrawWind("time", time);
+    }
+    
+    function onAdjustIndex (event) {
+        var source = event.target.id;
+        if (source == "bt_dec6")
+            ir_index.valueAsNumber = ir_index.valueAsNumber - 6;
+        else if (source == "bt_dec")
+            ir_index.valueAsNumber = ir_index.valueAsNumber - 1;
+        else if (source == "bt_inc")
+            ir_index.valueAsNumber = ir_index.valueAsNumber + 1;
+        else if (source == "bt_inc6")
+            ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
+        redrawWind("offset", ir_index.value);
     }
     
     function onDelayedStart (event) {
@@ -148,17 +178,80 @@
         }
     }
     
-    function markerClicked (marker) {
+    function onSetClientParameter (event) {
+        if ( event.currentTarget === 'foo' ) {
+        } else {
+            alert('later.');
+        }
+    }
+    
+    function onSetParameter (event) {
+        var paramName = event.currentTarget.name;
+        var paramValue;
+        // tb starttime has a 'checked' field but we don't want to use it.
+        if ( paramName === 'starttime' ) {
+            paramValue = event.currentTarget.value;
+        } else {
+            // default: if there is a 'checked' field use it, otherwise use the value field.
+            paramValue = event.currentTarget.checked;
+            if ( paramValue === undefined ) {
+                paramValue = event.currentTarget.value;
+            }
+        }
+        $.ajax({
+            url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
+            dataType: 'json'
+        }).done( function(data, status, xhr ) {
+            if ( paramName === "forecastbundle" ) {
+                var irIndex = $("#ir_index")[0];
+                var lbFCMax = $("#lb_fcmax")[0];
+                irIndex.value = 0;
+                if ( paramValue === "DWD-ICON-BUNDLE" ) {
+                    irIndex.max = 72;
+                    lbFCMax.innerText = 72;
+                } else if ( paramValue === "NOAA-BUNDLE" ) {
+                    irIndex.max = 240;
+                    lbFCMax.innerText = 240;
+                }
+                redrawWind("offset", irIndex.value);
+            }
+            console.log("OK");
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
+        });
+    }
+    
+    function onMapMenuMouseLeave (event) {
+        var mapMenu=$("#mapMenu")[0];
+        mapMenu.style.display = "none";
+    }
+    
+    function onMapRightClick (event) {
+        mapEvent = event;
+        var windowEvent = window.event;
+        var mapMenu=$("#mapMenu")[0];
+        var pageY;
+        var pageX;
+        if (windowEvent != undefined) {
+            pageX = windowEvent.pageX;
+            pageY = windowEvent.pageY;
+        } else {
+            pageX = event.pixel.x;
+            pageY = event.pixel.y;
+        }
+        
+        mapMenu.style.display = "block";
+        mapMenu.style["z-index"] = 400;
+        mapMenu.style.top = pageY + "px";
+        mapMenu.style.left = pageX + "px";
+        return false;
+    }
+    
+    function onMarkerClicked (marker) {
         twaAnchor = marker.getPosition();
         twaTime = marker.get('time');
         redrawWind("time", twaTime);
     }
-    
-    function updateStartPosition (lat, lng) {
-        var latLng = new google.maps.LatLng(lat, lng);
-        startMarker.setPosition(latLng);
-    }
-    
     
     function getSession () {
         $.ajax({
@@ -207,74 +300,9 @@
         });
     }
     
-    function onSetClientParameter (event) {
-        if ( event.currentTarget === 'foo' ) {
-        } else {
-            alert('later.');
-        }
-    }
-    
-    function onSetParameter (event) {
-        var paramName = event.currentTarget.name;
-        var paramValue;
-        // tb starttime has a 'checked' field but we don't want to use it.
-        if ( paramName === 'starttime' ) {
-            paramValue = event.currentTarget.value;
-        } else {
-            // default: if there is a 'checked' field use it, otherwise use the value field.
-            paramValue = event.currentTarget.checked;
-            if ( paramValue === undefined ) {
-                paramValue = event.currentTarget.value;
-            }
-        }
-        $.ajax({
-            url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
-            dataType: 'json'
-        }).done( function(data, status, xhr ) {
-            if ( paramName === "forecastbundle" ) {
-                var irIndex = $("#ir_index")[0];
-                var lbFCMax = $("#lb_fcmax")[0];
-                irIndex.value = 0;
-                if ( paramValue === "DWD-ICON-BUNDLE" ) {
-                    irIndex.max = 72;
-                    lbFCMax.innerText = 72;
-                } else if ( paramValue === "NOAA-BUNDLE" ) {
-                    irIndex.max = 240;
-                    lbFCMax.innerText = 240;
-                }
-                redrawWind("offset", irIndex.value);
-            }
-            console.log("OK");
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
-        });
-    }
-    
-    
-    function onMapMenuMouseLeave (event) {
-        var mapMenu=$("#mapMenu")[0];
-        mapMenu.style.display = "none";
-    }
-    
-    function onMapRightClick (event) {
-        mapEvent = event;
-        var windowEvent = window.event;
-        var mapMenu=$("#mapMenu")[0];
-        var pageY;
-        var pageX;
-        if (windowEvent != undefined) {
-            pageX = windowEvent.pageX;
-            pageY = windowEvent.pageY;
-        } else {
-            pageX = event.pixel.x;
-            pageY = event.pixel.y;
-        }
-        
-        mapMenu.style.display = "block";
-        mapMenu.style["z-index"] = 400;
-        mapMenu.style.top = pageY + "px";
-        mapMenu.style.left = pageX + "px";
-        return false;
+    function updateStartPosition (lat, lng) {
+        var latLng = new google.maps.LatLng(lat, lng);
+        startMarker.setPosition(latLng);
     }
     
     function setRoutePoint(point, latlng) {
@@ -311,13 +339,6 @@
         });
     }
 
-    // Event handler for context menu mapMenu 
-    function setRoute (point) {
-        var mapMenu=$("#mapMenu")[0];
-        mapMenu.style.display = "none";
-        setRoutePoint(point, mapEvent.latLng);
-    }
-    
     function clearRoute() {
         clearTWAPath();
         
@@ -342,7 +363,6 @@
         }
     }
     
-    
     function addWaypointInfo(trackMarker, point, nextPoint) {
         var infoWindow = new google.maps.InfoWindow({
             content: makeWaypointInfo(point, nextPoint)
@@ -355,6 +375,7 @@
             infoWindow.close();
         });
     }
+    
     function makeWaypointInfo(point, nextPoint) {
         result =  "<div style='color:#000;'>";
         result = result
@@ -461,17 +482,9 @@
         });
     }
     
-    function copyURL () {
-        var copyText = document.getElementById("tb_pageURL");
-        copyText.select();
-        document.execCommand("Copy");
-    }
-    
     function addMarkerListener(marker) {
-        marker.addListener('click', function () { markerClicked(marker) });
+        marker.addListener('click', function () { onMarkerClicked(marker) });
     }
-    
-    var twaPath = [];
     
     function clearTWAPath() {
         for ( var i=0; i<twaPath.length; i++ ) {
@@ -517,26 +530,6 @@
             var iso = isochrone;
             onSelectIsochrone(iso);
         });
-    }
-    
-    function onSelectIsochrone (isochrone) {
-        var offset = isochrone.get('offset');
-        $("#ir_index")[0].value = offset;
-        var time = isochrone.get('time');
-        redrawWind("time", time);
-    }
-    
-    function onAdjustIndex (event) {
-        var source = event.target.id;
-        if (source == "bt_dec6")
-            ir_index.valueAsNumber = ir_index.valueAsNumber - 6;
-        else if (source == "bt_dec")
-            ir_index.valueAsNumber = ir_index.valueAsNumber - 1;
-        else if (source == "bt_inc")
-            ir_index.valueAsNumber = ir_index.valueAsNumber + 1;
-        else if (source == "bt_inc6")
-            ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
-        redrawWind("offset", ir_index.value);
     }
     
     function updateMap () {
@@ -644,7 +637,6 @@
         }
     }
 
-
     function updateWindInfo (event) {
         
         var zoom = googleMap.getZoom();
@@ -674,14 +666,6 @@
                };
     }
 
-    
-    function arcLength(a, b) {
-        if ( a < 0 ) a += 360;
-        if ( b < 0 ) b += 360;
-        if ( b < a ) b += 360;
-        return b - a;
-    }
-
     function drawWindArrow(ctx, x, y, direction, speed) {
         direction = direction + 90;
         if (direction > 360) {
@@ -705,13 +689,8 @@
         ctx.restore();
     }
     
-    function m2nm (dist) {
-        return dist / 1852;
-    }
-    
-    function ms2knots (speed) {
-        return 900.0 * speed / 463.0;
-    }
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Formatting
     
     function formatLatLngPosition (latlng) {
         return formatPosition(latlng.lat(), latlng.lng());
@@ -719,34 +698,6 @@
     
     function formatPointPosition (point) {
         return formatPosition(point.lat, point.lng);
-    }
-
-    function sign(x) {
-        return (x < 0) ? -1 : 1;
-    }
-
-
-    function pad0(val) {
-        if (val < 10) {
-            val = "0" + val;
-        }
-        return val;
-    }
-
-    function toDMS(number) {
-        var u = sign(number);
-        number = Math.abs(number);
-        var g = Math.floor(number);
-        var frac = number - g;
-        var m = Math.floor(frac * 60);
-        frac = frac - m / 60;
-        var s = Math.floor(frac * 3600);
-        var cs = roundTo(360000 * (frac - s / 3600), 0);
-        while (cs >= 100) {
-            cs = cs - 100;
-            s = s + 1;
-        }
-        return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
     }
 
     function formatPosition(lat, lon) {
@@ -757,7 +708,17 @@
         return latString + ((latDMS.u == 1) ? "N" : "S") + " | " + lonString + ((lonDMS.u == 1) ? "E" : "W");
     }
 
-
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Conversion
+    
+    function m2nm (dist) {
+        return dist / 1852;
+    }
+    
+    function ms2knots (speed) {
+        return 900.0 * speed / 463.0;
+    }
+    
     function fromDeg (deg) {
         var sign = deg.u || 1;
         var abs = deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000.0);
@@ -780,9 +741,46 @@
         return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
     }
     
+    function toDMS(number) {
+        var u = sign(number);
+        number = Math.abs(number);
+        var g = Math.floor(number);
+        var frac = number - g;
+        var m = Math.floor(frac * 60);
+        frac = frac - m / 60;
+        var s = Math.floor(frac * 3600);
+        var cs = roundTo(360000 * (frac - s / 3600), 0);
+        while (cs >= 100) {
+            cs = cs - 100;
+            s = s + 1;
+        }
+        return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Stuff
+
     function roundTo (number, digits) {
         var scale = Math.pow(10, digits);
         return Math.round(number * scale) / scale;
+    }
+
+    function arcLength(a, b) {
+        if ( a < 0 ) a += 360;
+        if ( b < 0 ) b += 360;
+        if ( b < a ) b += 360;
+        return b - a;
+    }
+
+    function sign(x) {
+        return (x < 0) ? -1 : 1;
+    }
+
+    function pad0(val) {
+        if (val < 10) {
+            val = "0" + val;
+        }
+        return val;
     }
 
     $(document).ready(setUp);

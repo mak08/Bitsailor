@@ -15,10 +15,6 @@
     var xSteps = 70;
     var ySteps = 40;
     
-    // Map bounds
-    var north;
-    var south;
-    var west;
     var east;
     
     // Time index
@@ -549,14 +545,8 @@
         } else {
             googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
         }
-        var mapBounds = googleMap.getBounds();
-        var sw = mapBounds.getSouthWest();
-        var ne = mapBounds.getNorthEast();
-        north = ne.lat();
-        south = sw.lat();
-        west = sw.lng();
-        east = ne.lng();
-        var label = "⌊" + formatLatLngPosition(sw) + " \\ " +  formatLatLngPosition(ne) + "⌉";
+        var bounds = getMapBounds();
+        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
         redrawWind("offset", ir_index.value);
     }
@@ -587,18 +577,19 @@
     }
     
     function redrawWind (timeParamName, timeParamValue) {
+        var bounds = getMapBounds();
         
-        var lat0 = north + ((north - south) / ySteps)/2;
-        var lon0 = east + ((east - west) / xSteps)/2;
-        var ddx = roundTo(arcLength(west, east)/xSteps, 8);
-        var ddy = roundTo((north-south)/ySteps, 8);
+        var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
+        var lon0 = bounds.east + ((bounds.east - bounds.west) / xSteps)/2;
+        var ddx = roundTo(arcLength(bounds.west, bounds.east)/xSteps, 8);
+        var ddy = roundTo((bounds.north-bounds.south)/ySteps, 8);
 
         $.ajax({
             url: "/function/vh:getWind"
                 + "?" + timeParamName + "=" + timeParamValue
                 + "&north=" + roundTo(lat0, 6)
-                + "&south=" + roundTo(south, 6)
-                + "&west=" + roundTo(west, 6)
+                + "&south=" + roundTo(bounds.south, 6)
+                + "&west=" + roundTo(bounds.west, 6)
                 + "&east=" + roundTo(lon0, 6)
                 + "&ddx=" + ddx
                 + "&ddy=" + ddy,
@@ -625,23 +616,25 @@
         ctx.clearRect(0, 0, geometry.width, geometry.height);
 
         // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
+        var bounds = getMapBounds();
+
         var mapProjection = googleMap.getProjection();
-        var nwLatLng =  new google.maps.LatLng(north, west);
-        var seLatLng =  new google.maps.LatLng(south, east);
+        var nwLatLng =  new google.maps.LatLng(bounds.north, bounds.west);
+        var seLatLng =  new google.maps.LatLng(bounds.south, bounds.east);
         var nwPoint = mapProjection.fromLatLngToPoint(nwLatLng);
         var sePoint = mapProjection.fromLatLngToPoint(seLatLng);
         var mapWidth = (sePoint.x - nwPoint.x);
         var mapHeight = (sePoint.y - nwPoint.y);
 
         // Wind values are at evenly distributed lat/lng values
-        var width = (east-west);
-        var height = (south-north);
+        var width = (bounds.east-bounds.west);
+        var height = (bounds.south-bounds.north);
         var dlng = roundTo(width/xSteps, 8);
         var dlat = roundTo(height/ySteps, 8);
 
         // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
-        for ( var lat = north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
-            for ( var lng = west+dlng/4, x=0; x < xSteps; lng += dlng, x++ ) {
+        for ( var lat = bounds.north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
+            for ( var lng = bounds.west+dlng/4, x=0; x < xSteps; lng += dlng, x++ ) {
                 var latLng = new google.maps.LatLng(lat, lng);
                 var mapPoint = mapProjection.fromLatLngToPoint(latLng);
                 var pointX = (mapPoint.x - nwPoint.x) / mapWidth * ctx.canvas.width;
@@ -658,21 +651,30 @@
         
         $("#lb_position").text(formatLatLngPosition(event.latLng));
         
-        var mapBounds = googleMap.getBounds();
-        
-        var sw = mapBounds.getSouthWest();
-        var ne = mapBounds.getNorthEast();
-        north = ne.lat();
-        south = sw.lat();
-        west = sw.lng();
-        east = ne.lng();
-        var iLat = Math.round((event.latLng.lat() - north) / (south - north) * ySteps);
-        var iLng = Math.round(arcLength(west, event.latLng.lng()) / arcLength(west, east) * xSteps);
+        var bounds = getMapBounds();
+
+        var iLat = Math.round((event.latLng.lat() - bounds.north) / (bounds.south - bounds.north) * ySteps);
+        var iLng = Math.round(arcLength(bounds.west, event.latLng.lng()) / arcLength(bounds.west, bounds.east) * xSteps);
         var windDir = roundTo(windData[iLat][iLng][0], 0);
         var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
         $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
     }
 
+    function getMapBounds () {
+        var bounds = googleMap.getBounds();
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+        
+        return { northEast: ne,
+                 southWest: sw,
+                 north: ne.lat(),
+                 south: sw.lat(),
+                 west: sw.lng(),
+                 east: ne.lng()
+               };
+    }
+
+    
     function arcLength(a, b) {
         if ( a < 0 ) a += 360;
         if ( b < 0 ) b += 360;

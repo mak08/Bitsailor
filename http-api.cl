@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-03 22:53:46>
+;;; Last Modified <michael 2018-12-05 23:38:18>
 
 (in-package :virtualhelm)
 
@@ -16,22 +16,16 @@
 (defun get-page (server handler request response)
   (handler-case 
       (let* ((session (find-or-create-session request response))
-             (query (parameters request))
-             (mainpage (or (cadr (assoc "mainpage" query :test #'equal))
-                           "index"))
+             (mainpage (get-routing-request-mainpage request))
+             (race-id (get-routing-request-race-id request))
+             (routing (session-routing session race-id))
              (path (merge-pathnames (make-pathname :name mainpage :type "html")
                                     (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                                                       '("web"))))))
-        (log2:info "Query: ~a " query)
-        (dolist (pair (parameters request))
-          ;; Currently the only paramters supported here are 'start' and 'dest', designated by a place name.
-          ;; See places.cl.
-          (destructuring-bind (name value)
-              pair
-            (unless (string= name "mainpage")
-              (set-routing-parameter session name value))))
+        (log2:info "race-id: ~a" race-id)
+        (set-routing-parameters session routing (parameters request))
         (setf (http-header response :|Content-Location|)
-              (get-routing-url session))
+              (get-routing-url session race-id))
         (load-file path response))
     (error (e)
       (log2:error "~a" e)
@@ -44,6 +38,8 @@
   (declare (ignore location))
   (handler-case
       (let* ((session (find-or-create-session request response))
+             (race-id (get-routing-request-race-id request))
+             (routing (session-routing session race-id))
              (lat (coerce (read-from-string |lat|) 'double-float))
              (lng (coerce (read-from-string |lng|) 'double-float))
              (position (make-latlng :lat lat :lng lng)))
@@ -53,10 +49,10 @@
                (setf (status-code response) 400)
                (setf (status-text response) "Point is on land"))
               (t
-               (set-routing-parameter session |pointType| position)
+               (set-routing-parameter session routing |pointType| position)
                (setf (http-body response)
                      (with-output-to-string (s)
-                       (json s session))))))
+                       (json s routing))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -67,46 +63,67 @@
 
 (defun |setParameter| (location request response &key |name| (|value| nil))
   (declare (ignore location))
-  (let* ((session (find-or-create-session request response)))
-    (set-routing-parameter session |name| |value|) 
+  (let* ((session (find-or-create-session request response))
+         (race-id (get-routing-request-race-id request))
+         (routing (session-routing session race-id)))
+    (set-routing-parameter session routing |name| |value|) 
     (setf (http-header response :|Content-Location|)
-          (get-routing-url session))
-    (setf (http-body response)
-          (with-output-to-string (s)
-            (json s session)))))
+          (get-routing-url session race-id))
+    (setf (http-body response) "true")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
 (defun |getRoute| (location request response)
   (declare (ignore location))
-  (handler-case
-      (let* ((session
-              (find-or-create-session request response))
-             (routing
-              (session-routing session))
-             (routeinfo
-              (get-route routing)))
-        (setf (http-header response :|Content-Encoding|) "gzip")
-        (setf (http-body response)
-              (zlib:gzip (with-output-to-string (s)
-                           (json s routeinfo)))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
+  (let ((race-id (get-routing-request-race-id request)))
+    (handler-case
+        (let* ((session
+                (find-or-create-session request response))
+               (routing
+                (session-routing session race-id))
+               (routeinfo
+                (get-route routing)))
+          (setf (http-header response :|Content-Encoding|) "gzip")
+          (setf (http-body response)
+                (zlib:gzip (with-output-to-string (s)
+                             (json s routeinfo)))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
+
+(defun get-routing-request-mainpage (request)
+  (let ((query-pairs (parameters request)))
+    (or (cadr (assoc "mainpage" query-pairs :test #'string=))
+        "index")))
+
+(defun get-routing-request-race-id (request)
+  (or (cadr (assoc "race" (parameters request) :test #'string=))
+      (let* ((referer (http-header request :|referer|))
+             (query-string (puri:uri-query (puri:parse-uri referer)))
+             (query-pairs (parse-url-query query-string)))
+        (or (cadr (assoc "race" query-pairs :test #'string=))
+            "default"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getSession
+
+
+;;; JSON cannot print hashtables but SESSIOn now contains one.
+;;; For now we just return the requested routing.
 (defun |getSession| (location request response)
   (declare (ignore location))
   (let* ((session
-          (find-or-create-session request response)))
+          (find-or-create-session request response))
+         (race-id (get-routing-request-race-id request))
+         (routing
+          (session-routing session race-id)))
     (setf (http-header response :|Content-Location|)
-          (get-routing-url session))
+          (get-routing-url session race-id))
     (setf (http-body response)
           (with-output-to-string (s)
-            (json s session)))))
+            (json s routing)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -116,9 +133,10 @@
 (defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore location request))
   (handler-case
-      (let ((*read-default-float-format* 'double-float))
+      (let ((*read-default-float-format* 'double-float)
+            (race-id (get-routing-request-race-id request)))
         (let* ((session (find-or-create-session request response))
-               (routing (session-routing session))
+               (routing (session-routing session race-id))
                (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                                     (get-forecast-bundle 'constant-wind-bundle)))
                (forecast-time
@@ -177,7 +195,8 @@
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (session (find-or-create-session request response))
-             (routing (session-routing session))
+             (race-id (get-routing-request-race-id request))
+             (routing (session-routing session race-id))
              (time (parse-datetime |time|))
              (lat-a (read-from-string |latA|))
              (lng-a (read-from-string |lngA|))
@@ -218,11 +237,24 @@
 
 (defstruct session
   (session-id (make-session-id))
-  (routing (make-routing)))
+  (routings (make-hash-table :test #'equal)))
+
+(defun create-session (&key (session-id (make-session-id)) (race-id "default"))
+  (let ((session (make-session :session-id session-id)))
+    (setf (gethash race-id (session-routings session))
+          (make-routing))
+    (values session)))
+
+(defun session-routing (session race-id)
+  (or
+   (gethash race-id (session-routings session))
+   (setf (gethash race-id (session-routings session))
+         (make-routing))))
 
 (defun find-or-create-session (request response)
   (let* ((session-cookie
           (get-cookie request "SessionID"))
+         (race-id (get-routing-request-race-id request))
          (session-id)
          (session))
     (cond (session-cookie
@@ -231,7 +263,7 @@
              (cond
                ((null stored-session)
                 (setf session (setf (gethash session-id *session-ht*)
-                                    (make-session :session-id session-id)))
+                                    (create-session :session-id session-id :race-id race-id)))
                 (log2:info "Session was lost for SessionID ~a." session-id))
                (t
                 (setf session stored-session)
@@ -240,7 +272,7 @@
            (setf session-id (make-session-id))
            (set-cookie response "SessionID" session-id)
            (setf session (setf (gethash session-id *session-ht*)
-                               (make-session :session-id session-id)))
+                               (create-session :session-id session-id :race-id race-id)))
            (log2:info "Session created for new SessionID ~a." session-id)))
     session))
 
@@ -253,16 +285,17 @@
   (setf (http-header response :|Content-Type|) "text/html"))
 
 
-(defun get-routing-url (session)
-  (let ((routing (session-routing session)))
+(defun get-routing-url (session race-id)
+  (let ((routing (session-routing session race-id)))
     (format nil "/vh?~@{~a=~a~^&~}"
+            "mainpage" "main" 
+            "race" race-id
             "forecastbundle" (routing-forecast-bundle routing)
             "starttime" (routing-starttime routing)
             "polars" (routing-polars routing)
             "options" (format nil "~{~a~^,~}" (routing-options routing))
             "minwind" (if (routing-minwind routing) "true" "false")
             "duration" (/ (routing-stepmax routing) 3600))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races
@@ -273,77 +306,83 @@
         ("minwind" "true")
         ("searchangle" "90"))))
 
-(defun set-routing-parameter (session name value)
+(defun set-routing-parameters (session routing pairs)
+  (dolist (pair pairs)
+    (destructuring-bind (name value)
+        pair
+      (unless (member name '("destlat" "destlon" "mainpage") :test #'string=)
+        (set-routing-parameter session routing name value)))))
+
+(defun set-routing-parameter (session routing name value)
   (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
-  (let ((routing (session-routing session)))
-    (cond
-      ((string= name "race")
-       (loop
-          :for (name-i value-i) :in (get-parameter-group value)
-          :do (set-routing-parameter session name-i value-i)))
-      ((string= name "forecastbundle")
-       (cond
-         ((string= value "DWD-ICON-BUNDLE")
-          (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
-         ((string= value "NOAA-BUNDLE")
-          (setf (routing-forecast-bundle routing) 'noaa-bundle))
-         (t
-          (error "Invalid forecast designator ~a" value))))
-      ((string= name "starttime")
-       (setf (routing-starttime routing) value))
-      ((string= name "polars")
-       (setf (routing-polars routing) value))
-      ((string= name "options")
-       (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
-      ((string= name "minwind")
-       (setf (routing-minwind routing) (string= value "true")))
-      ((string= name "duration")
-       (let ((duration-hrs
-              (read-from-string value)))
-         (setf (routing-stepmax routing)
-               (* duration-hrs 3600))))
-      ((string= name "mode")
-       (cond
-         ((string= value "maxorigin")
-          (setf (routing-mode routing) +max-origin+))
-         ((string= value "mindestination")
-          (setf (routing-mode routing) +min-destination+))
-         ((string= value "convhull")
-          (error "NYI"))
-         (t
-          (error "Invalid search mode"))))
-      ((string= name "searchangle")
-       (let ((fan (read-from-string value)))
-         (setf (routing-fan routing) fan)))
-      ((string= name "start")
-       (setf (routing-start routing)
-             (etypecase value
-               (latlng value)
-               (string (find-place value)))))
-      ((string= name "startlat")
-       (setf (routing-start routing)
-             (make-latlng :lat (coerce (read-from-string value) 'double-float)
-                          :lng (latlng-lng (routing-start routing)))))
-      ((string= name "startlon")
-       (setf (routing-start routing)
-             (make-latlng :lat (latlng-lat (routing-start routing))
-                          :lng (coerce (read-from-string value) 'double-float))))
-      ((string= name "dest")
-       (setf (routing-dest routing)
-             (etypecase value
-               (latlng value)
-               (string (find-place value)))))
-      ((string= name "destlat")
-       (setf (routing-dest routing)
-             (make-latlng :lat (coerce (read-from-string value) 'double-float)
-                          :lng (latlng-lng (routing-dest routing)))))
-      ((string= name "destlon")
-       (setf (routing-dest routing)
-             (make-latlng :lat (latlng-lat (routing-dest routing))
-                          :lng (coerce (read-from-string value) 'double-float))))
-      (t
-       (log2:error "Unhandled parameter ~a=~a" name value)
-       (error "Unhandled parameter ~a=~a" name value)))))
+  (cond
+    ((string= name "race")
+     (loop
+        :for (name-i value-i) :in (get-parameter-group value)
+        :do (set-routing-parameter session routing name-i value-i)))
+    ((string= name "forecastbundle")
+     (cond
+       ((string= value "DWD-ICON-BUNDLE")
+        (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
+       ((string= value "NOAA-BUNDLE")
+        (setf (routing-forecast-bundle routing) 'noaa-bundle))
+       (t
+        (error "Invalid forecast designator ~a" value))))
+    ((string= name "starttime")
+     (setf (routing-starttime routing) value))
+    ((string= name "polars")
+     (setf (routing-polars routing) value))
+    ((string= name "options")
+     (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
+    ((string= name "minwind")
+     (setf (routing-minwind routing) (string= value "true")))
+    ((string= name "duration")
+     (let ((duration-hrs
+            (read-from-string value)))
+       (setf (routing-stepmax routing)
+             (* duration-hrs 3600))))
+    ((string= name "mode")
+     (cond
+       ((string= value "maxorigin")
+        (setf (routing-mode routing) +max-origin+))
+       ((string= value "mindestination")
+        (setf (routing-mode routing) +min-destination+))
+       ((string= value "convhull")
+        (error "NYI"))
+       (t
+        (error "Invalid search mode"))))
+    ((string= name "searchangle")
+     (let ((fan (read-from-string value)))
+       (setf (routing-fan routing) fan)))
+    ((string= name "start")
+     (setf (routing-start routing)
+           (etypecase value
+             (latlng value)
+             (string (find-place value)))))
+    ((string= name "startlat")
+     (setf (routing-start routing)
+           (make-latlng :lat (coerce (read-from-string value) 'double-float)
+                        :lng (latlng-lng (routing-start routing)))))
+    ((string= name "startlon")
+     (setf (routing-start routing)
+           (make-latlng :lat (latlng-lat (routing-start routing))
+                        :lng (coerce (read-from-string value) 'double-float))))
+    ((string= name "dest")
+     (setf (routing-dest routing)
+           (etypecase value
+             (latlng value)
+             (string (find-place value)))))
+    ((string= name "destlat")
+     (setf (routing-dest routing)
+           (make-latlng :lat (coerce (read-from-string value) 'double-float)
+                        :lng (latlng-lng (routing-dest routing)))))
+    ((string= name "destlon")
+     (setf (routing-dest routing)
+           (make-latlng :lat (latlng-lat (routing-dest routing))
+                        :lng (coerce (read-from-string value) 'double-float))))
+    (t
+     (log2:error "Unhandled parameter ~a=~a" name value)
+     (error "Unhandled parameter ~a=~a" name value))))
 
 (defun make-session-id ()
   (create-uuid))

@@ -171,7 +171,7 @@
                 url: "/function/vh:setParameter" + "?name=" + 'starttime',
                 dataType: 'json'
             }).done( function(data) {
-                console.log("OK");
+                console.log(data);
             }).fail( function (jqXHR, textStatus, errorThrown) {
                 alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
             });
@@ -257,22 +257,22 @@
         $.ajax({
             url: "/function/vh:getSession",
             dataType: 'json'
-        }).done( function(session, status, xhr) {
+        }).done( function(routing, status, xhr) {
             
-            updateStartPosition(session.routing.start.lat, session.routing.start.lng);
+            updateStartPosition(routing.start.lat, routing.start.lng);
             
-            var start  = new google.maps.LatLng(session.routing.start.lat, session.routing.start.lng);
+            var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
             googleMap.setCenter(start);
             
-            var dest  = new google.maps.LatLng(session.routing.dest.lat, session.routing.dest.lng);
+            var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
             destinationMarker.setPosition(dest);
             
-            var forecast = session.routing["forecast-bundle"];
+            var forecast = routing["forecast-bundle"];
             var selForecast = $("#sel_forecastbundle")[0];
             var irIndex = $("#ir_index")[0];
             var lbFCMax = $("#lb_fcmax")[0];
             
-            var starttime = session.routing.starttime;
+            var starttime = routing.starttime;
             var cbStartDelayed = $("#cb_startdelayed")[0];
             if ( starttime != false && starttime != 'NIL' ) {
                 cbStartDelayed.checked = true;
@@ -282,15 +282,15 @@
                 cbStartDelayed.checked = false;
             }
             
-            var polars = session.routing.polars;
+            var polars = routing.polars;
             var selPolars = $("#sel_polars")[0];
             selPolars.value = polars;
             
-            var duration = session.routing.stepmax/3600;
+            var duration = routing.stepmax/3600;
             var selDuration = $("#sel_duration")[0];
             selDuration.value = duration;
             
-            var minWind = session.routing.minwind;
+            var minWind = routing.minwind;
             var cbMinWind = $("#cb_minwind")[0];
             cbMinWind.checked = minWind;
             

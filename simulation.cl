@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-04 00:59:08>
+;;; Last Modified <michael 2018-12-08 14:07:59>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -45,7 +45,7 @@
   (start +lessables+)
   (dest +lacoruna+)
   (mode +max-origin+)
-  (fan 90)
+  (fan 100)
   (stepmax +24h+))
 
 (defstruct duration days hours minutes seconds)
@@ -288,8 +288,7 @@
     ((null routepoint)
      (return-from expand-routepoint 0))
     ((not (and
-           (<= -75d0 (latlng-lat (routepoint-position routepoint)) 85d0)
-           (<= -180d0 (latlng-lng (routepoint-position routepoint)) 180d0)))
+           (<= -75d0 (latlng-lat (routepoint-position routepoint)) 85d0)))
      (return-from expand-routepoint 0))
     (t
      (let* ((cur-twa (routepoint-twa routepoint))

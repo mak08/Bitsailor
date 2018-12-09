@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-14 23:57:49>
+;;; Last Modified <michael 2018-12-08 14:02:24>
 
 (in-package :virtualhelm)
 
@@ -62,6 +62,79 @@
 ;;; http://www.kompf.de/trekka/distance.php?lat1=52.5164&lon1=13.3777&lat2=38.692668&lon2=-9.177944
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
+(defun gc-angle (origin target)
+  ;; Angle between origin and target on the GC defined by these points (symmetric)
+  (let* ((lat1 (latlng-latr origin))
+         (lat2 (latlng-latr target))
+         (lon1 (latlng-lngr origin))
+         (lon2 (latlng-lngr target))
+         (d (- lon2 lon1)))
+    (deg
+     (acos
+      (+ (* (sin lat1) (sin lat2))
+         (* (cos lat1) (cos lat2) (cos d)))))))
+
+
+(declaim (inline add-distance-exact add-distance-estimate))
+(defun add-distance-exact (pos distance alpha)
+  ;; Exact calculation on the spherical Earth
+  (let ((lat (latlng-lat pos))
+        (lon (latlng-lng pos)))
+    (declare (double-float lat lon distance alpha))
+    (let* ((d (/ distance +radius+))
+           (cis-d (cis d))
+           (cos-d (realpart cis-d))
+           (sin-d (imagpart cis-d))
+           (a (* alpha +pi/180+))
+           (sin-a (sin a))
+           (lat-r (* lat +pi/180+))
+           (cis-lat-r (cis lat-r))
+           (cos-lat-r (realpart cis-lat-r))
+           (sin-lat-r (imagpart cis-lat-r))
+           (lon-r (* lon +pi/180+))
+           (lat-new-r (asin (+ (* sin-lat-r cos-d)
+                               (* cos-lat-r sin-d (cos a)))))
+           (lon-new-r (+ lon-r
+                         (asin (/ (* sin-a sin-d)
+                                  (cos lat-new-r))))))
+      (declare (double-float cos-d sin-d cos-lat-r sin-lat-r))
+      (make-latlng :lat (/ lat-new-r +pi/180+)
+                   :lng (/ lon-new-r +pi/180+)))))
+(defun add-distance-estimate (pos distance alpha)
+  ;; Approximation for short distances (<< 100km)
+  (let ((lat (latlng-lat pos))
+        (lon (latlng-lng pos)))
+    (declare (double-float lat lon distance alpha))
+    (let* ((d (/ distance +radius+))
+           (a (* alpha +pi/180+))
+           (lat-r (* lat +pi/180+))
+           (lon-r (* lon +pi/180+))
+           (d-lat-r (* d (cos a)))
+           (d-lon-r (* d (/ (sin a) (cos (+ lat-r d-lat-r))))))
+      (make-latlng :lat (/ (+ lat-r d-lat-r) +pi/180+)
+                   :lng (/ (+ lon-r d-lon-r) +pi/180+)))))
+(declaim (notinline add-distance-exact add-distance-estimate))
+
+(defun longitudinal-distance (latlng1 latlng2)
+  (let* ((l1 (latlng-lng latlng1))
+         (l2 (latlng-lng latlng2))
+         (d (abs (- l1 l2))))
+    (if (<= d 180)
+        d
+        (- 360 d))))
+
+(declaim (inline  longitudinal-direction))
+(defun longitudinal-direction (start dest)
+  (let* ((start-lng (latlng-lng start))
+         (dest-lng (latlng-lng dest))
+         (sign (- start-lng dest-lng))
+         (delta (abs sign)))
+    (if (<= delta 180)
+        (if (<= sign 0) 1 -1)
+        (if (<= sign 0) -1 1))))
+(declaim (notinline  longitudinal-direction))
+
+(declaim (inline course-distance course-angle))
 (defun course-distance (origin target)
   (declare (ftype (function (t) double-float) latlng-latr latlng-lngr))
   (let* ((lat1 (latlng-latr origin))
@@ -110,87 +183,15 @@
                  (if (complexp omega%)
                      (realpart omega%)
                      omega%)))
-              (delta
-               (- lon2 lon1)))
-         (declare (double-float cos-omega omega delta))
-         (deg
-          (if (or (< delta 0d0)
-                  (> delta 180d0))
-              (- omega)
-              omega)))))))
-
-(defun gc-angle (origin target)
-  ;; Angle between origin and target on the GC defined by these points (symmetric)
-  (let* ((lat1 (latlng-latr origin))
-         (lat2 (latlng-latr target))
-         (lon1 (latlng-lngr origin))
-         (lon2 (latlng-lngr target))
-         (d (- lon2 lon1)))
-    (deg
-     (acos
-      (+ (* (sin lat1) (sin lat2))
-         (* (cos lat1) (cos lat2) (cos d)))))))
-
-
-(defun add-distance-exact (pos distance alpha)
-  ;; Exact calculation on the spherical Earth
-  (let ((lat (latlng-lat pos))
-        (lon (latlng-lng pos)))
-    (declare (double-float lat lon distance alpha))
-    (let* ((d (/ distance +radius+))
-           (cis-d (cis d))
-           (cos-d (realpart cis-d))
-           (sin-d (imagpart cis-d))
-           (a (* alpha +pi/180+))
-           (sin-a (sin a))
-           (lat-r (* lat +pi/180+))
-           (cis-lat-r (cis lat-r))
-           (cos-lat-r (realpart cis-lat-r))
-           (sin-lat-r (imagpart cis-lat-r))
-           (lon-r (* lon +pi/180+))
-           (lat-new-r (asin (+ (* sin-lat-r cos-d)
-                               (* cos-lat-r sin-d (cos a)))))
-           (lon-new-r (+ lon-r
-                         (asin (/ (* sin-a sin-d)
-                                  (cos lat-new-r))))))
-      (declare (double-float cos-d sin-d cos-lat-r sin-lat-r))
-      (make-latlng :lat (/ lat-new-r +pi/180+)
-                   :lng (/ lon-new-r +pi/180+)))))
-
-;; Can't SETF LATLNG-LAT/LNG!
-#+()(defun add-distance-exact! (pos distance alpha)
-  ;; Exact calculation on the spherical Earth
-  (let ((lat (latlng-lat pos))
-        (lon (latlng-lng pos)))
-    (declare (double-float lat lon distance alpha))
-    (let* ((d (/ distance +radius+))
-           (a (* alpha +pi/180+))
-           (sin-a (sin a))
-           (sin-d (sin d))
-           (lat-r (* lat +pi/180+))
-           (lon-r (* lon +pi/180+))
-           (lat-new-r (asin (+ (* (sin lat-r) (cos d))
-                               (* (cos lat-r) sin-d (cos a)))))
-           (lon-new-r (+ lon-r
-                         (asin (/ (* sin-a sin-d)
-                                  (cos lat-new-r))))))
-      (setf (latlng-lat pos) (/ lat-new-r +pi/180+)
-            (latlng-lng pos) (/ lon-new-r +pi/180+)))))
-
-(defun add-distance-estimate (pos distance alpha)
-  ;; Approximation for short distances (<< 100km)
-  (let ((lat (latlng-lat pos))
-        (lon (latlng-lng pos)))
-    (declare (double-float lat lon distance alpha))
-    (let* ((d (/ distance +radius+))
-           (a (* alpha +pi/180+))
-           (lat-r (* lat +pi/180+))
-           (lon-r (* lon +pi/180+))
-           (d-lat-r (* d (cos a)))
-           (d-lon-r (* d (/ (sin a) (cos (+ lat-r d-lat-r))))))
-      (make-latlng :lat (/ (+ lat-r d-lat-r) +pi/180+)
-                   :lng (/ (+ lon-r d-lon-r) +pi/180+)))))
-
+              (delta (- lon2 lon1))
+              (ld (longitudinal-direction origin target)))
+         (declare (double-float cos-omega omega))
+         (normalize-angle
+          (deg
+           (if (= ld 1)
+               omega
+               (- (* PI 2) omega)))))))))
+(declaim (inline course-distance course-angle))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

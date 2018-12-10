@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-11-25 22:05:24>
+;;; Last Modified <michael 2018-12-10 21:12:05>
 
 (in-package :virtualhelm)
 
@@ -31,12 +31,14 @@
           (+ value 360)
           value)))
 
+(declaim (inline normalize-angle))
 (defun normalize-angle (value)
-  (if (<= value -180)
-      (+ value 360)
-      (if (> value 180)
-          (- value 360)
+  (if (<= value -180d0)
+      (+ value 360d0)
+      (if (> value 180d0)
+          (- value 360d0)
           value)))
+(declaim (notinline normalize-angle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Time

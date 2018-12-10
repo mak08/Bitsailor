@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-08 14:03:23>
+;;; Last Modified <michael 2018-12-10 21:22:40>
 
 (in-package :virtualhelm)
 
@@ -16,7 +16,7 @@
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng 1d0))
- 44.99563645533813d0)
+  44.99563645534485d0)
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 0d0 :lng 1d0))
@@ -24,7 +24,7 @@
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng 1d0))
- 135.00436354466189d0)
+ 135.00436354465515d0)
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng 0d0))
@@ -32,7 +32,7 @@
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat -1d0 :lng -1d0))
- -135.00436354466189d0)
+ -135.00436354465518d0)
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 0d0 :lng -1d0))
@@ -40,7 +40,7 @@
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng -1d0))
- -44.995636455338115d0)
+ -44.99563645534482d0)
 
 (check-equal
  (course-angle (make-latlng :lat 0d0 :lng 0d0) (make-latlng :lat 1d0 :lng 0d0))

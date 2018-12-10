@@ -33,19 +33,11 @@
     var windData = [];
 
     var twaPath = [];
-    
-    
+
     function setUp () {
         
         setupColors();
-        
-        mapCanvas = document.getElementById('wind-canvas');
-        var mapRect = mapCanvas.getBoundingClientRect();
-        geometry.width = mapRect.width * 6;
-        geometry.height = mapRect.height * 6;
-        mapCanvas.width = geometry.width;
-        mapCanvas.height = geometry.height;
-        
+
         // Create a map object, and include the MapTypeId to add
         // to the map type control.
         var mapProp = {
@@ -57,10 +49,12 @@
         };
         var mapDiv = $("#map")[0];
         googleMap = new google.maps.Map(mapDiv, mapProp);
-        
+
+        // Handle window resize
+        window.addEventListener('resize', onWindowResize);
+
         // Connect map events
         google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
-        // google.maps.event.addListener(googleMap, 'bounds_changed', updateMap);
         google.maps.event.addListener(googleMap, 'dragend', updateMap);
         google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
         
@@ -125,12 +119,32 @@
             setRoutePoint('dest', destinationMarker.getPosition());
         });
         
+        setupCanvas();
+        
         google.maps.event.addListenerOnce(googleMap, 'idle', function(){
             updateMap();
         });
         
         getSession();
         
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Event handlers
+    
+    function onWindowResize (event) {
+    }
+
+    function updateMap () {
+        if ( googleMap.zoom < 6 ) {
+            googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+        } else {
+            googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+        }
+        var bounds = getMapBounds();
+        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
+        $("#lb_map_bounds").text("Kartenausschnitt: " + label);
+        redrawWind("offset", ir_index.value);
     }
 
     // Event handler for context menu mapMenu 
@@ -253,155 +267,8 @@
         redrawWind("time", twaTime);
     }
     
-    function getSession () {
-        $.ajax({
-            url: "/function/vh:getSession",
-            dataType: 'json'
-        }).done( function(routing, status, xhr) {
-            
-            updateStartPosition(routing.start.lat, routing.start.lng);
-            
-            var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
-            googleMap.setCenter(start);
-            
-            var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
-            destinationMarker.setPosition(dest);
-            
-            var forecast = routing["forecast-bundle"];
-            var selForecast = $("#sel_forecastbundle")[0];
-            var irIndex = $("#ir_index")[0];
-            var lbFCMax = $("#lb_fcmax")[0];
-            
-            var starttime = routing.starttime;
-            var cbStartDelayed = $("#cb_startdelayed")[0];
-            if ( starttime != false && starttime != 'NIL' ) {
-                cbStartDelayed.checked = true;
-                $("#tb_starttime")[0].value = starttime;
-                
-            } else {
-                cbStartDelayed.checked = false;
-            }
-            
-            var polars = routing.polars;
-            var selPolars = $("#sel_polars")[0];
-            selPolars.value = polars;
-            
-            var duration = routing.stepmax/3600;
-            var selDuration = $("#sel_duration")[0];
-            selDuration.value = duration;
-            
-            var minWind = routing.minwind;
-            var cbMinWind = $("#cb_minwind")[0];
-            cbMinWind.checked = minWind;
-            
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
-    }
-    
-    function updateStartPosition (lat, lng) {
-        var latLng = new google.maps.LatLng(lat, lng);
-        startMarker.setPosition(latLng);
-    }
-    
-    function setRoutePoint(point, latlng) {
-        var lat =  latlng.lat();
-        var lng =  latlng.lng();
-        var that = this;
-        $.ajax({
-            url: "/function/vh:setRoute"
-                + "?pointType=" + point
-                + "&lat=" + lat
-                + "&lng=" + lng,
-            dataType: 'json'
-        }).done( function(data) {
-            // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-            if ( point === 'start' ) {
-                updateStartPosition(lat, lng);
-            } else if ( point === 'dest' ) {
-                destinationMarker.setPosition(latlng);
-            }
-            if (courseGCLine) {
-                courseGCLine.setMap(null);
-            };
-            courseGCLine = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#d00000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1
-            });
-            courseGCLine.setMap(googleMap);
-            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
-        });
-    }
-
-    function clearRoute() {
-        clearTWAPath();
-        
-        for ( var i = 0; i<trackMarkers.length; i++ ) {
-            trackMarkers[i].setMap(undefined);
-        }
-        trackMarkers = [];
-        for ( var i = 0; i<routeTracks.length; i++ ) {
-            routeTracks[i].setMap(undefined);
-        }
-        routeTracks = [];
-        for ( var i = 0; i<routeIsochrones.length; i++ ) {
-            routeIsochrones[i].setMap(undefined);
-        }
-        routeIsochrones = [];
-    }
-    
-    function updateGetRouteProgress () {
-        var pgGetRoute = $("#pg_getroute")[0];
-        if ( pgGetRoute.value < pgGetRoute.max ) {
-            pgGetRoute.value = pgGetRoute.value + 10;
-        }
-    }
-    
-    function addWaypointInfo(trackMarker, point, nextPoint) {
-        var infoWindow = new google.maps.InfoWindow({
-            content: makeWaypointInfo(point, nextPoint)
-        });
-        trackMarker.set('time', point.time);
-        trackMarker.addListener('mouseover', function() {
-            infoWindow.open(googleMap, trackMarker);
-        });
-        trackMarker.addListener('mouseout', function() {
-            infoWindow.close();
-        });
-    }
-    
-    function makeWaypointInfo(point, nextPoint) {
-        result =  "<div style='color:#000;'>";
-        result = result
-            + "<p><b>Time</b>: " + point.time + "</p>"
-            + "<p><b>Position</b>: " + formatPointPosition(point.position) + "</p>"
-            + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
-        if ( nextPoint !== undefined ) {
-            result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
-                + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>"
-                + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
-        }
-        result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
-        result = result + "</div>";
-        return result;
-    }
-    
-    // Routepoint does not store TWA
-    function routepointTWA (point) {
-        var angle =  point["wind-dir"] - point.heading;
-        if ( angle <= -180 ) {
-            angle += 360;
-        } else if (angle > 180) {
-            angle -= 360;
-        }
-        return angle;
-    }
+    //////////////////////////////////////////////////////////////////////
+    /// XHR requests
     
     function getRoute () {
         var mapMenu=$("#mapMenu")[0];
@@ -482,6 +349,166 @@
         });
     }
     
+    function setRoutePoint(point, latlng) {
+        var lat =  latlng.lat();
+        var lng =  latlng.lng();
+        var that = this;
+        $.ajax({
+            url: "/function/vh:setRoute"
+                + "?pointType=" + point
+                + "&lat=" + lat
+                + "&lng=" + lng,
+            dataType: 'json'
+        }).done( function(data) {
+            // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
+            if ( point === 'start' ) {
+                updateStartPosition(lat, lng);
+            } else if ( point === 'dest' ) {
+                destinationMarker.setPosition(latlng);
+            }
+            if (courseGCLine) {
+                courseGCLine.setMap(null);
+            };
+            courseGCLine = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: '#d00000',
+                strokeOpacity: 1.0,
+                strokeWeight: 1
+            });
+            courseGCLine.setMap(googleMap);
+            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+            
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
+        });
+    }
+
+    function getSession () {
+        $.ajax({
+            url: "/function/vh:getSession",
+            dataType: 'json'
+        }).done( function(routing, status, xhr) {
+            
+            updateStartPosition(routing.start.lat, routing.start.lng);
+            
+            var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
+            googleMap.setCenter(start);
+            
+            var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
+            destinationMarker.setPosition(dest);
+            
+            var forecast = routing["forecast-bundle"];
+            var selForecast = $("#sel_forecastbundle")[0];
+            var irIndex = $("#ir_index")[0];
+            var lbFCMax = $("#lb_fcmax")[0];
+            
+            var starttime = routing.starttime;
+            var cbStartDelayed = $("#cb_startdelayed")[0];
+            if ( starttime != false && starttime != 'NIL' ) {
+                cbStartDelayed.checked = true;
+                $("#tb_starttime")[0].value = starttime;
+                
+            } else {
+                cbStartDelayed.checked = false;
+            }
+            
+            var polars = routing.polars;
+            var selPolars = $("#sel_polars")[0];
+            selPolars.value = polars;
+            
+            var duration = routing.stepmax/3600;
+            var selDuration = $("#sel_duration")[0];
+            selDuration.value = duration;
+            
+            var minWind = routing.minwind;
+            var cbMinWind = $("#cb_minwind")[0];
+            cbMinWind.checked = minWind;
+            
+            
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert(textStatus + ' ' + errorThrown);
+        });
+    }
+    
+    function setupCanvas () {
+        var mapCanvas = document.getElementById('wind-canvas');
+        var mapRect = mapCanvas.getBoundingClientRect();
+        geometry.width = mapRect.width * 6;
+        geometry.height = mapRect.height * 6;
+        mapCanvas.width = geometry.width;
+        mapCanvas.height = geometry.height;
+    }
+
+    
+    function updateStartPosition (lat, lng) {
+        var latLng = new google.maps.LatLng(lat, lng);
+        startMarker.setPosition(latLng);
+    }
+    
+    function clearRoute() {
+        clearTWAPath();
+        
+        for ( var i = 0; i<trackMarkers.length; i++ ) {
+            trackMarkers[i].setMap(undefined);
+        }
+        trackMarkers = [];
+        for ( var i = 0; i<routeTracks.length; i++ ) {
+            routeTracks[i].setMap(undefined);
+        }
+        routeTracks = [];
+        for ( var i = 0; i<routeIsochrones.length; i++ ) {
+            routeIsochrones[i].setMap(undefined);
+        }
+        routeIsochrones = [];
+    }
+    
+    function updateGetRouteProgress () {
+        var pgGetRoute = $("#pg_getroute")[0];
+        if ( pgGetRoute.value < pgGetRoute.max ) {
+            pgGetRoute.value = pgGetRoute.value + 10;
+        }
+    }
+    
+    function addWaypointInfo(trackMarker, point, nextPoint) {
+        var infoWindow = new google.maps.InfoWindow({
+            content: makeWaypointInfo(point, nextPoint)
+        });
+        trackMarker.set('time', point.time);
+        trackMarker.addListener('mouseover', function() {
+            infoWindow.open(googleMap, trackMarker);
+        });
+        trackMarker.addListener('mouseout', function() {
+            infoWindow.close();
+        });
+    }
+    
+    function makeWaypointInfo(point, nextPoint) {
+        result =  "<div style='color:#000;'>";
+        result = result
+            + "<p><b>Time</b>: " + point.time + "</p>"
+            + "<p><b>Position</b>: " + formatPointPosition(point.position) + "</p>"
+            + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
+        if ( nextPoint !== undefined ) {
+            result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
+                + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>"
+                + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
+        }
+        result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
+        result = result + "</div>";
+        return result;
+    }
+    
+    // Routepoint does not store TWA
+    function routepointTWA (point) {
+        var angle =  point["wind-dir"] - point.heading;
+        if ( angle <= -180 ) {
+            angle += 360;
+        } else if (angle > 180) {
+            angle -= 360;
+        }
+        return angle;
+    }
+    
     function addMarkerListener(marker) {
         marker.addListener('click', function () { onMarkerClicked(marker) });
     }
@@ -532,18 +559,6 @@
         });
     }
     
-    function updateMap () {
-        if ( googleMap.zoom < 6 ) {
-            googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-        } else {
-            googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
-        }
-        var bounds = getMapBounds();
-        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
-        $("#lb_map_bounds").text("Kartenausschnitt: " + label);
-        redrawWind("offset", ir_index.value);
-    }
-    
     function getTWAPath(event) {
         var latA, lngA, time ;
         if ( twaAnchor.lat === undefined || twaTime === undefined ) {
@@ -573,7 +588,7 @@
         var bounds = getMapBounds();
         
         var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
-        var lon0 = bounds.east + ((bounds.east - bounds.west) / xSteps)/2;
+        var lon0 = bounds.east + (arcLength(bounds.west, bounds.east) / xSteps)/2;
         var ddx = roundTo(arcLength(bounds.west, bounds.east)/xSteps, 8);
         var ddy = roundTo((bounds.north-bounds.south)/ySteps, 8);
 
@@ -585,7 +600,9 @@
                 + "&west=" + roundTo(bounds.west, 6)
                 + "&east=" + roundTo(lon0, 6)
                 + "&ddx=" + ddx
-                + "&ddy=" + ddy,
+                + "&ddy=" + ddy
+                + "&xSteps=" + xSteps
+                + "&ySteps=" + ySteps,
             dataType: 'json'
         }).done( function(data) {
             drawWind(data)
@@ -603,7 +620,8 @@
 
         // Keep new wind data in global var for displaying wind data at mouse position
         windData = data[3];
-
+        
+        var mapCanvas = document.getElementById('wind-canvas');
         var ctx = mapCanvas.getContext("2d");
         ctx.globalAlpha = 0.6;
         ctx.clearRect(0, 0, geometry.width, geometry.height);

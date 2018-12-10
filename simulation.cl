@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-08 14:07:59>
+;;; Last Modified <michael 2018-12-10 21:56:36>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -352,7 +352,7 @@
                        reason
                        wind-dir
                        wind-speed
-                       (course-angle start-pos position distance)
+                       (course-angle-d start-pos position distance)
                        distance)))
 
 (defun get-routing-polars (routing)

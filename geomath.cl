@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-08 14:02:24>
+;;; Last Modified <michael 2018-12-10 21:48:15>
 
 (in-package :virtualhelm)
 
@@ -62,18 +62,40 @@
 ;;; http://www.kompf.de/trekka/distance.php?lat1=52.5164&lon1=13.3777&lat2=38.692668&lon2=-9.177944
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Great circle angle
+
+(declaim (inline gc-angle gc-angle-hvc))
 (defun gc-angle (origin target)
-  ;; Angle between origin and target on the GC defined by these points (symmetric)
+  "Copmute great circle angle between origin and target"
   (let* ((lat1 (latlng-latr origin))
          (lat2 (latlng-latr target))
          (lon1 (latlng-lngr origin))
          (lon2 (latlng-lngr target))
          (d (- lon2 lon1)))
-    (deg
-     (acos
-      (+ (* (sin lat1) (sin lat2))
-         (* (cos lat1) (cos lat2) (cos d)))))))
+    (declare (double-float lat1 lat2 lon1 lon2 d))
+    (acos
+     (+ (* (sin lat1) (sin lat2))
+        (* (cos lat1) (cos lat2) (cos d))))))
+(defun gc-angle-hvs (origin target)
+  "Compute great circle angle using the haversine formula"
+  (let* ((lat1 (latlng-latr origin))
+         (lat2 (latlng-latr target))
+         (lon1 (latlng-lngr origin))
+         (lon2 (latlng-lngr target))
+         (dlat/2 (/ (- lat2 lat1) 2))
+         (dlon/2 (/ (- lon2 lon1) 2)))
+    (declare (double-float lat1 lat2 lon1 lon2 dlat/2 dlon/2))
+    (flet ((sin2 (x)
+             (let ((sinx (sin x)))
+               (* sinx sinx))))
+      (declare (inline sin2))
+      (* 2 (asin (sqrt (+ (sin2 dlat/2) (* (cos lat1) (cos lat2) (sin2 dlon/2)))))))))
+(declaim (notinline gc-angle gc-angle-hvc))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Spherical distance
 
 (declaim (inline add-distance-exact add-distance-estimate))
 (defun add-distance-exact (pos distance alpha)
@@ -134,7 +156,7 @@
         (if (<= sign 0) -1 1))))
 (declaim (notinline  longitudinal-direction))
 
-(declaim (inline course-distance course-angle))
+(declaim (inline course-distance))
 (defun course-distance (origin target)
   (declare (ftype (function (t) double-float) latlng-latr latlng-lngr))
   (let* ((lat1 (latlng-latr origin))
@@ -151,8 +173,48 @@
     (* +radius+
        (acos (+ (* sin-lat1 sin-lat2)
                 (* cos-lat1 cos-lat2 (cos (- lon2 lon1))))))))
+(declaim (notinline course-distance))
 
-(defun course-angle (origin target &optional (dist -1d0))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Course angle
+
+(declaim (inline course-angle course-angle-d))
+
+(defun course-angle (origin target &optional (xi (gc-angle-hvs origin target)))
+  "Compute course angle using central angle" 
+  (let* ((lat1 (latlng-latr origin))
+         (cis-lat1 (cis lat1))
+         (cos-lat1 (realpart cis-lat1))
+         (sin-lat1 (imagpart cis-lat1))
+         (lat2 (latlng-latr target))
+         (lon1 (latlng-lngr origin))
+         (lon2 (latlng-lngr target)))
+    (declare (double-float lat1 cos-lat1 sin-lat1 lon1 lat2 lon2 xi))
+    (cond
+      ((and
+        (eql lat1 lat2)
+        (eql lon1 lon2))
+       (error "Distance is zero between ~a and ~a" origin target))
+      (t
+       (let* ((cos-omega
+               (/ (- (sin lat2) (* sin-lat1 (cos xi)))
+                  (* cos-lat1 (sin xi))))
+              (omega
+               (let ((omega%
+                      (acos cos-omega)))
+                 (if (complexp omega%)
+                     (realpart omega%)
+                     omega%)))
+              (ld (longitudinal-direction origin target)))
+         (declare (double-float cos-omega omega))
+         (normalize-angle
+          (deg
+           (if (= ld 1)
+               omega
+               (- (* PI 2) omega)))))))))
+
+(defun course-angle-d (origin target dist)
+  "Compute course angle using great circle distance"
   (let* ((lat1 (latlng-latr origin))
          (cis-lat1 (cis lat1))
          (cos-lat1 (realpart cis-lat1))
@@ -167,8 +229,6 @@
         (eql lon1 lon2))
        (error "Distance is zero between ~a and ~a" origin target))
       (t
-       (when (eql dist -1d0)
-         (setf dist (course-distance origin target)))
        (when (eql dist 0d0)
          (error "Distance is zero between ~a and ~a" origin target))
        (when (complexp dist)
@@ -183,7 +243,6 @@
                  (if (complexp omega%)
                      (realpart omega%)
                      omega%)))
-              (delta (- lon2 lon1))
               (ld (longitudinal-direction origin target)))
          (declare (double-float cos-omega omega))
          (normalize-angle
@@ -191,7 +250,7 @@
            (if (= ld 1)
                omega
                (- (* PI 2) omega)))))))))
-(declaim (inline course-distance course-angle))
+(declaim (notinline course-angle course-angle-d))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

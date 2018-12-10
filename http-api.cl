@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-05 23:38:18>
+;;; Last Modified <michael 2018-12-10 00:01:31>
 
 (in-package :virtualhelm)
 
@@ -160,28 +160,30 @@
           (assert (and (plusp ddx)
                        (plusp ddy)
                        (< south north)))
-          (setf (http-body response)
-                (with-output-to-string (s)
-                  (json s
-                        (list
-                         (let ((time
-                                (cl-weather::grib-cycle
-                                 (cl-weather::noaa-data forecast-bundle))))
-                           (format-timestring nil
-                                              time
-                                              :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+))
-                         (format-datetime nil forecast-time)
-                         (fcb-max-offset forecast-bundle)
-                         (loop
-                            :for lat :from north :downto south :by ddy
-                            :collect (loop
-                                        :for lon :from west :to east :by ddx
-                                        :collect (multiple-value-bind (dir speed)
-                                                     (let ((lon-icon
-                                                            (if (< lon 0) (+ lon 360) lon)))
-                                                       (get-wind-forecast forecast (make-latlng :lat lat :lng lon-icon)))
-                                                   (list (round-to-digits dir 2)
-                                                         (round-to-digits speed 2)))))))))))
+          (let ((wind-data
+                 (loop
+                    :for lat :from north :downto south :by ddy
+                    :collect (loop
+                                :for lon :from west :to east :by ddx
+                                :collect (multiple-value-bind (dir speed)
+                                             (let ((nlon
+                                                    (if (> lon 0) (- lon 360) lon)))
+                                               (get-wind-forecast forecast (make-latlng :lat lat :lng nlon)))
+                                           (list (round-to-digits dir 2)
+                                                 (round-to-digits speed 2)))))))
+            (setf (http-body response)
+                  (with-output-to-string (s)
+                    (json s
+                          (list
+                           (let ((time
+                                  (cl-weather::grib-cycle
+                                   (cl-weather::noaa-data forecast-bundle))))
+                             (format-timestring nil
+                                                time
+                                                :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+))
+                           (format-datetime nil forecast-time)
+                           (fcb-max-offset forecast-bundle)
+                           wind-data)))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

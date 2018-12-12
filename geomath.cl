@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-10 21:48:15>
+;;; Last Modified <michael 2018-12-10 23:54:14>
 
 (in-package :virtualhelm)
 
@@ -213,7 +213,7 @@
                omega
                (- (* PI 2) omega)))))))))
 
-(defun course-angle-d (origin target dist)
+(defun course-angle-d (origin target &optional (dist (course-distance origin target)))
   "Compute course angle using great circle distance"
   (let* ((lat1 (latlng-latr origin))
          (cis-lat1 (cis lat1))

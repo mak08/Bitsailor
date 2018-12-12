@@ -94,11 +94,13 @@
         mapMenu.onmouseleave = onMapMenuMouseLeave;
         
         ir_index = $("#ir_index")[0];
-        
+
+        var startFlag = 'img/start_32x20.png';
         startMarker = new google.maps.Marker({
             position: {"lat": 54.434403, "lng": 11.361632},
             map: googleMap,
             title: 'Start',
+            icon: startFlag,
             draggable: true
         });
         startMarker.addListener('click', function () { onMarkerClicked(startMarker) });
@@ -107,10 +109,12 @@
             setRoutePoint('start', startMarker.getPosition());
         });
         
+        var finishFlag = 'img/finish_32x20.png';
         destinationMarker = new google.maps.Marker({
             position: {"lat": 55.391123, "lng": 13.792635},
             map: googleMap,
             title: 'Destination',
+            icon: finishFlag,
             draggable: true
         });
         destinationMarker.addListener('click', function () { onMarkerClicked(destinationMarker) });
@@ -289,9 +293,11 @@
             pgGetRoute.value = pgGetRoute.max;
             var best = data.best;
             for ( var i = 0; i < best.length; i++ ) {
+                var markerIcon = "img/marker_32x12.png";
                 var trackMarker = new google.maps.Marker({
                     position: best[i].position,
                     map: googleMap,
+                    icon: markerIcon,
                     draggable: false
                 });
                 addMarkerListener(trackMarker);
@@ -305,7 +311,7 @@
                     geodesic: true,
                     strokeColor: '#d00000',
                     strokeOpacity: 1.0,
-                    strokeWeight: 2
+                    strokeWeight: 1.5
                 });
                 track.setPath(tracks[i]);
                 track.setMap(googleMap);
@@ -424,7 +430,15 @@
             var cbMinWind = $("#cb_minwind")[0];
             cbMinWind.checked = minWind;
             
-            
+            courseGCLine = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: '#ff0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 1
+            });
+            courseGCLine.setMap(googleMap);
+            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert(textStatus + ' ' + errorThrown);
         });

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2018-11-28 01:00:07>
+;;; Last Modified <michael 2018-12-12 22:37:33>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -81,6 +81,13 @@
  :request (:prefix "/css")
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web" "css"))
+                                     (make-pathname :directory (pathname-directory *load-pathname*))))
+                   :authentication nil))
+
+(handle
+ :request (:prefix "/img")
+ :handler (:static (namestring
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "img"))
                                      (make-pathname :directory (pathname-directory *load-pathname*))))
                    :authentication nil))
 

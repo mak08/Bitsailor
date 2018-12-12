@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-10 21:56:36>
+;;; Last Modified <michael 2018-12-12 23:58:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -122,15 +122,16 @@
           ;; Iteration stops when stepmax seconds have elapsed
           (stepnum 0 (1+ stepnum))
           (stepsum 0 (+ stepsum step-size))
-          (step-size (step-size start-time)
-                     (step-size start-time step-time))
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
           (max-points 200 (min 1500 (+ max-points 5)))
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (step-time (adjust-timestamp start-time (:offset :sec step-size))
+          (step-time start-time
                      (adjust-timestamp step-time (:offset :sec step-size)))
+          ;; The first step-size and when we apply it is important - brings step-time to mod 10min
+          (step-size (step-size start-time)
+                     (step-size start-time step-time))
           ;; Get wind data for simulation time
           (forecast (get-forecast forecast-bundle step-time)
                     (get-forecast forecast-bundle step-time))
@@ -307,6 +308,7 @@
          (loop
             :with up-vmg-angle = (third up-vmg)
             :with down-vmg-angle = (third down-vmg)
+            :with time = (adjust-timestamp step-time (:offset :sec step-size))
             :for pointnum :from 0
             :for twa :across all-twa-points
             :for heading-stbd = (twa-heading wind-dir twa)
@@ -324,7 +326,7 @@
                                                                 (coerce heading 'double-float))))
                              (incf pointnum)
                              (vector-push-extend
-                              (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
+                              (construct-rp routepoint start-pos new-pos time heading speed sail reason wind-dir wind-speed)
                               next-isochrone)))))
                   (when (between-heading left right heading-stbd)
                     (add-point heading-stbd twa))

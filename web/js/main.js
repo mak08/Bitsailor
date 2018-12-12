@@ -279,7 +279,7 @@
         pgGetRoute.value = 5;
         var selDuration = $("#sel_duration")[0];
         var duration = selDuration.value;
-        var timer = window.setInterval(updateGetRouteProgress, 3 * duration);
+        var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
         $.ajax({
             url: "/function/vh:getRoute",
             dataType: 'json'
@@ -613,13 +613,17 @@
 
     function drawWind (data) {
 
-        // Update time 
-        $("#lb_modelrun").text(data[0]);
+        // Update time
+        forecastCycle = data[0];
+        $("#lb_modelrun").text(data[3]);
         $("#lb_index").text(data[1]);
         $("#lb_fcmax").text(' ' + data[2] + 'hrs');
 
+        var offset = (new Date(data[1]) - new Date(data[0])) / 3600000;
+        ir_index.value = offset;
+
         // Keep new wind data in global var for displaying wind data at mouse position
-        windData = data[3];
+        windData = data[4];
         
         var mapCanvas = document.getElementById('wind-canvas');
         var ctx = mapCanvas.getContext("2d");

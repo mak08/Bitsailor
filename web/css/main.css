@@ -92,6 +92,10 @@ p, b {
 }
 .footer {
     grid-area: footer;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
     background-color: #004242; 
 }
 
@@ -112,7 +116,9 @@ select, option, input, button {
 	margin: 1px 1px;
 	border: 2px solid #203040;
 }
+
 label {
+	font-size: 90%;
 }
 
 input[type=checkbox] {
@@ -121,64 +127,76 @@ input[type=checkbox] {
 
 /* Forecast slider*/
 
-.forecast-header {
-	grid-row: 1;
-	grid-column: 1;
-}
-.forecast-slider-label {
-	grid-row: 1;
-	grid-column: 2;
-}
-.forecast-slider {
-	grid-row: 2;
-	grid-column: 2;
+.forecast-info {
 	display: flex;
 	flex-direction: row;
+	justify-self: end;
 	align-items: center;
+	justify-content: space-between;
+}
+
+.forecast-header {
+	margin: 2px 10px;
+}
+.forecast-slider-label {
+	margin: 2px 10px;
+}
+.forecast-slider {
+	display: flex;
+	flex-direction: row;
+	justify-self: end;
+	align-items: center;
+	margin: 2px 10px;
+}
+
+/* Start deleyed */
+.settings-label {
+	grid-row: 1;
+	grid-column: 1;
 }
 
 /* Start deleyed */
 .delayed-label {
-	grid-row: 3;
+	grid-row: 2;
 	grid-column: 1;
 }
 .delayed-entry {
-	grid-row: 3;
+	grid-row: 2;
 	grid-column: 2;
 
 }
 
 /* Routing duration */
 .duration-label {
-	grid-row: 4;
+	grid-row: 3;
 	grid-column: 1;
 
 }
 .duration-selector {
-	grid-row: 4;
+	grid-row: 3;
 	grid-column: 2;
 }
 
 /* Polars selection */
 .polars-label {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 1;
 
 }
 .polars-selector {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 2;
 
 }
 
 /* Minwind */
 .minwind-label {
-	grid-row: 6;
+	grid-row: 5;
 	grid-column: 1;
 
 }
 .minwind-checkbox {
-	grid-row: 6;
+	grid-row: 5;
 	grid-column: 2;
 
 }
@@ -203,12 +221,14 @@ input[type=checkbox] {
 .cursor-position {
 	grid-row: 9;
 	grid-column: 2;
+	margin: 2px 20px;
 }
 
 /* Cursor wind */
 .cursor-wind {
 	grid-row: 9;
 	grid-column: 1;
+	margin: 2px 20px;
 }
 
 /* Cursor wind */
@@ -219,21 +239,21 @@ input[type=checkbox] {
 
 /* Current TWA */
 .current-twa-label {
-	grid-row: 11;
+	grid-row: 10;
 	grid-column: 1;
 }
 .current-twa {
-	grid-row: 11;
+	grid-row: 10;
 	grid-column: 2;
 }
 
 /* Current Heading */
 .current-heading-label {
-	grid-row: 12;
+	grid-row: 11;
 	grid-column: 1;
 }
 .current-heading {
-	grid-row: 12;
+	grid-row: 11;
 	grid-column: 2;
 }
 

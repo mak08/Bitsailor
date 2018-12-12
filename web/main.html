@@ -34,24 +34,12 @@
 
       <div class="controls">
 
-        <div class="forecast-header">
-          <label>Forecast time</label>
-        </div>
-        
-        <div class="forecast-slider-label">
-          <label id="lb_index" style="font-size: 120%"></label>
-        </div>
-
-        <div class="forecast-slider">
-          <button id="bt_dec6" type="button">-6</button>
-          <button id="bt_dec" type="button">-1</button>
-          <input id="ir_index" type="range" min="0" max="380" step="1" value="0"/>
-          <button id="bt_inc" type="button">+1</button>
-          <button id="bt_inc6" type="button">+6</button>
+        <div class="settings-label">
+          <label></label>
         </div>
 
         <div class="delayed-label">
-          <label>Delayed:</label>
+          <label>Start at:</label>
         </div>
         <div class="delayed-entry">
           <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
@@ -63,18 +51,19 @@
         </div>
         <div class="duration-selector">
           <select id="sel_duration" name="duration">
-            <option value="6">6 hours</option>
             <option value="12">12 hours</option>
-            <option value="24" selected>24 hours</option>
-            <option value="36">36 hours</option>
-            <option value="48">2 days</option>
+            <option value="24">1 day</option>
+            <option value="48" selected>2 days</option>
+            <option value="72">3 days</option>
             <option value="96">4 days</option>
+            <option value="120">5 days</option>
             <option value="144">6 days</option>
+            <option value="168">7 days</option>
             <option value="192">8 days</option>
             <option value="240">10 days</option>
             <option value="288">12 days</option>
             <option value="336">14 days</option>
-            <option value="384">16 days</option>
+            <option value="360">15 days</option>
           </select>
         </div>
         
@@ -110,14 +99,6 @@
           <progress id="pg_getroute" style="width:300px" max="300" value="0"></progress>
         </div>
 
-        <div class="cursor-position">
-          <label id="lb_position">-.-.-.-</label>
-        </div>
-        
-        <div class="cursor-wind">
-          <label id="lb_windatposition">-.-.-.-</label>
-        </div>
-        
         <div class="current-twa-label">
           <label>TWA</label>
         </div>
@@ -137,7 +118,7 @@
         </div>
 
         <div class="statistics-from-label">
-          <label>From</label>
+          <label>Start</label>
         </div>
         <div class="statistics-from">
           <label id="lb_from">-.-.-.-</label>
@@ -198,6 +179,37 @@
           <div class="colorbox" style="background-color:#0000ff;">12</div>
           <label style="margin: 2px 2px 2px 10px;">Bft</label>
         </div>
+		<div class="spacer">
+		</div>
+		
+        <div class="cursor-position">
+		  Position
+          <label id="lb_position">-.-.-.-</label>
+        </div>
+        
+        <div class="cursor-wind">
+		  Wind
+          <label id="lb_windatposition">-.-.-.-</label>
+        </div>
+
+		<div class="forecast-info">
+          <div class="forecast-header">
+			<label>Forecast time</label>
+          </div>
+          
+          <div class="forecast-slider">
+			<button id="bt_dec6" type="button">-6</button>
+			<button id="bt_dec" type="button">-1</button>
+			<input id="ir_index" type="range" min="0" max="384" step="1" value="0"/>
+			<button id="bt_inc" type="button">+1</button>
+			<button id="bt_inc6" type="button">+6</button>
+          </div>
+          <div class="forecast-slider-label">
+			<label id="lb_index"></label>
+          </div>
+
+		</div>
+        
       </div>
 
     </div>

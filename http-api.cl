@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-10 00:01:31>
+;;; Last Modified <michael 2018-12-12 00:09:29>
 
 (in-package :virtualhelm)
 
@@ -174,16 +174,17 @@
             (setf (http-body response)
                   (with-output-to-string (s)
                     (json s
-                          (list
                            (let ((time
                                   (cl-weather::grib-cycle
                                    (cl-weather::noaa-data forecast-bundle))))
-                             (format-timestring nil
-                                                time
-                                                :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+))
-                           (format-datetime nil forecast-time)
-                           (fcb-max-offset forecast-bundle)
-                           wind-data)))))))
+                             (list
+                              (format-datetime nil time)
+                              (format-datetime nil forecast-time)
+                              (fcb-max-offset forecast-bundle)
+                              (format-timestring nil
+                                                 time
+                                                 :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+)
+                              wind-data))))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

@@ -16,9 +16,9 @@
    version="1.1"
    inkscape:version="0.91 r13725"
    sodipodi:docname="start.svg"
-   inkscape:export-filename="/home/michael/Repository/VirtualHelm/web/img/start_32x20.png"
-   inkscape:export-xdpi="24.362539"
-   inkscape:export-ydpi="24.362539">
+   inkscape:export-filename="start_45x32.png"
+   inkscape:export-xdpi="34.259819"
+   inkscape:export-ydpi="34.259819">
   <defs
      id="defs4" />
   <sodipodi:namedview
@@ -28,9 +28,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="5.6"
-     inkscape:cx="16.088568"
-     inkscape:cy="61.862591"
+     inkscape:zoom="3.959798"
+     inkscape:cx="12.915099"
+     inkscape:cy="66.406404"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -54,7 +54,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -68,7 +68,9 @@
        d="m 6.0937292,928.09875 72.0982508,7.85714 1.9e-5,0.17859 0,24.77681 -1.9e-5,-0.17855 -72.0982508,9.10714 -1.93e-5,-2e-5 0,-41.74109 z"
        id="rect3346"
        inkscape:connector-curvature="0"
-       sodipodi:nodetypes="ccccccccc" />
+       sodipodi:nodetypes="ccccccccc"
+       inkscape:export-xdpi="24"
+       inkscape:export-ydpi="24" />
     <rect
        style="fill:#241c1c"
        id="rect3378"
@@ -76,13 +78,17 @@
        height="118.21428"
        x="1.4285715"
        y="927.54077"
-       ry="1.9477602e-05" />
+       ry="1.9477602e-05"
+       inkscape:export-xdpi="24"
+       inkscape:export-ydpi="24" />
     <ellipse
        style="fill:#d40000"
        id="path3409"
        cx="28.124998"
        cy="948.25507"
        rx="14.732142"
-       ry="13.75" />
+       ry="13.75"
+       inkscape:export-xdpi="24"
+       inkscape:export-ydpi="24" />
   </g>
 </svg>

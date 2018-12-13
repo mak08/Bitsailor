@@ -31,7 +31,7 @@
     var trackMarkers = [];
     
     var windData = [];
-
+    var currentRouting = {};
     var twaPath = [];
 
     function setUp () {
@@ -95,7 +95,7 @@
         
         ir_index = $("#ir_index")[0];
 
-        var startFlag = 'img/start_32x20.png';
+        var startFlag = 'img/start_45x32.png';
         startMarker = new google.maps.Marker({
             position: {"lat": 54.434403, "lng": 11.361632},
             map: googleMap,
@@ -287,21 +287,74 @@
         $.ajax({
             url: "/function/vh:getRoute",
             dataType: 'json'
-        }).done( function(data) {
-            clearRoute();
+        }).done( function (data) {
+            // Remember routing data
+            currentRouting = data;
+
+            // Reset timer
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
+
+            // Display new data
+            clearRoute();
+            displayRouting(data);
+            
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            window.clearInterval(timer);
+            pgGetRoute.value = pgGetRoute.max;
+            alert(textStatus + ' ' + errorThrown);
+        });
+    }
+    
+    function setRoutePoint(point, latlng) {
+        var lat =  latlng.lat();
+        var lng =  latlng.lng();
+        var that = this;
+        $.ajax({
+            url: "/function/vh:setRoute"
+                + "?pointType=" + point
+                + "&lat=" + lat
+                + "&lng=" + lng,
+            dataType: 'json'
+        }).done( function(data) {
+            // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
+            if ( point === 'start' ) {
+                updateStartPosition(lat, lng);
+            } else if ( point === 'dest' ) {
+                destinationMarker.setPosition(latlng);
+            }
+            if (courseGCLine) {
+                courseGCLine.setMap(null);
+            };
+            courseGCLine = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: '#d00000',
+                strokeOpacity: 1.0,
+                strokeWeight: 1
+            });
+            courseGCLine.setMap(googleMap);
+            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+            
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
+        });
+    }
+
+
+    function displayRouting (data) {
             var best = data.best;
+            var startTime = new Date(best[0].time);
+            var markerIcon = "img/marker_32x12.png";
+            var redMarkerIcon = "img/marker_red_32x12.png";
             for ( var i = 0; i < best.length; i++ ) {
-                var markerIcon = "img/marker_32x12.png";
                 var trackMarker = new google.maps.Marker({
                     position: best[i].position,
                     map: googleMap,
-                    icon: markerIcon,
+                    icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
                     draggable: false
                 });
                 addMarkerListener(trackMarker);
-                addWaypointInfo(trackMarker, best[i], best[i+1]);
+                addWaypointInfo(trackMarker, startTime, best[i], best[i+1]);
                 trackMarkers[i] = trackMarker;
             }
             
@@ -347,47 +400,8 @@
             $("#lb_sails").text(JSON.stringify(data.stats.sails));
             $("#lb_minwind").text(roundTo(data.stats["min-wind"], 1) + " - " + roundTo(data.stats["max-wind"], 1));
             $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            window.clearInterval(timer);
-            pgGetRoute.value = pgGetRoute.max;
-            alert(textStatus + ' ' + errorThrown);
-        });
     }
-    
-    function setRoutePoint(point, latlng) {
-        var lat =  latlng.lat();
-        var lng =  latlng.lng();
-        var that = this;
-        $.ajax({
-            url: "/function/vh:setRoute"
-                + "?pointType=" + point
-                + "&lat=" + lat
-                + "&lng=" + lng,
-            dataType: 'json'
-        }).done( function(data) {
-            // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-            if ( point === 'start' ) {
-                updateStartPosition(lat, lng);
-            } else if ( point === 'dest' ) {
-                destinationMarker.setPosition(latlng);
-            }
-            if (courseGCLine) {
-                courseGCLine.setMap(null);
-            };
-            courseGCLine = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#d00000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1
-            });
-            courseGCLine.setMap(googleMap);
-            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
-        });
-    }
+
 
     function getSession () {
         $.ajax({
@@ -483,9 +497,9 @@
         }
     }
     
-    function addWaypointInfo(trackMarker, point, nextPoint) {
+    function addWaypointInfo(trackMarker, startTime, point, nextPoint) {
         var infoWindow = new google.maps.InfoWindow({
-            content: makeWaypointInfo(point, nextPoint)
+            content: makeWaypointInfo(startTime, point, nextPoint)
         });
         trackMarker.set('time', point.time);
         trackMarker.addListener('mouseover', function() {
@@ -496,25 +510,39 @@
         });
     }
     
-    function makeWaypointInfo(point, nextPoint) {
+    function makeWaypointInfo(startTime, point, nextPoint) {
+        var time = new Date(point.time);
+        var elapsed = formatDHM((time - startTime)/1000);
         result =  "<div style='color:#000;'>";
-        result = result
-            + "<p><b>Time</b>: " + point.time + "</p>"
-            + "<p><b>Position</b>: " + formatPointPosition(point.position) + "</p>"
-            + "<p><b>Wind</b>: " + roundTo(ms2knots(point["wind-speed"]), 2) + "kts / " + roundTo(point["wind-dir"], 0) + "°</p>";
+        result += "<p><b>T+" + elapsed + " - " + point.time + "</b></p>"
+        result += "<hr>";
+
+        result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
+
+        result += "<p><b>DTF</b>:" + roundTo(m2nm(point.dtf), 2) + "nm ";
         if ( nextPoint !== undefined ) {
-            result = result + "<p><b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1) + "<b> Heading</b>: " + roundTo(nextPoint.heading, 1) + "°</p>"
-                + "<p><b>Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts</p>"
-                + "<p><b>Sail</b>: " + nextPoint.sail + "</p>";
+            result += "<b> Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts";
         }
-        result = result + "<b>DTF</b>:" + roundTo(m2nm(point["destination-distance"]), 2) + "nm";
-        result = result + "</div>";
+        
+        result += "</p><hr>";
+        
+        result += "<p><b>Wind</b>: " + roundTo(ms2knots(point.tws), 2) + "kts / " + roundTo(point.twd, 0) + "°</p>";
+
+        if ( nextPoint !== undefined ) {
+            result += "<p>";
+            result += "<b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1);
+            result += "<b> HDG</b>: " + roundTo(nextPoint.heading, 1) + "°  " + point.sail;
+            result += "</p>";
+        }
+        
+        result += "</div>";
+        
         return result;
     }
     
     // Routepoint does not store TWA
     function routepointTWA (point) {
-        var angle =  point["wind-dir"] - point.heading;
+        var angle =  point.twd - point.heading;
         if ( angle <= -180 ) {
             angle += 360;
         } else if (angle > 180) {
@@ -744,6 +772,11 @@
         return latString + ((latDMS.u == 1) ? "N" : "S") + " | " + lonString + ((lonDMS.u == 1) ? "E" : "W");
     }
 
+    function formatDHM (seconds) {
+        var dhm = toDHM(seconds);
+        return dhm.days + ":" +  pad0(dhm.hours) + ":" + pad0(dhm.minutes) + ":" + pad0(dhm.seconds);
+    }
+    
     ////////////////////////////////////////////////////////////////////////////////
     /// Conversion
     
@@ -761,6 +794,15 @@
         return sign * abs
     }
     
+    function toDHM (seconds) {
+        return {
+            "days":  Math.floor(seconds / 86400),
+            "hours": Math.floor(seconds/3600) % 24,
+            "minutes": Math.floor(seconds/60) % 60,
+            "seconds": seconds % 60
+        };
+    }
+
     function toDeg (number) {
         var u = sign(number);
         number = Math.abs(number);

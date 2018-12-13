@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-12 23:58:21>
+;;; Last Modified <michael 2018-12-13 23:51:36>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -86,6 +86,21 @@
 (defstruct (routepoint
              (:constructor create-routepoint (predecessor position time heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
   predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance sort-angle%)
+
+(defstruct trackpoint
+  time position heading dtf speed sail penalty twd tws twa)
+
+(defun create-trackpoint (routepoint)
+  (make-trackpoint :time (routepoint-time routepoint)
+                   :position (routepoint-position routepoint)
+                   :heading (routepoint-heading routepoint)
+                   :dtf (routepoint-destination-distance routepoint)
+                   :speed (routepoint-speed routepoint)
+                   :sail (routepoint-sail routepoint)
+                   :twd (routepoint-wind-dir routepoint)
+                   :tws (routepoint-wind-speed routepoint)
+                   :twa (routepoint-twa routepoint)
+                   :penalty (routepoint-penalty routepoint)))
 
 (defun routepoint-twa (rp)
   (if (routepoint-wind-dir rp)
@@ -186,9 +201,9 @@
              (when (zerop r)
                (let* ((start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
                       (iso (make-isochrone :center start-pos
-                                      :time step-time
-                                      :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
-                                      :path (extract-points isochrone))))
+                                           :time step-time
+                                           :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
+                                           :path (extract-points isochrone))))
                  (push iso isochrones))))))
         (when reached
           (log2:info "Reached destination at ~a" step-time))))))
@@ -238,8 +253,8 @@
            (if (routing-winches routing) 0.9375 0.75)))
       (cond
         ((and
-          (not (equal sail cur-sail))
-          (not (equal twa cur-twa)))
+          cur-sail
+          (not (equal sail cur-sail)))
          (values sail (* speed penalty) "Sail Change"))
         ((or (< twa 0 cur-twa)
              (< cur-twa 0 twa))
@@ -394,28 +409,30 @@
                 (push (routepoint-position p) v))))
 
 (defun construct-route (isochrone dest-pos)
-  (let ((min-dtf nil)
-        (min-point nil)
+  (let ((best (best-point isochrone dest-pos))
         (route nil))
-    (loop
-       :for point :across (extract-points isochrone)
-       :do (progn
-             (setf (routepoint-destination-distance point)
-                   (course-distance (routepoint-position point) dest-pos))
-             (when (or (null min-point)
-                       (< (routepoint-destination-distance point) min-dtf))
-               (setf min-dtf (routepoint-destination-distance point)
-                     min-point point))))
-    (do ((cur-point min-point (routepoint-predecessor cur-point))
-         (predecessor nil cur-point))
+    (do ((cur-point best (routepoint-predecessor cur-point))
+         (successor nil cur-point))
         ((null cur-point)
          route)
-      (when (or (null predecessor)
-                (not (eql (routepoint-twa cur-point) (routepoint-twa predecessor)))
-                (not (eql (routepoint-sail cur-point) (routepoint-sail predecessor))))
-        (let ((next-point (copy-routepoint cur-point)))
-          (setf (routepoint-predecessor next-point) nil)
-          (push next-point route))))))
+      (when (or (null successor)
+                (routepoint-penalty cur-point)
+                (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))
+                (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
+        (push (create-trackpoint cur-point) route)))))
+
+(defun best-point (isochrone dest-pos)
+  (loop
+     :with min-dtf = nil :and min-point = nil
+     :for point :across (extract-points isochrone)
+     :do (progn
+           (setf (routepoint-destination-distance point)
+                 (course-distance (routepoint-position point) dest-pos))
+           (when (or (null min-point)
+                     (< (routepoint-destination-distance point) min-dtf))
+             (setf min-dtf (routepoint-destination-distance point)
+                   min-point point)))
+     :finally (return min-point)))
 
 (defun get-statistics (track)
   (let ((sails nil)
@@ -424,23 +441,23 @@
         (min-twa 180)
         (max-twa 0))
     (dolist (point track)
-      (when (routepoint-sail point)
-        (pushnew (routepoint-sail point) sails))
+      (when (trackpoint-sail point)
+        (pushnew (trackpoint-sail point) sails))
       (setf min-wind
             (min (m/s-to-knots
-                  (or (routepoint-wind-speed point) 100))
+                  (or (trackpoint-tws point) 100))
                  min-wind))
       (setf max-wind
             (max (m/s-to-knots
-                  (or (routepoint-wind-speed point) 0)) max-wind))
+                  (or (trackpoint-tws point) 0)) max-wind))
       (setf min-twa
-            (min (abs (or (routepoint-twa point) 180)) min-twa))
+            (min (abs (or (trackpoint-twa point) 180)) min-twa))
       (setf max-twa
-            (max (abs (or (routepoint-twa point) 0)) max-twa)))
-    (make-routestats :start (routepoint-time (first track))
+            (max (abs (or (trackpoint-twa point) 0)) max-twa)))
+    (make-routestats :start (trackpoint-time (first track))
                      :duration (encode-duration
-                                (timestamp-difference (routepoint-time (car (last track)))
-                                                      (routepoint-time (first track))))
+                                (timestamp-difference (trackpoint-time (car (last track)))
+                                                      (trackpoint-time (first track))))
                      :sails sails
                      :min-wind min-wind
                      :max-wind max-wind

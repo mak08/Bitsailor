@@ -537,24 +537,13 @@
         result += "<p><b>Wind</b>: " + roundTo(ms2knots(point.tws), 2) + "kts / " + roundTo(point.twd, 0) + "°</p>";
 
         result += "<p>";
-        result += "<b> TWA</b>: " + roundTo(routepointTWA(point), 1);
+        result += "<b> TWA</b>: " + roundTo(point.twa, 1);
         result += "<b> HDG</b>: " + roundTo(point.heading, 1) + "°  " + point.sail;
         result += "</p>";
         
         result += "</div>";
         
         return result;
-    }
-    
-    // Routepoint does not store TWA
-    function routepointTWA (point) {
-        var angle =  point.twd - point.heading;
-        if ( angle <= -180 ) {
-            angle += 360;
-        } else if (angle > 180) {
-            angle -= 360;
-        }
-        return angle;
     }
     
     function addMarkerListener(marker) {

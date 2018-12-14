@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-13 23:51:36>
+;;; Last Modified <michael 2018-12-14 22:52:14>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -90,16 +90,16 @@
 (defstruct trackpoint
   time position heading dtf speed sail penalty twd tws twa)
 
-(defun create-trackpoint (routepoint)
+(defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)
                    :position (routepoint-position routepoint)
-                   :heading (routepoint-heading routepoint)
+                   :heading (routepoint-heading successor)
                    :dtf (routepoint-destination-distance routepoint)
                    :speed (routepoint-speed routepoint)
-                   :sail (routepoint-sail routepoint)
+                   :sail (or (routepoint-sail routepoint) (routepoint-sail successor))
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)
-                   :twa (routepoint-twa routepoint)
+                   :twa (routepoint-twa successor)
                    :penalty (routepoint-penalty routepoint)))
 
 (defun routepoint-twa (rp)
@@ -419,7 +419,7 @@
                 (routepoint-penalty cur-point)
                 (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))
                 (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
-        (push (create-trackpoint cur-point) route)))))
+        (push (create-trackpoint cur-point (or successor cur-point)) route)))))
 
 (defun best-point (isochrone dest-pos)
   (loop

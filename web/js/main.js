@@ -507,9 +507,9 @@
         }
     }
     
-    function addWaypointInfo(trackMarker, startTime, point, nextPoint) {
+    function addWaypointInfo(trackMarker, startTime, point) {
         var infoWindow = new google.maps.InfoWindow({
-            content: makeWaypointInfo(startTime, point, nextPoint)
+            content: makeWaypointInfo(startTime, point)
         });
         trackMarker.set('time', point.time);
         trackMarker.addListener('mouseover', function() {
@@ -520,7 +520,7 @@
         });
     }
     
-    function makeWaypointInfo(startTime, point, nextPoint) {
+    function makeWaypointInfo(startTime, point) {
         var time = new Date(point.time);
         var elapsed = formatDHM((time - startTime)/1000);
         result =  "<div style='color:#000;'>";
@@ -530,20 +530,16 @@
         result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
 
         result += "<p><b>DTF</b>:" + roundTo(m2nm(point.dtf), 2) + "nm ";
-        if ( nextPoint !== undefined ) {
-            result += "<b> Speed</b>: " + roundTo(ms2knots(nextPoint.speed), 1) + "kts";
-        }
+        result += "<b> Speed</b>: " + roundTo(ms2knots(point.speed), 1) + "kts";
         
         result += "</p><hr>";
         
         result += "<p><b>Wind</b>: " + roundTo(ms2knots(point.tws), 2) + "kts / " + roundTo(point.twd, 0) + "°</p>";
 
-        if ( nextPoint !== undefined ) {
-            result += "<p>";
-            result += "<b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1);
-            result += "<b> HDG</b>: " + roundTo(nextPoint.heading, 1) + "°  " + (point.sail || nextPoint.sail);
-            result += "</p>";
-        }
+        result += "<p>";
+        result += "<b> TWA</b>: " + roundTo(routepointTWA(point), 1);
+        result += "<b> HDG</b>: " + roundTo(point.heading, 1) + "°  " + point.sail;
+        result += "</p>";
         
         result += "</div>";
         

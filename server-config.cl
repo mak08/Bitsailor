@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2018-12-12 22:37:33>
+;;; Last Modified <michael 2018-12-14 22:39:32>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -36,9 +36,9 @@
 ;;; -----
 
 (user :username "admin" :realm "virtualhelm" :password "_admin_01")
-(user :username "admin" :realm "admin" :password "_admin_admin_")
+(user :username "admin" :realm "admin" :password "_admin_01")
 (user :username "user01" :realm "virtualhelm" :password "_user_01")
-(user :username "guest" :realm "virtualhelm" :password "_guest_")
+(user :username "guest" :realm "virtualhelm" :password "_guest_01")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----------

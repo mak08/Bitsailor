@@ -79,6 +79,7 @@
         $("#sel_forecastbundle").change(onSetParameter);
         $("#sel_duration").change(onSetParameter);
         $("#cb_minwind").change(onSetParameter);
+        $("#cb_hidewind").change(onHideWind);
         
         // Tracks & Isochrones display is handled by the client directly
         $("#cb_tracks").change(onSetClientParameter);
@@ -163,6 +164,15 @@
         $("#ir_index")[0].value = offset;
         var time = isochrone.get('time');
         redrawWind("time", time);
+    }
+
+    function onHideWind (event) {
+        var cbHideWind = $("#cb_hidewind")[0];
+        if (cbHideWind.checked) {
+            $("#wind-canvas").hide();
+        } else {
+            $("#wind-canvas").show();
+        }
     }
     
     function onAdjustIndex (event) {
@@ -531,7 +541,7 @@
         if ( nextPoint !== undefined ) {
             result += "<p>";
             result += "<b> TWA</b>: " + roundTo(routepointTWA(nextPoint), 1);
-            result += "<b> HDG</b>: " + roundTo(nextPoint.heading, 1) + "°  " + point.sail;
+            result += "<b> HDG</b>: " + roundTo(nextPoint.heading, 1) + "°  " + (point.sail || nextPoint.sail);
             result += "</p>";
         }
         

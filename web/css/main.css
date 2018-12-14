@@ -201,6 +201,18 @@ input[type=checkbox] {
 
 }
 
+/* Hide wind */
+.hidewind-label {
+	grid-row: 6;
+	grid-column: 1;
+
+}
+.hidewind-checkbox {
+	grid-row: 6;
+	grid-column: 2;
+
+}
+
 /* Execute */
 .execute-button {
 	grid-row: 7;

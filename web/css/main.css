@@ -13,8 +13,8 @@
     font-family: Arial, sans-serif;
 	margin: 0px;
 	padding: 0px;
-	color: #e8e8ff;
 }
+
 
 html, body {
 	margin: 0px;
@@ -58,10 +58,12 @@ p, b {
     grid-area: header;
 	margin: 0px;
 	padding: 0px;
+	color: #e8e8ff;
     background-color: #004242;
 }
 .menu {
     grid-area: menu;
+	color: #e8e8ff;
     background-color: #004242;
 }
 .map {
@@ -81,6 +83,7 @@ p, b {
 	max-content: 40px;
 	grid-template-columns: 150px 1fr;
 	grid-template-rows: repeat(20, minmax(25px, 36px));
+	color: #e8e8ff;
     background-color: #004242;
 	align-items: top;
 }
@@ -88,6 +91,7 @@ p, b {
 
 .footer-left {
     grid-area: footer-left;
+	color: #e8e8ff;
     background-color: #004242; 
 }
 .footer {
@@ -96,6 +100,7 @@ p, b {
 	flex-direction: row;
 	align-items: center;
 	justify-content: space-between;
+	color: #e8e8ff;
     background-color: #004242; 
 }
 
@@ -112,6 +117,7 @@ p, b {
  *******************************************************************************/
 
 select, option, input, button {
+	color: #e8e8ff;
 	background-color: black;
 	margin: 1px 1px;
 	border: 2px solid #203040;

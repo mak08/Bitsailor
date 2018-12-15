@@ -352,64 +352,64 @@
 
 
     function displayRouting (data) {
-            var best = data.best;
-            var startTime = new Date(best[0].time);
-            var markerIcon = "img/marker_32x12.png";
-            var redMarkerIcon = "img/marker_red_32x12.png";
-            for ( var i = 0; i < best.length; i++ ) {
-                var trackMarker = new google.maps.Marker({
-                    position: best[i].position,
-                    map: googleMap,
-                    icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
-                    draggable: false
-                });
-                addMarkerListener(trackMarker);
-                addWaypointInfo(trackMarker, startTime, best[i], best[i+1]);
-                trackMarkers[i] = trackMarker;
+        var best = data.best;
+        var startTime = new Date(best[0].time);
+        var markerIcon = "img/marker_32x12.png";
+        var redMarkerIcon = "img/marker_red_32x12.png";
+        for ( var i = 0; i < best.length; i++ ) {
+            var trackMarker = new google.maps.Marker({
+                position: best[i].position,
+                map: googleMap,
+                icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
+                draggable: false
+            });
+            addMarkerListener(trackMarker);
+            addWaypointInfo(trackMarker, startTime, best[i], best[i+1]);
+            trackMarkers[i] = trackMarker;
+        }
+        
+        var tracks = data.tracks;
+        for ( var i = 0; i < tracks.length; i++ ) {
+            var track = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: '#d00000',
+                strokeOpacity: 1.0,
+                strokeWeight: 1.5
+            });
+            track.setPath(tracks[i]);
+            track.setMap(googleMap);
+            routeTracks[i] = track;
+        }
+        var isochrones = data.isochrones;
+        var startSymbol = {
+            path: google.maps.SymbolPath.CIRCLE
+        }
+        for ( var i = 0; i < isochrones.length; i++ ) {
+            var h = new Date(isochrones[i].time).getUTCHours();
+            var color;
+            if (h%6 === 4) {
+                color = '#D00000';
+            } else {
+                color = (h%12)?'#8080a0':'#000000';
             }
-            
-            var tracks = data.tracks;
-            for ( var i = 0; i < tracks.length; i++ ) {
-                var track = new google.maps.Polyline({
-                    geodesic: true,
-                    strokeColor: '#d00000',
-                    strokeOpacity: 1.0,
-                    strokeWeight: 1.5
-                });
-                track.setPath(tracks[i]);
-                track.setMap(googleMap);
-                routeTracks[i] = track;
-            }
-            var isochrones = data.isochrones;
-            var startSymbol = {
-                path: google.maps.SymbolPath.CIRCLE
-            }
-            for ( var i = 0; i < isochrones.length; i++ ) {
-                var h = new Date(isochrones[i].time).getUTCHours();
-                var color;
-                if (h%6 === 4) {
-                    color = '#D00000';
-                } else {
-                    color = (h%12)?'#8080a0':'#000000';
-                }
-                var isochrone = new google.maps.Polyline({
-                    geodesic: true,
-                    strokeColor: color,
-                    strokeOpacity: 0.8,
-                    strokeWeight: (h%6)?1:3,
-                    icons: [{icon: startSymbol,  offset: '0%'}]
-                });
-                isochrone.setPath(isochrones[i].path);
-                isochrone.setMap(googleMap);
-                addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
-                routeIsochrones[i] = isochrone;
-            }
-            
-            $("#lb_from").text(JSON.stringify(data.stats.start));
-            $("#lb_duration").text(JSON.stringify(data.stats.duration));
-            $("#lb_sails").text(JSON.stringify(data.stats.sails));
-            $("#lb_minwind").text(roundTo(data.stats["min-wind"], 1) + " - " + roundTo(data.stats["max-wind"], 1));
-            $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
+            var isochrone = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: color,
+                strokeOpacity: 0.8,
+                strokeWeight: (h%6)?1:3,
+                icons: [{icon: startSymbol,  offset: '0%'}]
+            });
+            isochrone.setPath(isochrones[i].path);
+            isochrone.setMap(googleMap);
+            addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
+            routeIsochrones[i] = isochrone;
+        }
+        
+        $("#lb_from").text(JSON.stringify(data.stats.start));
+        $("#lb_duration").text(JSON.stringify(data.stats.duration));
+        $("#lb_sails").text(formatSails(data));
+        $("#lb_minwind").text(roundTo(data.stats["min-wind"], 1) + " - " + roundTo(data.stats["max-wind"], 1));
+        $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
     }
 
 
@@ -772,6 +772,18 @@
         return dhm.days + ":" +  pad0(dhm.hours) + ":" + pad0(dhm.minutes) + ":" + pad0(dhm.seconds);
     }
     
+    function formatSails (data) {
+        var result = "";
+        for (sail of data.stats.sails) {
+            if (result) {
+                result = sail + "," + result;
+            } else {
+                result = sail;
+            }
+        }
+        return result;
+    }
+
     ////////////////////////////////////////////////////////////////////////////////
     /// Conversion
     

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-14 22:52:14>
+;;; Last Modified <michael 2018-12-15 23:48:37>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -46,7 +46,7 @@
   (dest +lacoruna+)
   (mode +max-origin+)
   (fan 100)
-  (stepmax +24h+))
+  (stepmax +12h+))
 
 (defstruct duration days hours minutes seconds)
 (defmethod print-object ((thing duration) stream)
@@ -323,7 +323,6 @@
          (loop
             :with up-vmg-angle = (third up-vmg)
             :with down-vmg-angle = (third down-vmg)
-            :with time = (adjust-timestamp step-time (:offset :sec step-size))
             :for pointnum :from 0
             :for twa :across all-twa-points
             :for heading-stbd = (twa-heading wind-dir twa)
@@ -341,7 +340,7 @@
                                                                 (coerce heading 'double-float))))
                              (incf pointnum)
                              (vector-push-extend
-                              (construct-rp routepoint start-pos new-pos time heading speed sail reason wind-dir wind-speed)
+                              (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
                               next-isochrone)))))
                   (when (between-heading left right heading-stbd)
                     (add-point heading-stbd twa))
@@ -386,12 +385,47 @@
 
 (defun strip-routepoints (isochrones)
   (loop
-     :for i :in isochrones
+     :for i :in (construct-isochrones isochrones)
      :collect (make-isochrone :time (isochrone-time i)
                               :offset (isochrone-offset i)
                               :path (loop
-                                       :for r :across (isochrone-path i)
+                                       :for r :in (isochrone-path i)
                                        :collect (routepoint-position r)))))
+
+(defun construct-isochrones (isochrones)
+  (loop
+     :for isochrone :in isochrones
+     :append (separate-isochrones isochrone)))
+
+(defun separate-isochrones (isochrone)
+  (do* ((path (isochrone-path isochrone))
+        (index 0 (1+ index))
+        (point (aref path index) (aref path index))
+        (previous nil point)
+        (current-path nil)
+        (isochrones nil))
+       ((>= index (1- (length path)))
+        (cons (make-isochrone :time (isochrone-time isochrone)
+                              :offset (isochrone-offset isochrone)
+                              :path current-path)
+              isochrones))
+    (cond
+      ((or (null previous)
+           (and (< (abs (- (latlng-lat (routepoint-position point))
+                           (latlng-lat (routepoint-position previous))))
+                   0.5)
+                (< (abs (- (latlng-lng (routepoint-position point))
+                           (latlng-lng (routepoint-position previous))))
+                   0.5)))
+       (push point current-path))
+      (t
+       (push (make-isochrone :time (isochrone-time isochrone)
+                              :offset (isochrone-offset isochrone)
+                              :path current-path)
+             isochrones)
+       (setf current-path (list point))))))
+
+
 
 (defun extract-points (isochrone)
   (let ((points (loop :for p :across isochrone :when p :collect p)))

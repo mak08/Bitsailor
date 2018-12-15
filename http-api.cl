@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-12 00:09:29>
+;;; Last Modified <michael 2018-12-15 21:50:38>
 
 (in-package :virtualhelm)
 
@@ -384,8 +384,8 @@
            (make-latlng :lat (latlng-lat (routing-dest routing))
                         :lng (coerce (read-from-string value) 'double-float))))
     (t
-     (log2:error "Unhandled parameter ~a=~a" name value)
-     (error "Unhandled parameter ~a=~a" name value))))
+     (log2:warning "Unhandled parameter ~a=~a" name value)))
+    (values))
 
 (defun make-session-id ()
   (create-uuid))

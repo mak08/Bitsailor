@@ -354,6 +354,10 @@
     function displayRouting (data) {
         var best = data.best;
         var startTime = new Date(best[0].time);
+
+        // Sometimes the first track mark is covered by the startMarker.
+        startMarker.set('time', best[0].time);
+
         var markerIcon = "img/marker_32x12.png";
         var redMarkerIcon = "img/marker_red_32x12.png";
         for ( var i = 0; i < best.length; i++ ) {
@@ -364,7 +368,7 @@
                 draggable: false
             });
             addMarkerListener(trackMarker);
-            addWaypointInfo(trackMarker, startTime, best[i], best[i+1]);
+            addWaypointInfo(trackMarker, startTime, best[i]);
             trackMarkers[i] = trackMarker;
         }
         
@@ -513,6 +517,7 @@
         });
         trackMarker.set('time', point.time);
         trackMarker.addListener('mouseover', function() {
+            console.log(infoWindow.content);
             infoWindow.open(googleMap, trackMarker);
         });
         trackMarker.addListener('mouseout', function() {

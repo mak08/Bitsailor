@@ -517,11 +517,18 @@
         });
         trackMarker.set('time', point.time);
         trackMarker.addListener('mouseover', function() {
-            console.log(infoWindow.content);
             infoWindow.open(googleMap, trackMarker);
         });
         trackMarker.addListener('mouseout', function() {
-            infoWindow.close();
+            if (!this.noClose) {
+                infoWindow.close();
+            }
+        });
+        trackMarker.addListener('click', function() {
+            this.noClose = true;
+        });
+        infoWindow.addListener('closeclick', function() {
+            trackMarker.noClose = false;
         });
     }
     

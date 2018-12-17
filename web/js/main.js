@@ -162,6 +162,7 @@
     function onSelectIsochrone (isochrone) {
         var offset = isochrone.get('offset');
         $("#ir_index")[0].value = offset;
+        updateIsochrones();
         var time = isochrone.get('time');
         redrawWind("time", time);
     }
@@ -185,6 +186,7 @@
             ir_index.valueAsNumber = ir_index.valueAsNumber + 1;
         else if (source == "bt_inc6")
             ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
+        updateIsochrones();
         redrawWind("offset", ir_index.value);
     }
     
@@ -384,30 +386,8 @@
             track.setMap(googleMap);
             routeTracks[i] = track;
         }
-        var isochrones = data.isochrones;
-        var startSymbol = {
-            path: google.maps.SymbolPath.CIRCLE
-        }
-        for ( var i = 0; i < isochrones.length; i++ ) {
-            var h = new Date(isochrones[i].time).getUTCHours();
-            var color;
-            if (h%6 === 4) {
-                color = '#D00000';
-            } else {
-                color = (h%12)?'#8080a0':'#000000';
-            }
-            var isochrone = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: color,
-                strokeOpacity: 0.8,
-                strokeWeight: (h%6)?1:3,
-                icons: [{icon: startSymbol,  offset: '0%'}]
-            });
-            isochrone.setPath(isochrones[i].path);
-            isochrone.setMap(googleMap);
-            addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
-            routeIsochrones[i] = isochrone;
-        }
+
+        createIsochrones(data.isochrones);
         
         $("#lb_from").text(JSON.stringify(data.stats.start));
         $("#lb_duration").text(JSON.stringify(data.stats.duration));
@@ -485,6 +465,50 @@
     function updateStartPosition (lat, lng) {
         var latLng = new google.maps.LatLng(lat, lng);
         startMarker.setPosition(latLng);
+    }
+
+    function createIsochrones (isochrones) {
+        var startSymbol = {
+            path: google.maps.SymbolPath.CIRCLE
+        }
+        for ( var i = 0; i < isochrones.length; i++ ) {
+            var style = getIsoStyle(isochrones[i].time, 0, 1);
+            var isochrone = new google.maps.Polyline({
+                geodesic: true,
+                strokeColor: style.color,
+                strokeOpacity: 0.8,
+                strokeWeight: style.weight,
+                icons: [{icon: startSymbol,  offset: '0%'}]
+            });
+            isochrone.setPath(isochrones[i].path);
+            isochrone.setMap(googleMap);
+            addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
+            routeIsochrones[i] = isochrone;
+        }
+    }
+
+    function getIsoStyle (time, offset, selectedOffset) {
+        var h = new Date(time).getUTCHours();
+        var weight =  (h%6)?1:3;
+        var color;
+        if (offset === selectedOffset) {
+            color = '#ffffff';
+            weight = 3;
+        } else {
+            if (h%6 === 4) {
+                color = '#d00000';
+            } else {
+                color = (h%12)?'#8080a0':'#000000';
+            }
+        }
+        return {"color": color, "weight": weight };
+    }
+
+    function updateIsochrones () {
+        for (isochrone of routeIsochrones ) {
+            var style = getIsoStyle(isochrone.get('time'), isochrone.get('offset'), ir_index.valueAsNumber);
+            isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
+        }
     }
     
     function clearRoute() {

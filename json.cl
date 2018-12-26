@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2018-11-11 20:41:19>
+;;; Last Modified  <michael 2018-12-25 23:33:56>
  
 (in-package :virtualhelm)
 
@@ -113,6 +113,13 @@
      :when (< k (1- (length thing))) :do (format stream ", "))
   (format stream "]"))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Special types
+
+(defmethod json% (stream (thing latlng))
+  (format stream "{\"lat\":~5$, \"lng\":~5$}"
+          (latlng-lat thing)
+          (latlng-lng thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Deserializing JSON

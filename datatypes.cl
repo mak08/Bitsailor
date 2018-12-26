@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-10 21:12:05>
+;;; Last Modified <michael 2018-12-25 22:03:45>
 
 (in-package :virtualhelm)
 
@@ -9,12 +9,12 @@
 ;;; Unit conversion
 
 (defun knots-to-m/s (knots)
-  (coerce (* 463 (/ knots 900)) 'double-float))
+  (* 463.0 (/ knots 900.0)))
 
 (defun m/s-to-knots (m/s)
-  (coerce (* 900 (/ m/s 463)) 'double-float))
+  (* 900.0 (/ m/s 463.0)))
 
-(defun m/s-to-kM/H (m/s)
+(defun m/s-to-kM/h (m/s)
   (* m/s 3.6))
  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

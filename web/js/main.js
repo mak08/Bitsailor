@@ -355,7 +355,6 @@
 
     function displayRouting (data) {
         var best = data.best;
-        var startTime = new Date(best[0].time);
 
         // Sometimes the first track mark is covered by the startMarker.
         startMarker.set('time', best[0].time);
@@ -370,7 +369,7 @@
                 draggable: false
             });
             addMarkerListener(trackMarker);
-            addWaypointInfo(trackMarker, startTime, best[i]);
+            addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
             trackMarkers[i] = trackMarker;
         }
         
@@ -416,11 +415,11 @@
             var irIndex = $("#ir_index")[0];
             var lbFCMax = $("#lb_fcmax")[0];
             
-            var starttime = routing.starttime;
+            var startTime = routing.starttime;
             var cbStartDelayed = $("#cb_startdelayed")[0];
-            if ( starttime != false && starttime != 'NIL' ) {
+            if ( startTime != false && startTime != 'NIL' ) {
                 cbStartDelayed.checked = true;
-                $("#tb_starttime")[0].value = starttime;
+                $("#tb_starttime")[0].value = startTime;
                 
             } else {
                 cbStartDelayed.checked = false;
@@ -575,6 +574,9 @@
         result += "<p>";
         result += "<b> TWA</b>: " + roundTo(point.twa, 1);
         result += "<b> HDG</b>: " + roundTo(point.heading, 1) + "°  " + point.sail;
+        result += "</p>";
+        result += "<p>";
+        result += "<b> Penalty</b>: " + point.penalty;
         result += "</p>";
         
         result += "</div>";

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-15 23:48:37>
+;;; Last Modified <michael 2018-12-24 23:09:56>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -45,7 +45,7 @@
   (start +lessables+)
   (dest +lacoruna+)
   (mode +max-origin+)
-  (fan 100)
+  (fan 90)
   (stepmax +12h+))
 
 (defstruct duration days hours minutes seconds)
@@ -96,16 +96,17 @@
                    :heading (routepoint-heading successor)
                    :dtf (routepoint-destination-distance routepoint)
                    :speed (routepoint-speed routepoint)
-                   :sail (or (routepoint-sail routepoint) (routepoint-sail successor))
+                   :sail (routepoint-sail successor)
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)
                    :twa (routepoint-twa successor)
-                   :penalty (routepoint-penalty routepoint)))
+                   :penalty (routepoint-penalty successor)))
 
 (defun routepoint-twa (rp)
-  (if (routepoint-wind-dir rp)
-      (round (heading-twa (routepoint-wind-dir rp)
-                          (routepoint-heading rp)))))
+  (when (and (routepoint-heading rp)
+             (routepoint-wind-dir rp))
+    (round (heading-twa (routepoint-wind-dir rp)
+                        (routepoint-heading rp)))))
 
 (defmethod print-object ((thing routepoint) stream)
   (format stream " ~a@~a"
@@ -118,7 +119,7 @@
          (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
                               (get-forecast-bundle 'constant-wind-bundle)))
          (polars (get-routing-polars routing))
-         (dest-heading (round (normalize-heading (course-angle start-pos dest-pos))))
+         (dest-heading (round (course-angle start-pos dest-pos)))
          (left (normalize-heading (- dest-heading (routing-fan routing))))
          (right (normalize-heading (+ dest-heading (routing-fan routing))))
          (start-time
@@ -156,7 +157,7 @@
                (get-wind-forecast forecast start-pos)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time dest-heading (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
                           (make-array 0 :adjustable t :fill-pointer 0)))
@@ -175,7 +176,7 @@
                             :tracks (extract-tracks isochrone)
                             :isochrones (strip-routepoints isochrones))))
         
-      (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
+      (log2:info "Isochrone ~a at ~a, ~a points, forecast ~a" stepnum (format-datetime nil step-time) (length isochrone) forecast)
 
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
@@ -227,7 +228,7 @@
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 36 600))
-              300)
+              600)
              ((<= delta-t (* 72 600))
               900)
              ((<= delta-t (* 144 600))
@@ -246,7 +247,7 @@
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
         (routing-foils routing)
-      (setf speed (* speed (foiling-factor speed twa))))
+      (setf speed (* speed (foiling-factor wind-speed twa))))
     (when (routing-hull routing)
       (setf speed (* speed 1.003)))
     (let ((penalty
@@ -256,8 +257,9 @@
           cur-sail
           (not (equal sail cur-sail)))
          (values sail (* speed penalty) "Sail Change"))
-        ((or (< twa 0 cur-twa)
-             (< cur-twa 0 twa))
+        ((and cur-twa
+              (or (< twa 0 cur-twa)
+                  (< cur-twa 0 twa)))
          (values sail (* speed penalty) "Tack/Gybe"))
         (t
          (values sail speed nil))))))
@@ -379,8 +381,8 @@
   (if (>= (- (latlng-lng (routing-dest routing))
              (latlng-lng (routing-start routing)))
           180)
-      (make-latlng :lat (latlng-lat (routing-dest routing))
-                   :lng (- (latlng-lng (routing-dest routing)) 360))
+      (make-latlng :lat% (latlng-lat (routing-dest routing))
+                   :lng% (- (latlng-lng (routing-dest routing)) 360))
       (routing-dest routing)))
 
 (defun strip-routepoints (isochrones)
@@ -528,8 +530,8 @@
          (polars (get-combined-polars (routing-polars routing) sails))
          (time (or time (now)))
          (time-increment +10min+)
-         (startpos (make-latlng :lat lat-a :lng lng-a)))
-    (let* ((heading (course-angle startpos (make-latlng :lat lat :lng lng)))
+         (startpos (make-latlng :lat% lat-a :lng% lng-a)))
+    (let* ((heading (course-angle startpos (make-latlng :lat% lat :lng% lng)))
            (curpos (copy-latlng startpos))
            (wind-dir (get-wind-forecast (get-forecast forecast-bundle time) startpos))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))

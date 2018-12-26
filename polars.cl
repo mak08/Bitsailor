@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-11-11 22:43:05>
+;;; Last Modified <michael 2018-12-25 21:59:48>
 
 (declaim (optimize speed (safety 1)))
 
@@ -53,8 +53,8 @@
   (declare (double-float twa wind-speed))
   ;; (check-type twa angle)
   (aref cpolars-speed
-        (round (* (abs twa) 10))
-        (round (* wind-speed 10))))
+        (round (* (abs twa) 10.0))
+        (round (* wind-speed 10.0))))
 
 (defun get-combined-polars (name options)
   ;; cpolar speeds are in m/s, not kts!
@@ -79,11 +79,11 @@
          (max-wind (aref tws (1- (length tws))))
          (precomputed
           (loop
-             :for angle :of-type double-float :from 0d0 :to 180d0 :by 0.1d0
+             :for angle :from 0 :to 1800
              :collect (loop
-                         :for wind :from 0d0 :to max-wind :by 0.1d0
+                         :for wind :from 0 :to (* max-wind 10)
                          :collect (multiple-value-list
-                                   (get-max-speed% angle wind polars options)))))
+                                   (get-max-speed% (/ angle  10.0) (/ wind 10.0) polars options)))))
          (speed (make-array (list (length precomputed)
                                   (length (car precomputed)))
                             :initial-contents precomputed)))
@@ -174,7 +174,7 @@
 
 
 (defun load-polars (polars-name)
-  ;;; Speed values are on knots. Convert to m/s.
+  ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (let* ((polars
           (joref (joref (parse-json-file polars-name) "scriptData") "polar"))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-10 23:54:14>
+;;; Last Modified <michael 2018-12-25 13:11:43>
 
 (in-package :virtualhelm)
 
@@ -15,6 +15,9 @@
   6218884d0
   "Assumed radius of Earth in metres")
 
+(defconstant +nautical-mile+
+  (/ (* 2 pi +radius+) (* 360 60)))
+
 (defconstant +pi/180+
   (/ pi 180))
 
@@ -26,11 +29,14 @@
 ;;; 
 
 (defun round-to-digits (x d)
-  (/ (fround x (expt 10 (- d))) (expt 10 d)))
+  (declare ((integer 0 10) d) (double-float x))
+  (let ((divisor (expt 10 d)))
+    (/ (the double-float (fround x (the double-float (/ 1d0 divisor)))) divisor)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Interpolation
-
+ 
+(declaim (inline fraction-index))
 (defun fraction-index (value steps)
   (loop
      :for step :across steps
@@ -40,21 +46,17 @@
      :finally (return (values (1- index)
                               (/ (- value (aref steps (1- index)))
                                  (- step (aref steps (1- index))))))))
+(declaim (notinline fraction-index))
 
+(declaim (inline bilinear-unit))
 (defun bilinear-unit (x y f00 f01 f10 f11)
-  (+ (* f00 (- 1 x) (- 1 y))
-     (* f01 x (- 1 y))
-     (* f10 (- 1 x) y)
+  ;; (declare (double-float x y f00 f01 f10 f11))
+  (+ (* f00 (- 1d0 x) (- 1d0 y))
+     (* f01 x (- 1d0 y))
+     (* f10 (- 1d0 x) y)
      (* f11 x y)))
+(declaim (notinline bilinear-unit))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Trigonometric units
-
-(declaim (inline deg))
-(defun deg (x)
-  (declare (double-float x))
-  (* 360 (/ x (* 2 pi))))
-(declaim (notinline deg))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Navigation
 
@@ -62,13 +64,12 @@
 ;;; http://www.kompf.de/trekka/distance.php?lat1=52.5164&lon1=13.3777&lat2=38.692668&lon2=-9.177944
 ;;; http://de.wikipedia.org/wiki/Gro%C3%9Fkreis
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Great circle angle
 
-(declaim (inline gc-angle gc-angle-hvc))
+(declaim (inline gc-angle))
 (defun gc-angle (origin target)
-  "Copmute great circle angle between origin and target"
+  "Compute great circle angle between origin and target"
   (let* ((lat1 (latlng-latr origin))
          (lat2 (latlng-latr target))
          (lon1 (latlng-lngr origin))
@@ -78,6 +79,9 @@
     (acos
      (+ (* (sin lat1) (sin lat2))
         (* (cos lat1) (cos lat2) (cos d))))))
+(declaim (notinline gc-angle))
+
+(declaim (inline  gc-angle-hvs))
 (defun gc-angle-hvs (origin target)
   "Compute great circle angle using the haversine formula"
   (let* ((lat1 (latlng-latr origin))
@@ -92,7 +96,7 @@
                (* sinx sinx))))
       (declare (inline sin2))
       (* 2 (asin (sqrt (+ (sin2 dlat/2) (* (cos lat1) (cos lat2) (sin2 dlon/2)))))))))
-(declaim (notinline gc-angle gc-angle-hvc))
+(declaim (notinline gc-angle-hvs))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Spherical distance
@@ -100,42 +104,42 @@
 (declaim (inline add-distance-exact add-distance-estimate))
 (defun add-distance-exact (pos distance alpha)
   ;; Exact calculation on the spherical Earth
-  (let ((lat (latlng-lat pos))
-        (lon (latlng-lng pos)))
-    (declare (double-float lat lon distance alpha))
+  (let ((lat-r (latlng-latr pos))
+        (lon-r (latlng-lngr pos)))
+    (declare (double-float lat-r lon-r distance alpha))
     (let* ((d (/ distance +radius+))
            (cis-d (cis d))
            (cos-d (realpart cis-d))
            (sin-d (imagpart cis-d))
-           (a (* alpha +pi/180+))
+           (a (rad alpha))
            (sin-a (sin a))
-           (lat-r (* lat +pi/180+))
            (cis-lat-r (cis lat-r))
            (cos-lat-r (realpart cis-lat-r))
            (sin-lat-r (imagpart cis-lat-r))
-           (lon-r (* lon +pi/180+))
            (lat-new-r (asin (+ (* sin-lat-r cos-d)
                                (* cos-lat-r sin-d (cos a)))))
            (lon-new-r (+ lon-r
                          (asin (/ (* sin-a sin-d)
                                   (cos lat-new-r))))))
-      (declare (double-float cos-d sin-d cos-lat-r sin-lat-r))
-      (make-latlng :lat (/ lat-new-r +pi/180+)
-                   :lng (/ lon-new-r +pi/180+)))))
+      (declare (double-float d a cos-d sin-d cos-lat-r sin-lat-r lat-new-r lon-new-r))
+      (make-latlng :latr% lat-new-r
+                   :lngr% lon-new-r))))
+(declaim (notinline add-distance-exact))
+
+(declaim (inline add-distance-estimate))
 (defun add-distance-estimate (pos distance alpha)
   ;; Approximation for short distances (<< 100km)
-  (let ((lat (latlng-lat pos))
-        (lon (latlng-lng pos)))
-    (declare (double-float lat lon distance alpha))
+  (let ((lat-r (latlng-latr pos))
+        (lon-r (latlng-lngr pos)))
+    (declare (double-float lat-r lon-r distance alpha))
     (let* ((d (/ distance +radius+))
-           (a (* alpha +pi/180+))
-           (lat-r (* lat +pi/180+))
-           (lon-r (* lon +pi/180+))
+           (a (rad alpha))
            (d-lat-r (* d (cos a)))
            (d-lon-r (* d (/ (sin a) (cos (+ lat-r d-lat-r))))))
-      (make-latlng :lat (/ (+ lat-r d-lat-r) +pi/180+)
-                   :lng (/ (+ lon-r d-lon-r) +pi/180+)))))
-(declaim (notinline add-distance-exact add-distance-estimate))
+      (declare (double-float a))
+      (make-latlng :latr% (+ lat-r d-lat-r)
+                   :lngr% (+ lon-r d-lon-r)))))
+(declaim (notinline add-distance-estimate))
 
 (defun longitudinal-distance (latlng1 latlng2)
   (let* ((l1 (latlng-lng latlng1))
@@ -178,8 +182,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Course angle
 
-(declaim (inline course-angle course-angle-d))
-
+(declaim (inline course-angle))
 (defun course-angle (origin target &optional (xi (gc-angle-hvs origin target)))
   "Compute course angle using central angle" 
   (let* ((lat1 (latlng-latr origin))
@@ -212,7 +215,9 @@
            (if (= ld 1)
                omega
                (- (* PI 2) omega)))))))))
+(declaim (notinline course-angle))
 
+(declaim (inline course-angle-d))
 (defun course-angle-d (origin target &optional (dist (course-distance origin target)))
   "Compute course angle using great circle distance"
   (let* ((lat1 (latlng-latr origin))
@@ -231,8 +236,6 @@
       (t
        (when (eql dist 0d0)
          (error "Distance is zero between ~a and ~a" origin target))
-       (when (complexp dist)
-         (error "Invalid distance |~a ~a|" origin target))
        (let* ((e (/ dist +radius+))
               (cos-omega
                (/ (- (sin lat2) (* sin-lat1 (cos e)))
@@ -250,7 +253,7 @@
            (if (= ld 1)
                omega
                (- (* PI 2) omega)))))))))
-(declaim (notinline course-angle course-angle-d))
+(declaim (notinline course-angle-d))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

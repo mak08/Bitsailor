@@ -1,40 +1,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-25 21:39:35>
+;;; Last Modified <michael 2018-12-29 11:59:47>
 
 (in-package :virtualhelm)
 
-
-(defun polars-json-to-csv (&key
-                             (filename  "/home/michael/Repository/VirtualHelm/polars/IMOCA60VVOR17.json"))
-  (let* ((saildefs
-          (load-polars-json :filename filename :convert-speed nil))
-         (pathname (pathname filename))
-         (output-directory (append (pathname-directory pathname)
-                                   (list (pathname-name pathname))))
-         (output-path (make-pathname :directory output-directory)))
-    (log2:info "Writing files to ~a" output-path)
-    (ensure-directories-exist output-path)
-    (loop
-       :for saildef :in saildefs
-       :do (with-open-file (f (make-pathname :directory output-directory
-                                             :name  (sail-name saildef)
-                                             :type "csv")
-                              :direction :output
-                              :if-exists :supersede)
-             (write-polars-csv saildef f)))))
-
-(defun write-polars-csv (saildef file)
-  (destructuring-bind (twa-length speed-length)
-      (array-dimensions (sail-speed saildef))
-    (loop
-       :for twa :below twa-length
-       :do (progn
-             (loop
-                :for speed :below speed-length
-                :do (format file "~a," (aref (sail-speed saildef) twa speed)))
-             (format file "~%")))))
 
 (defun probe-wind (time latlng)
   (let ((forecast (get-forecast
@@ -45,7 +15,6 @@
         (get-wind-forecast forecast latlng)
       (values angle
               (m/s-to-knots speed)))))
-
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))
@@ -96,6 +65,7 @@
 
 
 (defun boat-speed-raw (polars-name twa tws &optional (options '("reach" "heavy" "light")))
+  (declare (ignorable options))
   (let* ((polars (get-polars-raw polars-name))
          (twa-index (position twa (joref polars "twa") :test #'equalp))
          (tws-index (position tws (joref polars "tws") :test #'equalp))

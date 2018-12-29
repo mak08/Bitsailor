@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-22 18:36:06>
+;;; Last Modified <michael 2018-12-29 18:05:16>
 
 (in-package :virtualhelm)
 
@@ -302,6 +302,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races
+
+(defconstant +parameter-groups+ ())
 
 (defun get-parameter-group (name)
   (or (cdr (assoc name +parameter-groups+ :test #'string=))

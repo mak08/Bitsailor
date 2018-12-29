@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-24 23:09:56>
+;;; Last Modified <michael 2018-12-28 18:55:03>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -228,7 +228,7 @@
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 36 600))
-              600)
+              300)
              ((<= delta-t (* 72 600))
               900)
              ((<= delta-t (* 144 600))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-25 22:03:45>
+;;; Last Modified <michael 2018-12-28 02:36:23>
 
 (in-package :virtualhelm)
 
@@ -17,29 +17,6 @@
 (defun m/s-to-kM/h (m/s)
   (* m/s 3.6))
  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; - HEADING values range from 0..360 (clockwise from north)
-;;; - ANGLE  values range from -179..180 (starboard downwind to port downwind)  
-
-(deftype heading () `(integer 0 360))
-(deftype angle () `(double-float -179.99999999d0 180.0d0))
-
-(defun normalize-heading (value)
-  (if (> value 360)
-      (- value 360)
-      (if (< value 0)
-          (+ value 360)
-          value)))
-
-(declaim (inline normalize-angle))
-(defun normalize-angle (value)
-  (if (<= value -180d0)
-      (+ value 360d0)
-      (if (> value 180d0)
-          (- value 360d0)
-          value)))
-(declaim (notinline normalize-angle))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Time
 

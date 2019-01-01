@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-29 18:05:16>
+;;; Last Modified <michael 2019-01-01 17:19:08>
 
 (in-package :virtualhelm)
 
@@ -16,10 +16,10 @@
 (defun get-page (server handler request response)
   (handler-case 
       (let* ((session (find-or-create-session request response))
-             (mainpage (get-routing-request-mainpage request))
+             (app (get-request-app request))
              (race-id (get-routing-request-race-id request))
              (routing (session-routing session race-id))
-             (path (merge-pathnames (make-pathname :name mainpage :type "html")
+             (path (merge-pathnames (make-pathname :name app :type "html")
                                     (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                                                       '("web"))))))
         (log2:info "race-id: ~a" race-id)
@@ -93,9 +93,9 @@
         (setf (status-code response) 500)
         (setf (status-text response) (format nil "~a" e))))))
 
-(defun get-routing-request-mainpage (request)
+(defun get-request-app (request)
   (let ((query-pairs (parameters request)))
-    (or (cadr (assoc "mainpage" query-pairs :test #'string=))
+    (or (cadr (assoc "app" query-pairs :test #'string=))
         "index")))
 
 (defun get-routing-request-race-id (request)
@@ -291,7 +291,7 @@
 (defun get-routing-url (session race-id)
   (let ((routing (session-routing session race-id)))
     (format nil "/vh?~@{~a=~a~^&~}"
-            "mainpage" "main" 
+            "app" "main" 
             "race" race-id
             "forecastbundle" (routing-forecast-bundle routing)
             "starttime" (routing-starttime routing)
@@ -315,7 +315,7 @@
   (dolist (pair pairs)
     (destructuring-bind (name value)
         pair
-      (unless (member name '("destlat" "destlon" "mainpage") :test #'string=)
+      (unless (member name '("destlat" "destlon" "app") :test #'string=)
         (set-routing-parameter session routing name value)))))
 
 (defun set-routing-parameter (session routing name value)

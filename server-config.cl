@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2018-12-14 22:39:32>
+;;; Last Modified <michael 2019-01-01 18:13:56>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -93,7 +93,7 @@
 
 (handle
  :request (:method :get
-           :path "/vh")
+           :path "/start")
  :handler (:dynamic 'vh:get-page
                     :authentication nil))
 

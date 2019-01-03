@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-02 21:42:11>
+;;; Last Modified <michael 2019-01-03 22:26:03>
 
 (in-package :virtualhelm)
 
@@ -305,7 +305,7 @@
 
 (defun get-parameter-group (name)
   (or (cdr (assoc name +parameter-groups+ :test #'string=))
-      '(("forecastbundle" "NOAA-DATASET")
+      '(("forecastbundle" "NOAA")
         ("minwind" "true")
         ("searchangle" "90"))))
 

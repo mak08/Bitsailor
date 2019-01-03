@@ -1,14 +1,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-29 11:59:47>
+;;; Last Modified <michael 2019-01-02 21:25:37>
 
 (in-package :virtualhelm)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helpers
+
+(defparameter *fc* nil)
+(defun get-fc ()
+  (setf *fc* (get-forecast (get-dataset 'noaa-dataset) (now))))
+
+(defun get-route-for-session (session-id race-id)
+  (let ((session (gethash session-id *session-ht*)))
+    (get-route (session-routing session race-id))))
 
 
 (defun probe-wind (time latlng)
   (let ((forecast (get-forecast
-                   (get-forecast-bundle 'noaa-bundle)
+                   (get-dataset 'noaa-dataset)
                    (parse-rfc3339-timestring time))))
     (log2:info "Using ~a" forecast)
     (multiple-value-bind (angle speed)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-05 22:33:05>
+;;; Last Modified <michael 2019-01-02 21:45:06>
 
 (in-package :virtualhelm)
 
@@ -29,25 +29,15 @@
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
     ;; Load latest complete bundle and possbily update (synchronous)
-    (load-forecast-bundle 'noaa-bundle)
+    (load-dataset 'cl-weather:noaa-dataset)
     ;; Start asynchronous updates
     (timers:add-timer (lambda ()
-                        (let ((bundle (get-forecast-bundle 'noaa-bundle)))
-                          (update-forecast-bundle 'noaa-bundle)))
+                        (let ((bundle (get-dataset 'cl-weather:noaa-dataset)))
+                          (update-dataset 'noaa-dataset)))
                       :id "WEATHER-UPDATER"
                       :hours '(3 9 15 21)
                       :minutes '(30))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Helpers
-
-(defparameter *fc* nil)
-(defun get-fc ()
-  (setf *fc* (get-forecast (get-forecast-bundle 'noaa-bundle) (now))))
-
-(defun get-route-for-session (session-id race-id)
-  (let ((session (gethash session-id *session-ht*)))
-    (get-route (session-routing session race-id))))
     
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

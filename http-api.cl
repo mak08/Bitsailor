@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-01 17:19:08>
+;;; Last Modified <michael 2019-01-02 21:42:11>
 
 (in-package :virtualhelm)
 
@@ -137,15 +137,14 @@
             (race-id (get-routing-request-race-id request)))
         (let* ((session (find-or-create-session request response))
                (routing (session-routing session race-id))
-               (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
-                                    (get-forecast-bundle 'constant-wind-bundle)))
+               (dataset (get-dataset (routing-dataset routing)))
                (forecast-time
                 (if |time|
                     (parse-rfc3339-timestring |time|)
                     (adjust-timestamp
-                        (fcb-time forecast-bundle)
+                        (dataset-time dataset)
                       (:offset :hour (read-from-string |offset|)))))
-               (forecast (get-forecast forecast-bundle forecast-time))
+               (forecast (get-forecast dataset forecast-time))
                (ddx (read-from-string |ddx|))
                (ddy (read-from-string |ddy|))
                (north (read-from-string |north|))
@@ -175,12 +174,11 @@
                   (with-output-to-string (s)
                     (json s
                            (let ((time
-                                  (cl-weather::grib-cycle
-                                   (cl-weather::noaa-data forecast-bundle))))
+                                  (dataset-cycle dataset)))
                              (list
                               (format-datetime nil time)
                               (format-datetime nil forecast-time)
-                              (fcb-max-offset forecast-bundle)
+                              (dataset-max-offset dataset)
                               (format-timestring nil
                                                  time
                                                  :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+)
@@ -293,7 +291,7 @@
     (format nil "/vh?~@{~a=~a~^&~}"
             "app" "main" 
             "race" race-id
-            "forecastbundle" (routing-forecast-bundle routing)
+            "forecastbundle" (routing-dataset routing)
             "starttime" (routing-starttime routing)
             "polars" (routing-polars routing)
             "options" (format nil "~{~a~^,~}" (routing-options routing))
@@ -307,7 +305,7 @@
 
 (defun get-parameter-group (name)
   (or (cdr (assoc name +parameter-groups+ :test #'string=))
-      '(("forecastbundle" "NOAA-BUNDLE")
+      '(("forecastbundle" "NOAA-DATASET")
         ("minwind" "true")
         ("searchangle" "90"))))
 
@@ -327,10 +325,10 @@
         :do (set-routing-parameter session routing name-i value-i)))
     ((string= name "forecastbundle")
      (cond
-       ((string= value "DWD-ICON-BUNDLE")
-        (setf (routing-forecast-bundle routing) 'dwd-icon-bundle))
-       ((string= value "NOAA-BUNDLE")
-        (setf (routing-forecast-bundle routing) 'noaa-bundle))
+       ((string= value "DWD")
+        (setf (routing-dataset routing) 'dwd-dataset))
+       ((string= value "NOAA")
+        (setf (routing-dataset routing) 'noaa-dataset))
        (t
         (error "Invalid forecast designator ~a" value))))
     ((string= name "starttime")

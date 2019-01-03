@@ -1,11 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-28 18:55:03>
+;;; Last Modified <michael 2019-01-03 01:04:17>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
+
+(declaim (optimize (speed 3) (debug 0) (space 0) (safety 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -36,7 +38,7 @@
 ;;; and other routing parameters.
         
 (defstruct routing
-  (forecast-bundle 'noaa-bundle)
+  (dataset 'noaa-dataset)
   (polars "vo65")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
@@ -116,12 +118,11 @@
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (dest-pos (normalized-dest-pos routing))
-         (forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
-                              (get-forecast-bundle 'constant-wind-bundle)))
+         (dataset (get-dataset (routing-dataset routing)))
          (polars (get-routing-polars routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
-         (left (normalize-heading (- dest-heading (routing-fan routing))))
-         (right (normalize-heading (+ dest-heading (routing-fan routing))))
+         (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
+         (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
           ;; Start time NIL is parsed as NOW
           (parse-datetime-local (routing-starttime routing)
@@ -149,8 +150,8 @@
           (step-size (step-size start-time)
                      (step-size start-time step-time))
           ;; Get wind data for simulation time
-          (forecast (get-forecast forecast-bundle step-time)
-                    (get-forecast forecast-bundle step-time))
+          (forecast (get-forecast dataset step-time)
+                    (get-forecast dataset step-time))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -200,7 +201,7 @@
            (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
              (declare (ignore q))
              (when (zerop r)
-               (let* ((start-offset (/ (timestamp-difference start-time (fcb-time forecast-bundle)) 3600))
+               (let* ((start-offset (/ (timestamp-difference start-time (dataset-time dataset)) 3600))
                       (iso (make-isochrone :center start-pos
                                            :time step-time
                                            :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
@@ -240,7 +241,7 @@
 ;;; Speed
 
 (defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars twa)
-  (multiple-value-bind (speed heading sail)
+  (multiple-value-bind (speed sail)
       (twa-boatspeed polars wind-dir wind-speed (normalize-angle twa))
     (when (routing-minwind routing)
       (setf speed (max 1.0289d0 speed)))
@@ -524,8 +525,8 @@
                        lng
                        (total-time +12h+)
                        (step-num (truncate total-time +10min+)))
-  (let* ((forecast-bundle (or (get-forecast-bundle (routing-forecast-bundle routing))
-                              (get-forecast-bundle 'constant-wind-bundle)))
+  (let* ((dataset (or (get-dataset (routing-dataset routing))
+                              (get-dataset 'constant-wind-bundle)))
          (sails (encode-options (routing-options routing)))
          (polars (get-combined-polars (routing-polars routing) sails))
          (time (or time (now)))
@@ -533,27 +534,29 @@
          (startpos (make-latlng :lat% lat-a :lng% lng-a)))
     (let* ((heading (course-angle startpos (make-latlng :lat% lat :lng% lng)))
            (curpos (copy-latlng startpos))
-           (wind-dir (get-wind-forecast (get-forecast forecast-bundle time) startpos))
+           (wind-dir (get-wind-forecast (get-forecast dataset time) startpos))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
       (dotimes (k
                  step-num
                 (make-twainfo :twa twa
-                              :heading (normalize-heading
-                                        (round heading))
+                              :heading (normalize-heading heading)
                               :path (reverse (push (list time (copy-latlng curpos)) path))))
         ;; Save current position
         (push (list time (copy-latlng curpos)) path)
         (setf time (adjust-timestamp time (:offset :sec time-increment)))
-        (let ((forecast (get-forecast forecast-bundle time)))
+        (let ((forecast (get-forecast dataset time)))
           (multiple-value-bind (wind-dir wind-speed)
               (get-wind-forecast forecast curpos)
-            (multiple-value-bind (speed heading)
+            (multiple-value-bind (speed)
                 (twa-boatspeed polars wind-dir wind-speed twa)
-              (setf curpos (add-distance-exact curpos (* speed time-increment) heading)))))))))
+              (let ((heading (twa-heading wind-dir twa)))
+                (setf curpos
+                      (add-distance-exact curpos (* speed time-increment) heading))))))))))
 
 (defun twa-heading (wind-dir angle)
   "Compute HEADING resulting from TWA in WIND"
+  (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))
@@ -567,7 +570,6 @@
   (destructuring-bind (speed sail)
       (get-max-speed (cpolars-speed polars) angle wind-speed)
     (values speed
-            (twa-heading wind-dir angle)
             sail)))
 
 (defun heading-boatspeed (polars wind-dir wind-speed heading)

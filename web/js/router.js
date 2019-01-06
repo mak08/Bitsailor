@@ -287,6 +287,9 @@
     /// XHR requests
     
     function getRoute () {
+        var bt_execute=$("#bt_getroute")[0];
+        bt_execute.disabled = true;
+        
         var mapMenu=$("#mapMenu")[0];
         var windowEvent = window.event;
         mapMenu.style.display = "none";
@@ -310,8 +313,10 @@
             // Display new data
             clearRoute();
             displayRouting(data);
+            bt_execute.disabled = false;
             
         }).fail( function (jqXHR, textStatus, errorThrown) {
+            bt_execute.disabled = false;
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
             alert(textStatus + ' ' + errorThrown);

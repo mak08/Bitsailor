@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2019-01-01 18:13:56>
+;;; Last Modified <michael 2019-01-06 20:56:24>
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -9,6 +9,7 @@
 (setf (log2:log-level "mbedtls:create-config") log2:+info+)
 (setf (log2:log-level "mbedtls:create-ssl-env") log2:+info+)
 (setf (log2:log-level "mbedtls:mbedtls-error-text") log2:+info+)
+(setf (log2:log-level "mbedtls:mbedtls-net-accept") log2:+info+)
 
 (setf (log2:log-level "polarcl") log2:+info+)
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+info+)
@@ -27,8 +28,9 @@
 (server :hostname "aguas-10"
         :protocol :http
         :mt-method :ondemand
+        ;; :mt-method :pooled
         :port "8080"
-        :max-handlers 10)
+        :max-handlers 2)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----

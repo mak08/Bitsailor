@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-03 01:04:17>
+;;; Last Modified <michael 2019-01-05 20:32:56>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -39,6 +39,7 @@
         
 (defstruct routing
   (dataset 'noaa-dataset)
+  (race-id "default")
   (polars "vo65")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
@@ -332,8 +333,8 @@
             :for heading-port = (twa-heading wind-dir (- twa))
             :when (and (> twa 0)
                        (<= up-vmg-angle twa down-vmg-angle)
-                       (or (between-heading left right heading-stbd)
-                           (between-heading left right heading-port)))
+                       (or (heading-between left right heading-stbd)
+                           (heading-between left right heading-port)))
             :do (flet ((add-point (heading twa)
                          (multiple-value-bind (sail speed reason)
                              (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
@@ -341,24 +342,18 @@
                                ((new-pos (add-distance-estimate (routepoint-position routepoint)
                                                                 (* speed step-size)
                                                                 (coerce heading 'double-float))))
-                             (incf pointnum)
-                             (vector-push-extend
-                              (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
-                              next-isochrone)))))
-                  (when (between-heading left right heading-stbd)
+                             (when (meets-all (get-constraints (routing-race-id routing)) new-pos (routepoint-position routepoint))
+                               (incf pointnum)
+                               (vector-push-extend
+                                (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
+                                next-isochrone))))))
+                  (when (heading-between left right heading-stbd)
                     (add-point heading-stbd twa))
-                  (when (between-heading left right heading-port)
+                  (when (heading-between left right heading-port)
                     (add-point heading-port (- twa))))
             :finally (return pointnum)))))))
 
-(defun between-heading (left right heading)
-  (cond ((<= left right)
-         (<= left heading right))
-        (t
-         (or
-          (<= left heading 360)
-          (<= 0 heading right)))))
-    
+
 (defun construct-rp (previous start-pos position step-time heading speed sail reason wind-dir wind-speed)
   (let ((distance (course-distance start-pos position)))
     (create-routepoint previous

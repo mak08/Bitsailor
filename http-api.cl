@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-03 22:26:03>
+;;; Last Modified <michael 2019-01-05 11:31:34>
 
 (in-package :virtualhelm)
 
@@ -243,14 +243,14 @@
 (defun create-session (&key (session-id (make-session-id)) (race-id "default"))
   (let ((session (make-session :session-id session-id)))
     (setf (gethash race-id (session-routings session))
-          (make-routing))
+          (make-routing :race-id race-id))
     (values session)))
 
 (defun session-routing (session race-id)
   (or
    (gethash race-id (session-routings session))
    (setf (gethash race-id (session-routings session))
-         (make-routing))))
+         (make-routing :race-id race-id))))
 
 (defun find-or-create-session (request response)
   (let* ((session-cookie

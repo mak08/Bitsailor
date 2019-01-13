@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-05 11:31:34>
+;;; Last Modified <michael 2019-01-12 18:48:37>
 
 (in-package :virtualhelm)
 
@@ -42,7 +42,7 @@
              (routing (session-routing session race-id))
              (lat (coerce (read-from-string |lat|) 'double-float))
              (lng (coerce (read-from-string |lng|) 'double-float))
-             (position (make-latlng :lat% lat :lng% lng)))
+             (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
         (log2:info "~a: Position=~a" |pointType| position)
         (log2:trace "Session: ~a, Request: ~a" session request)
         (cond ((is-land lat lng)
@@ -167,7 +167,7 @@
                                 :collect (multiple-value-bind (dir speed)
                                              (let ((nlon
                                                     (if (> lon 0) (- lon 360) lon)))
-                                               (get-wind-forecast forecast (make-latlng :lat% lat :lng% nlon)))
+                                               (get-wind-forecast forecast (make-latlng :latr% (rad lat) :lngr% (rad nlon))))
                                            (list (round-to-digits dir 2)
                                                  (round-to-digits speed 2)))))))
             (setf (http-body response)
@@ -364,12 +364,12 @@
              (string (find-place value)))))
     ((string= name "startlat")
      (setf (routing-start routing)
-           (make-latlng :lat% (coerce (read-from-string value) 'double-float)
-                        :lng% (latlng-lng (routing-start routing)))))
+           (make-latlng :latr% (rad (coerce (read-from-string value) 'double-float))
+                        :lngr% (rad (latlng-lng (routing-start routing))))))
     ((string= name "startlon")
      (setf (routing-start routing)
-           (make-latlng :lat% (latlng-lat (routing-start routing))
-                        :lng% (coerce (read-from-string value) 'double-float))))
+           (make-latlng :latr% (rad (latlng-lat (routing-start routing)))
+                        :lngr% (rad (coerce (read-from-string value) 'double-float)))))
     ((string= name "dest")
      (setf (routing-dest routing)
            (etypecase value
@@ -377,12 +377,12 @@
              (string (find-place value)))))
     ((string= name "destlat")
      (setf (routing-dest routing)
-           (make-latlng :lat% (coerce (read-from-string value) 'double-float)
-                        :lng% (latlng-lng (routing-dest routing)))))
+           (make-latlng :latr% (rad (coerce (read-from-string value) 'double-float))
+                        :lngr% (rad (latlng-lng (routing-dest routing))))))
     ((string= name "destlon")
      (setf (routing-dest routing)
-           (make-latlng :lat% (latlng-lat (routing-dest routing))
-                        :lng% (coerce (read-from-string value) 'double-float))))
+           (make-latlng :latr% (rad (latlng-lat (routing-dest routing)))
+                        :lngr% (rad (coerce (read-from-string value) 'double-float)))))
     (t
      (log2:warning "Unhandled parameter ~a=~a" name value)))
     (values))

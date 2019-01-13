@@ -1,7 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-10-28 15:01:53>
+;;; Last Modified <michael 2019-01-12 21:33:50>
+
+(declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
 (in-package :virtualhelm)
 
@@ -19,13 +21,14 @@
                          left
                          right
                          max-points
-                         &key (criterion +max-origin+))
+                         &key
+                           (criterion +max-origin+)
+                           (fan 180d0))
   ;; (return-from filter-isochrone isochrone)
   (log2:debug "Filter: ~a points" (length isochrone))
   (when (= 0 (length isochrone))
     (return-from filter-isochrone nil))
-  (let* ((fan 180.0)
-         (last
+  (let* ((last
           (1- (length isochrone)))
          (delta-angle
           (/ fan max-points))

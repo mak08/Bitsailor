@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2019-01-06 15:21:19>
+;;; Last Modified <michael 2019-01-10 23:59:16>
 
 (in-package :virtualhelm)
 
@@ -34,7 +34,7 @@
   (gethash race-id +race-constraints-ht+))
 
 (defgeneric meets (constraint point predecessor)
-  (:method (c point predecessor)
+  (:method (constraint point predecessor)
     (error "Constraint ~a has no implementation" constraint)))
 
 (defun meets-all (constraints point predecessor)
@@ -47,36 +47,36 @@
 
 (defclass limit-south (latitude-constraint)
   ())
-(defmethod meets ((constraint limit-south) (point latlng) predecessor)
+(defmethod meets ((constraint limit-south) (point vector) predecessor)
   (declare (ignore predecessor))
   (> (latlng-lat point) (latitude constraint)))
 
 (defclass limit-north (latitude-constraint)
   ())
-(defmethod meets ((constraint limit-north) (point latlng) predecessor)
+(defmethod meets ((constraint limit-north) (point vector) predecessor)
   (declare (ignore predecessor))
   (< (latlng-lat point) (latitude constraint)))
 
 
 (defclass limit-east (longitude-constraint)
   ())
-(defmethod meets ((constraint longitude-constraint) (point latlng) (predecessor latlng))
+(defmethod meets ((constraint longitude-constraint) (point vector) (predecessor vector))
   (not (longitude-between (latlng-lng predecessor) (latlng-lng point) (longitude constraint))))
 
 (defclass limit-west (longitude-constraint)
   ())
-(defmethod meets ((constraint longitude-constraint) (point latlng) (predecessor latlng))
+(defmethod meets ((constraint longitude-constraint) (point vector) (predecessor vector))
   (not (longitude-between (latlng-lng point) (latlng-lng predecessor) (longitude constraint))))
 
 (defclass eastbound-south-gate (point-constraint)
   ())
-(defmethod meets ((constraint eastbound-south-gate) (point latlng) (predecessor latlng))
+(defmethod meets ((constraint eastbound-south-gate) (point vector) (predecessor vector))
   (or (< (latlng-lat point) (latitude constraint))
       (not (longitude-between (latlng-lng predecessor) (latlng-lng point) (longitude constraint)))))
 
 (defclass eastbound-north-gate (point-constraint)
   ())
-(defmethod meets ((constraint eastbound-north-gate) (point latlng) (predecessor latlng))
+(defmethod meets ((constraint eastbound-north-gate) (point vector) (predecessor vector))
   (or (> (latlng-lat point) (latitude constraint))
       (not (longitude-between (latlng-lng predecessor) (latlng-lng point) (longitude constraint)))))
 

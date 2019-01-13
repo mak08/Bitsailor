@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-05 20:32:56>
+;;; Last Modified <michael 2019-01-13 02:05:43>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(declaim (optimize (speed 3) (debug 0) (space 0) (safety 1)))
+(declaim (optimize (speed 3) (debug 0) (space 1) (safety 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -34,87 +34,7 @@
 (defvar *best-route*)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; A routing stores the start and destination of the route
-;;; and other routing parameters.
-        
-(defstruct routing
-  (dataset 'noaa-dataset)
-  (race-id "default")
-  (polars "vo65")
-  (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (options '("reach"))
-  (minwind t) ;; m/s !!
-  (start +lessables+)
-  (dest +lacoruna+)
-  (mode +max-origin+)
-  (fan 90)
-  (stepmax +12h+))
-
-(defstruct duration days hours minutes seconds)
-(defmethod print-object ((thing duration) stream)
-  (format stream "~dd ~2,'0dh ~2,'0dm"
-          (duration-days thing)
-          (duration-hours thing)
-          (duration-minutes thing)))
-
-(defun routing-foils (routing)
-  (member "foil" (routing-options routing) :test #'string=))
-(defun routing-hull (routing)
-  (member "hull" (routing-options routing) :test #'string=))
-(defun routing-winches (routing)
-  (member "winch" (routing-options routing) :test #'string=))
-
-(defstruct routeinfo best stats tracks isochrones)
-
-(defmethod print-object ((thing routeinfo) stream)
-  (let ((stats (or (routeinfo-stats thing)
-                   (make-routestats))))
-    (format stream "#<RouteInfo Start ~a Duration ~a Isochrones ~a>"
-            (routestats-start stats)
-            (routestats-duration stats)
-            (length (routeinfo-isochrones thing)))))
-
-(defstruct routestats start duration sails min-wind max-wind min-twa max-twa)
-  
-(defstruct isochrone center time offset path)
-
-(defstruct twainfo twa heading path)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Isochrones are described by sets of routepoints.
-;;;
-;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
-
-(defstruct (routepoint
-             (:constructor create-routepoint (predecessor position time heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
-  predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance sort-angle%)
-
-(defstruct trackpoint
-  time position heading dtf speed sail penalty twd tws twa)
-
-(defun create-trackpoint (routepoint successor)
-  (make-trackpoint :time (routepoint-time routepoint)
-                   :position (routepoint-position routepoint)
-                   :heading (routepoint-heading successor)
-                   :dtf (routepoint-destination-distance routepoint)
-                   :speed (routepoint-speed routepoint)
-                   :sail (routepoint-sail successor)
-                   :twd (routepoint-wind-dir routepoint)
-                   :tws (routepoint-wind-speed routepoint)
-                   :twa (routepoint-twa successor)
-                   :penalty (routepoint-penalty successor)))
-
-(defun routepoint-twa (rp)
-  (when (and (routepoint-heading rp)
-             (routepoint-wind-dir rp))
-    (round (heading-twa (routepoint-wind-dir rp)
-                        (routepoint-heading rp)))))
-
-(defmethod print-object ((thing routepoint) stream)
-  (format stream " ~a@~a"
-          (routepoint-position thing)
-          (routepoint-time thing)))
+;;; get-route
 
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
@@ -125,9 +45,9 @@
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
-          ;; Start time NIL is parsed as NOW
-          (parse-datetime-local (routing-starttime routing)
-                                :timezone "+00:00")) 
+          (timestamp-maximum (now)
+                             (parse-datetime-local (routing-starttime routing)
+                                                   :timezone "+00:00")))
          (isochrones nil))
     (log2:info "Routing from ~a to ~a / course angle ~a searching +/-~a"
                start-pos
@@ -214,7 +134,7 @@
 (defun reached (candidate dest-pos)
   (some (lambda (p)
           (and p
-               (< (course-distance (routepoint-position p) dest-pos) 10000)))
+               (< (fast-course-distance (routepoint-position p) dest-pos) 10000)))
         candidate))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -229,8 +149,8 @@
           time)))
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
-       (cond ((<= delta-t (* 36 600))
-              300)
+       (cond ((<= delta-t (* 48 600))
+              600)
              ((<= delta-t (* 72 600))
               900)
              ((<= delta-t (* 144 600))
@@ -303,7 +223,14 @@
                (/ elapsed stepnum)
                (coerce (/ pointnum stepnum) 'float))))
 
+(declaim (inline twa-heading))
+(defun twa-heading (wind-dir angle)
+  "Compute HEADING resulting from TWA in WIND"
+  (declare (double-float wind-dir angle) (inline normalize-heading))
+  (normalize-heading (- wind-dir angle)))
+
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time forecast polars next-isochrone)
+  (declare (inline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
   (cond
     ((null routepoint)
      (return-from expand-routepoint 0))
@@ -355,7 +282,7 @@
 
 
 (defun construct-rp (previous start-pos position step-time heading speed sail reason wind-dir wind-speed)
-  (let ((distance (course-distance start-pos position)))
+  (let ((distance (fast-course-distance start-pos position)))
     (create-routepoint previous
                        position
                        step-time
@@ -376,9 +303,9 @@
 (defun normalized-dest-pos (routing)
   (if (>= (- (latlng-lng (routing-dest routing))
              (latlng-lng (routing-start routing)))
-          180)
-      (make-latlng :lat% (latlng-lat (routing-dest routing))
-                   :lng% (- (latlng-lng (routing-dest routing)) 360))
+          180d0)
+      (make-latlng :latr% (latlng-latr (routing-dest routing))
+                   :lngr% (- (latlng-lngr (routing-dest routing)) (* 2 pi)))
       (routing-dest routing)))
 
 (defun strip-routepoints (isochrones)
@@ -459,7 +386,7 @@
      :for point :across (extract-points isochrone)
      :do (progn
            (setf (routepoint-destination-distance point)
-                 (course-distance (routepoint-position point) dest-pos))
+                 (fast-course-distance (routepoint-position point) dest-pos))
            (when (or (null min-point)
                      (< (routepoint-destination-distance point) min-dtf))
              (setf min-dtf (routepoint-destination-distance point)
@@ -508,8 +435,6 @@
                        :minutes minutes
                        :seconds rest-seconds)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TWA tool
 
 (defun get-twa-path (routing
                      &key
@@ -526,8 +451,8 @@
          (polars (get-combined-polars (routing-polars routing) sails))
          (time (or time (now)))
          (time-increment +10min+)
-         (startpos (make-latlng :lat% lat-a :lng% lng-a)))
-    (let* ((heading (course-angle startpos (make-latlng :lat% lat :lng% lng)))
+         (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
+    (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
            (curpos (copy-latlng startpos))
            (wind-dir (get-wind-forecast (get-forecast dataset time) startpos))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
@@ -549,10 +474,6 @@
                 (setf curpos
                       (add-distance-exact curpos (* speed time-increment) heading))))))))))
 
-(defun twa-heading (wind-dir angle)
-  "Compute HEADING resulting from TWA in WIND"
-  (declare (double-float wind-dir angle) (inline normalize-heading))
-  (normalize-heading (- wind-dir angle)))
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))
 

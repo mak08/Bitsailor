@@ -1,9 +1,91 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-29 16:46:43>
+;;; Last Modified <michael 2019-01-12 22:38:17>
 
 (in-package :virtualhelm)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; A routing stores the start and destination of the route
+;;; and other routing parameters.
+        
+(defstruct routing
+  (dataset 'noaa-dataset)
+  (race-id "default")
+  (polars "vo65")
+  (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (options '("reach"))
+  (minwind t) ;; m/s !!
+  (start +lessables+)
+  (dest +lacoruna+)
+  (mode +max-origin+)
+  (fan 90)
+  (stepmax +12h+))
+
+(defstruct duration days hours minutes seconds)
+(defmethod print-object ((thing duration) stream)
+  (format stream "~dd ~2,'0dh ~2,'0dm"
+          (duration-days thing)
+          (duration-hours thing)
+          (duration-minutes thing)))
+
+(defun routing-foils (routing)
+  (member "foil" (routing-options routing) :test #'string=))
+(defun routing-hull (routing)
+  (member "hull" (routing-options routing) :test #'string=))
+(defun routing-winches (routing)
+  (member "winch" (routing-options routing) :test #'string=))
+
+(defstruct routeinfo best stats tracks isochrones)
+
+(defmethod print-object ((thing routeinfo) stream)
+  (let ((stats (or (routeinfo-stats thing)
+                   (make-routestats))))
+    (format stream "#<RouteInfo Start ~a Duration ~a Isochrones ~a>"
+            (routestats-start stats)
+            (routestats-duration stats)
+            (length (routeinfo-isochrones thing)))))
+
+(defstruct routestats start duration sails min-wind max-wind min-twa max-twa)
+  
+(defstruct isochrone center time offset path)
+
+(defstruct twainfo twa heading path)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Isochrones are described by sets of routepoints.
+;;;
+;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
+
+(defstruct (routepoint
+             (:constructor create-routepoint (predecessor position time heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
+  predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance sort-angle%)
+
+(defstruct trackpoint
+  time position heading dtf speed sail penalty twd tws twa)
+
+(defun create-trackpoint (routepoint successor)
+  (make-trackpoint :time (routepoint-time routepoint)
+                   :position (routepoint-position routepoint)
+                   :heading (routepoint-heading successor)
+                   :dtf (routepoint-destination-distance routepoint)
+                   :speed (routepoint-speed routepoint)
+                   :sail (routepoint-sail successor)
+                   :twd (routepoint-wind-dir routepoint)
+                   :tws (routepoint-wind-speed routepoint)
+                   :twa (routepoint-twa successor)
+                   :penalty (routepoint-penalty successor)))
+
+(defun routepoint-twa (rp)
+  (when (and (routepoint-heading rp)
+             (routepoint-wind-dir rp))
+    (round (heading-twa (routepoint-wind-dir rp)
+                        (routepoint-heading rp)))))
+
+(defmethod print-object ((thing routepoint) stream)
+  (format stream " ~a@~a"
+          (routepoint-position thing)
+          (routepoint-time thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Time
@@ -56,17 +138,6 @@
 (defmethod print-object ((thing timestamp) stream)
   (format-rfc1123-timestring stream thing))
 
-(defstruct grib-values
-  forecast-time                 ; 
-  u-array
-  v-array
-  vmax-data)
-
-(defmethod print-object ((thing grib-values) stream)
-  (format stream "{grib-values ~a ~a}"
-          (grib-values-forecast-time thing)
-          (array-dimensions
-           (grib-values-u-array thing))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

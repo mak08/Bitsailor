@@ -1,19 +1,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2018-12-28 11:59:59>
+;;; Last Modified <michael 2019-01-13 15:59:53>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
   (:use "COMMON-LISP"
         #+sbcl "SB-MOP"
+        #+:ccl "CCL"
         "CL-GEOMATH"
         "POLARCL"
         "CL-MAP"
         "CL-WEATHER"
         "LOCAL-TIME"
         "RDPARSE"
-        "BABEL")
+        #-ccl"BABEL")
   (:export
    "*SERVER-CONFIG*"
    ;; HTTP API

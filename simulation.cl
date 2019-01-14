@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-13 02:05:43>
+;;; Last Modified <michael 2019-01-13 21:28:35>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -171,9 +171,9 @@
         (routing-foils routing)
       (setf speed (* speed (foiling-factor wind-speed twa))))
     (when (routing-hull routing)
-      (setf speed (* speed 1.003)))
+      (setf speed (* speed 1.003d0)))
     (let ((penalty
-           (if (routing-winches routing) 0.9375 0.75)))
+           (if (routing-winches routing) 0.9375d0 0.75d0)))
       (cond
         ((and
           cur-sail
@@ -186,15 +186,17 @@
         (t
          (values sail speed nil))))))
 
-(defvar +foil-speeds+ (map 'vector #'knots-to-m/s
-                           #(0.0 11.0 16.0 35.0 40.0 70.0)) )
-(defvar +foil-angles+ #(0.0 70.0 80.0 160.0 170.0 180.0))
-(defvar +foil-matrix+ #2a((1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.04 1.04 1.00 1.00)
-                          (1.00 1.00 1.04 1.04 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)
-                          (1.00 1.00 1.00 1.00 1.00 1.00)))
+(unless (boundp '+foil-speeds+)
+(defconstant +foil-speeds+ (map 'vector #'knots-to-m/s
+                                #(0.0d0 11.0d0 16.0d0 35.0d0 40.0d0 70.0d0)) )
+(defconstant +foil-angles+ #(0.0d0 70.0d0 80.0d0 160.0d0 170.0d0 180.0d0))
+(defconstant +foil-matrix+ #2a((1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
+)
 
 (defun foiling-factor (speed twa)
   (multiple-value-bind
@@ -265,6 +267,8 @@
             :do (flet ((add-point (heading twa)
                          (multiple-value-bind (sail speed reason)
                              (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
+                           (declare (double-float speed)
+                                    (integer step-size))
                            (let
                                ((new-pos (add-distance-estimate (routepoint-position routepoint)
                                                                 (* speed step-size)

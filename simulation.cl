@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-13 21:28:35>
+;;; Last Modified <michael 2019-03-16 22:53:11>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -247,42 +247,46 @@
                                         :initial-contents twa-points
                                         :adjustable t
                                         :fill-pointer t)))
-       (with-bindings
-           (((wind-dir wind-speed)
-             (get-wind-forecast forecast (routepoint-position routepoint)))
-            ((up-vmg down-vmg) (best-vmg polars wind-speed )))
-         (vector-push-extend (third up-vmg) all-twa-points)
-         (vector-push-extend (third down-vmg) all-twa-points)
-         (loop
-            :with up-vmg-angle = (third up-vmg)
-            :with down-vmg-angle = (third down-vmg)
-            :for pointnum :from 0
-            :for twa :across all-twa-points
-            :for heading-stbd = (twa-heading wind-dir twa)
-            :for heading-port = (twa-heading wind-dir (- twa))
-            :when (and (> twa 0)
-                       (<= up-vmg-angle twa down-vmg-angle)
-                       (or (heading-between left right heading-stbd)
-                           (heading-between left right heading-port)))
-            :do (flet ((add-point (heading twa)
-                         (multiple-value-bind (sail speed reason)
-                             (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
-                           (declare (double-float speed)
-                                    (integer step-size))
-                           (let
-                               ((new-pos (add-distance-estimate (routepoint-position routepoint)
-                                                                (* speed step-size)
-                                                                (coerce heading 'double-float))))
-                             (when (meets-all (get-constraints (routing-race-id routing)) new-pos (routepoint-position routepoint))
-                               (incf pointnum)
-                               (vector-push-extend
-                                (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
-                                next-isochrone))))))
-                  (when (heading-between left right heading-stbd)
-                    (add-point heading-stbd twa))
-                  (when (heading-between left right heading-port)
-                    (add-point heading-port (- twa))))
-            :finally (return pointnum)))))))
+       (multiple-value-bind
+             (wind-dir wind-speed)
+           (get-wind-forecast forecast (routepoint-position routepoint))
+         (when (null wind-dir)
+           ;; No wind forecast
+           (return-from expand-routepoint 0))
+         (multiple-value-bind (up-vmg down-vmg)
+             (best-vmg polars wind-speed)
+           (vector-push-extend (third up-vmg) all-twa-points)
+           (vector-push-extend (third down-vmg) all-twa-points)
+           (loop
+              :with up-vmg-angle = (third up-vmg)
+              :with down-vmg-angle = (third down-vmg)
+              :for pointnum :from 0
+              :for twa :across all-twa-points
+              :for heading-stbd = (twa-heading wind-dir twa)
+              :for heading-port = (twa-heading wind-dir (- twa))
+              :when (and (> twa 0)
+                         (<= up-vmg-angle twa down-vmg-angle)
+                         (or (heading-between left right heading-stbd)
+                             (heading-between left right heading-port)))
+              :do (flet ((add-point (heading twa)
+                           (multiple-value-bind (sail speed reason)
+                               (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
+                             (declare (double-float speed)
+                                      (integer step-size))
+                             (let
+                                 ((new-pos (add-distance-estimate (routepoint-position routepoint)
+                                                                  (* speed step-size)
+                                                                  (coerce heading 'double-float))))
+                               (when (meets-all (get-constraints (routing-race-id routing)) new-pos (routepoint-position routepoint))
+                                 (incf pointnum)
+                                 (vector-push-extend
+                                  (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
+                                  next-isochrone))))))
+                    (when (heading-between left right heading-stbd)
+                      (add-point heading-stbd twa))
+                    (when (heading-between left right heading-port)
+                      (add-point heading-port (- twa))))
+              :finally (return pointnum))))))))
 
 
 (defun construct-rp (previous start-pos position step-time heading speed sail reason wind-dir wind-speed)

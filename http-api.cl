@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-01-12 18:48:37>
+;;; Last Modified <michael 2019-03-17 19:58:23>
 
 (in-package :virtualhelm)
 
@@ -211,6 +211,43 @@
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Probe Wind
+
+(defun |probeWind| (location request response &key |time| |lat| |lng|)
+  (declare (ignore location))
+  (setf (http-header response :|Access-Control-Allow-Origin|) "chrome-extension://poijbgbfaaoibilekpmmeaoicaffnmab")
+  (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
+  (handler-case
+      (let ((*read-default-float-format* 'double-float)
+            (race-id (get-routing-request-race-id request)))
+        (let* ((session
+                (find-or-create-session request response))
+               (routing
+                (session-routing session race-id))
+               (dataset
+                (get-dataset (routing-dataset routing)))
+               (forecast-time
+                (parse-rfc3339-timestring |time|))
+               (forecast
+                (get-forecast dataset forecast-time))
+               (lat (coerce (read-from-string |lat|) 'double-float))
+               (lng (coerce (read-from-string |lng|) 'double-float)))
+          (multiple-value-bind (dir speed)
+              (get-wind-forecast forecast (make-latlng :latr% (rad lat) :lngr% (rad lng)))
+            (setf (http-body response)
+                  (with-output-to-string (s)
+                    (json s
+                          (list (round-to-digits dir 2)
+                                (round-to-digits (m/s-to-knots speed) 2))))))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))
+    #+ccl(ccl::invalid-memory-access (e)
+           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
+           (setf (status-code response) 500)
+           (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Batch routing

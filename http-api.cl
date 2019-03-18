@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-03-17 19:58:23>
+;;; Last Modified <michael 2019-03-18 18:27:21>
 
 (in-package :virtualhelm)
 
@@ -216,7 +216,7 @@
 
 (defun |probeWind| (location request response &key |time| |lat| |lng|)
   (declare (ignore location))
-  (setf (http-header response :|Access-Control-Allow-Origin|) "chrome-extension://poijbgbfaaoibilekpmmeaoicaffnmab")
+  (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
   (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
   (handler-case
       (let ((*read-default-float-format* 'double-float)

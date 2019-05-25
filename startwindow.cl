@@ -1,9 +1,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2018-05-25 21:42:13>
+;;; Last Modified <michael 2019-04-02 00:22:41>
 
 (in-package :virtualhelm)
+
+#|
+(check-window 12 168
+              :increment 180
+              :start cl-geomath::+los-angeles+
+              :dest cl-geomath::+honolulu+
+              :stepmax (* 60 60 24 5)
+              :polars "maxi_trimaran")
+|#
 
 (defun check-window (start-offset
                      window-size
@@ -20,7 +29,10 @@
        (last (adjust-timestamp first (:offset :hour window-size))))
     (adjust-timestamp! first (:set :minute 0) (:set :sec 0))
     (adjust-timestamp! last (:set :minute 0) (:set :sec 0))
-    (with-open-file (f logfile :direction :output :if-exists :supersede)
+    (with-open-file (f logfile
+                       :direction :output
+                       :if-exists :append
+                       :if-does-not-exist :create)
       (do ((starttime first
                       (adjust-timestamp starttime (:offset :minute increment)))
            (result (list)))

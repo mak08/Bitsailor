@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-01-02 21:25:37>
+;;; Last Modified <michael 2019-03-17 14:23:41>
 
 (in-package :virtualhelm)
 
@@ -17,10 +17,12 @@
     (get-route (session-routing session race-id))))
 
 
-(defun probe-wind (time latlng)
+(defun probe-wind (latlng &optional (time (now)))
+  (when (stringp time)
+    (setf time (parse-rfc3339-timestring time)))
   (let ((forecast (get-forecast
                    (get-dataset 'noaa-dataset)
-                   (parse-rfc3339-timestring time))))
+                   time)))
     (log2:info "Using ~a" forecast)
     (multiple-value-bind (angle speed)
         (get-wind-forecast forecast latlng)

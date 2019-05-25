@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2018-12-25 21:59:48>
+;;; Last Modified <michael 2019-03-26 22:37:13>
 
 (declaim (optimize speed (safety 1)))
 
@@ -67,7 +67,13 @@
               (preprocess-polars name options)))))
 
 (defun best-vmg (cpolars windspeed)
-  (values-list (aref (cpolars-vmg cpolars) (round (* windspeed 10)))))
+  (let ((index (round (* windspeed 10)))
+        (vmg (cpolars-vmg cpolars)))
+    (cond
+      ((< index (length vmg))
+       (values-list (aref vmg index)))
+      (T
+       (list 0 nil nil)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Implementation
@@ -223,6 +229,16 @@
          :sum (loop :for twa :from 40d0 :to 150d0 :by 5d0
                  :sum (car (get-max-speed (cpolars-speed polars) twa windspeed))))
       10))))
+
+
+(defun boat-vmg-performance (name)
+  (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))
+    (values
+     (round
+      (loop
+         :for windspeed :from 2d0 :to 35d0 :by 5d0
+         :sum (loop :for vmg :in (multiple-value-list (best-vmg polars windspeed))
+                 :sum (car vmg)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-03-26 22:37:13>
+;;; Last Modified <michael 2019-05-25 23:22:14>
 
 (declaim (optimize speed (safety 1)))
 
@@ -16,8 +16,10 @@
 (defmethod print-object ((thing polars) stream)
   (format stream "[Polars ~a]" (polars-name thing)))
 
-(defvar *polars-dir*
-  (append (pathname-directory (asdf:system-source-directory :virtualhelm)) '("polars")))
+(defparameter *polars-dir*
+  (make-pathname :directory (append (pathname-directory *load-truename*)
+                                    '("polars")))
+  "A string designating the directory containing polar files")
 
 (defvar +jib+ 0)
 (defvar +spi+ 1)
@@ -183,7 +185,7 @@
   ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (let* ((polars
-          (joref (joref (parse-json-file polars-name) "scriptData") "polar"))
+          (joref (joref (parsejson-file polars-name) "scriptData") "polar"))
          (tws
           (joref polars "tws"))
          (twa

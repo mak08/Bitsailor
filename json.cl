@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2019-01-11 00:03:21>
+;;; Last Modified  <michael 2019-05-25 23:05:51>
  
 (in-package :virtualhelm)
 
@@ -169,7 +169,7 @@
 
 (defun parse-json-file (name)
   (let ((filename (merge-pathnames (make-pathname :name name :type "json")
-                                   (make-pathname :directory *polars-dir*))))
+                                   (pathname *polars-dir*))))
     (log2:info "Loading polars from ~a~%" filename)
     (with-open-file (f filename :element-type 'character)
       (let ((json-string (make-string (file-length f))))

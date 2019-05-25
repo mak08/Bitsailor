@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-03-17 16:15:14>
+;;; Last Modified <michael 2019-05-25 21:02:39>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -17,6 +17,7 @@
         #-ccl"BABEL")
   (:export
    "*SERVER-CONFIG*"
+   "*POLARS-DIR*"
    ;; HTTP API
    "GET-PAGE"
    "getSession"

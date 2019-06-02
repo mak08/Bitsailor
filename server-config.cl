@@ -1,7 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2019-03-18 00:13:30>
+;;; Last Modified <michael 2019-06-01 12:58:50>
+
+(in-package :virtualhelm)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (setf (log2:log-level "mbedtls") log2:+info+)
 (setf (log2:log-level "mbedtls:accept") log2:+info+)
@@ -10,8 +14,8 @@
 (setf (log2:log-level "mbedtls:create-ssl-env") log2:+info+)
 (setf (log2:log-level "mbedtls:mbedtls-error-text") log2:+info+)
 (setf (log2:log-level "mbedtls:mbedtls-net-accept") log2:+info+)
-
-(setf (log2:log-level "polarcl") log2:+info+)
+(setf (log2:log-level "mbedtls:mbedtls-ssl-read") log2:+trace+) 
+(setf (log2:log-level "polarcl") log2:+debug+)
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+info+)
 (setf (log2:log-level "polarcl:handler-thread") log2:+info+)
 
@@ -27,8 +31,8 @@
 ;;; Start one server on port 8080 
 (server :hostname "aguas-10"
         :protocol :http
-        :mt-method :ondemand
-        ;; :mt-method :pooled
+        ;; :mt-method :ondemand
+        :mt-method :pooled
         :port "8080"
         :max-handlers 2)
 
@@ -77,21 +81,21 @@
 (handle
  :request (:prefix "/js")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web" "js"))
-                                     (make-pathname :directory (pathname-directory *load-pathname*))))
+                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                                     *source-root*))
                    :authentication nil))
 (handle
  :request (:prefix "/css")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web" "css"))
-                                     (make-pathname :directory (pathname-directory *load-pathname*))))
+                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                                     *source-root*))
                    :authentication nil))
 
 (handle
  :request (:prefix "/img")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web" "img"))
-                                     (make-pathname :directory (pathname-directory *load-pathname*))))
+                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                                     *source-root*))
                    :authentication nil))
 
 (handle

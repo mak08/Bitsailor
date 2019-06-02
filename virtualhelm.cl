@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-01-06 16:35:32>
+;;; Last Modified <michael 2019-05-28 00:29:58>
 
 (in-package :virtualhelm)
 
@@ -14,16 +14,19 @@
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
-                   (make-pathname :directory (pathname-directory #.*compile-file-truename*)))) 
+                   *source-root*))
 
 (defun run-virtual-helm ()
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((rcfile
          (merge-pathnames (make-pathname :name ".vhrc")
                           (user-homedir-pathname))))
-    (when (probe-file rcfile)
-      (log2:info "Loading ~a " rcfile)        
-      (load rcfile :verbose t :print t))
+    (cond
+      ((probe-file rcfile)
+       (log2:info "Loading ~a " rcfile)        
+       (load rcfile :verbose t :print t))
+      (t
+       (log2:warning "~a does not exist" rcfile)))
     (ensure-map)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)

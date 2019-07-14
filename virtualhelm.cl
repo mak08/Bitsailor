@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-05-28 00:29:58>
+;;; Last Modified <michael 2019-07-05 21:09:25>
 
 (in-package :virtualhelm)
 
@@ -10,7 +10,7 @@
 
 ;;; Log levels are also set in server configuration file!
 (setf (log2:log-level "virtualhelm") log2:+info+)
-(setf (log2:log-level "cl-weather") log2:+trace+)
+(setf (log2:log-level "cl-weather") log2:+info+)
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
@@ -30,15 +30,8 @@
     (ensure-map)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
-    ;; Load latest complete bundle and possbily update (synchronous)
-    (load-dataset 'cl-weather:noaa-dataset)
-    ;; Start asynchronous updates
-    (timers:add-timer (lambda ()
-                        (let ((bundle (get-dataset 'cl-weather:noaa-dataset)))
-                          (update-dataset 'noaa-dataset)))
-                      :id "WEATHER-UPDATER"
-                      :hours '(3 9 15 21)
-                      :minutes '(30))))
+    ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
+    (noaa-start-updates)))
 
     
 ;;; EOF

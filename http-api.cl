@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-03-18 18:27:21>
+;;; Last Modified <michael 2019-07-07 22:41:24>
 
 (in-package :virtualhelm)
 
@@ -127,62 +127,59 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
+;;;
 ;;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
-;;; Returns (0d0, -1d0) for unavailable values.
-;;; Does not work if date line is in longitude range.
+;;; Time may be specified directly or as an offset w.r.t the current cycle's start time
+;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (location request response &key  (|time| nil) (|offset| "0") |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore location request))
+  (log2:info "Time:~a Offset:~a N:~a S:~a W:~a E:~a" |time| |offset| |north| |south| |west| |east|) 
   (handler-case
-      (let ((*read-default-float-format* 'double-float)
-            (race-id (get-routing-request-race-id request)))
-        (let* ((session (find-or-create-session request response))
-               (routing (session-routing session race-id))
-               (dataset (get-dataset (routing-dataset routing)))
-               (forecast-time
-                (if |time|
-                    (parse-rfc3339-timestring |time|)
-                    (adjust-timestamp
-                        (dataset-time dataset)
-                      (:offset :hour (read-from-string |offset|)))))
-               (forecast (get-forecast dataset forecast-time))
-               (ddx (read-from-string |ddx|))
-               (ddy (read-from-string |ddy|))
-               (north (read-from-string |north|))
-               (south (read-from-string |south|))
-               (east (read-from-string |east|))
-               (west (read-from-string |west|)))
-
-          (when (< west 0d0) (incf west 360d0))
-          (when (< east 0d0) (incf east 360d0))
-          (when (< east west) (incf east 360d0))
-          
-          (assert (and (plusp ddx)
-                       (plusp ddy)
-                       (< south north)))
-          (let ((wind-data
-                 (loop
-                    :for lat :from north :downto south :by ddy
-                    :collect (loop
-                                :for lon :from west :to east :by ddx
-                                :collect (multiple-value-bind (dir speed)
-                                             (let ((nlon
-                                                    (if (> lon 0) (- lon 360) lon)))
-                                               (get-wind-forecast forecast (make-latlng :latr% (rad lat) :lngr% (rad nlon))))
-                                           (list (round-to-digits dir 2)
-                                                 (round-to-digits speed 2)))))))
-            (setf (http-body response)
-                  (with-output-to-string (s)
-                    (json s
-                           (let ((time
-                                  (dataset-cycle dataset)))
-                             (list
-                              (format-datetime nil time)
-                              (format-datetime nil forecast-time)
-                              (dataset-max-offset dataset)
-                              (format-timestring nil
-                                                 time
-                                                 :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+)
-                              wind-data))))))))
+      (multiple-value-bind (date cycle cycle-start-time)
+          (latest-complete-cycle)
+        (let ((*read-default-float-format* 'double-float))
+          (let* ((session (find-or-create-session request response))
+                 (forecast-time
+                  (if |time|
+                      (parse-rfc3339-timestring |time|)
+                      (adjust-timestamp cycle-start-time (:offset :hour (read-from-string |offset|)))))
+                 (ddx (read-from-string |ddx|))
+                 (ddy (read-from-string |ddy|))
+                 (north (read-from-string |north|))
+                 (south (read-from-string |south|))
+                 (east (read-from-string |east|))
+                 (west (read-from-string |west|)))
+            (log2:info "Cycle: ~a/~a ~a Time:~a" date cycle cycle-start-time forecast-time)
+            (when (< west 0d0) (incf west 360d0))
+            (when (< east 0d0) (incf east 360d0))
+            (when (< east west) (incf east 360d0))
+            
+            (assert (and (plusp ddx)
+                         (plusp ddy)
+                         (< south north)))
+            (let ((wind-data
+                   (loop
+                      :for lat :from north :downto south :by ddy
+                      :collect (loop
+                                  :for lon :from west :to east :by ddx
+                                  :collect (multiple-value-bind (dir speed)
+                                               (let ((nlon
+                                                      (if (> lon 0) (- lon 360) lon)))
+                                                 (cl-weather:noaa-prediction lat nlon :date date :cycle cycle :timestamp forecast-time))
+                                             (list (round-to-digits dir 2)
+                                                   (round-to-digits speed 2)))))))
+              (setf (http-body response)
+                    (with-output-to-string (s)
+                      (json s
+                            (let ((time cycle-start-time))
+                              (list
+                               (format-datetime nil time)
+                               (format-datetime nil forecast-time)
+                               372 ;; (dataset-max-offset dataset)
+                               (format-timestring nil
+                                                  time
+                                                  :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+)
+                               wind-data)))))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -225,16 +222,12 @@
                 (find-or-create-session request response))
                (routing
                 (session-routing session race-id))
-               (dataset
-                (get-dataset (routing-dataset routing)))
                (forecast-time
                 (parse-rfc3339-timestring |time|))
-               (forecast
-                (get-forecast dataset forecast-time))
                (lat (coerce (read-from-string |lat|) 'double-float))
                (lng (coerce (read-from-string |lng|) 'double-float)))
           (multiple-value-bind (dir speed)
-              (get-wind-forecast forecast (make-latlng :latr% (rad lat) :lngr% (rad lng)))
+              (noaa-prediction lat lng :timestamp forecast-time)
             (setf (http-body response)
                   (with-output-to-string (s)
                     (json s

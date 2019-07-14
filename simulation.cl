@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-03-16 22:53:11>
+;;; Last Modified <michael 2019-07-14 16:32:35>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -39,7 +39,6 @@
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (dest-pos (normalized-dest-pos routing))
-         (dataset (get-dataset (routing-dataset routing)))
          (polars (get-routing-polars routing))
          (dest-heading (round (course-angle start-pos dest-pos)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
@@ -71,15 +70,15 @@
           (step-size (step-size start-time)
                      (step-size start-time step-time))
           ;; Get wind data for simulation time
-          (forecast (get-forecast dataset step-time)
-                    (get-forecast dataset step-time))
+          (params (prediction-parameters step-time)
+                  (prediction-parameters step-time))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (get-wind-forecast forecast start-pos)
+               (noaa-prediction% (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time nil (course-distance start-pos dest-pos) nil nil nil wind-dir  wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil (course-distance start-pos dest-pos) nil nil nil wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array 0 :adjustable t :fill-pointer 0)
                           (make-array 0 :adjustable t :fill-pointer 0)))
@@ -98,13 +97,13 @@
                             :tracks (extract-tracks isochrone)
                             :isochrones (strip-routepoints isochrones))))
         
-      (log2:info "Isochrone ~a at ~a, ~a points, forecast ~a" stepnum (format-datetime nil step-time) (length isochrone) forecast)
+      (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
       (map nil (lambda (rp)
                  (let ((new-point-num
-                        (expand-routepoint routing rp start-pos left right step-size step-time forecast polars next-isochrone)))
+                        (expand-routepoint routing rp start-pos left right step-size step-time params polars next-isochrone)))
                    (incf pointnum new-point-num)))
            isochrone)
         
@@ -122,10 +121,10 @@
            (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
              (declare (ignore q))
              (when (zerop r)
-               (let* ((start-offset (/ (timestamp-difference start-time (dataset-time dataset)) 3600))
+               (let* (
                       (iso (make-isochrone :center start-pos
                                            :time step-time
-                                           :offset (truncate (+ start-offset (/ stepsum 3600)) 1.0)
+                                           :offset 0
                                            :path (extract-points isochrone))))
                  (push iso isochrones))))))
         (when reached
@@ -231,7 +230,7 @@
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
 
-(defun expand-routepoint (routing routepoint start-pos left right step-size step-time forecast polars next-isochrone)
+(defun expand-routepoint (routing routepoint start-pos left right step-size step-time params polars next-isochrone)
   (declare (inline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
   (cond
     ((null routepoint)
@@ -246,10 +245,12 @@
             (all-twa-points (make-array (length twa-points)
                                         :initial-contents twa-points
                                         :adjustable t
-                                        :fill-pointer t)))
+                                        :fill-pointer t))
+            (lat (latlng-lat (routepoint-position routepoint)))
+            (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
              (wind-dir wind-speed)
-           (get-wind-forecast forecast (routepoint-position routepoint))
+           (noaa-prediction% lat lng params)
          (when (null wind-dir)
            ;; No wind forecast
            (return-from expand-routepoint 0))
@@ -453,16 +454,14 @@
                        lng
                        (total-time +12h+)
                        (step-num (truncate total-time +10min+)))
-  (let* ((dataset (or (get-dataset (routing-dataset routing))
-                              (get-dataset 'constant-wind-bundle)))
-         (sails (encode-options (routing-options routing)))
+  (let* ((sails (encode-options (routing-options routing)))
          (polars (get-combined-polars (routing-polars routing) sails))
          (time (or time (now)))
          (time-increment +10min+)
          (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
     (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
            (curpos (copy-latlng startpos))
-           (wind-dir (get-wind-forecast (get-forecast dataset time) startpos))
+           (wind-dir (noaa-prediction (latlng-lat startpos) (latlng-lng startpos) :timestamp time))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
       (dotimes (k
@@ -470,17 +469,18 @@
                 (make-twainfo :twa twa
                               :heading (normalize-heading heading)
                               :path (reverse (push (list time (copy-latlng curpos)) path))))
-        ;; Save current position
+        ;; Save previous position
         (push (list time (copy-latlng curpos)) path)
-        (setf time (adjust-timestamp time (:offset :sec time-increment)))
-        (let ((forecast (get-forecast dataset time)))
-          (multiple-value-bind (wind-dir wind-speed)
-              (get-wind-forecast forecast curpos)
-            (multiple-value-bind (speed)
-                (twa-boatspeed polars wind-dir wind-speed twa)
-              (let ((heading (twa-heading wind-dir twa)))
-                (setf curpos
-                      (add-distance-exact curpos (* speed time-increment) heading))))))))))
+        ;; Increment time
+        (adjust-timestamp! time (:offset :sec time-increment))
+        ;; Determine next position
+        (multiple-value-bind (wind-dir wind-speed)
+            (noaa-prediction (latlng-lat curpos) (latlng-lng curpos) :timestamp time)
+          (multiple-value-bind (speed)
+              (twa-boatspeed polars wind-dir wind-speed twa)
+            (let ((heading (twa-heading wind-dir twa)))
+              (setf curpos
+                    (add-distance-exact curpos (* speed time-increment) heading)))))))))
 
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))

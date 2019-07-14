@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-05-27 23:44:08>
+;;; Last Modified <michael 2019-07-13 15:41:11>
 
 (declaim (optimize speed (safety 1)))
 
@@ -58,7 +58,7 @@
         (round (* (abs twa) 10.0))
         (round (* wind-speed 10.0))))
 
-(defun get-combined-polars (name options)
+(defun get-combined-polars (name &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
   (let ((polars-ht
          (or (gethash name *combined-polars-ht*)
@@ -69,7 +69,7 @@
               (preprocess-polars name options)))))
 
 (defun best-vmg (cpolars windspeed)
-  (let ((index (round (* windspeed 10)))
+  (let ((index (truncate windspeed 0.1))
         (vmg (cpolars-vmg cpolars)))
     (cond
       ((< index (length vmg))

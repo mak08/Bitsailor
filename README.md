@@ -22,14 +22,20 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 #### Prerequisites
 
 
-*	Install libgeos-3.4.2 (or newer) and dev files
+*	Install libgdal with GEOS support via apt (package name may vary)
+	
+	```bash
+	$ sudo apt-get install libgdal20
+	```
+
+	or following [these instructions](https://trac.osgeo.org/gdal/wiki/BuildingOnUnix). 
+	In the latter case first install libgeos-3.4.2 (or newer) and dev files
 	
 	```bash
 	$ sudo apt-get install libgeos-3.5.0
 	$ sudo apt-get install libgeos-dev
 	```
-
-*	Install libgdal with GEOS support following [these instructions](https://trac.osgeo.org/gdal/wiki/BuildingOnUnix).
+	Then do
 
 	```bash
 	$ ./configure --with-geos=yes

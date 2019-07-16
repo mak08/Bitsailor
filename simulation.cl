@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-14 16:32:35>
+;;; Last Modified <michael 2019-07-16 22:55:54>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(declaim (optimize (speed 3) (debug 0) (space 1) (safety 0)))
+(declaim (optimize (speed 2) (debug 1) (space 1) (safety 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -48,11 +48,11 @@
                              (parse-datetime-local (routing-starttime routing)
                                                    :timezone "+00:00")))
          (isochrones nil))
-    (log2:info "Routing from ~a to ~a / course angle ~a searching +/-~a"
+    (log2:info "Routing from ~a to ~a at ~a Course angle ~a"
                start-pos
                dest-pos
-               dest-heading
-               (routing-fan routing))
+               start-time
+               dest-heading)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -72,6 +72,7 @@
           ;; Get wind data for simulation time
           (params (prediction-parameters step-time)
                   (prediction-parameters step-time))
+          (base-time (params-timestamp params))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -124,7 +125,7 @@
                (let* (
                       (iso (make-isochrone :center start-pos
                                            :time step-time
-                                           :offset 0
+                                           :offset (truncate (timestamp-difference step-time base-time) 3600)
                                            :path (extract-points isochrone))))
                  (push iso isochrones))))))
         (when reached
@@ -230,8 +231,9 @@
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
 
+
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time params polars next-isochrone)
-  (declare (inline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
+  (declare (notinline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
   (cond
     ((null routepoint)
      (return-from expand-routepoint 0))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-13 15:41:11>
+;;; Last Modified <michael 2019-07-15 22:45:18>
 
 (declaim (optimize speed (safety 1)))
 
@@ -55,8 +55,8 @@
   (declare (double-float twa wind-speed))
   ;; (check-type twa angle)
   (aref cpolars-speed
-        (round (* (abs twa) 10.0))
-        (round (* wind-speed 10.0))))
+        (round (* (abs twa) 10d0))
+        (round (* wind-speed 10d0))))
 
 (defun get-combined-polars (name &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
@@ -69,13 +69,26 @@
               (preprocess-polars name options)))))
 
 (defun best-vmg (cpolars windspeed)
-  (let ((index (truncate windspeed 0.1))
+  (let ((index (round (* windspeed 10d0)))
         (vmg (cpolars-vmg cpolars)))
     (cond
       ((< index (length vmg))
        (values-list (aref vmg index)))
       (T
        (list 0 nil nil)))))
+
+(defun get-cpolars-vmg (name twa kts)
+  (let* ((cpolars (get-combined-polars name +allsails+))
+         (wind-speed (knots-to-m/s kts))
+         (boat-speed (car
+                      (get-max-speed (cpolars-speed cpolars) twa wind-speed))))
+    (* boat-speed (cos (rad twa)))))
+
+(defun get-polars-vmg (name twa kts)
+  (let* ((polars (get-polars name))
+         (wind-speed (knots-to-m/s kts))
+         (boat-speed (get-max-speed% twa wind-speed polars +allsails+)))
+    (* boat-speed (cos (rad twa)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Implementation
@@ -111,13 +124,13 @@
 
 (defun best-vmg% (windspeed cpolars-speed)
   (loop
-     :with best-vmg-up = 0.0
-     :with best-twa-up = 0.0
+     :with best-vmg-up = 0.0d0
+     :with best-twa-up = 0.0d0
      :with best-sail-up = nil
-     :with best-vmg-down = 0.0
-     :with best-twa-down = 0.0
+     :with best-vmg-down = 0.0d0
+     :with best-twa-down = 0.0d0
      :with best-sail-down = nil
-     :for angle :from 20.0d0 :to 170.0d0
+     :for angle :from 0.0d0 :to 170.0d0
      :for (speed sail) = (get-max-speed cpolars-speed angle windspeed)
      :for vmg = (* speed (cos (rad angle)))
      :when (< vmg best-vmg-down)
@@ -158,8 +171,8 @@
     (multiple-value-bind
           (angle-index angle-fraction)
         (fraction-index angle twa)
-      (bilinear-unit speed-fraction
-                     angle-fraction
+      (bilinear-unit angle-fraction
+                     speed-fraction
                      (aref sailspeeds angle-index speed-index)
                      (aref sailspeeds angle-index (1+ speed-index))
                      (aref sailspeeds (1+ angle-index) speed-index)

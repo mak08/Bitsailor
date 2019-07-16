@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2019-05-25 23:05:51>
+;;; Last Modified  <michael 2019-07-15 00:39:45>
  
 (in-package :virtualhelm)
 
@@ -138,7 +138,8 @@
 (defun _json (name tree &rest args)
   (etypecase tree
     (rdparse::token
-     (read-from-string (token-value tree)))
+     (let ((*read-default-float-format* 'double-float))
+       (read-from-string (token-value tree))))
     (atom
      tree)))
 
@@ -152,7 +153,8 @@
 (defun _jsonseq (name tree &rest args)
   (typecase tree
     (rdparse::token 
-     (list (read-from-string (token-value tree))))
+     (list (let ((*read-default-float-format* 'double-float))
+             (read-from-string (token-value tree)))))
     (atom
      (list tree))
     (otherwise

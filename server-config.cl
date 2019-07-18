@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2019-06-01 12:58:50>
+;;; Last Modified <michael 2019-07-18 21:46:53>
 
 (in-package :virtualhelm)
 
@@ -67,6 +67,7 @@
 (register-function 'vh:|getSession|)
 (register-function 'vh:|getWind|)
 (register-function 'vh:|probeWind|)
+(register-function 'vh:|getWindForecast|)
 (register-function 'vh:|setRoute|)
 (register-function 'vh:|setParameter|)
 (register-function 'vh:|getRoute|)

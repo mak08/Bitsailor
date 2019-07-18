@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-05-25 21:02:39>
+;;; Last Modified <michael 2019-07-18 21:47:06>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -22,6 +22,7 @@
    "GET-PAGE"
    "getSession"
    "getWind"
+   "getWindForecast"
    "probeWind"
    "setRoute"
    "setParameter"

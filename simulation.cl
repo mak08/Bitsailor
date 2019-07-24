@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-24 21:02:33>
+;;; Last Modified <michael 2019-07-25 00:40:56>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -70,13 +70,13 @@
           (step-size (step-size start-time)
                      (step-size start-time step-time))
           ;; Get wind data for simulation time
-          (params (prediction-parameters step-time)
-                  (prediction-parameters step-time))
-          (base-time (params-base-time params))
+          (params (interpolation-parameters step-time)
+                  (interpolation-parameters step-time))
+          (base-time (base-time params))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (noaa-prediction% (latlng-lat start-pos) (latlng-lng start-pos) params)
+               (interpolated-prediction (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
                           (create-routepoint nil start-pos start-time nil (course-distance start-pos dest-pos) nil nil nil wind-dir wind-speed)))))
@@ -252,7 +252,7 @@
             (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
              (wind-dir wind-speed)
-           (noaa-prediction% lat lng params)
+           (interpolated-prediction lat lng params)
          (when (null wind-dir)
            ;; No wind forecast
            (return-from expand-routepoint 0))

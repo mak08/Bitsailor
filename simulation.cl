@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-16 22:55:54>
+;;; Last Modified <michael 2019-07-24 21:02:33>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -72,7 +72,7 @@
           ;; Get wind data for simulation time
           (params (prediction-parameters step-time)
                   (prediction-parameters step-time))
-          (base-time (params-timestamp params))
+          (base-time (params-base-time params))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -473,8 +473,8 @@
                               :path (reverse (push (list time (copy-latlng curpos)) path))))
         ;; Save previous position
         (push (list time (copy-latlng curpos)) path)
-        ;; Increment time
-        (adjust-timestamp! time (:offset :sec time-increment))
+        ;; Create new timestamp, Increment time
+        (setf time (adjust-timestamp time (:offset :sec time-increment)))
         ;; Determine next position
         (multiple-value-bind (wind-dir wind-speed)
             (noaa-prediction (latlng-lat curpos) (latlng-lng curpos) :timestamp time)

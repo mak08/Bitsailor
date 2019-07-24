@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2019-07-18 21:46:53>
+;;; Last Modified <michael 2019-07-24 21:38:44>
 
 (in-package :virtualhelm)
 
@@ -14,8 +14,8 @@
 (setf (log2:log-level "mbedtls:create-ssl-env") log2:+info+)
 (setf (log2:log-level "mbedtls:mbedtls-error-text") log2:+info+)
 (setf (log2:log-level "mbedtls:mbedtls-net-accept") log2:+info+)
-(setf (log2:log-level "mbedtls:mbedtls-ssl-read") log2:+trace+) 
-(setf (log2:log-level "polarcl") log2:+debug+)
+(setf (log2:log-level "mbedtls:mbedtls-ssl-read") log2:+info+) 
+(setf (log2:log-level "polarcl") log2:+info+)
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+info+)
 (setf (log2:log-level "polarcl:handler-thread") log2:+info+)
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-18 23:35:15>
+;;; Last Modified <michael 2019-07-25 00:12:48>
 
 (in-package :virtualhelm)
 
@@ -219,7 +219,7 @@
 ;;;
 ;;; Return current and old forecast
 
-(defstruct forecast current previous)
+(defstruct forecast current previous interpolated)
 (defstruct windinfo date cycle dir speed) 
 
 (defun |getWindForecast| (location request response &key |time| |lat| |lng|)
@@ -229,28 +229,36 @@
   (handler-case
       (let ((*read-default-float-format* 'double-float))
         (let* ((forecast-time
-                (parse-rfc3339-timestring |time|))
+                (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
                (lat (read-from-string |lat|))
                (lng (read-from-string |lng|)))
           (multiple-value-bind  (date1 cycle1)
               (available-cycle forecast-time)
-            (multiple-value-bind (dir1 speed1)
-                (noaa-prediction lat lng :timestamp forecast-time :date date1 :cycle cycle1)
-              (multiple-value-bind (date0 cycle0)
-                  (previous-cycle date1 cycle1) 
+            (multiple-value-bind (date0 cycle0)
+                (previous-cycle date1 cycle1) 
+              (multiple-value-bind (dir1 speed1)
+                  (noaa-prediction lat lng :timestamp forecast-time :date date1 :cycle cycle1)
                 (multiple-value-bind (dir0 speed0)
                     (noaa-prediction lat lng :timestamp forecast-time :date date0 :cycle cycle0)
-                  (setf (http-body response)
-                        (with-output-to-string (s)
-                          (json s (make-forecast
-                                   :previous (make-windinfo :date date0
-                                                            :cycle cycle0
-                                                            :dir (round-to-digits dir0 2)
-                                                            :speed (round-to-digits (m/s-to-knots speed0) 2))
-                                   :current (make-windinfo :date date1
-                                                           :cycle cycle1
-                                                           :dir (round-to-digits dir1 2)
-                                                           :speed (round-to-digits (m/s-to-knots speed1) 2))))))))))))
+                  (multiple-value-bind (dir speed)
+                      (interpolated-prediction lat lng
+                                               (make-iparams :old (prediction-parameters forecast-time :date date0 :cycle cycle0 :estimator #'vr-estimator)
+                                                             :current (prediction-parameters forecast-time :date date1 :cycle cycle1 :estimator #'vr-estimator)))
+                    (setf (http-body response)
+                          (with-output-to-string (s)
+                            (json s (make-forecast
+                                     :previous (make-windinfo :date date0
+                                                              :cycle cycle0
+                                                              :dir (round-to-digits dir0 2)
+                                                              :speed (round-to-digits (m/s-to-knots speed0) 2))
+                                     :current (make-windinfo :date date1
+                                                             :cycle cycle1
+                                                             :dir (round-to-digits dir1 2)
+                                                             :speed (round-to-digits (m/s-to-knots speed1) 2))
+                                     :interpolated (make-windinfo :date date1
+                                                                  :cycle cycle1
+                                                                  :dir (round-to-digits dir 2)
+                                                                  :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -260,6 +268,10 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
+(defun timestamp-truncate (timestamp seconds)
+  (universal-to-timestamp (* seconds (truncate (timestamp-to-universal timestamp) seconds))))
+
+                           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Probe Wind
 

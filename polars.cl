@@ -1,9 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-15 22:45:18>
+;;; Last Modified <michael 2019-08-29 22:40:41>
 
-(declaim (optimize speed (safety 1)))
+(declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
 (in-package :virtualhelm)
 
@@ -54,9 +54,11 @@
 (defun get-max-speed (cpolars-speed twa wind-speed)
   (declare (double-float twa wind-speed))
   ;; (check-type twa angle)
-  (aref cpolars-speed
-        (round (* (abs twa) 10d0))
-        (round (* wind-speed 10d0))))
+  (let ((dim (array-dimension cpolars-speed 1)))
+    (aref cpolars-speed
+          (round (* (abs twa) 10d0))
+          (min (round (* wind-speed 10d0))
+               (1- dim)))))
 
 (defun get-combined-polars (name &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
@@ -75,7 +77,8 @@
       ((< index (length vmg))
        (values-list (aref vmg index)))
       (T
-       (list 0 nil nil)))))
+       (log2:warning "Windpseed ~a exceeds interpolation range 0..~a" windspeed (/ (length vmg) 10d0))
+       (values-list (aref vmg (1- (length vmg))))))))
 
 (defun get-cpolars-vmg (name twa kts)
   (let* ((cpolars (get-combined-polars name +allsails+))

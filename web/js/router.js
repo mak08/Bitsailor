@@ -29,7 +29,8 @@
     var routeTracks = [];
     var routeIsochrones = [];
     var trackMarkers = [];
-    
+
+    var forecastData = {};
     var windData = [];
     var currentRouting = {};
     var twaPath = [];
@@ -123,7 +124,7 @@
         google.maps.event.addListener(destinationMarker,'dragend',function() {
             setRoutePoint('dest', destinationMarker.getPosition());
         });
-        
+
         setupCanvas();
         
         google.maps.event.addListenerOnce(googleMap, 'idle', function(){
@@ -149,7 +150,13 @@
         var bounds = getMapBounds();
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
-        redrawWind("offset", ir_index.value);
+        if (forecastData.basetime) {
+            redrawWindByOffset(forecastData.basetime, ir_index.value);
+        } else {
+            var d = new Date();
+            var now = d.toISOString();
+            redrawWindByTime(now, ir_index.value);
+        }
     }
 
     // Event handler for context menu mapMenu 
@@ -164,7 +171,7 @@
         $("#ir_index")[0].value = offset;
         updateIsochrones();
         var time = isochrone.get('time');
-        redrawWind("time", time);
+        redrawWindByTime(time);
     }
 
     function onHideWind (event) {
@@ -187,7 +194,7 @@
         else if (source == "bt_inc6")
             ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
         updateIsochrones();
-        redrawWind("offset", ir_index.value);
+        redrawWindByOffset(forecastData.basetime, ir_index.value);
     }
     
     function onDelayedStart (event) {
@@ -243,7 +250,7 @@
                     irIndex.max = 240;
                     lbFCMax.innerText = 240;
                 }
-                redrawWind("offset", irIndex.value);
+                redrawWindByOffset(forecastData.basetime, irIndex.value);
             }
             console.log("OK");
         }).fail( function (jqXHR, textStatus, errorThrown) {
@@ -280,7 +287,7 @@
     function onMarkerClicked (marker) {
         twaAnchor = marker.getPosition();
         twaTime = marker.get('time');
-        redrawWind("time", twaTime);
+        redrawWindByTime(twaTime);
     }
     
     //////////////////////////////////////////////////////////////////////
@@ -299,10 +306,15 @@
         var selDuration = $("#sel_duration")[0];
         var duration = selDuration.value;
         var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
+
+        // $('div, button, input').css('cursor', 'wait');
+
         $.ajax({
             url: "/function/vh:getRoute",
             dataType: 'json'
         }).done( function (data) {
+            // $('div, button, input').css('cursor', 'auto');
+
             // Remember routing data
             currentRouting = data;
 
@@ -316,6 +328,8 @@
             bt_execute.disabled = false;
             
         }).fail( function (jqXHR, textStatus, errorThrown) {
+            // $('div, button, input').css('cursor', 'auto');
+
             bt_execute.disabled = false;
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
@@ -664,17 +678,27 @@
         });
     }
     
-    function redrawWind (timeParamName, timeParamValue) {
+    function redrawWindByTime (time) {
+        var timeSpec = "time=" + time;
+        getWind(timeSpec);
+    }
+    
+    function redrawWindByOffset (basetime, offset) {
+        var timeSpec = "basetime=" + basetime + "&offset=" + offset;
+        getWind(timeSpec);
+    }
+    
+    function getWind (timeSpec) {
         var bounds = getMapBounds();
         
         var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
         var lon0 = bounds.east + (arcLength(bounds.west, bounds.east) / xSteps)/2;
         var ddx = roundTo(arcLength(bounds.west, bounds.east)/xSteps, 8);
         var ddy = roundTo((bounds.north-bounds.south)/ySteps, 8);
-
+        // $('div, button, input').css('cursor', 'wait');
         $.ajax({
             url: "/function/vh:getWind"
-                + "?" + timeParamName + "=" + timeParamValue
+                + "?" + timeSpec
                 + "&north=" + roundTo(lat0, 6)
                 + "&south=" + roundTo(bounds.south, 6)
                 + "&west=" + roundTo(bounds.west, 6)
@@ -685,8 +709,11 @@
                 + "&ySteps=" + ySteps,
             dataType: 'json'
         }).done( function(data) {
+            // $('div, button, input').css('cursor', 'auto');
+            forecastData = data;
             drawWind(data)
         }).fail( function (jqXHR, textStatus, errorThrown) {
+            // $('div, button, input').css('cursor', 'auto');
             console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
         });
     }
@@ -694,16 +721,16 @@
     function drawWind (data) {
 
         // Update time
-        forecastCycle = data[0];
-        $("#lb_modelrun").text(data[3]);
-        $("#lb_index").text(data[1]);
-        $("#lb_fcmax").text(' ' + data[2] + 'hrs');
+        forecastCycle = data.basetime;
+        $("#lb_modelrun").text(data.cycle);
+        $("#lb_index").text(data.time);
+        $("#lb_fcmax").text(' ' + data.maxoffset + 'hrs');
 
-        var offset = (new Date(data[1]) - new Date(data[0])) / 3600000;
+        var offset = (new Date(data.time) - new Date(data.basetime)) / 3600000;
         ir_index.value = offset;
 
         // Keep new wind data in global var for displaying wind data at mouse position
-        windData = data[4];
+        windData = data.data;
         
         var mapCanvas = document.getElementById('wind-canvas');
         var ctx = mapCanvas.getContext("2d");

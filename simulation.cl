@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-07-25 00:40:56>
+;;; Last Modified <michael 2019-09-01 01:17:20>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(declaim (optimize (speed 2) (debug 1) (space 1) (safety 1)))
+(declaim (optimize (speed 3) (debug 1) (space 1) (safety 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -134,7 +134,7 @@
 (defun reached (candidate dest-pos)
   (some (lambda (p)
           (and p
-               (< (fast-course-distance (routepoint-position p) dest-pos) 10000)))
+               (< (fast-course-distance (routepoint-position p) dest-pos) 30000)))
         candidate))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -230,7 +230,7 @@
   "Compute HEADING resulting from TWA in WIND"
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
-
+(declaim (notinline twa-heading))
 
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time params polars next-isochrone)
   (declare (notinline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
@@ -463,7 +463,7 @@
          (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
     (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
            (curpos (copy-latlng startpos))
-           (wind-dir (noaa-prediction (latlng-lat startpos) (latlng-lng startpos) :timestamp time))
+           (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time)))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
       (dotimes (k
@@ -477,7 +477,7 @@
         (setf time (adjust-timestamp time (:offset :sec time-increment)))
         ;; Determine next position
         (multiple-value-bind (wind-dir wind-speed)
-            (noaa-prediction (latlng-lat curpos) (latlng-lng curpos) :timestamp time)
+            (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time))
           (multiple-value-bind (speed)
               (twa-boatspeed polars wind-dir wind-speed twa)
             (let ((heading (twa-heading wind-dir twa)))

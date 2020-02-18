@@ -200,7 +200,9 @@
     function onDelayedStart (event) {
         if (event.target.checked === true) {
             var d = new Date();
-            $("#tb_starttime")[0].value = d.toISOString().substring(0,16);
+            var isoDate = d.toISOString().substring(0,16);
+            var dateInput =  $("#tb_starttime")[0];
+            dateInput.value = isoDate;
         } else {
             $("#tb_starttime")[0].value = null;
             $.ajax({

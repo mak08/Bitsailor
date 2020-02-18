@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-01-12 22:38:17>
+;;; Last Modified <michael 2019-12-18 23:52:56>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,7 +19,7 @@
   (start +lessables+)
   (dest +lacoruna+)
   (mode +max-origin+)
-  (fan 90)
+  (fan 110)
   (stepmax +12h+))
 
 (defstruct duration days hours minutes seconds)

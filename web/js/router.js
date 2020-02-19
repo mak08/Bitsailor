@@ -624,12 +624,13 @@
         }
         for ( var i=1; i<data.length; i++ ) {
             var twaPathSegment;
-            if ( (i % 6) === 0 ) {
+            var d = new Date(data[i][0]);
+            if ( d.getMinutes() === 0 ) {
                 twaPathSegment = new google.maps.Polyline({
                     geodesic: true,
                     strokeColor: color,
                     strokeOpacity: 1,
-                    strokeWeight: 4,
+                    strokeWeight: 2,
                     icons: [{icon: lineSymbol,  offset: '100%'}]
                 });
             } else {
@@ -637,7 +638,7 @@
                     geodesic: true,
                     strokeColor: color,
                     strokeOpacity: 1,
-                    strokeWeight: 4
+                    strokeWeight: 1
                 });
             }
             twaPathSegment.setPath([data[i-1][1], data[i][1]]);

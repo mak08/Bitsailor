@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-09-01 01:17:20>
+;;; Last Modified <michael 2020-02-19 00:54:57>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -460,6 +460,10 @@
          (polars (get-combined-polars (routing-polars routing) sails))
          (time (or time (now)))
          (time-increment +10min+)
+         (first-increment
+          (let* ((utime (timestamp-to-unix time)))
+            (- (* 600 (truncate (+ utime 600) 600))
+               utime)))
          (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
     (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
            (curpos (copy-latlng startpos))
@@ -474,12 +478,13 @@
         ;; Save previous position
         (push (list time (copy-latlng curpos)) path)
         ;; Create new timestamp, Increment time
-        (setf time (adjust-timestamp time (:offset :sec time-increment)))
+        (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
         ;; Determine next position
         (multiple-value-bind (wind-dir wind-speed)
             (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time))
-          (multiple-value-bind (speed)
-              (twa-boatspeed polars wind-dir wind-speed twa)
+          (multiple-value-bind (sail speed)
+              (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
+            ;;(twa-boatspeed polars wind-dir wind-speed twa)
             (let ((heading (twa-heading wind-dir twa)))
               (setf curpos
                     (add-distance-exact curpos (* speed time-increment) heading)))))))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-02-19 00:54:57>
+;;; Last Modified <michael 2020-02-23 17:38:02>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -30,6 +30,8 @@
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
 
+(defconstant  +max-iso-points+ 1600)
+
 (defvar *isochrones* nil)
 (defvar *best-route*)
 
@@ -56,20 +58,20 @@
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
+          (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
-          (stepnum 0 (1+ stepnum))
           (stepsum 0 (+ stepsum step-size))
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 200 (min 1500 (+ max-points 5)))
-          ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (step-time start-time
-                     (adjust-timestamp step-time (:offset :sec step-size)))
+          (max-points 200 (min +max-iso-points+ (+ max-points 5)))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (step-size (step-size start-time)
                      (step-size start-time step-time))
           ;; Get wind data for simulation time
+          ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
+          (step-time (adjust-timestamp start-time (:offset :sec step-size))
+                     (adjust-timestamp step-time (:offset :sec step-size)))
           (params (interpolation-parameters step-time)
                   (interpolation-parameters step-time))
           (base-time (base-time params))
@@ -98,8 +100,6 @@
                             :tracks (extract-tracks isochrone)
                             :isochrones (strip-routepoints isochrones))))
         
-      (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
-
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
       (map nil (lambda (rp)
@@ -118,6 +118,9 @@
           (t
            (setf reached (reached candidate dest-pos))
            (setf isochrone candidate)
+
+           (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
+
            ;; Collect hourly isochrones
            (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
              (declare (ignore q))

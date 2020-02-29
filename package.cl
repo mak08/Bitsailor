@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-07-18 21:47:06>
+;;; Last Modified <michael 2020-02-29 21:10:21>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -18,6 +18,7 @@
   (:export
    "*SERVER-CONFIG*"
    "*POLARS-DIR*"
+   "*REACHED-DISTANCE*"
    ;; HTTP API
    "GET-PAGE"
    "getSession"

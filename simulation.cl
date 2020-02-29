@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-02-23 17:38:02>
+;;; Last Modified <michael 2020-02-29 21:08:47>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -32,6 +32,7 @@
 
 (defconstant  +max-iso-points+ 1600)
 
+(defvar *reached-distance* 30000)
 (defvar *isochrones* nil)
 (defvar *best-route*)
 
@@ -137,7 +138,7 @@
 (defun reached (candidate dest-pos)
   (some (lambda (p)
           (and p
-               (< (fast-course-distance (routepoint-position p) dest-pos) 30000)))
+               (< (fast-course-distance (routepoint-position p) dest-pos) *reached-distance*)))
         candidate))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

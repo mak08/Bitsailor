@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-10-24 22:24:01>
+;;; Last Modified <michael 2020-04-09 22:22:15>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
@@ -51,11 +51,8 @@
          :for point :across isochrone
          :do (let ((bucket (bucket point)))
                (if (>= bucket (length result))
-                   (log2:error "Invalid bucket ~a, angle ~a, left ~a, right ~a"
-                               bucket
-                               (routepoint-sort-angle% point)
-                               left
-                               right)
+                   ;; (log2:error "Invalid bucket ~a, angle ~a, left ~a, right ~a" bucket (routepoint-sort-angle% point) left right)
+                   t
                    (when (or (null (aref result bucket))
                              (funcall (criterion-compfn criterion)
                                       (funcall (criterion-distfn criterion) point)

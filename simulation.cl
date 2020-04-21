@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-02-29 21:08:47>
+;;; Last Modified <michael 2020-04-10 15:08:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -30,7 +30,7 @@
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
 
-(defconstant  +max-iso-points+ 1600)
+(defconstant  +max-iso-points+ 1500)
 
 (defvar *reached-distance* 30000)
 (defvar *isochrones* nil)
@@ -65,7 +65,7 @@
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 200 (min +max-iso-points+ (+ max-points 5)))
+          (max-points 200 (min +max-iso-points+ (+ max-points 10)))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (step-size (step-size start-time)
                      (step-size start-time step-time))
@@ -153,7 +153,9 @@
           time)))
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
-       (cond ((<= delta-t (* 48 600))
+       (cond ((<= delta-t (* 12 600))
+              600)
+             ((<= delta-t (* 48 600))
               600)
              ((<= delta-t (* 72 600))
               900)

@@ -85,6 +85,9 @@
         // Tracks & Isochrones display is handled by the client directly
         $("#cb_tracks").change(onSetClientParameter);
         $("#cb_isochrones").change(onSetClientParameter);
+
+        // Disable default contextmenu
+        window.oncontextmenu = function (event) { e.preventDefault() }; 
         
         // Connect menu events
         $("#bt_setstart" ).click(function () { onContextMenu('start') });

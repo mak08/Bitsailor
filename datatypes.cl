@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-12-18 23:52:56>
+;;; Last Modified <michael 2020-04-07 00:50:21>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -47,7 +47,14 @@
             (length (routeinfo-isochrones thing)))))
 
 (defstruct routestats start duration sails min-wind max-wind min-twa max-twa)
-  
+(defmethod print-object ((thing routestats) stream)
+  (format stream "~a | ~a | ~2,'0d - ~2,'0d | ~{~a~^, ~}"
+          (format-datetime nil (routestats-start thing))
+          (routestats-duration thing)
+          (routestats-min-wind thing)
+          (routestats-max-wind thing)
+          (routestats-sails thing)))
+
 (defstruct isochrone center time offset path)
 
 (defstruct twainfo twa heading path)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-09-01 18:20:11>
+;;; Last Modified <michael 2020-04-21 23:21:19>
 
 (in-package :virtualhelm)
 
@@ -45,7 +45,7 @@
              (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
         (log2:info "~a: Position=~a" |pointType| position)
         (log2:trace "Session: ~a, Request: ~a" session request)
-        (cond ((is-land lat lng)
+        (cond ((point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
                (setf (status-code response) 400)
                (setf (status-text response) "Point is on land"))
               (t

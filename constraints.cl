@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2019-01-10 23:59:16>
+;;; Last Modified <michael 2020-04-23 18:10:52>
 
 (in-package :virtualhelm)
 
@@ -43,7 +43,7 @@
          constraints))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Constraint types
+;;; Constraint types - Limits
 
 (defclass limit-south (latitude-constraint)
   ())
@@ -68,6 +68,9 @@
 (defmethod meets ((constraint longitude-constraint) (point vector) (predecessor vector))
   (not (longitude-between (latlng-lng point) (latlng-lng predecessor) (longitude constraint))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Eastbound gates
+
 (defclass eastbound-south-gate (point-constraint)
   ())
 (defmethod meets ((constraint eastbound-south-gate) (point vector) (predecessor vector))
@@ -79,6 +82,21 @@
 (defmethod meets ((constraint eastbound-north-gate) (point vector) (predecessor vector))
   (or (> (latlng-lat point) (latitude constraint))
       (not (longitude-between (latlng-lng predecessor) (latlng-lng point) (longitude constraint)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Westbound gates
+
+(defclass westbound-south-gate (point-constraint)
+  ())
+(defmethod meets ((constraint westbound-south-gate) (point vector) (predecessor vector))
+  (or (< (latlng-lat point) (latitude constraint))
+      (not (longitude-between (latlng-lng point) (latlng-lng predecessor) (longitude constraint)))))
+
+(defclass westbound-north-gate (point-constraint)
+  ())
+(defmethod meets ((constraint westbound-north-gate) (point vector) (predecessor vector))
+  (or (> (latlng-lat point) (latitude constraint))
+      (not (longitude-between (latlng-lng point) (latlng-lng predecessor) (longitude constraint)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;F

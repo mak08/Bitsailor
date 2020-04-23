@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-02-29 21:10:21>
+;;; Last Modified <michael 2020-04-22 22:23:21>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -31,7 +31,15 @@
    "getTWAPath"
    "checkWindow"
    ;; VH backend
-   "RUN-VIRTUAL-HELM"))
+   "RUN-VIRTUAL-HELM"
+   ;; Constraints
+   "ADD-CONSTRAINT"
+   "LIMIT-SOUTH"
+   "LIMIT-NORTH"
+   "LIMIT-WEST"
+   "LIMIT-EAST"
+   "EASTBOUND-SOUTH-GATE"
+   "EASTBOUND-NORTH-GATE"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -67,6 +67,8 @@ In addition, VirtualHelm requires
 
 *	[PolarCL](https://github.com/mak08/PolarCL)
 
+*	[cl-weather](https://github.com/mak08/cl-weather)
+
 *	[cl-map](https://github.com/mak08/cl-map)
 
 *	[cl-grib2](https://github.com/mak08/cl-grib2)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-04-21 23:21:19>
+;;; Last Modified <michael 2020-05-01 14:06:01>
 
 (in-package :virtualhelm)
 
@@ -135,15 +135,15 @@
 ;;; In either case, data from the latest available cycle is returned.
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (location request response &key (|time|) (|basetime|) (|offset|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
-  (declare (ignore location |ySteps| |xSteps|))
+  (declare (ignore location request |ySteps| |xSteps|))
   (log2:info "Time:~a Basetime:~a Offset:~a N:~a S:~a W:~a E:~a" |time| |basetime| |offset| |north| |south| |west| |east|)
   (assert (or |time| (and |basetime| |offset|)))
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (requested-time
               (if |time|
-                  (parse-rfc3339-timestring |time|)
-                  (adjust-timestamp  (parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
+                  (local-time:parse-rfc3339-timestring |time|)
+                  (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
         (log2:info "Requested time: ~a" requested-time)
         (multiple-value-bind (date cycle)
             (available-cycle requested-time)
@@ -184,7 +184,7 @@
                                :maxoffset 372 ;; (dataset-max-offset dataset)
                                :cycle (format-timestring nil
                                                          time
-                                                         :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone +utc-zone+)
+                                                         :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone local-time:+utc-zone+)
                                :data wind-data)))))))))
     (error (e)
       (log2:error "~a" e)
@@ -317,8 +317,8 @@
 (defun |checkWindow| (location request response &key (|logfile| "checkWindow.log"))
   (handler-case
       (let ((result
-             (check-window  (adjust-timestamp (now) (:offset :hour 2))
-                            (adjust-timestamp (now) (:offset :day 3))
+             (check-window  (local-time:adjust-timestamp (local-time:now) (:offset :hour 2))
+                            (local-time:adjust-timestamp (local-time:now) (:offset :day 3))
                             :options '("winch" "foil" "heavy" "reach" "hull")
                             :logfile |logfile|)))
         (setf (http-body response)

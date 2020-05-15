@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-04-10 15:08:21>
+;;; Last Modified <michael 2020-04-26 18:05:39>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -108,9 +108,11 @@
                         (expand-routepoint routing rp start-pos left right step-size step-time params polars next-isochrone)))
                    (incf pointnum new-point-num)))
            isochrone)
-        
+      
       ;; Step 2 - Filter isochrone. 
-      (let ((candidate (filter-isochrone next-isochrone left right max-points :criterion (routing-mode routing))))
+      (let ((candidate (filter-isochrone next-isochrone left right max-points
+                                         :criterion (routing-mode routing)
+                                         :constraints (get-constraints (routing-race-id routing)))))
         (cond
           ((or (null candidate)
                (= (length candidate) 0)
@@ -286,7 +288,7 @@
                                  ((new-pos (add-distance-estimate (routepoint-position routepoint)
                                                                   (* speed step-size)
                                                                   (coerce heading 'double-float))))
-                               (when (meets-all (get-constraints (routing-race-id routing)) new-pos (routepoint-position routepoint))
+                               (when t
                                  (incf pointnum)
                                  (vector-push-extend
                                   (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-04-09 22:22:15>
+;;; Last Modified <michael 2020-04-26 18:11:35>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
@@ -24,6 +24,7 @@
                          max-points
                          &key
                            (criterion +max-origin+)
+                           (constraints nil)
                            (fan 180d0))
   ;; (return-from filter-isochrone isochrone)
   (log2:debug "Filter: ~a points" (length isochrone))
@@ -61,9 +62,11 @@
     (let ((filtered
            (loop
               :for p :across result
-              :unless (and  p
-                            (intersects-land-p (routepoint-position (routepoint-predecessor p))
-                                               (routepoint-position p)))
+              :for old-pos = (when p (routepoint-position (routepoint-predecessor p)))
+              :for new-pos =  (when p (routepoint-position p))
+              :when (and p
+                         (meets-all constraints new-pos old-pos)
+                         (not (intersects-land-p old-pos new-pos)))
               :collect p)))
       (values (make-array (length filtered) :initial-contents filtered)))))
 

@@ -46,7 +46,7 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 *	Download the Land polygons shapefile, WGS84 projection, split polygons from [openstreetmapdata](http://openstreetmapdata.com/data/land-polygons)
 
 	```bash
-	$ wget http://data.openstreetmapdata.com/land-polygons-split-4326.zip
+	$ wget https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip
 	```
 
 *	Install package mapserver-bin
@@ -66,6 +66,10 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 In addition, VirtualHelm requires 
 
 *	[PolarCL](https://github.com/mak08/PolarCL)
+
+*	[cl-weather](https://github.com/mak08/cl-weather)
+
+*	[cl-map](https://github.com/mak08/cl-map)
 
 *	[cl-grib2](https://github.com/mak08/cl-grib2)
 

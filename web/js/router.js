@@ -62,6 +62,7 @@
         // Track cursor position
         google.maps.event.addListener(googleMap, 'mousemove', updateWindInfo);
         google.maps.event.addListener(googleMap, 'click', getTWAPath);
+        google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
         
         // Connect button events
         $("#bt_getroute").click(getRoute);
@@ -617,6 +618,27 @@
             twaPath[i].setMap(null);
         }
         twaPath = [];
+    }
+
+    var ortho;
+    function drawOrthodromic(data) {
+        if (ortho) {
+            ortho.setMap(null);
+        }
+        var start;
+        if (twaAnchor.lat) {
+            start = twaAnchor;
+        } else {
+            start = startMarker.position;
+        }
+        ortho = new google.maps.Polyline({
+            geodesic: true,
+            strokeColor: '#0f0f0f',
+            strokeOpacity: 1,
+            strokeWeight: 2,
+        });
+        ortho.setPath([start, data.latLng]);
+        ortho.setMap(googleMap);
     }
     
     function drawTWAPath(data) {

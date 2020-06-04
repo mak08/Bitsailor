@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2019-08-29 22:40:41>
+;;; Last Modified <michael 2020-06-04 20:00:24>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
@@ -112,7 +112,10 @@
                                   (length (car precomputed)))
                             :initial-contents precomputed)))
     (make-cpolars :name name
-                  :twa twa
+                  :twa (remove-duplicates
+                        (merge 'vector twa
+                               (loop :for s :from 44d0 :to 150d0 :by 2d0 :collect s) #'<=)
+                        :test #'eql)
                   :speed speed
                   :vmg (precompute-vmg speed max-wind))))
 

@@ -40,7 +40,7 @@ p, b {
 							 'controls main main main main main'
 							 'footer-left footer footer footer footer footer';
 	grid-template-rows: 40px 1fr 30px;
-	grid-template-columns: 40vh 1fr;
+	grid-template-columns: 45vh 1fr;
 	grid-gap: 1px;
 	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
 	height: calc(100vh - 12px);

@@ -13,7 +13,7 @@
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCP2gFKu91VHqqPiNKnhXKZNSInqcMrFXQ"></script>
 
     <script src="js/colors.js"></script>
-    <script src="js/router.js"></script>
+    <script type="module" src="js/router.js"></script>
     
   </head>
 
@@ -39,11 +39,11 @@
         </div>
 
         <div class="delayed-label">
-          <label>Start at:</label>
+          <label>Delayed start:</label>
         </div>
         <div class="delayed-entry">
-          <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
-          <input id="tb_starttime" name="starttime" type="datetime-local"/>
+           <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
+           <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
         
         <div class="duration-label">
@@ -53,7 +53,7 @@
           <select id="sel_duration" name="duration">
             <option value="12">12 hours</option>
             <option value="24">1 day</option>
-            <option value="48" selected>2 days</option>
+            <option value="48" "default">2 days</option>
             <option value="72">3 days</option>
             <option value="96">4 days</option>
             <option value="120">5 days</option>
@@ -125,7 +125,7 @@
         </div>
 
         <div class="statistics-label">
-          <label>Statistics</label>
+          <label>Route info</label>
         </div>
 
         <div class="statistics-from-label">

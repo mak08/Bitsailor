@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-07-16 20:14:19>
+;;; Last Modified <michael 2020-06-07 20:39:57>
 
 (in-package :virtualhelm)
 
@@ -31,7 +31,7 @@
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
-    (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "VH-UPDATER")))
+    (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")))
 
     
 ;;; EOF

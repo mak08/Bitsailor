@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-05-01 14:06:01>
+;;; Last Modified <michael 2020-06-12 21:44:28>
 
 (in-package :virtualhelm)
 
@@ -50,9 +50,9 @@
                (setf (status-text response) "Point is on land"))
               (t
                (set-routing-parameter session routing |pointType| position)
-               (setf (http-body response)
-                     (with-output-to-string (s)
-                       (json s routing))))))
+               (values
+                (with-output-to-string (s)
+                  (json s routing))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -69,7 +69,7 @@
     (set-routing-parameter session routing |name| |value|) 
     (setf (http-header response :|Content-Location|)
           (get-routing-url session race-id))
-    (setf (http-body response) "true")))
+    (values "true")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
@@ -84,10 +84,9 @@
                 (session-routing session race-id))
                (routeinfo
                 (get-route routing)))
-          (setf (http-header response :|Content-Encoding|) "gzip")
-          (setf (http-body response)
-                (zlib:gzip (with-output-to-string (s)
-                             (json s routeinfo)))))
+          (values
+           (with-output-to-string (s)
+             (json s routeinfo))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
@@ -121,9 +120,9 @@
           (session-routing session race-id)))
     (setf (http-header response :|Content-Location|)
           (get-routing-url session race-id))
-    (setf (http-body response)
-          (with-output-to-string (s)
-            (json s routing)))))
+    (values
+     (with-output-to-string (s)
+       (json s routing)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -174,18 +173,20 @@
                                                  (cl-weather:vr-prediction lat nlon :date date :cycle cycle :timestamp requested-time))
                                              (list (round-to-digits dir 2)
                                                    (round-to-digits speed 2)))))))
-              (setf (http-body response)
-                    (with-output-to-string (s)
-                      (json s
-                            (let ((time cycle-start-time))
-                              (make-forecast-data
-                               :basetime (format-datetime nil cycle-start-time)
-                               :time (format-datetime nil requested-time)
-                               :maxoffset 372 ;; (dataset-max-offset dataset)
-                               :cycle (format-timestring nil
-                                                         time
-                                                         :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone local-time:+utc-zone+)
-                               :data wind-data)))))))))
+              (let ((encoding (http-header request :accept-encoding))
+                    (body
+                     (with-output-to-string (s)
+                       (json s
+                             (let ((time cycle-start-time))
+                               (make-forecast-data
+                                :basetime (format-datetime nil cycle-start-time)
+                                :time (format-datetime nil requested-time)
+                                :maxoffset 372 ;; (dataset-max-offset dataset)
+                                :cycle (format-timestring nil
+                                                          time
+                                                          :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone local-time:+utc-zone+)
+                                :data wind-data))))))
+               (values body))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -206,9 +207,9 @@
              (lng-a (read-from-string |lngA|))
              (lat (read-from-string |lat|))
              (lng (read-from-string |lng|)))
-        (setf (http-body response)
-              (with-output-to-string (s)
-                (json s (get-twa-path routing :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+        (values
+         (with-output-to-string (s)
+           (json s (get-twa-path routing :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -242,21 +243,21 @@
                     (vr-prediction lat lng :timestamp forecast-time :date date0 :cycle cycle0)
                   (multiple-value-bind (dir speed)
                       (interpolated-prediction lat lng (interpolation-parameters forecast-time))
-                    (setf (http-body response)
-                          (with-output-to-string (s)
-                            (json s (make-forecast
-                                     :previous (make-windinfo :date date0
-                                                              :cycle cycle0
-                                                              :dir (round-to-digits dir0 2)
-                                                              :speed (round-to-digits (m/s-to-knots speed0) 2))
-                                     :current (make-windinfo :date date1
+                    (values
+                     (with-output-to-string (s)
+                       (json s (make-forecast
+                                :previous (make-windinfo :date date0
+                                                         :cycle cycle0
+                                                         :dir (round-to-digits dir0 2)
+                                                         :speed (round-to-digits (m/s-to-knots speed0) 2))
+                                :current (make-windinfo :date date1
+                                                        :cycle cycle1
+                                                        :dir (round-to-digits dir1 2)
+                                                        :speed (round-to-digits (m/s-to-knots speed1) 2))
+                                :interpolated (make-windinfo :date date1
                                                              :cycle cycle1
-                                                             :dir (round-to-digits dir1 2)
-                                                             :speed (round-to-digits (m/s-to-knots speed1) 2))
-                                     :interpolated (make-windinfo :date date1
-                                                                  :cycle cycle1
-                                                                  :dir (round-to-digits dir 2)
-                                                                  :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
+                                                             :dir (round-to-digits dir 2)
+                                                             :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -297,11 +298,11 @@
               (multiple-value-bind (dir speed)
                   (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :date date :cycle cycle)
                                                                  :current (prediction-parameters forecast-time :date date :cycle cycle)))
-                (setf (http-body response)
-                      (with-output-to-string (s)
-                        (json s
-                              (list (round-to-digits dir 2)
-                                    (round-to-digits (m/s-to-knots speed) 2))))))))))
+                (values
+                 (with-output-to-string (s)
+                   (json s
+                         (list (round-to-digits dir 2)
+                               (round-to-digits (m/s-to-knots speed) 2))))))))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -321,9 +322,9 @@
                             (local-time:adjust-timestamp (local-time:now) (:offset :day 3))
                             :options '("winch" "foil" "heavy" "reach" "hull")
                             :logfile |logfile|)))
-        (setf (http-body response)
-              (with-output-to-string (s)
-                (json s result))))
+        (values
+         (with-output-to-string (s)
+           (json s result))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -370,7 +371,7 @@
                 (log2:info "Session retrieved for SessionID ~a." session-id)))))
           (t
            (setf session-id (make-session-id))
-           (set-cookie response "SessionID" session-id)
+           (set-cookie response "SessionID" session-id :options '())
            (setf session (setf (gethash session-id *session-ht*)
                                (create-session :session-id session-id :race-id race-id)))
            (log2:info "Session created for new SessionID ~a." session-id)))

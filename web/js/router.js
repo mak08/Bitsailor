@@ -1,6 +1,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// Sailsphere Router UI
 
+import * as Util from './Util.js';
+
 ( function () {
 
     var raceId = "anon";
@@ -31,6 +33,7 @@
     var trackMarkers = [];
 
     var forecastData = {};
+    var forecastCycle;
     var windData = [];
     var currentRouting = {};
     var twaPath = [];
@@ -146,10 +149,13 @@
     }
 
     function updateMap () {
-        if ( googleMap.zoom < 6 ) {
-            googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-        } else {
-            googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+        if ((googleMap.getMapTypeId() == google.maps.MapTypeId.ROADMAP)
+            || (googleMap.getMapTypeId() == google.maps.MapTypeId.TERRAIN)) {
+            if ( googleMap.zoom < 6 ) {
+                googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+            } else {
+                googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+            }
         }
         var bounds = getMapBounds();
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
@@ -416,7 +422,7 @@
         $("#lb_from").text(JSON.stringify(data.stats.start));
         $("#lb_duration").text(JSON.stringify(data.stats.duration));
         $("#lb_sails").text(formatSails(data));
-        $("#lb_minwind").text(roundTo(data.stats["min-wind"], 1) + " - " + roundTo(data.stats["max-wind"], 1));
+        $("#lb_minwind").text(Util.roundTo(data.stats["min-wind"], 1) + " - " + Util.roundTo(data.stats["max-wind"], 1));
         $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
     }
 
@@ -529,7 +535,7 @@
     }
 
     function updateIsochrones () {
-        for (isochrone of routeIsochrones ) {
+        for (const isochrone of routeIsochrones ) {
             var style = getIsoStyle(isochrone.get('time'), isochrone.get('offset'), ir_index.valueAsNumber);
             isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
         }
@@ -582,23 +588,23 @@
     
     function makeWaypointInfo(startTime, point) {
         var time = new Date(point.time);
-        var elapsed = formatDHM((time - startTime)/1000);
-        result =  "<div style='color:#000;'>";
+        var elapsed = Util.formatDHM((time - startTime)/1000);
+        var result =  "<div style='color:#000;'>";
         result += "<p><b>T+" + elapsed + " - " + point.time + "</b></p>"
         result += "<hr>";
 
         result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
 
-        result += "<p><b>DTF</b>:" + roundTo(m2nm(point.dtf), 2) + "nm ";
-        result += "<b> Speed</b>: " + roundTo(ms2knots(point.speed), 1) + "kts";
+        result += "<p><b>DTF</b>:" + Util.roundTo(Util.m2nm(point.dtf), 2) + "nm ";
+        result += "<b> Speed</b>: " + Util.roundTo(Util.ms2knots(point.speed), 1) + "kts";
         
         result += "</p><hr>";
         
-        result += "<p><b>Wind</b>: " + roundTo(ms2knots(point.tws), 2) + "kts / " + roundTo(point.twd, 0) + "°</p>";
+        result += "<p><b>Wind</b>: " + Util.roundTo(Util.ms2knots(point.tws), 2) + "kts / " + Util.roundTo(point.twd, 0) + "°</p>";
 
         result += "<p>";
-        result += "<b> TWA</b>: " + roundTo(point.twa, 1);
-        result += "<b> HDG</b>: " + roundTo(point.heading, 1) + "°  " + point.sail;
+        result += "<b> TWA</b>: " + Util.roundTo(point.twa, 1);
+        result += "<b> HDG</b>: " + Util.roundTo(point.heading, 1) + "°  " + point.sail;
         result += "</p>";
         result += "<p>";
         result += "<b> Penalty</b>: " + point.penalty;
@@ -720,17 +726,17 @@
         var bounds = getMapBounds();
         
         var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
-        var lon0 = bounds.east + (arcLength(bounds.west, bounds.east) / xSteps)/2;
-        var ddx = roundTo(arcLength(bounds.west, bounds.east)/xSteps, 8);
-        var ddy = roundTo((bounds.north-bounds.south)/ySteps, 8);
+        var lon0 = bounds.east + (Util.arcLength(bounds.west, bounds.east) / xSteps)/2;
+        var ddx = Util.roundTo(Util.arcLength(bounds.west, bounds.east)/xSteps, 8);
+        var ddy = Util.roundTo((bounds.north-bounds.south)/ySteps, 8);
         // $('div, button, input').css('cursor', 'wait');
         $.ajax({
             url: "/function/vh:getWind"
                 + "?" + timeSpec
-                + "&north=" + roundTo(lat0, 6)
-                + "&south=" + roundTo(bounds.south, 6)
-                + "&west=" + roundTo(bounds.west, 6)
-                + "&east=" + roundTo(lon0, 6)
+                + "&north=" + Util.roundTo(lat0, 6)
+                + "&south=" + Util.roundTo(bounds.south, 6)
+                + "&west=" + Util.roundTo(bounds.west, 6)
+                + "&east=" + Util.roundTo(lon0, 6)
                 + "&ddx=" + ddx
                 + "&ddy=" + ddy
                 + "&xSteps=" + xSteps
@@ -779,8 +785,8 @@
         // Wind values are at evenly distributed lat/lng values
         var width = (bounds.east-bounds.west);
         var height = (bounds.south-bounds.north);
-        var dlng = roundTo(width/xSteps, 8);
-        var dlat = roundTo(height/ySteps, 8);
+        var dlng = Util.roundTo(width/xSteps, 8);
+        var dlat = Util.roundTo(height/ySteps, 8);
 
         // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
         for ( var lat = bounds.north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
@@ -803,9 +809,9 @@
         var bounds = getMapBounds();
 
         var iLat = Math.round((event.latLng.lat() - bounds.north) / (bounds.south - bounds.north) * ySteps);
-        var iLng = Math.round(arcLength(bounds.west, event.latLng.lng()) / arcLength(bounds.west, bounds.east) * xSteps);
-        var windDir = roundTo(windData[iLat][iLng][0], 0);
-        var windSpeed = roundTo(ms2knots(windData[iLat][iLng][1]), 1);
+        var iLng = Math.round(Util.arcLength(bounds.west, event.latLng.lng()) / Util.arcLength(bounds.west, bounds.east) * xSteps);
+        var windDir = Util.roundTo(windData[iLat][iLng][0], 0);
+        var windSpeed = Util.roundTo(Util.ms2knots(windData[iLat][iLng][1]), 1);
         $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
     }
 
@@ -850,29 +856,16 @@
     /// Formatting
     
     function formatLatLngPosition (latlng) {
-        return formatPosition(latlng.lat(), latlng.lng());
+        return Util.formatPosition(latlng.lat(), latlng.lng());
     }
     
     function formatPointPosition (point) {
-        return formatPosition(point.lat, point.lng);
+        return Util.formatPosition(point.lat, point.lng);
     }
 
-    function formatPosition(lat, lon) {
-        var latDMS = toDMS(lat);
-        var lonDMS = toDMS(lon);
-        var latString = latDMS.g + "°" + pad0(latDMS.m) + "'" + pad0(latDMS.s) + '"';
-        var lonString = lonDMS.g + "°" + pad0(lonDMS.m) + "'" + pad0(lonDMS.s) + '"';
-        return latString + ((latDMS.u == 1) ? "N" : "S") + " | " + lonString + ((lonDMS.u == 1) ? "E" : "W");
-    }
-
-    function formatDHM (seconds) {
-        var dhm = toDHM(seconds);
-        return dhm.days + ":" +  pad0(dhm.hours) + ":" + pad0(dhm.minutes) + ":" + pad0(dhm.seconds);
-    }
-    
     function formatSails (data) {
         var result = "";
-        for (sail of data.stats.sails) {
+        for (const sail of data.stats.sails) {
             if (result) {
                 result = sail + "," + result;
             } else {
@@ -880,90 +873,6 @@
             }
         }
         return result;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-    /// Conversion
-    
-    function m2nm (dist) {
-        return dist / 1852;
-    }
-    
-    function ms2knots (speed) {
-        return 900.0 * speed / 463.0;
-    }
-    
-    function fromDeg (deg) {
-        var sign = deg.u || 1;
-        var abs = deg.g + (deg.m / 60.0) + (deg.s / 3600.0) + (deg.cs / 360000.0);
-        return sign * abs
-    }
-    
-    function toDHM (seconds) {
-        return {
-            "days":  Math.floor(seconds / 86400),
-            "hours": Math.floor(seconds/3600) % 24,
-            "minutes": Math.floor(seconds/60) % 60,
-            "seconds": seconds % 60
-        };
-    }
-
-    function toDeg (number) {
-        var u = sign(number);
-        number = Math.abs(number);
-        var g = Math.floor(number);
-        var frac = number - g;
-        var m = Math.floor(frac * 60);
-        frac = frac - m/60;
-        var s = Math.floor(frac * 3600);
-        var cs = roundTo(360000 * (frac - s/3600), 0);
-        while ( cs >= 100 ) {
-            cs = cs - 100;
-            s = s + 1;
-        }
-        return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
-    }
-    
-    function toDMS(number) {
-        var u = sign(number);
-        number = Math.abs(number);
-        var g = Math.floor(number);
-        var frac = number - g;
-        var m = Math.floor(frac * 60);
-        frac = frac - m / 60;
-        var s = Math.floor(frac * 3600);
-        var cs = roundTo(360000 * (frac - s / 3600), 0);
-        while (cs >= 100) {
-            cs = cs - 100;
-            s = s + 1;
-        }
-        return {"u":u, "g":g, "m":m, "s":s, "cs":cs};
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
-    /// Stuff
-
-    function roundTo (number, digits) {
-        var scale = Math.pow(10, digits);
-        return Math.round(number * scale) / scale;
-    }
-
-    function arcLength(a, b) {
-        if ( a < 0 ) a += 360;
-        if ( b < 0 ) b += 360;
-        if ( b < a ) b += 360;
-        return b - a;
-    }
-
-    function sign(x) {
-        return (x < 0) ? -1 : 1;
-    }
-
-    function pad0(val) {
-        if (val < 10) {
-            val = "0" + val;
-        }
-        return val;
     }
 
     $(document).ready(setUp);

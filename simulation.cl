@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-04-26 18:05:39>
+;;; Last Modified <michael 2020-06-11 17:58:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(declaim (optimize (speed 3) (debug 1) (space 1) (safety 1)))
+(declaim (optimize (speed 3) (debug 0) (space 0) (safety 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -241,7 +241,6 @@
 (declaim (notinline twa-heading))
 
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time params polars next-isochrone)
-  (declare (notinline twa-heading heading-between add-distance-estimate get-penalized-avg-speed))
   (cond
     ((null routepoint)
      (return-from expand-routepoint 0))
@@ -275,10 +274,11 @@
               :for twa :across all-twa-points
               :for heading-stbd = (twa-heading wind-dir twa)
               :for heading-port = (twa-heading wind-dir (- twa))
+              :for is-stbd = (heading-between left right heading-stbd)
+              :for is-port = (heading-between left right heading-port)
               :when (and (> twa 0)
                          (<= up-vmg-angle twa down-vmg-angle)
-                         (or (heading-between left right heading-stbd)
-                             (heading-between left right heading-port)))
+                         (or is-stbd is-port))
               :do (flet ((add-point (heading twa)
                            (multiple-value-bind (sail speed reason)
                                (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
@@ -293,9 +293,9 @@
                                  (vector-push-extend
                                   (construct-rp routepoint start-pos new-pos step-time heading speed sail reason wind-dir wind-speed)
                                   next-isochrone))))))
-                    (when (heading-between left right heading-stbd)
+                    (when is-stbd
                       (add-point heading-stbd twa))
-                    (when (heading-between left right heading-port)
+                    (when is-port
                       (add-point heading-port (- twa))))
               :finally (return pointnum))))))))
 

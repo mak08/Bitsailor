@@ -91,7 +91,7 @@ import * as Util from './Util.js';
         $("#cb_isochrones").change(onSetClientParameter);
 
         // Disable default contextmenu
-        window.oncontextmenu = function (event) { e.preventDefault() }; 
+        window.oncontextmenu = function (event) { event.preventDefault() }; 
         
         // Connect menu events
         $("#bt_setstart" ).click(function () { onContextMenu('start') });

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-06-07 20:39:57>
+;;; Last Modified <michael 2020-07-26 16:42:07>
 
 (in-package :virtualhelm)
 
@@ -28,11 +28,29 @@
       (t
        (log2:warning "~a does not exist" rcfile)))
     (ensure-map)
+    (load-race-definitions)
+    (load-all-polars)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")))
 
+(defvar *races-ht* (make-hash-table :test #'equalp))
+(defvar *races-dir*
+  (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")
+                   *source-root*)
+  "A string designating the directory containing polar files")
+
+(defun load-race-definitions ()
+  (loop
+     :for name :in (directory (merge-pathnames *races-dir* (make-pathname :name :wild :type "json")))
+     :do (let* ((race-def (parse-json-file name))
+                (leg (joref (joref race-def "scriptData") "leg"))
+                (race-id (joref (joref leg  "_id") "race_id"))
+                (leg-num (joref (joref leg "_id") "num"))
+                (leg-id (format nil "~a.~a" race-id leg-num)))
+           (log2:info "Loading race ~a" leg-id)
+           (setf (gethash leg-id *races-ht*) leg))))
     
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

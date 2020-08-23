@@ -39,7 +39,7 @@
         </div>
 
         <div class="delayed-label">
-          <label>Delayed start:</label>
+          <label>Start time:</label>
         </div>
         <div class="delayed-entry">
            <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
@@ -53,7 +53,7 @@
           <select id="sel_duration" name="duration">
             <option value="12">12 hours</option>
             <option value="24">1 day</option>
-            <option value="48" "default">2 days</option>
+            <option value="48" selected="true">2 days</option>
             <option value="72">3 days</option>
             <option value="96">4 days</option>
             <option value="120">5 days</option>
@@ -72,20 +72,19 @@
         </div>
         <div class="polars-selector">
           <select id="sel_polars" name="polars">
-            <option value="magellan">Magellan</option>
-            <option value="Caravel">Caravel</option>
-            <option value="oceanis">Beneteau Oceanis 40.1</option>
-            <option value="figaro_2">Figaro Bénéteau II</option>
-            <option value="class_40">Class 40</option>
-            <option value="mini_6.50_v2">Mini 6.50</option>
-            <option value="clipper_70_v2">Clipper</option>
-            <option value="imoca_60_new">IMOCA 60</option>
-            <option value="vo65">VO65</option>
-            <option value="super_maxi_100">Super Maxi 100</option>
-            <option value="multi_50">Multi 50</option>
-            <option value="ultim_macif">Ultime Macif</option>
-            <option value="maxi_trimaran">Maxi Trimaran</option>
-            <option value="maxi_trimaran_x10percent">Maxi Trimaran+</option>
+            <option value="13">Caravel</option>
+            <option value="15">Beneteau Oceanis 40.1</option>
+            <option value="2">Figaro Bénéteau II</option>
+            <option value="3">Class 40</option>
+            <option value="5">Mini 6.50</option>
+            <option value="8">Clipper 70 v2</option>
+            <option value="4">IMOCA 60</option>
+            <option value="7">VO65</option>
+            <option value="14">Super Maxi 100</option>
+            <option value="11">Multi 50</option>
+            <option value="12">Ultime Macif</option>
+            <option value="6">Maxi Trimaran</option>
+            <option value="9">Maxi Trimaran+</option>
           </select>
         </div>
 
@@ -223,6 +222,13 @@
 
   </body>
   <div id="mapMenu" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:132px; height:84px; display:none;">
+    <button id="bt_setstart" style="width:130px; text-align:left;">Set Start</button>
+    <button id="bt_setdest"  style="width:130px; text-align:left;">Set Destination</button>
+    <button id="bt_ltpmark"  style="width:130px; text-align:left;">Add port mark</button>
+    <button id="bt_ltsmark"  style="width:130px; text-align:left;">Add stbd mark</button>
+  </div>
+
+  <div id="markerMenu" style="position:absolute; border: 4px solid #505056; border-radius:2px; background:#505056; width:132px; height:84px; display:none;">
     <button id="bt_setstart" style="width:130px; text-align:left;">Set Start</button>
     <button id="bt_setdest"  style="width:130px; text-align:left;">Set Destination</button>
     <button id="bt_ltpmark"  style="width:130px; text-align:left;">Add port mark</button>

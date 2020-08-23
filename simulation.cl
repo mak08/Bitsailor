@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-06-11 17:58:21>
+;;; Last Modified <michael 2020-07-23 01:06:11>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -98,8 +98,8 @@
             (setf *isochrones*  isochrones)
             (make-routeinfo :best best-route
                             :stats (get-statistics best-route)
-                            :tracks (extract-tracks isochrone)
-                            :isochrones (strip-routepoints isochrones))))
+                            :tracks (extract-tracks start-pos (course-angle start-pos dest-pos) isochrone)
+                            :isochrones (prepare-routepoints isochrones))))
         
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
@@ -132,6 +132,7 @@
                       (iso (make-isochrone :center start-pos
                                            :time step-time
                                            :offset (truncate (timestamp-difference step-time base-time) 3600)
+                                           :params (null params)
                                            :path (extract-points isochrone))))
                  (push iso isochrones))))))
         (when reached
@@ -156,7 +157,7 @@
     (t
      (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 12 600))
-              600)
+              300)
              ((<= delta-t (* 48 600))
               600)
              ((<= delta-t (* 72 600))
@@ -172,6 +173,7 @@
 (defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars twa)
   (multiple-value-bind (speed sail)
       (twa-boatspeed polars wind-dir wind-speed (normalize-angle twa))
+    (declare (double-float speed))
     (when (routing-minwind routing)
       (setf speed (max 1.0289d0 speed)))
     (when
@@ -327,11 +329,13 @@
                    :lngr% (- (latlng-lngr (routing-dest routing)) (* 2 pi)))
       (routing-dest routing)))
 
-(defun strip-routepoints (isochrones)
+(defun prepare-routepoints (isochrones)
   (loop
      :for i :in (construct-isochrones isochrones)
-     :collect (make-isochrone :time (isochrone-time i)
+     :collect (make-isochrone :center (isochrone-center i)
+                              :time (isochrone-time i)
                               :offset (isochrone-offset i)
+                              :params (null (isochrone-params i))
                               :path (loop
                                        :for r :in (isochrone-path i)
                                        :collect (routepoint-position r)))))
@@ -375,11 +379,14 @@
   (let ((points (loop :for p :across isochrone :when p :collect p)))
     (make-array (length points) :initial-contents points)))
 
-(defun extract-tracks (isochrone)
+(defun extract-tracks (start-pos course-angle isochrone)
   (loop
      :for point :across isochrone
      :for k :from 0
-     :when point ; Don't send NULL entries
+     :when (and point ; Don't send NULL entries
+                (<= (abs (- course-angle
+                            (course-angle start-pos (routepoint-position point))))
+                    30d0))
      :collect (do ((p point (routepoint-predecessor p))
                    (v (list)))
                   ((null p)
@@ -490,8 +497,10 @@
         ;; Determine next position
         (multiple-value-bind (wind-dir wind-speed)
             (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time))
+          (declare (double-float wind-dir wind-speed))
           (multiple-value-bind (sail speed)
               (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
+            (declare (double-float speed))
             ;;(twa-boatspeed polars wind-dir wind-speed twa)
             (let ((heading (twa-heading wind-dir twa)))
               (setf curpos

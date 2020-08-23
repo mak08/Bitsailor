@@ -1,14 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-06-04 20:00:24>
+;;; Last Modified <michael 2020-07-26 16:41:16>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
 (in-package :virtualhelm)
 
-(defstruct cpolars name twa vmg speed)
-(defstruct polars name tws twa sails)
+(defstruct cpolars id name twa vmg speed)
+(defstruct polars id name tws twa sails)
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
@@ -17,7 +17,7 @@
   (format stream "[Polars ~a]" (polars-name thing)))
 
 (defvar *polars-dir*
-  (merge-pathnames (make-pathname :directory '(:relative "polars"))
+  (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")
                    *source-root*)
   "A string designating the directory containing polar files")
 
@@ -34,6 +34,9 @@
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
+
+(defvar *polars-id-ht* (make-hash-table :test 'equalp))
+(defvar *polars-name-ht* (make-hash-table :test 'equalp))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
@@ -60,15 +63,23 @@
           (min (round (* wind-speed 10d0))
                (1- dim)))))
 
-(defun get-combined-polars (name &optional (options +allsails+))
+(defun load-all-polars ()
+  (loop
+     :for name :in (directory (merge-pathnames *polars-dir* (make-pathname :name :wild :type "json")))
+     :do (let ((polars
+                (load-polars-from-file name)))
+           (setf (gethash (polars-id polars) *polars-id-ht*) polars)
+           (setf (gethash (polars-name polars) *polars-name-ht*) polars))))
+
+(defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
   (let ((polars-ht
-         (or (gethash name *combined-polars-ht*)
-             (setf (gethash name *combined-polars-ht*)
+         (or (gethash id *combined-polars-ht*)
+             (setf (gethash id *combined-polars-ht*)
                    (make-hash-table :test 'eql)))))
     (or (gethash options polars-ht)
         (setf (gethash options polars-ht)
-              (preprocess-polars name options)))))
+              (preprocess-polars id options)))))
 
 (defun best-vmg (cpolars windspeed)
   (let ((index (round (* windspeed 10d0)))
@@ -80,24 +91,11 @@
        (log2:warning "Windpseed ~a exceeds interpolation range 0..~a" windspeed (/ (length vmg) 10d0))
        (values-list (aref vmg (1- (length vmg))))))))
 
-(defun get-cpolars-vmg (name twa kts)
-  (let* ((cpolars (get-combined-polars name +allsails+))
-         (wind-speed (knots-to-m/s kts))
-         (boat-speed (car
-                      (get-max-speed (cpolars-speed cpolars) twa wind-speed))))
-    (* boat-speed (cos (rad twa)))))
-
-(defun get-polars-vmg (name twa kts)
-  (let* ((polars (get-polars name))
-         (wind-speed (knots-to-m/s kts))
-         (boat-speed (get-max-speed% twa wind-speed polars +allsails+)))
-    (* boat-speed (cos (rad twa)))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Implementation
 
-(defun preprocess-polars (name options)
-  (let* ((polars (get-polars name))
+(defun preprocess-polars (id options)
+  (let* ((polars (get-polars-by-id id))
          (tws (polars-tws polars))
          (twa (polars-twa polars))
          (max-wind (aref tws (1- (length tws))))
@@ -111,7 +109,8 @@
          (speed (make-array (list (length precomputed)
                                   (length (car precomputed)))
                             :initial-contents precomputed)))
-    (make-cpolars :name name
+    (make-cpolars :id id
+                  :name (polars-name polars)
                   :twa (remove-duplicates
                         (merge 'vector twa
                                (loop :for s :from 44d0 :to 150d0 :by 2d0 :collect s) #'<=)
@@ -187,12 +186,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from file
 
-(defvar *polars-ht* (make-hash-table :test 'equal))
+(defun get-polars-by-name (name)
+  (gethash name *polars-name-ht*))
 
-(defun get-polars (name)
-  (or (gethash name *polars-ht*)
-      (setf (gethash name *polars-ht*)
-            (load-polars name))))
+(defun get-polars-by-id (id)
+  (gethash id *polars-id-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
@@ -200,11 +198,13 @@
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
 
-(defun load-polars (polars-name)
+(defun load-polars-from-file (polars-name)
   ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (let* ((polars
           (joref (joref (parse-json-file polars-name) "scriptData") "polar"))
+         (id
+          (joref polars "_id"))
          (tws
           (joref polars "tws"))
          (twa
@@ -213,7 +213,7 @@
           (joref polars "sail"))
          (saildefs
           (make-array (length sail))))
-    (log2:info "Reading ~a sail definitions for TWS=~a TWA=~a" (length sail) tws twa)
+    (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" (joref polars "label") id (length sail) tws twa)
     (loop
        :for saildef :across sail
        :for k :from 0
@@ -237,6 +237,7 @@
        :do (setf (aref twa angle-index)
                  (coerce (aref twa angle-index) 'double-float)))
     (make-polars :name polars-name
+                 :id id
                  :tws tws
                  :twa twa
                  :sails saildefs)))

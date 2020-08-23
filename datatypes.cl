@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-04-07 00:50:21>
+;;; Last Modified <michael 2020-07-30 23:45:38>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -16,10 +16,10 @@
   (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (options '("reach"))
   (minwind t) ;; m/s !!
-  (start +lessables+)
-  (dest +lacoruna+)
+  (start +LESSABLES+) ;; set-paramater needs a valid initial values
+  (dest +LACORUNA+)   ;; because start/dest lat and lon are set separately.
   (mode +max-origin+)
-  (fan 110)
+  (fan 130)
   (stepmax +12h+))
 
 (defstruct duration days hours minutes seconds)
@@ -55,7 +55,7 @@
           (routestats-max-wind thing)
           (routestats-sails thing)))
 
-(defstruct isochrone center time offset path)
+(defstruct isochrone center time offset params path)
 
 (defstruct twainfo twa heading path)
 

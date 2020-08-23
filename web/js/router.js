@@ -5,7 +5,7 @@ import * as Util from './Util.js';
 
 ( function () {
 
-    var raceId = "anon";
+    var raceId = "default";
     
     var googleMap = null;
     var mapEvent;
@@ -138,8 +138,9 @@ import * as Util from './Util.js';
             updateMap();
         });
         
+        getLegInfo()
         getSession();
-        
+
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -441,7 +442,6 @@ import * as Util from './Util.js';
             var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
             destinationMarker.setPosition(dest);
             
-            var forecast = routing["forecast-bundle"];
             var selForecast = $("#sel_forecastbundle")[0];
             var irIndex = $("#ir_index")[0];
             var lbFCMax = $("#lb_fcmax")[0];
@@ -477,6 +477,33 @@ import * as Util from './Util.js';
             courseGCLine.setMap(googleMap);
             courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
 
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert(textStatus + ' ' + errorThrown);
+        });
+    }
+
+    function getLegInfo () {
+        $.ajax({
+            url: "/function/vh:getLegInfo",
+            dataType: 'json'
+        }).done( function(leg, status, xhr) {
+            var checkpoints = leg.checkpoints;
+            var markStbd = 'img/mark_green.png';
+            var markPort = 'img/mark_red.png';
+
+            startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
+            destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
+
+            for (const c of checkpoints) {
+                var mark = new google.maps.Marker({
+                    position: {"lat": c.start.lat, "lng": c.start.lon},
+                    map: googleMap,
+                    icon: (c.side=='port')?markPort:markStbd,
+                    title: c.group + "-" + c.id + " " + c.name,
+                    draggable: false
+                });
+                mark.addListener('click', function () { onMarkerClicked(mark) });
+            }
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert(textStatus + ' ' + errorThrown);
         });

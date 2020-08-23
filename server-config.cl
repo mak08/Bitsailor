@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2019-07-24 21:38:44>
+;;; Last Modified <michael 2020-07-24 22:39:21>
 
 (in-package :virtualhelm)
 
@@ -65,6 +65,7 @@
  :handler (:query-function t :realm "virtualhelm"))
 
 (register-function 'vh:|getSession|)
+(register-function 'vh:|getLegInfo|)
 (register-function 'vh:|getWind|)
 (register-function 'vh:|probeWind|)
 (register-function 'vh:|getWindForecast|)
@@ -102,8 +103,7 @@
 (handle
  :request (:method :get
            :path "/start")
- :handler (:dynamic 'vh:get-page
-                    :authentication nil))
+ :handler (:dynamic 'vh:get-page :realm "virtualhelm"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-07-26 16:42:07>
+;;; Last Modified <michael 2020-09-23 18:01:12>
 
 (in-package :virtualhelm)
 
@@ -49,7 +49,7 @@
                 (race-id (joref (joref leg  "_id") "race_id"))
                 (leg-num (joref (joref leg "_id") "num"))
                 (leg-id (format nil "~a.~a" race-id leg-num)))
-           (log2:info "Loading race ~a" leg-id)
+           (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
            (setf (gethash leg-id *races-ht*) leg))))
     
 ;;; EOF

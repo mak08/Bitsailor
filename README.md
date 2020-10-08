@@ -5,10 +5,11 @@
 VirtualHelm uses the well-known Isochrones method for sailing route optimization. This is basically a brute-force algorithm that computes all positions reachable from a given position by moving with constant speed and direction for a fixed amount of time (eg. 10min). The resulting positions are filtered to prevent exponential growth and constitute the next isochrone.
 
 #### Map
-'Land check' is discrete, i.e. only the computed positions are checked but not the line connecting a position to the predecessor position. It therefore possible that the route skips over small stretches of land.
+VirtualHelm uses geodata provided by [FOSSGIS e.V.](https://www.fossgis.de/) which in turn uses OpenStreetMap data.
 
-VirtualHelm uses libgdal for detecting interior points. The 'Land Polygons' file with split polygons from openstreetmapdata is used. 
-A geospatial index is computed off-line on the set of polygons. At runtime the index is used to quickly find and intersect polygons with the current position. This is why the non-split polygons are much slower.
+Map data is accessed with libgdal. The 'Land Polygons' file with split polygons from openstreetmapdata is used. A geospatial index is computed off-line on the set of polygons. (The non-split polygons file, while smaller, provides a less selective index and is therefor much slower).
+
+At runtime the index is used to quickly find and intersect polygons with the boat path. In order to improve performance, a 1° tile cache is used . If neither the tile containing the start point nor the tile containing the end point of the path contain any land, the exact land check is skipped.
 
 #### Wind
 #### Polars
@@ -43,7 +44,7 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 
 	Check that GEOS support is available.
 
-*	Download the Land polygons shapefile, WGS84 projection, split polygons from [openstreetmapdata](http://openstreetmapdata.com/data/land-polygons)
+*	Download the Land polygons shapefile, WGS84 projection, split polygons from [osmdata.openstreetmap.de](https://osmdata.openstreetmap.de/data/land-polygons.html)
 
 	```bash
 	$ wget https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip

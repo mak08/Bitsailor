@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-07-31 23:45:59>
+;;; Last Modified <michael 2020-11-01 11:34:54>
 
 (in-package :virtualhelm)
 
@@ -163,25 +163,39 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
 
-(defstruct forecast-data basetime time maxoffset cycle data)
+(defstruct forecast-data
+  basetime                              ; Indicates the cycle
+  maxoffset                             ; Max offset available in forecast data (384 for NOAA)
+  cycle                                 ; Cycle in a nice format
+  time                                  ; Forecast time
+  data                                  ; Wind forecast values 
+  )
 
 ;;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
-;;; Time may be specified directly or as an offset w.r.t a cycle (base time).
-;;; In either case, data from the latest available cycle is returned.
+;;; $|basetime|
+;;;        Mandatory. Indcates the cycle that should be used.
+;;; $|offset|
+;;;        Optinonal. Requested time as an offset to  $|basetime|,
+;;; $|time|
+;;;        Optional. The requested time.
+;;; Returns an error if the requested time is in the past or in the future of the requested cycle, or if $|offset| is too large.
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore request |ySteps| |xSteps|))
-  (log2:info "Time:~a Basetime:~a Offset:~a N:~a S:~a W:~a E:~a" |time| |basetime| |offset| |north| |south| |west| |east|)
-  (assert (or |time| (and |basetime| |offset|)))
+  (log2:info "Basetime:~a Offset:~a Time:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |north| |south| |west| |east|)
+  (assert (and |basetime| (or |time| |offset|)))
   (handler-case
-      (let* ((*read-default-float-format* 'double-float)
+      (let* ((*read-default-float-format*
+              'double-float)
+             (base-time
+              (local-time:parse-rfc3339-timestring |basetime|))
              (requested-time
               (if |time|
                   (local-time:parse-rfc3339-timestring |time|)
                   (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
         (log2:info "Requested time: ~a" requested-time)
         (multiple-value-bind (date cycle)
-            (available-cycle requested-time)
+            (timestamp-to-timespec base-time)
           (let* ((cycle-start-time (timespec-to-timestamp date cycle))
                  (user-id (http-authenticated-user handler request))
                  (session (find-or-create-session user-id request response))
@@ -218,7 +232,7 @@
                                (make-forecast-data
                                 :basetime (format-datetime nil cycle-start-time)
                                 :time (format-datetime nil requested-time)
-                                :maxoffset 372 ;; (dataset-max-offset dataset)
+                                :maxoffset 384 ;; (dataset-max-offset dataset)
                                 :cycle (format-timestring nil
                                                           time
                                                           :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone local-time:+utc-zone+)
@@ -478,6 +492,15 @@
      )
     ((string= name "starttime")
      (setf (routing-starttime routing) value))
+    ((or (string= name "cycle"))
+     (cond
+       ((null value)
+        (setf (routing-cycle routing)
+              nil))
+       (t
+        (assert (eql (length value)
+                     (length "2020-10-24T00:00:00Z")))
+        (setf (routing-cycle routing) value))))
     ((string= name "polars")
      (setf (routing-polars routing) (read-from-string value)))
     ((string= name "options")

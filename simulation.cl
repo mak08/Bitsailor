@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-07-23 01:06:11>
+;;; Last Modified <michael 2020-11-01 12:24:59>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(declaim (optimize (speed 3) (debug 0) (space 0) (safety 0)))
+(declaim (optimize (speed 3) (debug 1) (space 0) (safety 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -43,6 +43,8 @@
   (let* ((start-pos (routing-start routing))
          (dest-pos (normalized-dest-pos routing))
          (polars (get-routing-polars routing))
+         (race-info (get-routing-race-info routing))
+         (limits (get-race-limits race-info))
          (dest-heading (round (course-angle start-pos dest-pos)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -50,12 +52,15 @@
           (timestamp-maximum (now)
                              (parse-datetime-local (routing-starttime routing)
                                                    :timezone "+00:00")))
+         (cycle (routing-cycle routing))
          (isochrones nil))
-    (log2:info "Routing from ~a to ~a at ~a Course angle ~a"
-               start-pos
-               dest-pos
+    (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a"
+               (format-latlng nil start-pos)
+               (format-latlng nil dest-pos)
                start-time
-               dest-heading)
+               dest-heading
+               (routing-fan routing))
+    (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -73,8 +78,8 @@
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
                      (adjust-timestamp step-time (:offset :sec step-size)))
-          (params (interpolation-parameters step-time)
-                  (interpolation-parameters step-time))
+          (params (interpolation-parameters step-time cycle)
+                  (interpolation-parameters step-time cycle))
           (base-time (base-time params))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
@@ -112,7 +117,8 @@
       ;; Step 2 - Filter isochrone. 
       (let ((candidate (filter-isochrone next-isochrone left right max-points
                                          :criterion (routing-mode routing)
-                                         :constraints (get-constraints (routing-race-id routing)))))
+                                         :constraints (get-constraints (routing-race-id routing))
+                                         :limits limits)))
         (cond
           ((or (null candidate)
                (= (length candidate) 0)
@@ -122,7 +128,7 @@
            (setf reached (reached candidate dest-pos))
            (setf isochrone candidate)
 
-           (log2:info "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
+           (log2:trace "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
            ;; Collect hourly isochrones
            (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
@@ -130,7 +136,7 @@
              (when (zerop r)
                (let* (
                       (iso (make-isochrone :center start-pos
-                                           :time step-time
+                                           :time base-time
                                            :offset (truncate (timestamp-difference step-time base-time) 3600)
                                            :params (null params)
                                            :path (extract-points isochrone))))
@@ -143,6 +149,15 @@
           (and p
                (< (fast-course-distance (routepoint-position p) dest-pos) *reached-distance*)))
         candidate))
+
+
+(defun get-race-limits (leg-info)
+  (let* ((south (joref (joref leg-info "ice_limits") "south")))
+    (map 'vector
+         (lambda (p)
+           (make-latlng :lat (coerce (joref p "lat") 'double-float)
+                        :lng (coerce (joref p "lon") 'double-float)))
+         south)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
@@ -321,6 +336,9 @@
   (let ((sails (encode-options (routing-options routing))))
     (get-combined-polars (routing-polars routing) sails)))
 
+(defun get-routing-race-info (routing)
+  (gethash (routing-race-id routing) *races-ht*))
+
 (defun normalized-dest-pos (routing)
   (if (>= (- (latlng-lng (routing-dest routing))
              (latlng-lng (routing-start routing)))
@@ -376,7 +394,10 @@
 
 
 (defun extract-points (isochrone)
-  (let ((points (loop :for p :across isochrone :when p :collect p)))
+  (let ((points (loop
+                   :for i :below (length isochrone) :by 3
+                   :for p = (aref isochrone i)
+                   :when p :collect p)))
     (make-array (length points) :initial-contents points)))
 
 (defun extract-tracks (start-pos course-angle isochrone)

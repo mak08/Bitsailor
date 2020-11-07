@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-09-23 18:01:12>
+;;; Last Modified <michael 2020-10-24 21:36:57>
 
 (in-package :virtualhelm)
 
@@ -44,13 +44,25 @@
 (defun load-race-definitions ()
   (loop
      :for name :in (directory (merge-pathnames *races-dir* (make-pathname :name :wild :type "json")))
-     :do (let* ((race-def (parse-json-file name))
-                (leg (joref (joref race-def "scriptData") "leg"))
-                (race-id (joref (joref leg  "_id") "race_id"))
-                (leg-num (joref (joref leg "_id") "num"))
-                (leg-id (format nil "~a.~a" race-id leg-num)))
-           (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
-           (setf (gethash leg-id *races-ht*) leg))))
+     :do (let ((race-def (parse-json-file name)))
+           (get-leg-data race-def))))
+
+(defun get-leg-data (json-object)
+  (cond
+    ((joref json-object "scriptData")
+     (let* ((leg (joref (joref json-object "scriptData") "leg"))
+            (race-id (joref (joref leg  "_id") "race_id"))
+            (leg-num (joref (joref leg "_id") "num"))
+            (leg-id (format nil "~a.~a" race-id leg-num)))
+       (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
+       (setf (gethash leg-id *races-ht*) leg)))
+    ((joref json-object "res")
+     (let* ((leg (joref (joref json-object "res") "leg"))
+            (race-id (joref (joref leg  "_id") "race_id"))
+            (leg-num (joref (joref leg "_id") "num"))
+            (leg-id (format nil "~a.~a" race-id leg-num)))
+       (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
+       (setf (gethash leg-id *races-ht*) leg)))))      
     
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

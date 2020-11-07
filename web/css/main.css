@@ -348,6 +348,28 @@ input[type=checkbox] {
 	align-self:top;
 }
 
+.statistics-polars-label {
+	grid-row: 19;
+	grid-column: 1;
+	align-self:top;
+}
+.statistics-polars {
+	grid-row: 19;
+	grid-column: 2;
+	align-self:top;
+}
+
+.statistics-maxspeed-label {
+	grid-row: 20;
+	grid-column: 1;
+	align-self:top;
+}
+.statistics-maxspeed {
+	grid-row: 20;
+	grid-column: 2;
+	align-self:top;
+}
+
 
 /* Legend */
 

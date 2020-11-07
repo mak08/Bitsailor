@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-11-01 12:24:59>
+;;; Last Modified <michael 2020-11-07 21:36:29>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -103,6 +103,8 @@
             (setf *isochrones*  isochrones)
             (make-routeinfo :best best-route
                             :stats (get-statistics best-route)
+                            :polars (cpolars-label polars)
+                            :maxspeed (cpolars-maxspeed polars)
                             :tracks (extract-tracks start-pos (course-angle start-pos dest-pos) isochrone)
                             :isochrones (prepare-routepoints isochrones))))
         

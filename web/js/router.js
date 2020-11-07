@@ -481,6 +481,8 @@ import * as Util from './Util.js';
         $("#lb_sails").text(formatSails(data));
         $("#lb_minwind").text(Util.roundTo(data.stats["min-wind"], 1) + " - " + Util.roundTo(data.stats["max-wind"], 1));
         $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
+        $("#lb_polars").text(data.polars);
+        $("#lb_maxspeed").text(data.maxspeed);
     }
 
 

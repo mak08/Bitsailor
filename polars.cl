@@ -1,14 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-07-26 16:41:16>
+;;; Last Modified <michael 2020-11-07 21:40:04>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
 (in-package :virtualhelm)
 
-(defstruct cpolars id name twa vmg speed)
-(defstruct polars id name tws twa sails)
+(defstruct cpolars id label name maxspeed twa vmg speed)
+(defstruct polars id label name maxspeed tws twa sails)
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
@@ -110,7 +110,9 @@
                                   (length (car precomputed)))
                             :initial-contents precomputed)))
     (make-cpolars :id id
+                  :label (polars-label polars)
                   :name (polars-name polars)
+                  :maxspeed  (polars-maxspeed polars)
                   :twa (remove-duplicates
                         (merge 'vector twa
                                (loop :for s :from 44d0 :to 150d0 :by 2d0 :collect s) #'<=)
@@ -205,6 +207,10 @@
           (joref (joref (parse-json-file polars-name) "scriptData") "polar"))
          (id
           (joref polars "_id"))
+         (label
+          (joref polars "label"))
+         (maxspeed
+          (joref polars "maxSpeed"))
          (tws
           (joref polars "tws"))
          (twa
@@ -238,6 +244,8 @@
                  (coerce (aref twa angle-index) 'double-float)))
     (make-polars :name polars-name
                  :id id
+                 :label label
+                 :maxspeed maxspeed
                  :tws tws
                  :twa twa
                  :sails saildefs)))

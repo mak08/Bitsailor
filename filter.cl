@@ -1,9 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-04-26 18:11:35>
+;;; Last Modified <michael 2020-11-06 23:57:40>
 
-(declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
+(declaim (optimize (speed 3) (debug 1) (space 0) (safety 0)))
 
 (in-package :virtualhelm)
 
@@ -25,9 +25,10 @@
                          &key
                            (criterion +max-origin+)
                            (constraints nil)
+                           (limits nil)
                            (fan 180d0))
   ;; (return-from filter-isochrone isochrone)
-  (log2:debug "Filter: ~a points" (length isochrone))
+  (log2:trace-more "Filter: ~a points" (length isochrone))
   (when (= 0 (length isochrone))
     (return-from filter-isochrone nil))
   (let* ((last
@@ -66,6 +67,7 @@
               :for new-pos =  (when p (routepoint-position p))
               :when (and p
                          (meets-all constraints new-pos old-pos)
+                         (check-limits old-pos new-pos limits)
                          (not (intersects-land-p old-pos new-pos)))
               :collect p)))
       (values (make-array (length filtered) :initial-contents filtered)))))

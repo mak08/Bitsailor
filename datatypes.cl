@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-07-30 23:45:38>
+;;; Last Modified <michael 2020-11-01 16:48:10>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -10,16 +10,18 @@
         
 (defstruct routing
   (dataset 'noaa-dataset)
-  (race-id "default")
+  (race-id "440.1")
   (polars "vo65")
+  (limits "limits.json")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (cycle nil) ;; NIL = latest available
   (options '("reach"))
   (minwind t) ;; m/s !!
   (start +LESSABLES+) ;; set-paramater needs a valid initial values
   (dest +LACORUNA+)   ;; because start/dest lat and lon are set separately.
   (mode +max-origin+)
-  (fan 130)
+  (fan 90)            ;; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
   (stepmax +12h+))
 
 (defstruct duration days hours minutes seconds)

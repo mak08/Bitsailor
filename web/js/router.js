@@ -79,6 +79,10 @@ import * as Util from './Util.js';
         $("#cb_startdelayed").click(onDelayedStart);
         $("#tb_starttime").change(onSetParameter);
         
+        $("#cb_manualcycle").click(onManualCycle);
+        $("#tb_cycledate").change(onSetParameter);
+        $("#sel_cyclehour").change(onSetParameter);
+        
         // Connect option selectors
         $("#sel_polars").change(onSetParameter);
         $("#sel_forecastbundle").change(onSetParameter);
@@ -164,12 +168,17 @@ import * as Util from './Util.js';
         if (forecastData.basetime) {
             redrawWindByOffset(forecastData.basetime, ir_index.value);
         } else {
-            var d = new Date();
-            var now = d.toISOString();
-            redrawWindByTime(now, ir_index.value);
+            var baseTime = availableForecastCycle();
+            redrawWindByTime(baseTime, ir_index.value);
         }
     }
 
+    function availableForecastCycle (d=new Date()) {
+        var availDate = d - 210 * 60 * 1000;
+        var fc = truncate(availDate, 6 * 3600 * 1000);
+        return new Date(fc).toISOString();
+    }
+        
     // Event handler for context menu mapMenu 
     function onContextMenu (point) {
         var mapMenu=$("#mapMenu")[0];
@@ -178,11 +187,11 @@ import * as Util from './Util.js';
     }
     
     function onSelectIsochrone (isochrone) {
+        var baseTime = isochrone.get('time');
         var offset = isochrone.get('offset');
         $("#ir_index")[0].value = offset;
         updateIsochrones();
-        var time = isochrone.get('time');
-        redrawWindByTime(time);
+        redrawWindByOffset(baseTime, offset);
     }
 
     function onHideWind (event) {
@@ -227,6 +236,47 @@ import * as Util from './Util.js';
             });
         }
     }
+
+    function truncate (n, q) {
+        return n - (n % q);
+    }
+    
+    function pad0 (val, length=2, base=10) {
+        var result = val.toString(base)
+        while (result.length < length) result = '0' + result;
+        return result;
+    }
+
+
+    function getManualCycle () {
+        var dateInput =  $("#tb_cycledate")[0];
+        var hourInput =  $("#sel_cyclehour")[0];
+        return dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+    }
+    
+    function onManualCycle (event) {
+        var dateInput =  $("#tb_cycledate")[0];
+        var hourInput =  $("#sel_cyclehour")[0];
+        var d = new Date();
+        var isoDate = d.toISOString().substring(0,10);
+        dateInput.value = isoDate;
+        var hour = truncate(d.getUTCHours(), 6);
+        hourInput.value = hour;
+        var valueSpec = "";
+        if (event.currentTarget.value) {
+            valueSpec = "&value=" + getManualCycle();
+        }
+        $.ajax({
+            // No paramValue == reset (value defaults to nil)
+            url: "/function/vh:setParameter" + "?name=" + 'cycle' + valueSpec,
+            dataType: 'json'
+        }).done( function(data) {
+            console.log(data);
+            redrawWindByOffset(getManualCycle(), 0);
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert('Could not set cycle: ' + textStatus + ' ' + errorThrown);
+        });
+    }
     
     function onSetClientParameter (event) {
         if ( event.currentTarget === 'foo' ) {
@@ -241,6 +291,12 @@ import * as Util from './Util.js';
         // tb starttime has a 'checked' field but we don't want to use it.
         if ( paramName === 'starttime' ) {
             paramValue = event.currentTarget.value;
+        } else if ( paramName === 'cycledate' || paramName === 'cyclehour' ) {
+            var dateInput =  $("#tb_cycledate")[0];
+            var hourInput =  $("#sel_cyclehour")[0];
+            paramName = 'cycle';
+            paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+            redrawWindByOffset(paramValue, "0");
         } else {
             // default: if there is a 'checked' field use it, otherwise use the value field.
             paramValue = event.currentTarget.checked;
@@ -487,22 +543,26 @@ import * as Util from './Util.js';
             url: "/function/vh:getLegInfo",
             dataType: 'json'
         }).done( function(leg, status, xhr) {
-            var checkpoints = leg.checkpoints;
-            var markStbd = 'img/mark_green.png';
-            var markPort = 'img/mark_red.png';
-
-            startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
-            destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
-
-            for (const c of checkpoints) {
-                var mark = new google.maps.Marker({
-                    position: {"lat": c.start.lat, "lng": c.start.lon},
-                    map: googleMap,
-                    icon: (c.side=='port')?markPort:markStbd,
-                    title: c.group + "-" + c.id + " " + c.name,
-                    draggable: false
-                });
-                mark.addListener('click', function () { onMarkerClicked(mark) });
+            if (leg) {
+                var checkpoints = leg.checkpoints;
+                var markStbd = 'img/mark_green.png';
+                var markPort = 'img/mark_red.png';
+                
+                startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
+                destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
+                
+                for (const c of checkpoints) {
+                    var mark = new google.maps.Marker({
+                        position: {"lat": c.start.lat, "lng": c.start.lon},
+                        map: googleMap,
+                        icon: (c.side=='port')?markPort:markStbd,
+                        title: c.group + "-" + c.id + " " + c.name,
+                        draggable: false
+                    });
+                    mark.addListener('click', function () { onMarkerClicked(mark) });
+                }
+            } else {
+                alert("No leg info for race");
             }
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert(textStatus + ' ' + errorThrown);
@@ -529,7 +589,7 @@ import * as Util from './Util.js';
             path: google.maps.SymbolPath.CIRCLE
         }
         for ( var i = 0; i < isochrones.length; i++ ) {
-            var style = getIsoStyle(isochrones[i].time, 0, 1);
+            var style = getIsoStyle(isochrones[i], 1);
             var isochrone = new google.maps.Polyline({
                 geodesic: true,
                 strokeColor: style.color,
@@ -544,11 +604,18 @@ import * as Util from './Util.js';
         }
     }
 
-    function getIsoStyle (time, offset, selectedOffset) {
-        var h = new Date(time).getUTCHours();
+    function getIsochroneTime(isochrone) {
+        var basetime = new Date(isochrone.time);
+        var offset = isochrone.offset;
+        return new Date(basetime - 0 + offset * 3600 * 1000);
+    }
+    
+    function getIsoStyle (isochrone, selectedOffset) {
+        var d = getIsochroneTime(isochrone);
+        var h = d.getUTCHours();
         var weight =  (h%6)?1:3;
         var color;
-        if (offset === selectedOffset) {
+        if (isochrone.offset === selectedOffset) {
             color = '#ffffff';
             weight = 3;
         } else {
@@ -563,7 +630,7 @@ import * as Util from './Util.js';
 
     function updateIsochrones () {
         for (const isochrone of routeIsochrones ) {
-            var style = getIsoStyle(isochrone.get('time'), isochrone.get('offset'), ir_index.valueAsNumber);
+            var style = getIsoStyle(isochrone, ir_index.valueAsNumber);
             isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
         }
     }
@@ -740,12 +807,12 @@ import * as Util from './Util.js';
     }
     
     function redrawWindByTime (time) {
-        var timeSpec = "time=" + time;
-        getWind(timeSpec);
+        var baseTime  = availableForecastCycle();
+        getWind("basetime=" + baseTime + "&" + "time=" + time);
     }
     
     function redrawWindByOffset (basetime, offset) {
-        var timeSpec = "basetime=" + basetime + "&offset=" + offset;
+        var timeSpec = "basetime=" + basetime + "&" + "offset=" + offset;
         getWind(timeSpec);
     }
     
@@ -775,6 +842,7 @@ import * as Util from './Util.js';
             drawWind(data)
         }).fail( function (jqXHR, textStatus, errorThrown) {
             // $('div, button, input').css('cursor', 'auto');
+            alert("Could not get wind data:" + textStatus + ' ' + errorThrown);
             console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
         });
     }

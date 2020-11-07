@@ -45,6 +45,20 @@
            <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
            <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
+
+        <div class="cycle-label">
+          <label>Cycle time:</label>
+        </div>
+        <div class="cycle-entry">
+           <input id="cb_manualcycle" name="manualcycle" type="checkbox"/>
+           <input id="tb_cycledate" name="cycledate" type="date"/>
+           <select id="sel_cyclehour" name="cyclehour">
+             <option value="0">00</option>
+             <option value="6">06</option>
+             <option value="12">12</option>
+             <option value="18">18</option>
+           </select>
+        </div>	
         
         <div class="duration-label">
           <label>Duration</label>

@@ -177,63 +177,73 @@ input[type=checkbox] {
 
 }
 
+/* Override cycle */
+.cycle-label {
+	grid-row: 3;
+	grid-column: 1;
+}
+.cycle-entry {
+	grid-row: 3;
+	grid-column: 2;
+}
+
 /* Routing duration */
 .duration-label {
-	grid-row: 3;
+	grid-row: 4;
 	grid-column: 1;
 
 }
 .duration-selector {
-	grid-row: 3;
+	grid-row: 4;
 	grid-column: 2;
 }
 
 /* Polars selection */
 .polars-label {
-	grid-row: 4;
+	grid-row: 5;
 	grid-column: 1;
 
 }
 .polars-selector {
-	grid-row: 4;
+	grid-row: 5;
 	grid-column: 2;
 
 }
 
 /* Minwind */
 .minwind-label {
-	grid-row: 5;
+	grid-row: 6;
 	grid-column: 1;
 
 }
 .minwind-checkbox {
-	grid-row: 5;
+	grid-row: 6;
 	grid-column: 2;
 
 }
 
 /* Hide wind */
 .hidewind-label {
-	grid-row: 6;
+	grid-row: 7;
 	grid-column: 1;
 
 }
 .hidewind-checkbox {
-	grid-row: 6;
+	grid-row: 7;
 	grid-column: 2;
 
 }
 
 /* Execute */
 .execute-button {
-	grid-row: 7;
+	grid-row: 8;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 8;
+	grid-row: 9;
 	grid-column: 1;
 
 }
@@ -242,17 +252,11 @@ input[type=checkbox] {
 /* Cursor position */
 
 .cursor-position {
-	grid-row: 9;
+	grid-row: 19;
 	grid-column: 2;
 	margin: 2px 20px;
 }
 
-/* Cursor wind */
-.cursor-wind {
-	grid-row: 9;
-	grid-column: 1;
-	margin: 2px 20px;
-}
 
 /* Cursor wind */
 .current-wind {
@@ -262,21 +266,21 @@ input[type=checkbox] {
 
 /* Current TWA */
 .current-twa-label {
-	grid-row: 10;
+	grid-row: 11;
 	grid-column: 1;
 }
 .current-twa {
-	grid-row: 10;
+	grid-row: 11;
 	grid-column: 2;
 }
 
 /* Current Heading */
 .current-heading-label {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 1;
 }
 .current-heading {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 2;
 }
 

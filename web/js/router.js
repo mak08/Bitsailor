@@ -563,6 +563,20 @@ import * as Util from './Util.js';
                     });
                     mark.addListener('click', function () { onMarkerClicked(mark) });
                 }
+                if (leg.ice_limits) {
+                    var iceLimit = [];
+                    for (const p of leg.ice_limits.south) {
+                        iceLimit.push({"lat": p.lat, "lng": p.lon});
+                    }
+                    var iceLine = new google.maps.Polyline({
+                        geodesic: true,
+                        strokeColor: '#ff0000',
+                        strokeOpacity: 1.0,
+                        strokeWeight: 1
+                    });
+                    iceLine.setMap(googleMap);
+                    iceLine.setPath(iceLimit);
+                }
             } else {
                 alert("No leg info for race");
             }

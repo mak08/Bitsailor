@@ -263,7 +263,7 @@ import * as Util from './Util.js';
         var hour = truncate(d.getUTCHours(), 6);
         hourInput.value = hour;
         var valueSpec = "";
-        if (event.currentTarget.value) {
+        if (document.getElementById("cb_manualcycle").checked) {
             valueSpec = "&value=" + getManualCycle();
         }
         $.ajax({

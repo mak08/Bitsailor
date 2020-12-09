@@ -569,7 +569,7 @@ import * as Util from './Util.js';
                         iceLimit.push({"lat": p.lat, "lng": p.lon});
                     }
                     var iceLine = new google.maps.Polyline({
-                        geodesic: true,
+                        geodesic: false,
                         strokeColor: '#ff0000',
                         strokeOpacity: 1.0,
                         strokeWeight: 1

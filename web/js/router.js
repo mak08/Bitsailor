@@ -823,7 +823,12 @@ import * as Util from './Util.js';
     }
     
     function redrawWindByTime (time) {
-        var baseTime  = availableForecastCycle();
+        var baseTime;
+        if (document.getElementById("cb_manualcycle").checked) {
+            baseTime = getManualCycle();
+        } else {
+            baseTime  = availableForecastCycle();
+        }
         getWind("basetime=" + baseTime + "&" + "time=" + time);
     }
     

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-11-07 21:40:04>
+;;; Last Modified <michael 2020-12-12 01:13:28>
 
 (declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
 
@@ -32,6 +32,8 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
+
+(defparameter *twa-step* 2d0)
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
 
@@ -115,7 +117,7 @@
                   :maxspeed  (polars-maxspeed polars)
                   :twa (remove-duplicates
                         (merge 'vector twa
-                               (loop :for s :from 44d0 :to 150d0 :by 2d0 :collect s) #'<=)
+                               (loop :for s :from 44d0 :to 150d0 :by *twa-step* :collect s) #'<=)
                         :test #'eql)
                   :speed speed
                   :vmg (precompute-vmg speed max-wind))))

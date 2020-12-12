@@ -810,8 +810,14 @@ import * as Util from './Util.js';
         }
         var lat = event.latLng.lat();
         var lng = event.latLng.lng();
+        var baseTime;
+        if (document.getElementById("cb_manualcycle").checked) {
+            baseTime = getManualCycle();
+        } else {
+            baseTime  = availableForecastCycle();
+        }
         $.ajax({
-            url: "/function/vh:getTWAPath?time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+            url: "/function/vh:getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.path);

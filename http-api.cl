@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-11-01 11:34:54>
+;;; Last Modified <michael 2020-12-12 00:42:43>
 
 (in-package :virtualhelm)
 
@@ -247,7 +247,7 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
-(defun |getTWAPath| (handler request response &key |time| |latA| |lngA| |lat| |lng|)
+(defun |getTWAPath| (handler request response &key |basetime| |time| |latA| |lngA| |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (user-id
@@ -255,6 +255,7 @@
              (session (find-or-create-session user-id request response))
              (race-id (get-routing-request-race-id request))
              (routing (session-routing session race-id))
+             (base-time |basetime|)
              (time (parse-datetime |time|))
              (lat-a (read-from-string |latA|))
              (lng-a (read-from-string |lngA|))
@@ -262,7 +263,7 @@
              (lng (read-from-string |lng|)))
         (values
          (with-output-to-string (s)
-           (json s (get-twa-path routing :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+           (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)

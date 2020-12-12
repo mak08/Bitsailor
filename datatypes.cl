@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-11-07 21:41:08>
+;;; Last Modified <michael 2020-11-22 22:01:30>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -23,6 +23,13 @@
   (mode +max-origin+)
   (fan 90)            ;; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
   (stepmax +12h+))
+
+(defmethod print-object ((thing routing) stream)
+  (format stream "{T=~a C=~a O=~a}"
+          (routing-starttime thing)
+          (routing-cycle thing)
+          (routing-options thing)))
+
 
 (defstruct duration days hours minutes seconds)
 (defmethod print-object ((thing duration) stream)
@@ -60,6 +67,11 @@
 (defstruct isochrone center time offset params path)
 
 (defstruct twainfo twa heading path)
+
+(defmethod print-object ((thing twainfo) stream)
+  (format stream "{TWA:~a Heading:~a}"
+          (twainfo-twa thing)
+          (twainfo-heading thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.

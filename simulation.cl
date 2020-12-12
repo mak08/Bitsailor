@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-11-07 21:36:29>
+;;; Last Modified <michael 2020-12-12 00:28:42>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -49,9 +49,11 @@
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
-          (timestamp-maximum (now)
+          ;; (timestamp-maximum (now)
                              (parse-datetime-local (routing-starttime routing)
-                                                   :timezone "+00:00")))
+                                                   :timezone "+00:00")
+           ;; )
+           )
          (cycle (routing-cycle routing))
          (isochrones nil))
     (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a"
@@ -487,6 +489,7 @@
 
 (defun get-twa-path (routing
                      &key
+                       base-time
                        time
                        lat-a
                        lng-a
@@ -505,7 +508,7 @@
          (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
     (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
            (curpos (copy-latlng startpos))
-           (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time)))
+           (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time base-time)))
            (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
            (path nil))
       (dotimes (k
@@ -519,7 +522,7 @@
         (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
         ;; Determine next position
         (multiple-value-bind (wind-dir wind-speed)
-            (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time))
+            (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time base-time))
           (declare (double-float wind-dir wind-speed))
           (multiple-value-bind (sail speed)
               (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
@@ -528,7 +531,6 @@
             (let ((heading (twa-heading wind-dir twa)))
               (setf curpos
                     (add-distance-exact curpos (* speed time-increment) heading)))))))))
-
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-10-24 21:36:57>
+;;; Last Modified <michael 2020-12-13 22:52:39>
 
 (in-package :virtualhelm)
 
@@ -47,6 +47,12 @@
      :do (let ((race-def (parse-json-file name)))
            (get-leg-data race-def))))
 
+(defun load-race-definition (name)
+  (let* ((path (merge-pathnames *races-dir* (make-pathname :name name :type "json")))
+         (race-def  (parse-json-file name)))
+    (get-leg-data race-def)))
+    
+  
 (defun get-leg-data (json-object)
   (cond
     ((joref json-object "scriptData")

@@ -1,13 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-12-12 00:28:42>
+;;; Last Modified <michael 2021-03-22 10:22:29>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
-
-(declaim (optimize (speed 3) (debug 1) (space 0) (safety 0)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Todo: User settings
@@ -32,7 +30,7 @@
 
 (defconstant  +max-iso-points+ 1500)
 
-(defvar *reached-distance* 30000)
+(defconstant +reached-distance+ 30000d0)
 (defvar *isochrones* nil)
 (defvar *best-route*)
 
@@ -72,7 +70,7 @@
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 200 (min +max-iso-points+ (+ max-points 10)))
+          (max-points 200 (min +max-iso-points+ (+ max-points 12)))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (step-size (step-size start-time)
                      (step-size start-time step-time))
@@ -109,16 +107,19 @@
                             :maxspeed (cpolars-maxspeed polars)
                             :tracks (extract-tracks start-pos (course-angle start-pos dest-pos) isochrone)
                             :isochrones (prepare-routepoints isochrones))))
+
+      (declare (fixnum max-points step-size stepsum pointnum))
         
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
       (map nil (lambda (rp)
                  (let ((new-point-num
-                        (expand-routepoint routing rp start-pos left right step-size step-time params polars next-isochrone)))
+                         (expand-routepoint routing rp start-pos left right step-size step-time params polars next-isochrone)))
+                   (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)
       
-      ;; Step 2 - Filter isochrone. 
+      ;; Step 2 - Filter isochrone.
       (let ((candidate (filter-isochrone next-isochrone left right max-points
                                          :criterion (routing-mode routing)
                                          :constraints (get-constraints (routing-race-id routing))
@@ -135,7 +136,7 @@
            (log2:trace "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
            ;; Collect hourly isochrones
-           (multiple-value-bind (q r) (truncate (timestamp-to-universal step-time) 3600)
+           (multiple-value-bind (q r) (truncate (the fixnum (timestamp-to-universal step-time)) 3600)
              (declare (ignore q))
              (when (zerop r)
                (let* (
@@ -151,17 +152,21 @@
 (defun reached (candidate dest-pos)
   (some (lambda (p)
           (and p
-               (< (fast-course-distance (routepoint-position p) dest-pos) *reached-distance*)))
+               (< (fast-course-distance (routepoint-position p) dest-pos) +reached-distance+)))
         candidate))
 
 
 (defun get-race-limits (leg-info)
-  (let* ((south (joref (joref leg-info "ice_limits") "south")))
-    (map 'vector
-         (lambda (p)
-           (make-latlng :lat (coerce (joref p "lat") 'double-float)
-                        :lng (coerce (joref p "lon") 'double-float)))
-         south)))
+  (let* ((south (joref (joref leg-info "ice_limits") "south"))
+         (result (make-array (+ (length south) 1))))
+    (map-into result
+              (lambda (p)
+                (make-latlng :lat (coerce (joref p "lat") 'double-float)
+                             :lng (coerce (joref p "lon") 'double-float)))
+              south)
+    ;; Wrap around
+    (setf (aref result (1- (length result))) (aref result 1))
+    result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
@@ -174,9 +179,9 @@
        (- (* 600 (truncate (+ time 600) 600))
           time)))
     (t
-     (let ((delta-t (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
+     (let ((delta-t  (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
        (cond ((<= delta-t (* 12 600))
-              300)
+              600)
              ((<= delta-t (* 48 600))
               600)
              ((<= delta-t (* 72 600))
@@ -189,7 +194,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed
 
+(declaim (inline foiling-factor))
+(defun foiling-factor (speed twa)
+  (multiple-value-bind
+        (speed-index speed-fraction)
+      (fraction-index speed +foil-speeds+)
+    (multiple-value-bind
+          (angle-index angle-fraction)
+        (fraction-index (abs twa) +foil-angles+)
+      (bilinear-unit speed-fraction
+                     angle-fraction
+                     (aref +foil-matrix+ speed-index angle-index)
+                     (aref +foil-matrix+ speed-index (1+ angle-index))
+                     (aref +foil-matrix+ (1+ speed-index) angle-index)
+                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
+
 (defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars twa)
+  (declare (double-float wind-speed twa))
   (multiple-value-bind (speed sail)
       (twa-boatspeed polars wind-dir wind-speed (normalize-angle twa))
     (declare (double-float speed))
@@ -198,7 +219,7 @@
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
         (routing-foils routing)
-      (setf speed (* speed (foiling-factor wind-speed twa))))
+      (setf speed (* speed (the double-float (foiling-factor wind-speed twa)))))
     (when (routing-hull routing)
       (setf speed (* speed 1.003d0)))
     (let ((penalty
@@ -227,19 +248,6 @@
                                (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
 )
 
-(defun foiling-factor (speed twa)
-  (multiple-value-bind
-        (speed-index speed-fraction)
-      (fraction-index speed +foil-speeds+)
-    (multiple-value-bind
-          (angle-index angle-fraction)
-        (fraction-index (abs twa) +foil-angles+)
-      (bilinear-unit speed-fraction
-                     angle-fraction
-                     (aref +foil-matrix+ speed-index angle-index)
-                     (aref +foil-matrix+ speed-index (1+ angle-index))
-                     (aref +foil-matrix+ (1+ speed-index) angle-index)
-                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Aux functions
@@ -259,7 +267,6 @@
   "Compute HEADING resulting from TWA in WIND"
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
-(declaim (notinline twa-heading))
 
 (defun expand-routepoint (routing routepoint start-pos left right step-size step-time params polars next-isochrone)
   (cond
@@ -322,7 +329,7 @@
 
 
 (defun construct-rp (previous start-pos position step-time heading speed sail reason wind-dir wind-speed)
-  (let ((distance (fast-course-distance start-pos position)))
+  (let ((distance (or (fast-course-distance start-pos position))))
     (create-routepoint previous
                        position
                        step-time

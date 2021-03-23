@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2020-07-24 22:39:21>
+;;; Last Modified <michael 2021-02-14 19:09:05>
 
 (in-package :virtualhelm)
 
@@ -29,7 +29,7 @@
                          (make-pathname :directory (pathname-directory *load-pathname*))))
 
 ;;; Start one server on port 8080 
-(server :hostname "aguas-10"
+(server :hostname "aguas-13"
         :protocol :http
         ;; :mt-method :ondemand
         :mt-method :pooled

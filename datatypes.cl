@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-11-22 22:01:30>
+;;; Last Modified <michael 2021-03-22 10:25:08>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,10 +19,10 @@
   (options '("reach"))
   (minwind t) ;; m/s !!
   (start +LESSABLES+) ;; set-paramater needs a valid initial values
-  (dest +LACORUNA+)   ;; because start/dest lat and lon are set separately.
+  (dest +NEW-YORK+)   ;; because start/dest lat and lon are set separately.
   (mode +max-origin+)
   (fan 90)            ;; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
-  (stepmax +12h+))
+  (stepmax +12h+ :type fixnum))
 
 (defmethod print-object ((thing routing) stream)
   (format stream "{T=~a C=~a O=~a}"

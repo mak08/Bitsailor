@@ -1,9 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-12-12 01:13:28>
-
-(declaim (optimize (speed 3) (debug 0) (space 1) (safety 1)))
+;;; Last Modified <michael 2021-03-20 20:51:11>
 
 (in-package :virtualhelm)
 
@@ -194,6 +192,7 @@
   (gethash name *polars-name-ht*))
 
 (defun get-polars-by-id (id)
+  (assert (numberp id))
   (gethash id *polars-id-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

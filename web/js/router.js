@@ -108,33 +108,8 @@ import * as Util from './Util.js';
         
         ir_index = $("#ir_index")[0];
 
-        var startFlag = 'img/start_45x32.png';
-        startMarker = new google.maps.Marker({
-            position: {"lat": 54.434403, "lng": 11.361632},
-            map: googleMap,
-            title: 'Start',
-            icon: startFlag,
-            draggable: true
-        });
-        startMarker.addListener('click', function () { onMarkerClicked(startMarker) });
-        
-        google.maps.event.addListener(startMarker,'dragend',function() {
-            setRoutePoint('start', startMarker.getPosition());
-        });
-        
-        var finishFlag = 'img/finish_32x20.png';
-        destinationMarker = new google.maps.Marker({
-            position: {"lat": 55.391123, "lng": 13.792635},
-            map: googleMap,
-            title: 'Destination',
-            icon: finishFlag,
-            draggable: true
-        });
-        destinationMarker.addListener('click', function () { onMarkerClicked(destinationMarker) });
-        
-        google.maps.event.addListener(destinationMarker,'dragend',function() {
-            setRoutePoint('dest', destinationMarker.getPosition());
-        });
+        startMarker = initMarker('start', 'Start', 'img/start_45x32.png');
+        destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png');
 
         setupCanvas();
         
@@ -145,6 +120,24 @@ import * as Util from './Util.js';
         getLegInfo()
         getSession();
 
+    }
+
+    function initMarker (type, title, icon) {
+        var marker = new google.maps.Marker({
+            position: {"lat": 0, "lng": 0},
+            map: googleMap,
+            title: title,
+            icon: icon,
+            draggable: true
+        });
+
+        marker.addListener('click', function () { onMarkerClicked(marker) });
+        
+        google.maps.event.addListener(marker,'dragend',function() {
+            setRoutePoint(type, marker.getPosition());
+        });
+
+        return marker;
     }
 
     ////////////////////////////////////////////////////////////////////////////////

@@ -1,12 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-11-06 23:57:40>
-
-(declaim (optimize (speed 3) (debug 1) (space 0) (safety 0)))
+;;; Last Modified <michael 2021-03-21 01:12:40>
 
 (in-package :virtualhelm)
-
 
 (defstruct criterion distfn compfn)
 
@@ -70,6 +67,7 @@
                          (check-limits old-pos new-pos limits)
                          (not (intersects-land-p old-pos new-pos)))
               :collect p)))
+
       (values (make-array (length filtered) :initial-contents filtered)))))
 
 ;;; EOF

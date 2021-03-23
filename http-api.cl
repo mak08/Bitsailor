@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-12-12 00:42:43>
+;;; Last Modified <michael 2020-12-26 21:39:20>
 
 (in-package :virtualhelm)
 
@@ -491,7 +491,8 @@
   (cond
     ((string= name "race")
      )
-    ((string= name "starttime")
+    ((or (string= name "starttime")
+         (string= name "ts"))
      (setf (routing-starttime routing) value))
     ((or (string= name "cycle"))
      (cond

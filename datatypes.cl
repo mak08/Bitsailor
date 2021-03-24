@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-22 10:25:08>
+;;; Last Modified <michael 2021-03-24 00:22:04>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -11,7 +11,7 @@
 (defstruct routing
   (dataset 'noaa-dataset)
   (race-id "440.1")
-  (polars "vo65")
+  (polars 4)
   (limits "limits.json")
   (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)

@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2020-07-26 15:12:53>
+;;; Last Modified  <michael 2021-03-24 20:57:08>
  
 (in-package :virtualhelm)
 
@@ -285,7 +285,8 @@
             :for end :from pos
             :while (is-numchar (aref s end))
             :finally (return end))))
-    (let ((n (read-from-string s nil nil :start pos :end end)))
+    (let* ((*read-default-float-format* 'double-float)
+           (n (read-from-string s nil nil :start pos :end end)))
       (unless (numberp n)
         (error "At position ~: invalid number ~a" pos (subseq s pos end)))
       (setf pos end)

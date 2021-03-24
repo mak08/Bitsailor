@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-03-20 20:51:11>
+;;; Last Modified <michael 2021-03-24 21:19:28>
 
 (in-package :virtualhelm)
 
@@ -105,7 +105,7 @@
              :collect (loop
                          :for wind :from 0 :to (* max-wind 10)
                          :collect (multiple-value-list
-                                   (get-max-speed% (/ angle  10.0) (/ wind 10.0) polars options)))))
+                                   (get-max-speed% (/ angle  10.d0) (/ wind 10.d0) polars options)))))
          (speed (make-array (list (length precomputed)
                                   (length (car precomputed)))
                             :initial-contents precomputed)))

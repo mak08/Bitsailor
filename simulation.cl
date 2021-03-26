@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-03-22 10:22:29>
+;;; Last Modified <michael 2021-03-26 13:29:14>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -63,6 +63,7 @@
     (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
+          (reached-distance (* 900 (cpolars-maxspeed polars)))
           (error nil)
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
@@ -109,7 +110,7 @@
                             :isochrones (prepare-routepoints isochrones))))
 
       (declare (fixnum max-points step-size stepsum pointnum))
-        
+
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone. 
       (map nil (lambda (rp)
@@ -130,7 +131,7 @@
                (notany #'routepoint-p candidate))
            (setf error t))
           (t
-           (setf reached (reached candidate dest-pos))
+           (setf reached (reached candidate dest-pos reached-distance))
            (setf isochrone candidate)
 
            (log2:trace "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
@@ -149,12 +150,11 @@
         (when reached
           (log2:info "Reached destination at ~a" step-time))))))
 
-(defun reached (candidate dest-pos)
+(defun reached (candidate dest-pos &optional (reached-distance  +reached-distance+))
   (some (lambda (p)
           (and p
-               (< (fast-course-distance (routepoint-position p) dest-pos) +reached-distance+)))
+               (< (fast-course-distance (routepoint-position p) dest-pos) reached-distance)))
         candidate))
-
 
 (defun get-race-limits (leg-info)
   (let* ((south (joref (joref leg-info "ice_limits") "south"))
@@ -211,11 +211,11 @@
 
 (defun get-penalized-avg-speed (routing cur-twa cur-sail wind-dir wind-speed polars twa)
   (declare (double-float wind-speed twa))
+  (when (routing-minwind routing)
+    (setf wind-speed (max 1.0289d0 wind-speed)))
   (multiple-value-bind (speed sail)
-      (twa-boatspeed polars wind-dir wind-speed (normalize-angle twa))
+      (twa-boatspeed polars wind-speed (normalize-angle twa))
     (declare (double-float speed))
-    (when (routing-minwind routing)
-      (setf speed (max 1.0289d0 speed)))
     (when
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
         (routing-foils routing)
@@ -534,7 +534,6 @@
           (multiple-value-bind (sail speed)
               (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
             (declare (double-float speed))
-            ;;(twa-boatspeed polars wind-dir wind-speed twa)
             (let ((heading (twa-heading wind-dir twa)))
               (setf curpos
                     (add-distance-exact curpos (* speed time-increment) heading)))))))))
@@ -545,7 +544,7 @@
   "Compute TWA resulting from HEADING in WIND"
   (normalize-angle (- wind-dir heading)))
 
-(defun twa-boatspeed (polars wind-dir wind-speed angle)
+(defun twa-boatspeed (polars wind-speed angle)
   (check-type angle angle)
   (destructuring-bind (speed sail)
       (get-max-speed (cpolars-speed polars) angle wind-speed)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-03-26 13:29:14>
+;;; Last Modified <michael 2021-03-26 20:47:41>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -63,7 +63,10 @@
     (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
-          (reached-distance (* 900 (cpolars-maxspeed polars)))
+          (reached-distance (* 900 (knots-to-m/s (cpolars-maxspeed polars))))
+          (dummy (log2:info "Max speed: ~,1,,,f Reached distance: ~a"
+                            (cpolars-maxspeed polars)
+                            reached-distance))
           (error nil)
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed

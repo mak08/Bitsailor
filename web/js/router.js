@@ -37,6 +37,7 @@ import * as Util from './Util.js';
     var windData = [];
     var currentRouting = {};
     var twaPath = [];
+    var hdgPath = [];
 
     function setUp () {
         
@@ -645,7 +646,8 @@ import * as Util from './Util.js';
     }
     
     function clearRoute() {
-        clearTWAPath();
+        clearPath(twaPath);
+        clearPath(hdgPath);
         
         for ( var i = 0; i<trackMarkers.length; i++ ) {
             trackMarkers[i].setMap(undefined);
@@ -722,11 +724,11 @@ import * as Util from './Util.js';
         marker.addListener('click', function () { onMarkerClicked(marker) });
     }
     
-    function clearTWAPath() {
-        for ( var i=0; i<twaPath.length; i++ ) {
-            twaPath[i].setMap(null);
+    function clearPath (path) {
+        for ( var i=0; i < path.length; i++ ) {
+            path[i].setMap(null);
         }
-        twaPath = [];
+        path = [];
     }
 
     var ortho;
@@ -742,17 +744,25 @@ import * as Util from './Util.js';
         }
         ortho = new google.maps.Polyline({
             geodesic: true,
-            strokeColor: '#0f0f0f',
+            strokeColor: '#1f1f1f',
             strokeOpacity: 1,
-            strokeWeight: 2,
+            strokeWeight: 1,
         });
         ortho.setPath([start, data.latLng]);
         ortho.setMap(googleMap);
     }
+
+    function drawTWAPath (data) {
+        clearPath(twaPath);
+        drawPath(twaPath, data, '#00a0c0');
+    }
+
+    function drawHDGPath (data) {
+        clearPath(hdgPath);
+        drawPath(hdgPath, data, '#e0e080');
+    }
     
-    function drawTWAPath(data) {
-        clearTWAPath();
-        var color = '#00a0c0';
+    function drawPath (bPath, data, color) {
         var lineSymbol = {
             path: google.maps.SymbolPath.CIRCLE
         }
@@ -764,7 +774,7 @@ import * as Util from './Util.js';
                     geodesic: true,
                     strokeColor: color,
                     strokeOpacity: 1,
-                    strokeWeight: 2,
+                    strokeWeight: 4,
                     icons: [{icon: lineSymbol,  offset: '100%'}]
                 });
             } else {
@@ -772,12 +782,12 @@ import * as Util from './Util.js';
                     geodesic: true,
                     strokeColor: color,
                     strokeOpacity: 1,
-                    strokeWeight: 1
+                    strokeWeight: 2
                 });
             }
             twaPathSegment.setPath([data[i-1][1], data[i][1]]);
             twaPathSegment.setMap(googleMap);
-            twaPath[i-1] = twaPathSegment;
+            bPath[i-1] = twaPathSegment;
         }
     }
     
@@ -813,7 +823,8 @@ import * as Util from './Util.js';
             url: "/function/vh:getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
             dataType: 'json'
         }).done( function(data) {
-            drawTWAPath(data.path);
+            drawTWAPath(data.twapath);
+            drawHDGPath(data.hdgpath);
             $("#lb_twa").text(data.twa);
             $("#lb_twa_heading").text(data.heading);
         }).fail( function (jqXHR, textStatus, errorThrown) {

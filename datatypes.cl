@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-24 00:22:04>
+;;; Last Modified <michael 2021-03-28 01:02:39>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,7 +66,7 @@
 
 (defstruct isochrone center time offset params path)
 
-(defstruct twainfo twa heading path)
+(defstruct twainfo twa heading twapath hdgpath)
 
 (defmethod print-object ((thing twainfo) stream)
   (format stream "{TWA:~a Heading:~a}"

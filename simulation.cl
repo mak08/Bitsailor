@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-03-26 20:47:41>
+;;; Last Modified <michael 2021-03-28 01:15:30>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -231,13 +231,13 @@
         ((and
           cur-sail
           (not (equal sail cur-sail)))
-         (values sail (* speed penalty) "Sail Change"))
+         (values (* speed penalty) sail "Sail Change"))
         ((and cur-twa
               (or (< twa 0 cur-twa)
                   (< cur-twa 0 twa)))
-         (values sail (* speed penalty) "Tack/Gybe"))
+         (values (* speed penalty) sail "Tack/Gybe"))
         (t
-         (values sail speed nil))))))
+         (values speed sail nil))))))
 
 (unless (boundp '+foil-speeds+)
 (defconstant +foil-speeds+ (map 'vector #'knots-to-m/s
@@ -311,7 +311,7 @@
                          (<= up-vmg-angle twa down-vmg-angle)
                          (or is-stbd is-port))
               :do (flet ((add-point (heading twa)
-                           (multiple-value-bind (sail speed reason)
+                           (multiple-value-bind (speed sail reason)
                                (get-penalized-avg-speed routing cur-twa cur-sail wind-dir wind-speed polars twa)
                              (declare (double-float speed)
                                       (integer step-size))
@@ -497,49 +497,56 @@
                        :seconds rest-seconds)))))
 
 
-(defun get-twa-path (routing
-                     &key
-                       base-time
-                       time
-                       lat-a
-                       lng-a
-                       lat
-                       lng
-                       (total-time +12h+)
-                       (step-num (truncate total-time +10min+)))
-  (let* ((sails (encode-options (routing-options routing)))
-         (polars (get-combined-polars (routing-polars routing) sails))
+(defun get-twa-path (routing &key base-time time lat-a lng-a lat lng
+                               (total-time +12h+)
+                               (step-num (truncate total-time +10min+)))
+  (let* ((options (encode-options (routing-options routing)))
+         (polars (get-combined-polars (routing-polars routing) options))
          (time (or time (now)))
          (time-increment +10min+)
          (first-increment
           (let* ((utime (timestamp-to-unix time)))
             (- (* 600 (truncate (+ utime 600) 600))
                utime)))
-         (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a))))
-    (let* ((heading (course-angle startpos (make-latlng :latr% (rad lat) :lngr% (rad lng))))
-           (curpos (copy-latlng startpos))
-           (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time base-time)))
-           (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
-           (path nil))
-      (dotimes (k
-                 step-num
-                (make-twainfo :twa twa
-                              :heading (normalize-heading heading)
-                              :path (reverse (push (list time (copy-latlng curpos)) path))))
-        ;; Save previous position
-        (push (list time (copy-latlng curpos)) path)
-        ;; Create new timestamp, Increment time
-        (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
-        ;; Determine next position
-        (multiple-value-bind (wind-dir wind-speed)
-            (interpolated-prediction (latlng-lat curpos) (latlng-lng curpos) (interpolation-parameters time base-time))
-          (declare (double-float wind-dir wind-speed))
-          (multiple-value-bind (sail speed)
-              (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
-            (declare (double-float speed))
-            (let ((heading (twa-heading wind-dir twa)))
-              (setf curpos
-                    (add-distance-exact curpos (* speed time-increment) heading)))))))))
+         (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a)))
+         (targetpos (make-latlng :latr% (rad lat) :lngr% (rad lng)))
+         (heading (course-angle startpos targetpos))
+         (curpos-twa (copy-latlng startpos))
+         (curpos-hdg (copy-latlng startpos))
+         (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time base-time)))
+         (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
+         (twa-path nil)
+         (hdg-path nil))
+    (dotimes (k
+              step-num
+              (make-twainfo :twa twa
+                            :heading (normalize-heading heading)
+                            :twapath (reverse (push (list time (copy-latlng curpos-twa)) twa-path))
+                            :hdgpath (reverse (push (list time (copy-latlng curpos-hdg)) hdg-path))))
+      ;; Save previous position
+      (push (list time (copy-latlng curpos-twa)) twa-path)
+      (push (list time (copy-latlng curpos-hdg)) hdg-path)
+      ;; Create new timestamp, Increment time
+      (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
+      ;; Determine next position
+      (multiple-value-bind (wind-dir wind-speed)
+          (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time base-time))
+        (declare (double-float wind-dir wind-speed))
+        (multiple-value-bind (speed)
+            (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars twa)
+          (declare (double-float speed))
+          (let ((twa-heading (twa-heading wind-dir twa)))
+            (setf curpos-twa
+                  (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
+      (multiple-value-bind (wind-dir wind-speed)
+          (interpolated-prediction (latlng-lat curpos-hdg) (latlng-lng curpos-hdg) (interpolation-parameters time base-time))
+        (declare (double-float wind-dir wind-speed))
+        (let ((heading-twa (heading-twa wind-dir heading)))
+          (multiple-value-bind (speed)
+              (get-penalized-avg-speed routing nil nil wind-dir wind-speed polars heading-twa)
+            (setf curpos-hdg
+                  (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading))))))))
+
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))
 

@@ -249,24 +249,26 @@ import * as Util from './Util.js';
     }
     
     function onManualCycle (event) {
+
+        // When manual cycle is switched on, initialize with available cycle.
+        // When it is switched off, reset to available cycle.
+        var cycle = availableForecastCycle();
+        
         var dateInput =  $("#tb_cycledate")[0];
         var hourInput =  $("#sel_cyclehour")[0];
-        var d = new Date();
-        var isoDate = d.toISOString().substring(0,10);
-        dateInput.value = isoDate;
-        var hour = truncate(d.getUTCHours(), 6);
-        hourInput.value = hour;
-        var valueSpec = "";
-        if (document.getElementById("cb_manualcycle").checked) {
-            valueSpec = "&value=" + getManualCycle();
-        }
+
+        dateInput.value = cycle.substring(0,10);
+        hourInput.value = Number.parseInt(cycle.substring(11,13));
+
+        var cycleSpec = getManualCycle();
+
         $.ajax({
             // No paramValue == reset (value defaults to nil)
-            url: "/function/vh:setParameter" + "?name=" + 'cycle' + valueSpec,
+            url: "/function/vh:setParameter" + "?name=" + 'cycle' +  "&value=" + cycleSpec,
             dataType: 'json'
         }).done( function(data) {
             console.log(data);
-            redrawWindByOffset(getManualCycle(), 0);
+            redrawWindByOffset(cycleSpec, 0);
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert('Could not set cycle: ' + textStatus + ' ' + errorThrown);
         });

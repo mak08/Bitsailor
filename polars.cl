@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-03-24 21:19:28>
+;;; Last Modified <michael 2021-03-31 21:01:38>
 
 (in-package :virtualhelm)
 
@@ -31,7 +31,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
 
-(defparameter *twa-step* 2d0)
+(defparameter *twa-step* nil
+  "Set this to a desired TWA step width (eg. 2.0d0) if necessary.
+   Clear *combined-polars-ht* to force recomputation of cpolars.")
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
 
@@ -99,6 +101,12 @@
          (tws (polars-tws polars))
          (twa (polars-twa polars))
          (max-wind (aref tws (1- (length tws))))
+         (twa-steps (if (null *twa-step*)
+                        twa
+                        (remove-duplicates
+                         (merge 'vector twa
+                                (loop :for s :from 44d0 :to 150d0 :by *twa-step* :collect s) #'<=)
+                         :test #'eql)))
          (precomputed
           (loop
              :for angle :from 0 :to 1800
@@ -113,10 +121,7 @@
                   :label (polars-label polars)
                   :name (polars-name polars)
                   :maxspeed  (polars-maxspeed polars)
-                  :twa (remove-duplicates
-                        (merge 'vector twa
-                               (loop :for s :from 44d0 :to 150d0 :by *twa-step* :collect s) #'<=)
-                        :test #'eql)
+                  :twa twa-steps
                   :speed speed
                   :vmg (precompute-vmg speed max-wind))))
 

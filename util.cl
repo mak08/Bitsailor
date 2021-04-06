@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2019-03-17 14:23:41>
+;;; Last Modified <michael 2021-04-05 13:26:13>
 
 (in-package :virtualhelm)
 
@@ -14,20 +14,10 @@
 
 (defun get-route-for-session (session-id race-id)
   (let ((session (gethash session-id *session-ht*)))
+    (unless session
+      (error "~a: no such session" session-id)) 
     (get-route (session-routing session race-id))))
 
-
-(defun probe-wind (latlng &optional (time (now)))
-  (when (stringp time)
-    (setf time (parse-rfc3339-timestring time)))
-  (let ((forecast (get-forecast
-                   (get-dataset 'noaa-dataset)
-                   time)))
-    (log2:info "Using ~a" forecast)
-    (multiple-value-bind (angle speed)
-        (get-wind-forecast forecast latlng)
-      (values angle
-              (m/s-to-knots speed)))))
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))

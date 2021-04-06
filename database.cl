@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2020-07-16 23:50:17>
+;;; Last Modified <michael 2021-03-28 20:40:00>
 
 (in-package :virtualhelm)
 
@@ -98,7 +98,6 @@
      (sql:%drop-schema "virtualhelm")))
 
 (defun clear ()
-  (clrhash *resource-lock-ht*)
   (sqlite-client:with-current-connection (c *db*)
     (sql-exec c "PRAGMA foreign_keys = OFF;")
     (sql::clear-schema (get-schema-by-name "tinysphere"))

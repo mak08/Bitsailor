@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-12-13 22:52:39>
+;;; Last Modified <michael 2021-03-29 22:58:24>
 
 (in-package :virtualhelm)
 
@@ -11,6 +11,8 @@
 ;;; Log levels are also set in server configuration file!
 (setf (log2:log-level "virtualhelm") log2:+info+)
 (setf (log2:log-level "cl-weather") log2:+info+)
+
+(log2:info "Heap space: ~a" (sb-ext:dynamic-space-size))
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")

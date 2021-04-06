@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-28 01:02:39>
+;;; Last Modified <michael 2021-03-31 23:57:52>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -80,7 +80,7 @@
 
 (defstruct (routepoint
              (:constructor create-routepoint (predecessor position time heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
-  predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance sort-angle%)
+  predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance)
 
 (defstruct trackpoint
   time position heading dtf speed sail penalty twd tws twa)

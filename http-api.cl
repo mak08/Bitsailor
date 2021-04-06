@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2020-12-26 21:39:20>
+;;; Last Modified <michael 2021-04-05 13:25:37>
 
 (in-package :virtualhelm)
 
@@ -403,6 +403,7 @@
 (defun session-routing (session race-id)
   (or
    (gethash race-id (session-routings session))
+   (log2:info "Creating routing for session ~a race ~a" (session-id session) race-id)
    (setf (gethash race-id (session-routings session))
          (make-routing :race-id race-id))))
 

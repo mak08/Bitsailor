@@ -5,7 +5,7 @@
 /*******************************************************************************
  * Colors 
  *
- *  Warm black 004242
+ *  Warm black 424242
  *  Coffee     6f4e37
  *******************************************************************************/
 
@@ -15,6 +15,17 @@
 	padding: 0px;
 }
 
+dummy {
+	color00: #ffffff
+	color01: #8080a0
+	color02: #424242;
+	color03: #1f1f1f;
+	color04: #000000
+	color05: #00c2f8;
+	color06: #308040;
+	color07: #d00000;
+	color08: #ff0000;
+}
 
 html, body {
 	margin: 0px;
@@ -59,12 +70,12 @@ p, b {
 	margin: 0px;
 	padding: 0px;
 	color: #e8e8ff;
-    background-color: #004242;
+    background-color: #424242;
 }
 .menu {
     grid-area: menu;
 	color: #e8e8ff;
-    background-color: #004242;
+    background-color: #424242;
 }
 .map {
     grid-area: main;
@@ -84,7 +95,7 @@ p, b {
 	grid-template-columns: 150px 1fr;
 	grid-template-rows: repeat(20, minmax(25px, 36px));
 	color: #e8e8ff;
-    background-color: #004242;
+    background-color: #424242;
 	align-items: flex-start;
 }
 
@@ -92,7 +103,7 @@ p, b {
 .footer-left {
     grid-area: footer-left;
 	color: #e8e8ff;
-    background-color: #004242; 
+    background-color: #424242; 
 }
 .footer {
     grid-area: footer;
@@ -101,7 +112,7 @@ p, b {
 	align-items: center;
 	justify-content: space-between;
 	color: #e8e8ff;
-    background-color: #004242; 
+    background-color: #424242; 
 }
 
 #wind-canvas {
@@ -224,12 +235,12 @@ input[type=checkbox] {
 }
 
 /* Hide wind */
-.hidewind-label {
+.displaywind-label {
 	grid-row: 7;
 	grid-column: 1;
 
 }
-.hidewind-checkbox {
+.displaywind-checkbox {
 	grid-row: 7;
 	grid-column: 2;
 
@@ -269,20 +280,26 @@ input[type=checkbox] {
 .current-twa-label {
 	grid-row: 11;
 	grid-column: 1;
+	color: #308040;
+	font-weight: bold;
 }
 .current-twa {
 	grid-row: 11;
 	grid-column: 2;
+	color: #308040;
 }
 
 /* Current Heading */
 .current-heading-label {
 	grid-row: 12;
 	grid-column: 1;
+	color: #00c2f8;
+	font-weight: bold;
 }
 .current-heading {
 	grid-row: 12;
 	grid-column: 2;
+	color: #00c2f8;
 }
 
 /* Statistics */

@@ -89,7 +89,7 @@ import * as Util from './Util.js';
         $("#sel_forecastbundle").change(onSetParameter);
         $("#sel_duration").change(onSetParameter);
         $("#cb_minwind").change(onSetParameter);
-        $("#cb_hidewind").change(onHideWind);
+        $("#cb_displaywind").change(onDisplaywind);
         
         // Tracks & Isochrones display is handled by the client directly
         $("#cb_tracks").change(onSetClientParameter);
@@ -188,12 +188,12 @@ import * as Util from './Util.js';
         redrawWindByOffset(baseTime, offset);
     }
 
-    function onHideWind (event) {
-        var cbHideWind = $("#cb_hidewind")[0];
-        if (cbHideWind.checked) {
-            $("#wind-canvas").hide();
-        } else {
+    function onDisplaywind (event) {
+        var cbDisplaywind = $("#cb_displaywind")[0];
+        if (cbDisplaywind.checked) {
             $("#wind-canvas").show();
+        } else {
+            $("#wind-canvas").hide();
         }
     }
     
@@ -472,13 +472,13 @@ import * as Util from './Util.js';
 
         createIsochrones(data.isochrones);
         
-        $("#lb_from").text(JSON.stringify(data.stats.start));
-        $("#lb_duration").text(JSON.stringify(data.stats.duration));
+        $("#lb_from").text(data.stats.start);
+        $("#lb_duration").text(data.stats.duration);
         $("#lb_sails").text(formatSails(data));
         $("#lb_minwind").text(Util.roundTo(data.stats["min-wind"], 1) + " - " + Util.roundTo(data.stats["max-wind"], 1));
         $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
         $("#lb_polars").text(data.polars);
-        $("#lb_maxspeed").text(data.maxspeed);
+        // $("#lb_maxspeed").text(data.maxspeed);
     }
 
 
@@ -756,12 +756,12 @@ import * as Util from './Util.js';
 
     function drawTWAPath (data) {
         clearPath(twaPath);
-        drawPath(twaPath, data, '#00a0c0');
+        drawPath(twaPath, data, '#308040');
     }
 
     function drawHDGPath (data) {
         clearPath(hdgPath);
-        drawPath(hdgPath, data, '#e0e080');
+        drawPath(hdgPath, data, '#00c2f8');
     }
     
     function drawPath (bPath, data, color) {
@@ -992,12 +992,41 @@ import * as Util from './Util.js';
     }
 
     function formatSails (data) {
+        var best = data.best;
+        var t0 = new Date(best[0].time);
+        var start = t0;
+        var t1;
+        var sail = best[0].sail;
+        var m = {};
+        for (const s of best) {
+            t1 = new Date(s.time);
+            if (s.sail != sail) {
+                var dt = t1 - t0;
+                if ( ! m[sail]) {
+                    m[sail] = dt;
+                } else {
+                    m[sail] += dt;
+                }
+                t0 = t1;
+                sail = s.sail;
+            }
+        }
+
+        var dt = t1 - t0;
+        if ( ! m[sail]) {
+            m[sail] = dt;
+        } else {
+            m[sail] += dt;
+        }
+
+        dt = t1 - start;
+
         var result = "";
-        for (const sail of data.stats.sails) {
+        for (const e in m) {
             if (result) {
-                result = sail + "," + result;
+                result = result + " - " + e + ":" + (m[e]/dt*100).toFixed() + "%" ;
             } else {
-                result = sail;
+                result = e + ":" + (m[e]/dt*100).toFixed() + "%";
             }
         }
         return result;

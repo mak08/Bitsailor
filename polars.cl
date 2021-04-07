@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-06 00:25:56>
+;;; Last Modified <michael 2021-04-07 01:26:38>
 
 (in-package :virtualhelm)
 
@@ -31,8 +31,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
 
-(defparameter *twa-step* 2d0
-  "Set this to a desired TWA step width (eg. 2.0d0) if necessary.
+(defparameter *twa-step* nil
+  "Set this to the desired TWA step width (eg. 5d0).
+   NIL (default) mean use only points provided in polar file.
    Clear *combined-polars-ht* to force recomputation of cpolars.")
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))

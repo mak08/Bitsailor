@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-05 13:25:37>
+;;; Last Modified <michael 2021-04-17 21:40:23>
 
 (in-package :virtualhelm)
 
@@ -36,7 +36,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
 (defun |setRoute| (handler request response &key |pointType| |lat| |lng|)
-  (declare (ignore location))
   (handler-case
       (let* ((user-id (http-authenticated-user handler request))
              (session (find-or-create-session user-id request response))
@@ -64,7 +63,6 @@
 ;;; setParameter
 
 (defun |setParameter| (handler request response &key |name| (|value| nil))
-  (declare (ignore location))
   (let* ((user-id (http-authenticated-user handler request))
          (session (find-or-create-session user-id request response))
          (race-id (get-routing-request-race-id request))
@@ -78,7 +76,6 @@
 ;;; getRoute
 
 (defun |getRoute| (handler request response)
-  (declare (ignore location))
   (let ((race-id (get-routing-request-race-id request)))
     (handler-case
         (let* ((user-id
@@ -155,10 +152,13 @@
          (race-id
           (get-routing-request-race-id request))
          (leg-info
-          (gethash race-id *races-ht*)))
+           (get-leg-info race-id user-id)))
     (values
      (with-output-to-string (s)
        (json s leg-info)))))
+
+(defun get-leg-info (race-id user-id)
+  (gethash race-id *races-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -277,8 +277,8 @@
 (defstruct forecast current previous interpolated)
 (defstruct windinfo date cycle dir speed) 
 
-(defun |getWindForecast| (location request response &key |time| |lat| |lng|)
-  (declare (ignore location))
+(defun |getWindForecast| (handler request response &key |time| |lat| |lng|)
+  (declare (ignore handler))
   (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
   (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
   (handler-case
@@ -328,15 +328,16 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Probe Wind
 
-(defun |probeWind| (location request response &key |time| |lat| |lng| |date| |cycle|)
-  (declare (ignore location))
+(defun |probeWind| (handler request response &key |time| |lat| |lng| |date| |cycle|)
   (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
   (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
   (handler-case
       (let ((*read-default-float-format* 'double-float)
             (race-id (get-routing-request-race-id request)))
-        (let* ((session
-                (find-or-create-session request response))
+        (let* ((user-id
+                 (http-authenticated-user handler request))
+               (session
+                 (find-or-create-session user-id request response))
                (routing
                 (session-routing session race-id))
                (forecast-time
@@ -385,6 +386,74 @@
       (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; RealSail specific commads
+
+(defstruct raceinfo name id class start-time closing-time start-pos finish-pos closed)
+
+(defun |getRaceList| (handler request response)
+  ;; unauthenticated!
+  (declare (ignore handler request response))
+  (let ((races (list)))
+    (maphash 
+     (lambda (k v)
+       (declare (ignore k))
+       (push (get-raceinfo v) races))
+     *races-ht*)
+    (with-output-to-string (s)
+      (json s races))))
+
+(defun get-raceinfo (race)
+  (make-raceinfo
+   :name (joref race "name")
+   :id (joref race "objectId")
+   :class (joref (joref race "polar") "classBoat")
+   :start-time (joref (joref race "start") "iso")
+   :start-pos (make-latlng
+               :lat (joref (joref race "startLocation") "latitude")
+               :lng (joref (joref race "startLocation") "longitude"))))
+
+(defstruct posinfo time position speed course)
+
+;;; The web page can't fetch the position from the Telnet port itself.
+(defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+  (let* ((user-id (http-authenticated-user handler request))
+         (race-id (get-routing-request-race-id request))
+         (session (find-or-create-session user-id request response))
+         (routing (session-routing session race-id))
+         (host |host|)
+         (port |port|))
+    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
+    (unless (ignore-errors
+             (numberp (parse-integer port)))
+      (error "Invalid NMEA port ~a" port))
+    (let ((messages
+            (reverse
+             ;; There may be more than one GPRMC record. Search from end.
+             (get-nmea-messages routing host port))))
+      (with-output-to-string (s)
+        (json s (loop
+                  :for m :in messages 
+                  :when (search "$GPRMC" m)
+                    :do (progn
+                          (log2:info "~a" m)
+                          (return (parse-gprmc m)))))))))
+
+(defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+  (let* ((user-id (http-authenticated-user handler request))
+         (race-id (get-routing-request-race-id request))
+         (session (find-or-create-session user-id request response))
+         (routing (session-routing session race-id))
+         (host |host|)
+         (port |port|))
+    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
+    (unless (ignore-errors
+             (numberp (parse-integer port)))
+      (error "Invalid NMEA port ~a" port))
+    (with-output-to-string (s)
+            (json s
+                  (reset-nmea-socket routing host port)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 
 ;;; Keep session table when reloading system!
@@ -403,7 +472,7 @@
 (defun session-routing (session race-id)
   (or
    (gethash race-id (session-routings session))
-   (log2:info "Creating routing for session ~a race ~a" (session-id session) race-id)
+   (log2:info "Creating routing for session ~a race ~a" (session-session-id session) race-id)
    (setf (gethash race-id (session-routings session))
          (make-routing :race-id race-id))))
 
@@ -505,7 +574,7 @@
                      (length "2020-10-24T00:00:00Z")))
         (setf (routing-cycle routing) value))))
     ((string= name "polars")
-     (setf (routing-polars routing) (read-from-string value)))
+     (setf (routing-polars routing)  value))
     ((string= name "options")
      (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
     ((string= name "minwind")

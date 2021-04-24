@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-31 23:57:52>
+;;; Last Modified <michael 2021-04-18 21:57:03>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13,16 +13,19 @@
   (race-id "440.1")
   (polars 4)
   (limits "limits.json")
-  (starttime nil) ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (starttimezone "+00:00") ;; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (cycle nil) ;; NIL = latest available
+  (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (starttimezone "+00:00")              ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
+  (cycle nil)                           ; NIL = latest available
   (options '("reach"))
-  (minwind t) ;; m/s !!
-  (start +LESSABLES+) ;; set-paramater needs a valid initial values
-  (dest +NEW-YORK+)   ;; because start/dest lat and lon are set separately.
+  (minwind nil)                         ; m/s !!
+  (start +LESSABLES+)                   ; set-paramater needs a valid initial values
+  (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.
   (mode +max-origin+)
-  (fan 90)            ;; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
-  (stepmax +12h+ :type fixnum))
+  (fan 90)                              ; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
+  (stepmax +12h+ :type fixnum)
+  (nmea-port "10000")                   ; Fetch boat position
+  (nmea-socket)
+  )
 
 (defmethod print-object ((thing routing) stream)
   (format stream "{T=~a C=~a O=~a}"
@@ -64,7 +67,7 @@
           (routestats-max-wind thing)
           (routestats-sails thing)))
 
-(defstruct isochrone center time offset params path)
+(defstruct isochrone center time offset path)
 
 (defstruct twainfo twa heading twapath hdgpath)
 
@@ -83,7 +86,7 @@
   predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance)
 
 (defstruct trackpoint
-  time position heading dtf speed sail penalty twd tws twa)
+  time cycle position heading dtf speed sail penalty twd tws twa)
 
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)

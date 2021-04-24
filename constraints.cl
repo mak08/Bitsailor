@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2020-12-13 22:14:17>
+;;; Last Modified <michael 2021-04-17 21:30:10>
 
 (in-package :virtualhelm)
 
@@ -57,7 +57,6 @@
            (make-latlng :lat (coerce (joref p "lat") 'double-float)
                         :lng (coerce (joref p "lon") 'double-float)))
          south)))
-
 
 (defun check-limits (p0 p1 limits)
   (loop

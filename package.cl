@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-30 23:24:18>
+;;; Last Modified <michael 2021-04-16 16:57:38>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -31,6 +31,9 @@
    "setRoute"
    "setParameter"
    "getRoute"
+   "getRaceList"
+   "resetNMEAConnection"
+   "getBoatPosition"
    "getTWAPath"
    "checkWindow"
    ;; VH backend

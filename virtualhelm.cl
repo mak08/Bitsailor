@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-03-29 22:58:24>
+;;; Last Modified <michael 2021-04-23 01:32:40>
 
 (in-package :virtualhelm)
 
@@ -29,9 +29,14 @@
        (load rcfile :verbose t :print t))
       (t
        (log2:warning "~a does not exist" rcfile)))
+
+    
+    ;; The GSHHS coastline is abysmally slow
+    ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
     (ensure-map)
-    (load-race-definitions)
-    (load-all-polars)
+    
+    (load-race-definitions-rs)
+    (load-all-polars-rs)
     (log2:info "Loading server configuration ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
@@ -43,18 +48,31 @@
                    *source-root*)
   "A string designating the directory containing polar files")
 
-(defun load-race-definitions ()
-  (loop
-     :for name :in (directory (merge-pathnames *races-dir* (make-pathname :name :wild :type "json")))
-     :do (let ((race-def (parse-json-file name)))
-           (get-leg-data race-def))))
+(defvar *races-dir-rs*
+  (merge-pathnames (make-pathname :directory '(:relative "races-rs") :type "json")
+                   *source-root*)
+  "A string designating the directory containing polar files")
 
+(defun load-race-definitions-rs ()
+  (let* ((filename (merge-pathnames *races-dir-rs* (make-pathname :name "Races" :type "json")))
+         (races (parse-json-file filename)))
+    (loop
+      :for race :across (joref races "results")
+      :do (get-leg-data-rs race))))
+
+(defun load-race-definition-rs (name)
+  (let* ((path (merge-pathnames *races-dir-rs* (make-pathname :name name :type "json")))
+         (race-def  (parse-json-file name)))
+    (get-leg-data-rs race-def)))
+
+;;; Used for testing
 (defun load-race-definition (name)
   (let* ((path (merge-pathnames *races-dir* (make-pathname :name name :type "json")))
          (race-def  (parse-json-file name)))
     (get-leg-data race-def)))
     
-  
+
+;; caution - get-leg-info also exists
 (defun get-leg-data (json-object)
   (cond
     ((joref json-object "scriptData")
@@ -70,7 +88,15 @@
             (leg-num (joref (joref leg "_id") "num"))
             (leg-id (format nil "~a.~a" race-id leg-num)))
        (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
-       (setf (gethash leg-id *races-ht*) leg)))))      
+       (setf (gethash leg-id *races-ht*) leg)))
+    (T
+     (error "Unexpected JSON format"))))
+
+(defun get-leg-data-rs (race-def)
+  (let* ((race-id (joref race-def "objectId"))
+         (race-name (joref race-def "name")))
+    (log2:info "Loading race ~a ~a" race-id race-name)
+    (setf (gethash race-id *races-ht*) race-def)))
     
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

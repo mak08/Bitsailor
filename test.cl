@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2020-12-15 19:19:02>
+;;; Last Modified <michael 2021-04-17 21:30:01>
 
 (in-package :virtualhelm)
 
@@ -141,14 +141,6 @@
 ;; Pos: 56°24'23"S 184°55'25"E
 ;; Pos: 56°26'03"S 185°12'08"E
 
-(let* ((lat0 (dms-to-decimal (make-dms :u -1d0 :d 56  :m 24 :s 23 :cs 0)))
-       (lng0 (dms-to-decimal (make-dms :u 1d0 :d 184 :m 55 :s 25 :cs 0)))
-       (lat1 (dms-to-decimal (make-dms :u -1d0 :d 56  :m 26 :s 03 :cs 0)))
-       (lng1 (dms-to-decimal (make-dms :u 1d0 :d 185 :m 12 :s 08 :cs 0)))
-       (p0 (make-latlng :lat lat0 :lng lng0))
-       (p1 (make-latlng :lat lat1 :lng lng1))
-       (limits (get-race-limits (load-race-definition "/home/michael/Races/RaceInfo_VendeeGlobe_2020-12-10.json"))))
-  (check-limits p0 p1 limits))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

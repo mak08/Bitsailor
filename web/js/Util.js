@@ -1,4 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
+/// No JQuery
+
+function doGET (url, success, error) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function ( ){
+        if ( xhr.readyState == 4 && xhr.status < 400 )  {
+           success(xhr);
+        }
+    }
+    xhr.open("GET", url, true);
+    xhr.send();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 /// Helper functions
 
 function m2nm (dist) {
@@ -92,4 +106,4 @@ function formatPosition(lat, lon) {
     return latString + ((latDMS.u == 1) ? "N" : "S") + " " + lonString + ((lonDMS.u == 1) ? "E" : "W");
 }
 
-export { arcLength, m2nm, ms2knots, toDeg, toDMS, toDHM, toHHMMSS, roundTo, formatPosition, formatDHM };
+export { doGET, arcLength, m2nm, ms2knots, toDeg, toDMS, toDHM, toHHMMSS, roundTo, formatPosition, formatDHM };

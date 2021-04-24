@@ -1,0 +1,99 @@
+/*******************************************************************************
+ * General properties
+ *******************************************************************************/
+
+/*******************************************************************************
+ * Colors 
+ *
+ *  Warm black 424242
+ *  Coffee     6f4e37
+ *******************************************************************************/
+
+* {
+    font-family: Arial, sans-serif;
+	margin: 0px;
+	padding: 0px;
+}
+
+dummy {
+	color00: #ffffff
+	color00: #ededeb
+	color01: #8080a0
+	color02: #464242;
+	color03: #222222;
+	color04: #000000
+	color05: #00c2f8;
+	color06: #308040;
+	color07: #504040;
+	color08: #d00000;
+	color08: #d43830;
+	color09: #ff0000;
+}
+
+html {
+	margin: 0px 0px 0px 0px;
+	background-color: #222222;
+}
+
+
+tr:hover {
+	background-color:  #a0a0a0;
+}
+
+a:link {
+	color: white;
+	background-color: : #00c2f8;
+}
+
+a:visited {
+	color: white;
+	background-color: : #00c2f8;
+}
+
+a:hover {
+}
+
+/* selected link */
+a:active {
+  color: #222222;
+}
+
+/*******************************************************************************
+ * Page layout
+ *******************************************************************************/
+
+#race_list {
+	width: 100%;
+}
+
+
+.grid-container {
+	display: grid;
+	grid-template-columns: 10% 80% 10%;
+	grid-template-rows: auto;
+	grid-gap: 1px;
+	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
+	background-color: #ffffff;
+	padding: 2px;
+}
+
+.grid-container > div {
+    /* defining a background-color here makes the canvas intransparent */
+    text-align: left;
+    padding: 4px;
+}
+
+.table-header {
+	grid-row: 1;
+	grid-column: 2;
+	color: #ededeb;
+	background-color: #308040;
+
+}
+.race-selection-table {
+	grid-row: 2;
+	grid-column: 2;
+	color: #ededeb;
+	background-color: #464242;
+}
+

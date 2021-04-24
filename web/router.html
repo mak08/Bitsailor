@@ -21,7 +21,11 @@
 
     <div class="grid-container">
 
-      <div class="header"><h2>Sailsphere Router</h2></div>
+      <div class="header">
+		<div id="edition_tag">
+		  <em>realsail edition</em>
+		</div>
+	  </div>
 
       <div class="menu"></div>
 
@@ -37,7 +41,21 @@
         <div class="settings-label">
           <label></label>
         </div>
+		
+        <div class="nmea-label">
+          <label>NMEA port</label>
+        </div>
+        <div class="nmea-port">
+          <input id="tb_nmeaport" name="nmeaport" type="text"  maxlength="5" placeholder="10000"/>
+        </div>
 
+		<div class="nmea-update">
+          <button id="bt_nmeaupdate">Update</button>
+		</div>
+		<div class="nmea-reset">
+          <button id="bt_nmeareset">Reset</button>
+		</div>
+		
         <div class="delayed-label">
           <label>Start time:</label>
         </div>
@@ -80,35 +98,6 @@
             <option value="360">15 days</option>
           </select>
         </div>	
-        
-        <div class="polars-label">
-          <label>Polars</label>
-        </div>
-        <div class="polars-selector">
-          <select id="sel_polars" name="polars">
-            <option value="13">Caravel</option>
-            <option value="16">Tara</option>
-            <option value="15">Beneteau Oceanis 40.1</option>
-            <option value="2">Figaro Bénéteau II</option>
-            <option value="3">Class 40</option>
-            <option value="5">Mini 6.50</option>
-            <option value="8">Clipper 70 v2</option>
-            <option value="4">IMOCA 60</option>
-            <option value="7">VO65</option>
-            <option value="14">Super Maxi 100</option>
-            <option value="11">Multi 50</option>
-            <option value="12">Ultime Macif</option>
-            <option value="6">Maxi Trimaran</option>
-            <option value="9">Maxi Trimaran+</option>
-          </select>
-        </div>
-
-        <div class="minwind-label">
-          <label>Min 2kn wind</label>
-        </div>
-        <div class="minwind-checkbox">
-          <input id="cb_minwind" name="minwind" type="checkbox" checked="true"/>
-        </div>
         
         <div class="displaywind-label">
           <label>Display wind</label>

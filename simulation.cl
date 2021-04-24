@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-06 00:22:15>
+;;; Last Modified <michael 2021-04-18 21:57:47>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -54,7 +54,8 @@
          (destination (normalized-destination routing))
          (polars (get-routing-polars routing))
          (race-info (get-routing-race-info routing))
-         (limits (get-race-limits race-info))
+         (limits (when race-info
+                   (get-race-limits-rs race-info)))
          (dest-heading (round (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -71,7 +72,11 @@
     (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
-          (reached-distance (* 900 (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
+          (reached-distance (* (cond
+                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  150)
+                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  450)
+                                 (T 900))
+                               (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
           (dummy (log2:info "Max speed: ~,1,,,f Reached distance: ~a"
                             (cpolars-maxspeed polars)
                             reached-distance))
@@ -157,7 +162,6 @@
              (let* ((iso (make-isochrone :center start-pos
                                          :time base-time
                                          :offset (truncate (timestamp-difference step-time base-time) 3600)
-                                         :params (null params)
                                          :path (extract-points isochrone))))
                (push iso isochrones)))))
         (when reached
@@ -181,6 +185,9 @@
     (setf (aref result (1- (length result))) (aref result 1))
     result))
 
+(defun get-race-limits-rs (leg-info)
+  nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
@@ -193,11 +200,9 @@
           time)))
     (t
      (let ((delta-t  (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
-       (cond ((<= delta-t (* 12 600))
+       (cond ((<= delta-t (* 18 600))
               600)
              ((<= delta-t (* 48 600))
-              600)
-             ((<= delta-t (* 72 600))
               900)
              ((<= delta-t (* 144 600))
               1800)
@@ -373,7 +378,6 @@
      :collect (make-isochrone :center (isochrone-center i)
                               :time (isochrone-time i)
                               :offset (isochrone-offset i)
-                              :params (null (isochrone-params i))
                               :path (loop
                                        :for r :in (isochrone-path i)
                                        :collect (routepoint-position r)))))
@@ -442,6 +446,7 @@
          route)
       (when (or (null successor)
                 (routepoint-penalty cur-point)
+                (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
                 (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))
                 (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
         (push (create-trackpoint cur-point (or successor cur-point)) route)))))

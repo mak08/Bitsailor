@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-06 00:23:11>
+;;; Last Modified <michael 2021-04-22 22:17:24>
 
 (in-package :virtualhelm)
 
@@ -63,7 +63,10 @@
                                origin-distance))))
   (values))
 
-(defun-t filter-isochrone vector ((isochrone vector) &key (limits nil))
+
+(defvar *use-bitmap* t)
+
+(defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (use-bitmap *use-bitmap*))
   (let ((filtered
           (loop
             :for p :across isochrone
@@ -72,7 +75,10 @@
             :when (and p
                        ;; (meets-all constraints new-pos old-pos)
                        (check-limits old-pos new-pos limits)
-                       (not (intersects-land-p old-pos new-pos)))
+                       (cond (use-bitmap
+                              (not (bm-is-land new-pos)))
+                             (t
+                              (not (intersects-land-p old-pos new-pos)))))
               :collect p)))
     (make-array (length filtered) :initial-contents filtered)))
 

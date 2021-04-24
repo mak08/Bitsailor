@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-07 01:26:38>
+;;; Last Modified <michael 2021-04-09 23:24:22>
 
 (in-package :virtualhelm)
 
@@ -66,7 +66,7 @@
           (min (round (* wind-speed 10d0))
                (1- dim)))))
 
-(defun load-all-polars ()
+(defun load-all-polars-rs ()
   (loop
      :for name :in (directory (merge-pathnames *polars-dir* (make-pathname :name :wild :type "json")))
      :do (let ((polars

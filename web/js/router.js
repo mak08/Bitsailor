@@ -71,6 +71,9 @@ import * as Util from './Util.js';
         // Connect button events
         $("#bt_getroute").click(getRoute);
 
+        $("#bt_nmeaupdate").click(getBoatPosition);
+        $("#bt_nmeareset").click(resetNMEAConnection);
+
         $("#bt_inc").click(onAdjustIndex);
         $("#bt_dec").click(onAdjustIndex);
         $("#bt_inc6").click(onAdjustIndex);
@@ -109,8 +112,8 @@ import * as Util from './Util.js';
         
         ir_index = $("#ir_index")[0];
 
-        startMarker = initMarker('start', 'Start', 'img/start_45x32.png');
-        destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png');
+        startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 1, 45);
+        destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
 
         setupCanvas();
         
@@ -123,12 +126,16 @@ import * as Util from './Util.js';
 
     }
 
-    function initMarker (type, title, icon) {
+    function initMarker (type, title, url, x, y) {
         var marker = new google.maps.Marker({
             position: {"lat": 0, "lng": 0},
             map: googleMap,
             title: title,
-            icon: icon,
+            icon: {
+                url: url,
+                origin: new google.maps.Point(0, 0),
+                anchor: new google.maps.Point(x, y)
+            },
             draggable: true
         });
 
@@ -300,6 +307,11 @@ import * as Util from './Util.js';
                 paramValue = event.currentTarget.value;
             }
         }
+
+        setParameter(paramName, paramValue);
+    }
+
+    function setParameter (paramName, paramValue) {
         $.ajax({
             url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
             dataType: 'json'
@@ -399,6 +411,46 @@ import * as Util from './Util.js';
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
             alert(textStatus + ' ' + errorThrown);
+        });
+    }
+
+    function getBoatPosition (event) {
+        var port= document.getElementById("tb_nmeaport").value
+        $.ajax({
+            url: "/function/vh:getBoatPosition?port=" + port,
+            dataType: 'json'
+        }).done( function (data) {
+            console.log(data);
+            if (data) {
+                var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
+                setRoutePoint('start', startPos);
+                alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
+                var curTime = new Date(data.time);
+                var isoDate = curTime.toISOString().substring(0,16);
+                var dateInput = document.getElementById("tb_starttime");
+                dateInput.value = isoDate;
+
+            } else {
+                alert('No position update');
+            }
+
+        }).fail( function (request, textStatus, errorThrown) {
+            console.log(errorThrown);
+            alert(request.responseText);
+        });
+    }
+    
+    function resetNMEAConnection (event) {
+        var port= document.getElementById("tb_nmeaport").value
+        $.ajax({
+            url: "/function/vh:resetNMEAConnection?port=" + port,
+            dataType: 'json'
+        }).done( function (data) {
+            console.log(data);
+            alert("Connected to " + data.peer);
+        }).fail( function (request, textStatus, errorThrown) {
+            console.log(errorThrown);
+            alert(request.responseText);
         });
     }
     
@@ -542,36 +594,10 @@ import * as Util from './Util.js';
             dataType: 'json'
         }).done( function(leg, status, xhr) {
             if (leg) {
-                var checkpoints = leg.checkpoints;
-                var markStbd = 'img/mark_green.png';
-                var markPort = 'img/mark_red.png';
-                
-                startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
-                destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
-                
-                for (const c of checkpoints) {
-                    var mark = new google.maps.Marker({
-                        position: {"lat": c.start.lat, "lng": c.start.lon},
-                        map: googleMap,
-                        icon: (c.side=='port')?markPort:markStbd,
-                        title: c.group + "-" + c.id + " " + c.name,
-                        draggable: false
-                    });
-                    mark.addListener('click', function () { onMarkerClicked(mark) });
-                }
-                if (leg.ice_limits) {
-                    var iceLimit = [];
-                    for (const p of leg.ice_limits.south) {
-                        iceLimit.push({"lat": p.lat, "lng": p.lon});
-                    }
-                    var iceLine = new google.maps.Polyline({
-                        geodesic: false,
-                        strokeColor: '#ff0000',
-                        strokeOpacity: 1.0,
-                        strokeWeight: 1
-                    });
-                    iceLine.setMap(googleMap);
-                    iceLine.setPath(iceLimit);
+                if (leg.checkpoints) {
+                    setupLegVR(leg);
+                } else if (leg.objectId) {
+                    setupLegRS(leg);
                 }
             } else {
                 alert("No leg info for race");
@@ -579,6 +605,69 @@ import * as Util from './Util.js';
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert(textStatus + ' ' + errorThrown);
         });
+    }
+
+    function setupLegRS (leg) {
+        var markPort = 'img/mark_red.png';
+
+        setParameter("polars", leg.polar.objectId);
+        
+        startMarker.setPosition( {"lat": leg.startLocation.latitude,
+                                  "lng": leg.startLocation.longitude});
+        googleMap.panTo(startMarker.getPosition());
+        
+        for (const gate of leg.gates) {
+            var mark0 = new google.maps.Marker({
+                position: {"lat": gate[0].latitude,
+                           "lng": gate[0].longitude},
+                map: googleMap,
+                icon: markPort,
+                title: gate[0].__type,
+                draggable: false
+            });
+            var mark1 = new google.maps.Marker({
+                position: {"lat": gate[1].latitude,
+                           "lng": gate[1].longitude},
+                map: googleMap,
+                icon: markPort,
+                title: gate[1].__type,
+                draggable: false
+            });
+        }
+    }
+    
+    function setupLegVR (leg) {
+        var checkpoints = leg.checkpoints;
+        var markStbd = 'img/mark_green.png';
+        var markPort = 'img/mark_red.png';
+        
+        startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
+        destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
+        
+        for (const c of checkpoints) {
+            var mark = new google.maps.Marker({
+                position: {"lat": c.start.lat, "lng": c.start.lon},
+                map: googleMap,
+                icon: (c.side=='port')?markPort:markStbd,
+                title: c.group + "-" + c.id + " " + c.name,
+                draggable: false
+            });
+            mark.addListener('click', function () { onMarkerClicked(mark) });
+        }
+        if (leg.ice_limits) {
+            var iceLimit = [];
+            for (const p of leg.ice_limits.south) {
+                iceLimit.push({"lat": p.lat, "lng": p.lon});
+            }
+            var iceLine = new google.maps.Polyline({
+                geodesic: false,
+                strokeColor: '#ff0000',
+                strokeOpacity: 1.0,
+                strokeWeight: 1
+            });
+            iceLine.setMap(googleMap);
+            iceLine.setPath(iceLimit);
+        }
     }
     
     function setupCanvas () {
@@ -597,10 +686,11 @@ import * as Util from './Util.js';
     }
 
     function createIsochrones (isochrones) {
-        var startSymbol = {
-            path: google.maps.SymbolPath.CIRCLE
-        }
         for ( var i = 0; i < isochrones.length; i++ ) {
+            var startSymbol = {
+                path: google.maps.SymbolPath.CIRCLE,
+                title: i.offset
+            }
             var style = getIsoStyle(isochrones[i], 1);
             var isochrone = new google.maps.Polyline({
                 geodesic: true,
@@ -756,7 +846,7 @@ import * as Util from './Util.js';
 
     function drawTWAPath (data) {
         clearPath(twaPath);
-        drawPath(twaPath, data, '#308040');
+        drawPath(twaPath, data, '#60B260');
     }
 
     function drawHDGPath (data) {

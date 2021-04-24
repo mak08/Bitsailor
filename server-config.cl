@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-04-18 13:43:34>
+;;; Last Modified <michael 2021-04-25 00:31:34>
 
 (in-package :virtualhelm)
 
@@ -69,13 +69,13 @@
 (register-function 'vh:|getWind|)
 (register-function 'vh:|probeWind|)
 (register-function 'vh:|getWindForecast|)
-(register-function 'vh:|setRoute|)
+(register-function 'vh:|getTWAPath|)
+(register-function 'vh:|setParameter|)
 (register-function 'vh:|getRaceList|)
 (register-function 'vh:|resetNMEAConnection|)
 (register-function 'vh:|getBoatPosition|)
-(register-function 'vh:|setParameter|)
+(register-function 'vh:|setRoute|)
 (register-function 'vh:|getRoute|)
-(register-function 'vh:|getTWAPath|)
 (register-function 'vh:|checkWindow|)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

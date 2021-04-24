@@ -35,7 +35,7 @@ import * as Util from './Util.js';
                            appendTextCell(row, race.name);
                            appendTextCell(row, race.class);
                            appendTextCell(row, race["start-time"]);
-                           appendLinkCell(row, race.id, "http://aguas-13:8080/start?app=router&race=" + race.id);
+                           appendLinkCell(row, race.id, "/start?app=router&race=" + race.id);
                        }
                    },
                    function (jqXHR, textStatus, errorThrown) {

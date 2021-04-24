@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-23 01:32:40>
+;;; Last Modified <michael 2021-04-25 01:27:09>
 
 (in-package :virtualhelm)
 
@@ -34,6 +34,7 @@
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
     (ensure-map)
+    (ensure-bitmap)
     
     (load-race-definitions-rs)
     (load-all-polars-rs)

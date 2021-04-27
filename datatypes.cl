@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-18 21:57:03>
+;;; Last Modified <michael 2021-04-28 00:11:20>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -23,9 +23,11 @@
   (mode +max-origin+)
   (fan 90)                              ; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
   (stepmax +12h+ :type fixnum)
-  (nmea-port "10000")                   ; Fetch boat position
-  (nmea-socket)
-  )
+  (nmea-connection))
+
+(defstruct nmea-connection host port socket listener cache)
+
+(defstruct posinfo time position speed course)
 
 (defmethod print-object ((thing routing) stream)
   (format stream "{T=~a C=~a O=~a}"

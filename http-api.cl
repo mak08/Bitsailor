@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-17 21:40:23>
+;;; Last Modified <michael 2021-04-28 00:11:23>
 
 (in-package :virtualhelm)
 
@@ -46,14 +46,12 @@
              (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
         (log2:info "~a: Position=~a" |pointType| position)
         (log2:trace "Session: ~a, Request: ~a" session request)
-        (cond ((point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
-               (setf (status-code response) 400)
-               (setf (status-text response) "Point is on land"))
-              (t
-               (set-routing-parameter session routing |pointType| position)
-               (values
-                (with-output-to-string (s)
-                  (json s routing))))))
+        (when (point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
+          (log2:warning "~a ~a: ~a is on land" user-id race-id position))
+        (set-routing-parameter session routing |pointType| position)
+        (values
+         (with-output-to-string (s)
+           (json s routing))))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -412,8 +410,6 @@
                :lat (joref (joref race "startLocation") "latitude")
                :lng (joref (joref race "startLocation") "longitude"))))
 
-(defstruct posinfo time position speed course)
-
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
   (let* ((user-id (http-authenticated-user handler request))
@@ -426,17 +422,10 @@
     (unless (ignore-errors
              (numberp (parse-integer port)))
       (error "Invalid NMEA port ~a" port))
-    (let ((messages
-            (reverse
-             ;; There may be more than one GPRMC record. Search from end.
-             (get-nmea-messages routing host port))))
-      (with-output-to-string (s)
-        (json s (loop
-                  :for m :in messages 
-                  :when (search "$GPRMC" m)
-                    :do (progn
-                          (log2:info "~a" m)
-                          (return (parse-gprmc m)))))))))
+    (with-output-to-string (s)
+      (json s
+            (get-nmea-position (routing-nmea-connection routing) host port)))))
+
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
   (let* ((user-id (http-authenticated-user handler request))
@@ -445,14 +434,20 @@
          (routing (session-routing session race-id))
          (host |host|)
          (port |port|))
-    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
-    (unless (ignore-errors
-             (numberp (parse-integer port)))
-      (error "Invalid NMEA port ~a" port))
-    (with-output-to-string (s)
-            (json s
-                  (reset-nmea-socket routing host port)))))
-
+    (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
+    (unless (routing-nmea-connection routing)
+      (setf (routing-nmea-connection routing)
+            (make-nmea-connection))) 
+    (cond ((equal port "")
+           (stop-nmea-listener (routing-nmea-connection routing) host port)
+           (format nil "Stopped listening on ~a:~a" host port))
+          (t
+           (unless (ignore-errors
+                    (numberp (parse-integer port)))
+             (error "Invalid NMEA port ~a" port))
+           (reset-nmea-listener (routing-nmea-connection routing) host port)
+           (format nil "Listening on ~a:~a" host port)))))
+           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 
@@ -620,3 +615,4 @@
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+

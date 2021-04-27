@@ -25,7 +25,7 @@ import * as Util from './Util.js';
     // http://aguas-13:8080/start?app=router&race=8SUUWHr4JD
     
     function getRaceList (event) {
-        Util.doGET("/function/vh:getRaceList",
+        Util.doGET("/public/vh:getRaceList",
                    function (request) {
                        console.log(request);
                        var races = JSON.parse(request.responseText);

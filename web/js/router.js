@@ -436,7 +436,7 @@ import * as Util from './Util.js';
 
         }).fail( function (request, textStatus, errorThrown) {
             console.log(errorThrown);
-            alert(request.responseText);
+            alert('Could not get boat position: ' + request.responseText);
         });
     }
     

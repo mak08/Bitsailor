@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-04-25 00:31:34>
+;;; Last Modified <michael 2021-04-25 13:08:31>
 
 (in-package :virtualhelm)
 
@@ -63,6 +63,10 @@
 (handle
  :request (:prefix "/function")
  :handler (:query-function t :realm "virtualhelm"))
+
+(handle
+ :request (:prefix "/public")
+ :handler (:query-function t :authentication nil))
 
 (register-function 'vh:|getSession|)
 (register-function 'vh:|getLegInfo|)

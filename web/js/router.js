@@ -91,7 +91,6 @@ import * as Util from './Util.js';
         $("#sel_polars").change(onSetParameter);
         $("#sel_forecastbundle").change(onSetParameter);
         $("#sel_duration").change(onSetParameter);
-        $("#cb_minwind").change(onSetParameter);
         $("#cb_displaywind").change(onDisplaywind);
         
         // Tracks & Isochrones display is handled by the client directly
@@ -329,7 +328,7 @@ import * as Util from './Util.js';
                 }
                 redrawWindByOffset(forecastData.basetime, irIndex.value);
             }
-            console.log("OK");
+            console.log(`Set ${paramName}=${paramValue}`);
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
         });
@@ -562,17 +561,9 @@ import * as Util from './Util.js';
                 cbStartDelayed.checked = false;
             }
             
-            var polars = routing.polars;
-            var selPolars = $("#sel_polars")[0];
-            selPolars.value = polars;
-            
             var duration = routing.stepmax/3600;
             var selDuration = $("#sel_duration")[0];
             selDuration.value = duration;
-            
-            var minWind = routing.minwind;
-            var cbMinWind = $("#cb_minwind")[0];
-            cbMinWind.checked = minWind;
             
             courseGCLine = new google.maps.Polyline({
                 geodesic: true,
@@ -1028,9 +1019,16 @@ import * as Util from './Util.js';
 
         var iLat = Math.round((event.latLng.lat() - bounds.north) / (bounds.south - bounds.north) * ySteps);
         var iLng = Math.round(Util.arcLength(bounds.west, event.latLng.lng()) / Util.arcLength(bounds.west, bounds.east) * xSteps);
-        var windDir = Util.roundTo(windData[iLat][iLng][0], 0);
-        var windSpeed = Util.roundTo(Util.ms2knots(windData[iLat][iLng][1]), 1);
-        $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
+
+        var wind = windData[iLat][iLng];
+        if (wind) {
+            var windDir = Util.roundTo(wind[0], 0);
+            var windSpeed = Util.roundTo(Util.ms2knots(windData[iLat][iLng][1]), 1);
+            $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
+        } else {
+            console.log(`No wind data at ${iLat}, ${iLng}`);
+        }
+
     }
 
     function getMapBounds () {
@@ -1122,7 +1120,18 @@ import * as Util from './Util.js';
         return result;
     }
 
-    $(document).ready(setUp);
+    function pickleSession () {
+        // Attempt to tell tell the server that the client is gone.
+        console.log('Goodbye');
+    }
+
+    window.addEventListener("beforeunload", function (event) {
+        pickleSession();
+    });
+    
+    window.addEventListener("load", function (event) {
+        setUp();
+    });
     
 }) ()
 

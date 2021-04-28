@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-04-27 21:33:15>
+;;; Last Modified <michael 2021-04-28 23:10:33>
 
 (in-package :virtualhelm)
 
@@ -54,14 +54,13 @@
   (let* ((p (- (position #\. value) 2))
          (degrees (parse-integer (subseq value 0 p)))
          (minutes (read-from-string (subseq value p)))
-         (latlng (+ degrees (/ minutes 60)))
          (sign (cond 
                  ((equal direction "N") 1.0d0)
                  ((equal direction "S") -1.0d0)
                  ((equal direction "E") 1.0d0)
                  ((equal direction "W") -1.0d0)
                  (T (error "Invalid sign ~a" direction)))))
-    (* latlng sign)))
+    (* sign (+ degrees (/ minutes 60)))))
 
 (defun close-nmea-socket (nc)
   (when (nmea-connection-socket nc)
@@ -87,32 +86,28 @@
           (bordeaux-threads:make-thread
            (lambda ()
              (nmea-listener nc))
-           :name (format nil "~a:~a"
-                         (nmea-connection-host nc)
-                         (nmea-connection-port nc)))))
+           :name (format nil "~a" (nmea-connection-socket nc)))))
     (log2:info "Created thread ~a" listener)
     (setf (nmea-connection-listener nc) listener)))
 
 (defun nmea-listener (nc)
-  (loop
-    :with k = 0
-    :do
-       (let* ((messages (reverse
-                         (get-nmea-messages nc
-                                            (nmea-connection-host nc)
-                                            (nmea-connection-port nc))))
-              (gprmc (loop
-                       :for m :in messages 
-                       :when (search "$GPRMC" m)
-                         :do (progn
-                               (log2:info "~a" m)
-                               (return (parse-gprmc m))))))
-         (cond
-           ((null gprmc)
-            (sleep 10))
-           (t
-            (setf (nmea-connection-cache nc) gprmc)
-            (sleep 60))))))
+  (loop :do
+    (let* ((host (nmea-connection-host nc))
+           (port (nmea-connection-port nc))
+           (messages (reverse
+                      (get-nmea-messages nc host port)))
+           (gprmc (loop
+                    :for m :in messages 
+                    :when (search "$GPRMC" m)
+                      :do (progn
+                            (log2:info "~a" m)
+                            (return (parse-gprmc m))))))
+      (cond
+        ((null gprmc)
+         (sleep 10))
+        (t
+         (setf (nmea-connection-cache nc) gprmc)
+         (sleep 60))))))
 
 (defun get-nmea-messages (nc host port &key (timeout 250))
   (when (and (nmea-connection-socket nc)

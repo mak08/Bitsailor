@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-28 00:11:23>
+;;; Last Modified <michael 2021-04-28 20:19:55>
 
 (in-package :virtualhelm)
 
@@ -422,10 +422,13 @@
     (unless (ignore-errors
              (numberp (parse-integer port)))
       (error "Invalid NMEA port ~a" port))
+    (unless (routing-nmea-connection routing)
+      (setf (routing-nmea-connection routing)
+            (make-nmea-connection))
+      (reset-nmea-listener (routing-nmea-connection routing) host port))
     (with-output-to-string (s)
       (json s
             (get-nmea-position (routing-nmea-connection routing) host port)))))
-
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
   (let* ((user-id (http-authenticated-user handler request))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-18 21:57:47>
+;;; Last Modified <michael 2021-04-28 22:56:02>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -423,19 +423,25 @@
                    :when p :collect p)))
     (make-array (length points) :initial-contents points)))
 
+(defun-t arc-length double-float ((alpha double-float)  (beta double-float))
+  (when (< alpha 0) (incf alpha 360d0))
+  (when (< beta 0) (incf beta 360d0))
+  (when (< beta alpha) (incf beta 360d0))
+  (- beta alpha))
+
 (defun extract-tracks (start-pos course-angle isochrone)
   (loop
-     :for point :across isochrone
-     :for k :from 0
-     :when (and point ; Don't send NULL entries
-                (<= (abs (- course-angle
-                            (course-angle start-pos (routepoint-position point))))
-                    30d0))
-     :collect (do ((p point (routepoint-predecessor p))
-                   (v (list)))
-                  ((null p)
-                   v)
-                (push (routepoint-position p) v))))
+    :for point :across isochrone
+    :for angle = (course-angle start-pos (routepoint-position point))
+    :for delta = (min (arc-length course-angle angle)
+                      (arc-length angle course-angle))
+    :when (and point ; Don't send NULL entries
+               (<= delta 30d0))
+      :collect (do ((p point (routepoint-predecessor p))
+                    (v (list)))
+                   ((null p)
+                    v)
+                 (push (routepoint-position p) v))))
 
 (defun construct-route (isochrone destination)
   (let ((best (best-point isochrone destination))

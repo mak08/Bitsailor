@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-16 16:57:38>
+;;; Last Modified <michael 2021-05-02 11:45:38>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -19,6 +19,7 @@
   (:export
    "*SERVER-CONFIG*"
    "*POLARS-DIR*"
+   "*TWA-STEPS*"
    "*RACES-DIR*"
    "*REACHED-DISTANCE*"
    ;; HTTP API

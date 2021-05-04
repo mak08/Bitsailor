@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-04-25 13:08:31>
+;;; Last Modified <michael 2021-05-02 21:29:06>
 
 (in-package :virtualhelm)
 
@@ -28,11 +28,11 @@
         (merge-pathnames (make-pathname :directory '(:relative "web"))
                          (make-pathname :directory (pathname-directory *load-pathname*))))
 
-;;; Start one server on port 8080 
-(server :hostname "aguas-13"
+;;; Start one server on port 8080. 
+(server :hostname "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
         :protocol :http
-        ;; :mt-method :ondemand
-        :mt-method :pooled
+        :mt-method :ondemand
+        ;; :mt-method :pooled
         :port "8080"
         :max-handlers 10)
 
@@ -68,19 +68,19 @@
  :request (:prefix "/public")
  :handler (:query-function t :authentication nil))
 
-(register-function 'vh:|getSession|)
-(register-function 'vh:|getLegInfo|)
-(register-function 'vh:|getWind|)
-(register-function 'vh:|probeWind|)
-(register-function 'vh:|getWindForecast|)
-(register-function 'vh:|getTWAPath|)
-(register-function 'vh:|setParameter|)
-(register-function 'vh:|getRaceList|)
-(register-function 'vh:|resetNMEAConnection|)
-(register-function 'vh:|getBoatPosition|)
-(register-function 'vh:|setRoute|)
-(register-function 'vh:|getRoute|)
-(register-function 'vh:|checkWindow|)
+(register-function "vh.getSession")
+(register-function "vh.getLegInfo")
+(register-function "vh.getWind")
+(register-function "vh.probeWind")
+(register-function "vh.getWindForecast")
+(register-function "vh.getTWAPath")
+(register-function "vh.setParameter")
+(register-function "vh.getRaceList" :authorizer (constantly t))
+(register-function "vh.resetNMEAConnection")
+(register-function "vh.getBoatPosition")
+(register-function "vh.setRoute")
+(register-function "vh.getRoute")
+(register-function "vh.checkWindow")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
@@ -111,6 +111,13 @@
  :request (:method :get
            :path "/start")
  :handler (:dynamic 'vh:get-page :realm "virtualhelm"))
+
+(handle
+ :request (:method :get
+           :path "/intro")
+ :handler (:dynamic 'vh:get-page
+           :authentication nil))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

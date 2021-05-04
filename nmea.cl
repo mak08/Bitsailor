@@ -1,27 +1,27 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-04-28 23:10:33>
+;;; Last Modified <michael 2021-05-03 22:03:01>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
 
-(defun stop-nmea-listener (nc host port)
+(defun stop-nmea-listener (routing host port)
   (declare (ignore host port))
-  (bordeaux-threads:destroy-thread (nmea-connection-listener nc))
-  (setf (nmea-connection-listener nc) nil)
-  (close-nmea-socket nc))
+  (let ((nc (routing-nmea-connection routing)))
+    (kill-nmea-listener (nmea-connection-listener% nc))
+    (setf (nmea-connection-listener% nc) nil)
+    (close-nmea-socket% nc)))
 
-(defun reset-nmea-listener (nc host port)
+(defun reset-nmea-listener (user-id routing host port)
   ;; Reconnect socket, start listener thread if not running
-  (reset-nmea-socket nc host port)
-  (when (nmea-connection-listener nc)
-    (ignore-errors
-     (bordeaux-threads:destroy-thread (nmea-connection-listener nc))))    
-  (setf (nmea-connection-listener nc)
-        (start-nmea-listener nc)))
+  (let ((nc (routing-nmea-connection routing)))
+    (reset-nmea-socket nc host port)
+    (kill-nmea-listener (nmea-connection-listener% nc))
+    (setf (nmea-connection-listener% nc)
+          (start-nmea-listener user-id nc))))
 
 (defun get-nmea-position (nc host port)
   (declare (ignore host port))
@@ -29,6 +29,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
+
+(defun kill-nmea-listener (thread)
+  (when thread
+      (ignore-errors
+       (log2:info "Destroying thread ~a" thread)
+       (bordeaux-threads:destroy-thread thread)
+       (log2:info "Destroyed thread ~a" thread))))
 
 (defun parse-gprmc (m)
   ;; $GPRMC,185951.00,A,4103.4804,N,02426.2568,W,10.795927221436223,256,120421,,,A*66
@@ -63,32 +70,34 @@
     (* sign (+ degrees (/ minutes 60)))))
 
 (defun close-nmea-socket (nc)
-  (when (nmea-connection-socket nc)
+  (when (nmea-connection-socket% nc)
     (ignore-errors
-     (mbedtls:close-socket (nmea-connection-socket nc)))
-    (setf (nmea-connection-socket nc) nil)))
+     (mbedtls:close-socket (nmea-connection-socket% nc)))
+    (setf (nmea-connection-socket% nc) nil)))
 
 (defun reset-nmea-socket (nc host port)
   ;; Close socket and open with (new or unchanged) host and port
-  (when (nmea-connection-socket nc)
+  (when (nmea-connection-socket% nc)
     (log2:info "Closing NMEA socket")
     (close-nmea-socket nc))
   (log2:info "Connecting to NMEA socket at ~a:~a" host port)
   (setf (nmea-connection-port nc)
         port)
-  (setf (nmea-connection-socket nc)
+  (setf (nmea-connection-socket% nc)
         (mbedtls:connect host :port port)))
 
 
-(defun start-nmea-listener (nc)
+(defun start-nmea-listener (user-id nc)
   ;; Start a message fetching thread with current settings
   (let ((listener
           (bordeaux-threads:make-thread
            (lambda ()
              (nmea-listener nc))
-           :name (format nil "~a" (nmea-connection-socket nc)))))
+           :name (format nil "~a-:~a"
+                         user-id
+                         (nmea-connection-port nc)))))
     (log2:info "Created thread ~a" listener)
-    (setf (nmea-connection-listener nc) listener)))
+    (setf (nmea-connection-listener% nc) listener)))
 
 (defun nmea-listener (nc)
   (loop :do
@@ -110,23 +119,28 @@
          (sleep 60))))))
 
 (defun get-nmea-messages (nc host port &key (timeout 250))
-  (when (and (nmea-connection-socket nc)
+  (when (and (nmea-connection-socket% nc)
              (or (not (equal host (nmea-connection-host nc)))
                  (not (equal port (nmea-connection-port nc)))))
     (log2:info "Closing NMEA socket")
     (close-nmea-socket nc))
-  (unless (nmea-connection-socket nc)
+  (unless (nmea-connection-socket% nc)
     (log2:info "Connecting to NMEA socket at ~a:~a" host port)
     (setf (nmea-connection-host nc)
           host)
     (setf (nmea-connection-port nc)
           port)
-    (setf (nmea-connection-socket nc)
+    (setf (nmea-connection-socket% nc)
           (mbedtls:connect host :port port)))
   (loop
     :for line = (ignore-errors
-                 (mbedtls:get-line (nmea-connection-socket nc)
-                                   :timeout timeout))
+                 (handler-case
+                     (mbedtls:get-line (nmea-connection-socket% nc)
+                                       :timeout timeout)
+                   (mbedtls:stream-timeout (e)
+                     (declare (ignore e))
+                     (log2:trace "Timeout on ~a"  (nmea-connection-socket% nc))
+                     nil)))
     :while line
     :collect line))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-28 22:56:02>
+;;; Last Modified <michael 2021-05-03 20:13:11>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -33,6 +33,7 @@
 (defconstant +reached-distance+ 30000d0)
 (defvar *isochrones* nil)
 (defvar *best-route*)
+(defvar *manoeuvering-penalty* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -45,6 +46,11 @@
       (get-max-speed (cpolars-speed polars) angle wind-speed)
     (values speed
             sail)))
+
+(declaim (inline get-penalty))
+(defun get-penalty (routing &key step-size type)
+  ;; (if (routing-winches routing) 0.9375d0 0.75d0)
+  0.975d0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
@@ -85,8 +91,6 @@
           ;; Iteration stops when stepmax seconds have elapsed
           (stepsum 0 (+ stepsum step-size))
           (pointnum 0)
-          (penalty
-           (if (routing-winches routing) 0.9375d0 0.75d0))
           (hull (routing-hull routing))
           (foils  (routing-foils routing))
           (elapsed0 (now))
@@ -96,6 +100,8 @@
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (step-size (step-size start-time)
                      (step-size start-time step-time))
+          (penalty (get-penalty routing :step-size step-size)
+                   (get-penalty routing :step-size step-size))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
@@ -113,7 +119,7 @@
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
-        
+
          ;; When the maximum number of iterations is reached, construct the best path
          ;; from the most advanced point's predecessor chain.
          ((or reached
@@ -129,11 +135,10 @@
                             :maxspeed (cpolars-maxspeed polars)
                             :tracks (extract-tracks start-pos (course-angle start-pos destination) isochrone)
                             :isochrones (prepare-routepoints isochrones))))
-
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
       (declare (vector next-isochrone))
-
+        
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
 
@@ -199,15 +204,21 @@
        (- (* 600 (truncate (+ time 600) 600))
           time)))
     (t
-     (let ((delta-t  (timestamp-difference step-time (timestamp-maximize-part start-time :hour :timezone +utc-zone+))))
-       (cond ((<= delta-t (* 18 600))
-              600)
-             ((<= delta-t (* 48 600))
-              900)
-             ((<= delta-t (* 144 600))
-              1800)
-             (t
-              1800))))))
+     (let* ((hour-gap
+              (+ 3600 (timestamp-difference (timestamp-minimize-part start-time :min)
+                                            start-time)))
+            (start
+              (unix-to-timestamp (* 600 (ceiling (timestamp-to-unix start-time) 600))))
+            (delta-t
+              (timestamp-difference step-time start))
+            (step
+              (cond ((<= delta-t (+ hour-gap (* 35 600)))
+                     600)
+                    ((<= delta-t (+ hour-gap (* 287 600)))
+                     900)
+                    (t
+                     1800))))
+       step))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed
@@ -239,7 +250,6 @@
                                (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
 )
 
-           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Aux functions
 
@@ -276,7 +286,8 @@
         cur-sail
         (not (equal sail cur-sail)))
        (values (* speed penalty) sail "Sail Change"))
-      ((and cur-twa
+      ((and *manoeuvering-penalty*
+            cur-twa
             (or (< twa 0 cur-twa)
                 (< cur-twa 0 twa)))
        (values (* speed penalty) sail "Tack/Gybe"))
@@ -513,12 +524,11 @@
                        :seconds rest-seconds)))))
 
 (defun get-twa-path (routing &key base-time time lat-a lng-a lat lng
-                               (total-time +12h+)
+                               (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
   (let* ((options (encode-options (routing-options routing)))
          (polars (get-combined-polars (routing-polars routing) options))
-         (penalty
-           (if (routing-winches routing) 0.9375d0 0.75d0))
+         (penalty (get-penalty routing))
          (hull (routing-hull routing))
          (foils  (routing-foils routing))
          (time (or time (now)))
@@ -547,7 +557,7 @@
       (push (list time (copy-latlng curpos-hdg)) hdg-path)
       ;; Create new timestamp, Increment time
       (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
-      ;; Determine next position
+      ;; Determine next position - TWA
       (multiple-value-bind (wind-dir wind-speed)
           (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time base-time))
         (declare (double-float wind-dir wind-speed))
@@ -557,6 +567,7 @@
           (let ((twa-heading (twa-heading wind-dir twa)))
             (setf curpos-twa
                   (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
+      ;; Determine next position - HDG
       (multiple-value-bind (wind-dir wind-speed)
           (interpolated-prediction (latlng-lat curpos-hdg) (latlng-lng curpos-hdg) (interpolation-parameters time base-time))
         (declare (double-float wind-dir wind-speed))

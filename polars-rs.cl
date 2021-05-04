@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-14 20:41:26>
+;;; Last Modified <michael 2021-05-02 11:00:11>
 
 (in-package :virtualhelm)
 
@@ -76,7 +76,7 @@
            (make-array 3 :initial-contents (list jib gnk spi)))
          (saildefs
            (make-array (length sails))))
-    (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" label id (length sails) tws twa)
+    (log2:info "~20,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" label id (length sails) (length tws) (length twa))
     (setf (aref saildefs 0)
           (make-sail :name "jib"
                      :speed (get-speeddata-rs twa tws jib)))
@@ -138,21 +138,6 @@
     (map 'vector
          (lambda (e) e)
          (cdr (first all-tws)))))
-
-(defun max-polars (polars-name)
-  ;;; Speed values are in knots. Convert to m/s.
-  ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
-  (let* ((polar
-           (joref (aref (joref (parse-json-file polars-name) "results") 0) "polar"))
-         (polar-data
-           (joref polar "polarData"))
-         (jib
-           (joref polar-data "jib"))
-         (gnk
-           (joref polar-data "gennaker"))
-         (spi
-           (joref polar-data "spi")))
-    (max-speed jib gnk spi)))
 
 (defun max-speed (jib gnk spi)
   (format t "~{~{~a~^;~}~%~}~%"

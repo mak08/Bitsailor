@@ -1,31 +1,34 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-28 00:11:20>
+;;; Last Modified <michael 2021-05-03 22:00:34>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route
 ;;; and other routing parameters.
-        
+
+(defstruct session
+  (session-id (make-session-id))
+  (user-id)
+  (routings (make-hash-table :test #'equal)))
+
 (defstruct routing
   (dataset 'noaa-dataset)
-  (race-id "440.1")
+  (race-id "default")
   (polars 4)
   (limits "limits.json")
   (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (starttimezone "+00:00")              ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (cycle nil)                           ; NIL = latest available
   (options '("reach"))
   (minwind nil)                         ; m/s !!
   (start +LESSABLES+)                   ; set-paramater needs a valid initial values
   (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.
-  (mode +max-origin+)
   (fan 90)                              ; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
   (stepmax +12h+ :type fixnum)
   (nmea-connection))
 
-(defstruct nmea-connection host port socket listener cache)
+(defstruct nmea-connection host port socket% listener% cache)
 
 (defstruct posinfo time position speed course)
 

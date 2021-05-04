@@ -218,23 +218,15 @@ import * as Util from './Util.js';
     }
     
     function onDelayedStart (event) {
+        var dateInput =  $("#tb_starttime")[0];
         if (event.target.checked === true) {
             var d = new Date();
             var isoDate = d.toISOString().substring(0,16);
-            var dateInput =  $("#tb_starttime")[0];
             dateInput.value = isoDate;
         } else {
-            $("#tb_starttime")[0].value = null;
-            $.ajax({
-                // No paramValue == reset (value defaults to nil)
-                url: "/function/vh:setParameter" + "?name=" + 'starttime',
-                dataType: 'json'
-            }).done( function(data) {
-                console.log(data);
-            }).fail( function (jqXHR, textStatus, errorThrown) {
-                alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
-            });
+            dateInput.value = null;
         }
+        setParameter('starttime', dateInput.value);
     }
 
     function truncate (n, q) {
@@ -270,7 +262,7 @@ import * as Util from './Util.js';
 
         $.ajax({
             // No paramValue == reset (value defaults to nil)
-            url: "/function/vh:setParameter" + "?name=" + 'cycle' +  "&value=" + cycleSpec,
+            url: "/function/vh.setParameter" + "?name=" + 'cycle' +  "&value=" + cycleSpec,
             dataType: 'json'
         }).done( function(data) {
             console.log(data);
@@ -312,7 +304,7 @@ import * as Util from './Util.js';
 
     function setParameter (paramName, paramValue) {
         $.ajax({
-            url: "/function/vh:setParameter" + "?name=" + paramName + "&value=" + paramValue,
+            url: "/function/vh.setParameter" + "?name=" + paramName + "&value=" + paramValue,
             dataType: 'json'
         }).done( function(data, status, xhr ) {
             if ( paramName === "forecastbundle" ) {
@@ -386,7 +378,7 @@ import * as Util from './Util.js';
         // $('div, button, input').css('cursor', 'wait');
 
         $.ajax({
-            url: "/function/vh:getRoute",
+            url: "/function/vh.getRoute",
             dataType: 'json'
         }).done( function (data) {
             // $('div, button, input').css('cursor', 'auto');
@@ -416,7 +408,7 @@ import * as Util from './Util.js';
     function getBoatPosition (event) {
         var port= document.getElementById("tb_nmeaport").value
         $.ajax({
-            url: "/function/vh:getBoatPosition?port=" + port,
+            url: "/function/vh.getBoatPosition?port=" + port,
             dataType: 'json'
         }).done( function (data) {
             console.log(data);
@@ -428,6 +420,7 @@ import * as Util from './Util.js';
                 var isoDate = curTime.toISOString().substring(0,16);
                 var dateInput = document.getElementById("tb_starttime");
                 dateInput.value = isoDate;
+                setParameter('starttime', isoDate);
 
             } else {
                 alert('No position update');
@@ -442,7 +435,7 @@ import * as Util from './Util.js';
     function resetNMEAConnection (event) {
         var port= document.getElementById("tb_nmeaport").value
         $.ajax({
-            url: "/function/vh:resetNMEAConnection?port=" + port,
+            url: "/function/vh.resetNMEAConnection?port=" + port,
             dataType: 'json'
         }).done( function (data) {
             console.log(data);
@@ -458,7 +451,7 @@ import * as Util from './Util.js';
         var lng =  latlng.lng();
         var that = this;
         $.ajax({
-            url: "/function/vh:setRoute"
+            url: "/function/vh.setRoute"
                 + "?pointType=" + point
                 + "&lat=" + lat
                 + "&lng=" + lng,
@@ -535,17 +528,20 @@ import * as Util from './Util.js';
 
     function getSession () {
         $.ajax({
-            url: "/function/vh:getSession",
+            url: "/function/vh.getSession",
             dataType: 'json'
         }).done( function(routing, status, xhr) {
             
-            updateStartPosition(routing.start.lat, routing.start.lng);
-            
-            var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
-            googleMap.setCenter(start);
-            
-            var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
-            destinationMarker.setPosition(dest);
+            if (routing.start) {
+                updateStartPosition(routing.start.lat, routing.start.lng);
+                var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
+                googleMap.setCenter(start);
+            }
+
+            if (routing.dest) {
+                var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
+                destinationMarker.setPosition(dest);
+            }
             
             var selForecast = $("#sel_forecastbundle")[0];
             var irIndex = $("#ir_index")[0];
@@ -574,6 +570,13 @@ import * as Util from './Util.js';
             courseGCLine.setMap(googleMap);
             courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
 
+            if (routing["nmea-connection"]) {
+                var nmeaInfo = routing["nmea-connection"];
+                if (nmeaInfo.port) {
+                    document.getElementById("tb_nmeaport").value = nmeaInfo.port;
+                }
+            }
+
         }).fail( function (jqXHR, textStatus, errorThrown) {
             alert(textStatus + ' ' + errorThrown);
         });
@@ -581,7 +584,7 @@ import * as Util from './Util.js';
 
     function getLegInfo () {
         $.ajax({
-            url: "/function/vh:getLegInfo",
+            url: "/function/vh.getLegInfo",
             dataType: 'json'
         }).done( function(leg, status, xhr) {
             if (leg) {
@@ -599,12 +602,26 @@ import * as Util from './Util.js';
     }
 
     function setupLegRS (leg) {
+        document.title = leg.name;
+        
         var markPort = 'img/mark_red.png';
 
         setParameter("polars", leg.polar.objectId);
         
         startMarker.setPosition( {"lat": leg.startLocation.latitude,
                                   "lng": leg.startLocation.longitude});
+        var startPos = new google.maps.LatLng(leg.startLocation.latitude, leg.startLocation.longitude);
+        setRoutePoint('start', startPos);
+
+        // Destination 
+        var lastP0 = leg.gates[leg.gates.length-1][0]
+        var lastP1 = leg.gates[leg.gates.length-1][1]
+        // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
+        var destLat = (lastP0.latitude + lastP1.latitude)/2;
+        var destLon = (lastP0.longitude + lastP1.longitude)/2; 
+        var destPos = new google.maps.LatLng(destLat, destLon);
+        setRoutePoint('dest', destPos);
+        
         googleMap.panTo(startMarker.getPosition());
         
         for (const gate of leg.gates) {
@@ -903,7 +920,7 @@ import * as Util from './Util.js';
             baseTime  = availableForecastCycle();
         }
         $.ajax({
-            url: "/function/vh:getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+            url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);
@@ -939,7 +956,7 @@ import * as Util from './Util.js';
         var ddy = Util.roundTo((bounds.north-bounds.south)/ySteps, 8);
         // $('div, button, input').css('cursor', 'wait');
         $.ajax({
-            url: "/function/vh:getWind"
+            url: "/function/vh.getWind"
                 + "?" + timeSpec
                 + "&north=" + Util.roundTo(lat0, 6)
                 + "&south=" + Util.roundTo(bounds.south, 6)

@@ -46,15 +46,6 @@ p, b {
  * Page layout
  *******************************************************************************/
 
-.header {
-	display: flex;
-	justify-content: flex-end;
-	align-items: flex-end;
-}
-
-#edition_tag {
-	align-self: flex-end;
-}
 
 .grid-container {
 	display: grid;
@@ -68,6 +59,31 @@ p, b {
 	height: calc(100vh - 12px);
 	background-color: white;
 	padding: 2px;
+}
+
+
+.header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-around;
+}
+
+#appname {
+	font-size: 110%;
+}
+
+#edition_tag {
+	font-size: 75%;
+}
+
+.menu {
+	display: flex;
+	justify-content: flex-end;
+	align-items: flex-end;
+}
+
+#motto {
+	font-size: 70%;
 }
 
 .grid-container > div {
@@ -131,7 +147,6 @@ p, b {
     height: 100%;
     width:  100%;
 	z-index: 10;
-	border: 2bx solid red;
     pointer-events:none;
 }
 

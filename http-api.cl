@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-04-28 20:19:55>
+;;; Last Modified <michael 2021-05-03 22:45:53>
 
 (in-package :virtualhelm)
 
@@ -125,7 +125,7 @@
 ;;;   - gates
 ;;;   - polars id
 
-;;; JSON cannot print hashtables but SESSIOn now contains one.
+;;; JSON cannot print hashtables but SESSION now contains one.
 ;;; For now we just return the requested routing.
 (defun |getSession| (handler request response)
   (let* ((user-id
@@ -233,7 +233,7 @@
                                 :maxoffset 384 ;; (dataset-max-offset dataset)
                                 :cycle (format-timestring nil
                                                           time
-                                                          :format '((:year 4) "-" (:month 2) "-" (:day 2) " Cycle " (:hour 2)) :timezone local-time:+utc-zone+)
+                                                          :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
                                 :data wind-data))))))
                (values body))))))
     (error (e)
@@ -425,7 +425,7 @@
     (unless (routing-nmea-connection routing)
       (setf (routing-nmea-connection routing)
             (make-nmea-connection))
-      (reset-nmea-listener (routing-nmea-connection routing) host port))
+      (reset-nmea-listener user-id routing host port))
     (with-output-to-string (s)
       (json s
             (get-nmea-position (routing-nmea-connection routing) host port)))))
@@ -442,14 +442,14 @@
       (setf (routing-nmea-connection routing)
             (make-nmea-connection))) 
     (cond ((equal port "")
-           (stop-nmea-listener (routing-nmea-connection routing) host port)
-           (format nil "Stopped listening on ~a:~a" host port))
+           (stop-nmea-listener routing host port)
+           (format nil "Disconnected from ~a:~a" host port))
           (t
            (unless (ignore-errors
                     (numberp (parse-integer port)))
              (error "Invalid NMEA port ~a" port))
-           (reset-nmea-listener (routing-nmea-connection routing) host port)
-           (format nil "Listening on ~a:~a" host port)))))
+           (reset-nmea-listener user-id routing host port)
+           (format nil "Connected to ~a:~a" host port)))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
@@ -457,12 +457,8 @@
 ;;; Keep session table when reloading system!
 (defvar *session-ht* (make-hash-table :test #'equalp))
 
-(defstruct session
-  (session-id (make-session-id))
-  (routings (make-hash-table :test #'equal)))
-
-(defun create-session (&key (session-id (make-session-id)) (race-id "default"))
-  (let ((session (make-session :session-id session-id)))
+(defun create-session (&key (session-id (make-session-id)) (user-id) (race-id "default"))
+  (let ((session (make-session :session-id session-id :user-id user-id)))
     (setf (gethash race-id (session-routings session))
           (make-routing :race-id race-id))
     (values session)))
@@ -485,18 +481,18 @@
            (let ((stored-session (gethash session-id *session-ht*)))
              (cond
                ((null stored-session)
+                (log2:info "Session ~a unknown, creating." session-id)
                 (setf session (setf (gethash session-id *session-ht*)
-                                    (create-session :session-id session-id :race-id race-id)))
-                (log2:info "Session was lost for SessionID ~a." session-id))
+                                    (create-session :session-id session-id :user-id user-id :race-id race-id))))
                (t
-                (setf session stored-session)
-                (log2:info "Session retrieved for SessionID ~a." session-id)))))
+                (log2:info "Session ~a found." session-id)
+                (setf session stored-session)))))
           (t
            (setf session-id (make-session-id))
            (set-cookie response "SessionID" session-id :options '())
            (setf session (setf (gethash session-id *session-ht*)
                                (create-session :session-id session-id :race-id race-id)))
-           (log2:info "Session created for new SessionID ~a." session-id)))
+           (log2:info "Session ~a created." session-id)))
     session))
 
 
@@ -561,7 +557,10 @@
      )
     ((or (string= name "starttime")
          (string= name "ts"))
-     (setf (routing-starttime routing) value))
+     (setf (routing-starttime routing)
+           (when (and value
+                      (> (length value) 0))
+             value)))
     ((or (string= name "cycle"))
      (cond
        ((null value)

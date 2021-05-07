@@ -1,12 +1,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-05 13:26:13>
+;;; Last Modified <michael 2021-05-06 23:27:33>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helpers
+
+(defun distance-knots (lat0 lon0 lat1 lon1 seconds)
+  (m/s-to-knots
+   (/ (course-distance (make-latlng :lat lat0 :lng lon0)
+                       (make-latlng :lat lat1 :lng lon1))
+      seconds)))
+
 
 (defparameter *fc* nil)
 (defun get-fc ()

@@ -519,7 +519,7 @@ import * as Util from './Util.js';
         $("#lb_from").text(data.stats.start);
         $("#lb_duration").text(data.stats.duration);
         $("#lb_sails").text(formatSails(data));
-        $("#lb_minwind").text(Util.roundTo(data.stats["min-wind"], 1) + " - " + Util.roundTo(data.stats["max-wind"], 1));
+        $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed (1));
         $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
         $("#lb_polars").text(data.polars);
         // $("#lb_maxspeed").text(data.maxspeed);
@@ -800,16 +800,16 @@ import * as Util from './Util.js';
 
         result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
 
-        result += "<p><b>DTF</b>:" + Util.roundTo(Util.m2nm(point.dtf), 2) + "nm ";
-        result += "<b> Speed</b>: " + Util.roundTo(Util.ms2knots(point.speed), 1) + "kts";
+        result += "<p><b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
+        result += "<b> Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
         
         result += "</p><hr>";
         
-        result += "<p><b>Wind</b>: " + Util.roundTo(Util.ms2knots(point.tws), 2) + "kts / " + Util.roundTo(point.twd, 0) + "°</p>";
+        result += "<p><b>Wind</b>: " + Util.ms2knots(point.tws).toFixed(2) + "kts / " + point.twd.toFixed(0) + "°</p>";
 
         result += "<p>";
-        result += "<b> TWA</b>: " + Util.roundTo(point.twa, 1);
-        result += "<b> HDG</b>: " + Util.roundTo(point.heading, 1) + "°  " + point.sail;
+        result += "<b> TWA</b>: " + point.twa.toFixed(1);
+        result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + point.sail;
         result += "</p>";
         result += "<p>";
         result += "<b> Penalty</b>: " + point.penalty;
@@ -952,16 +952,16 @@ import * as Util from './Util.js';
         
         var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
         var lon0 = bounds.east + (Util.arcLength(bounds.west, bounds.east) / xSteps)/2;
-        var ddx = Util.roundTo(Util.arcLength(bounds.west, bounds.east)/xSteps, 8);
-        var ddy = Util.roundTo((bounds.north-bounds.south)/ySteps, 8);
+        var ddx = (Util.arcLength(bounds.west, bounds.east)/xSteps).toFixed(8);
+        var ddy = ((bounds.north-bounds.south)/ySteps).toFixed(8);
         // $('div, button, input').css('cursor', 'wait');
         $.ajax({
             url: "/function/vh.getWind"
                 + "?" + timeSpec
-                + "&north=" + Util.roundTo(lat0, 6)
-                + "&south=" + Util.roundTo(bounds.south, 6)
-                + "&west=" + Util.roundTo(bounds.west, 6)
-                + "&east=" + Util.roundTo(lon0, 6)
+                + "&north=" + lat0.toFixed(6)
+                + "&south=" + bounds.south.toFixed(6)
+                + "&west=" + bounds.west.toFixed(6)
+                + "&east=" + lon0.toFixed(6)
                 + "&ddx=" + ddx
                 + "&ddy=" + ddy
                 + "&xSteps=" + xSteps
@@ -1011,8 +1011,8 @@ import * as Util from './Util.js';
         // Wind values are at evenly distributed lat/lng values
         var width = (bounds.east-bounds.west);
         var height = (bounds.south-bounds.north);
-        var dlng = Util.roundTo(width/xSteps, 8);
-        var dlat = Util.roundTo(height/ySteps, 8);
+        var dlng = (width/xSteps);
+        var dlat = (height/ySteps);
 
         // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
         for ( var lat = bounds.north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
@@ -1034,14 +1034,36 @@ import * as Util from './Util.js';
         
         var bounds = getMapBounds();
 
-        var iLat = Math.round((event.latLng.lat() - bounds.north) / (bounds.south - bounds.north) * ySteps);
-        var iLng = Math.round(Util.arcLength(bounds.west, event.latLng.lng()) / Util.arcLength(bounds.west, bounds.east) * xSteps);
+        var curLat = event.latLng.lat();
+        var curLng = event.latLng.lng();
+
+        var destLat = destinationMarker.getPosition().lat();
+        var destLng = destinationMarker.getPosition().lng();
+
+        var dtf = Util.gcDistance({"lat": curLat, "lon": curLng},
+                                  {"lat": destLat, "lon": destLng});
+
+        var lbDTF = document.getElementById("lb_dtf");
+        lbDTF.innerText = dtf.toFixed(2);
+
+        var startLat = startMarker.getPosition().lat();
+        var startLng = startMarker.getPosition().lng();
+
+        var dfs = Util.gcDistance({"lat": curLat, "lon": curLng},
+                                  {"lat": startLat, "lon": startLng});
+
+        var lbDFS = document.getElementById("lb_dfs");
+        lbDFS.innerText = dfs.toFixed(2);
+        
+            
+        var iLat = Math.round((curLat - bounds.north) / (bounds.south - bounds.north) * ySteps);
+        var iLng = Math.round(Util.arcLength(bounds.west, curLng) / Util.arcLength(bounds.west, bounds.east) * xSteps);
 
         var wind = windData[iLat][iLng];
         if (wind) {
-            var windDir = Util.roundTo(wind[0], 0);
-            var windSpeed = Util.roundTo(Util.ms2knots(windData[iLat][iLng][1]), 1);
-            $("#lb_windatposition").text(windDir + "° | " + windSpeed + "kn");
+            var windDir = wind[0].toFixed(0);
+            var windSpeed = Util.ms2knots(windData[iLat][iLng][1]).toFixed(1);
+            $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
         } else {
             console.log(`No wind data at ${iLat}, ${iLng}`);
         }

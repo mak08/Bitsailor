@@ -12,6 +12,31 @@ function doGET (url, success, error) {
     xhr.send();
 }
 
+
+
+////////////////////////////////////////////////////////////////////////////////
+/// Geo math
+
+var radius = 3437.74683;
+
+
+function gcAngle(rlat0, rlon0, rlat1, rlon1) {
+    return Math.acos(Math.sin(rlat0) * Math.sin(rlat1) + Math.cos(rlat0) * Math.cos(rlat1) * Math.cos(rlon1 - rlon0));
+}
+
+// Greate circle distance
+function gcDistance(pos0, pos1) {
+    // e = r · arccos(sin(φA) · sin(φB) + cos(φA) · cos(φB) · cos(λB – λA))
+    var rlat0 = toRad(pos0.lat);
+    var rlat1 = toRad(pos1.lat);
+    var rlon0 = toRad(pos0.lon);
+    var rlon1 = toRad(pos1.lon);
+    return radius * gcAngle(rlat0, rlon0, rlat1, rlon1);
+}
+function toRad(angle) {
+    return angle / 180 * Math.PI;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Helper functions
 
@@ -64,8 +89,6 @@ function toDHM (seconds) {
     };
 }
 
-
-
 function roundTo(number, digits) {
     var scale = Math.pow(10, digits);
     return (Math.round(number * scale) / scale);
@@ -82,11 +105,10 @@ function sign(x) {
     return (x < 0) ? -1 : 1;
 }
 
-function pad0(val) {
-    if (val < 10) {
-        val = "0" + val;
-    }
-    return val;
+function pad0 (val, length=2, base=10) {
+    var result = val.toString(base)
+    while (result.length < length) result = '0' + result;
+    return result;
 }
 
 function toHHMMSS (timestamp) {
@@ -106,4 +128,4 @@ function formatPosition(lat, lon) {
     return latString + ((latDMS.u == 1) ? "N" : "S") + " " + lonString + ((lonDMS.u == 1) ? "E" : "W");
 }
 
-export { doGET, arcLength, m2nm, ms2knots, toDeg, toDMS, toDHM, toHHMMSS, roundTo, formatPosition, formatDHM };
+export { doGET, gcAngle, gcDistance, arcLength, m2nm, ms2knots, toDeg, toDMS, toDHM, toHHMMSS, roundTo, formatPosition, formatDHM };

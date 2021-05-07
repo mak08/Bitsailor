@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-03 22:45:53>
+;;; Last Modified <michael 2021-05-06 00:24:24>
 
 (in-package :virtualhelm)
 
@@ -466,7 +466,7 @@
 (defun session-routing (session race-id)
   (or
    (gethash race-id (session-routings session))
-   (log2:info "Creating routing for session ~a race ~a" (session-session-id session) race-id)
+   (log2:trace "Creating routing for session ~a race ~a" (session-session-id session) race-id)
    (setf (gethash race-id (session-routings session))
          (make-routing :race-id race-id))))
 
@@ -485,14 +485,14 @@
                 (setf session (setf (gethash session-id *session-ht*)
                                     (create-session :session-id session-id :user-id user-id :race-id race-id))))
                (t
-                (log2:info "Session ~a found." session-id)
+                (log2:trace "Session ~a found." session-id)
                 (setf session stored-session)))))
           (t
            (setf session-id (make-session-id))
            (set-cookie response "SessionID" session-id :options '())
            (setf session (setf (gethash session-id *session-ht*)
                                (create-session :session-id session-id :race-id race-id)))
-           (log2:info "Session ~a created." session-id)))
+           (log2:info "New session ~a created." session-id)))
     session))
 
 

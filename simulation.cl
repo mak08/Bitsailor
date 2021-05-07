@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-03 20:13:11>
+;;; Last Modified <michael 2021-05-07 08:20:00>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -79,9 +79,9 @@
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (reached-distance (* (cond
-                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  150)
-                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  450)
-                                 (T 900))
+                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  50)
+                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  150)
+                                 (T 300))
                                (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
           (dummy (log2:info "Max speed: ~,1,,,f Reached distance: ~a"
                             (cpolars-maxspeed polars)

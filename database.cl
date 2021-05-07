@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-03-28 20:40:00>
+;;; Last Modified <michael 2021-05-06 02:17:37>
 
 (in-package :virtualhelm)
 
@@ -42,41 +42,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Data model
 ;;;
-;;; - The e-mail address must be unique
-;;; - An account may hold multiple boats
-;;; - A boat does not have a class, the class is determined by the resp. race
-;;;   a boat is entering.
-;;;
-;;; Quantities, Units and data types
-;;; - Timestamp: unix epoch (integer; second accuracy)
-;;; - Duration: seconds (integer)
-;;; - Distance: meters (float)
-;;; - Speed: m/s (float)
-;;; - Coordinate:
-;;;       DEG in table 'places', 'boat_program', 'race_course', 'race_edition'
-;;;       RAD in table 'boat_status'
-;;;       (float)
-;;; - Direction: DEG is used for TWA and HDG (float).  
-;;;
-;;; Classes are generated from the schema directly, by USE-SCHEMA
 
 (sql:defschema "virtualhelm"
   (:table "session"
-          :columns (("id" :datatype +smallid+)
-                    ("user_id" :datatype +largename+)
-                    ("race_id"  :datatype +largename+)
-                    ("race_def" :datatype +text+))
+          :columns (("id" :datatype +uuid+)
+                    ("user_id" :datatype +largename+))
           :constraints ((:primary-key "pk_session" :columns ("id"))))
 
-
-  (:table "race_mark"
-          :columns (("id" :datatype +smallid+)
-                    ("session_id" :datatype +smallid+)
-                    ("name" :datatype +text+)
-                    ("seqno" :datatype +int+)
-                    ("latitude" :datatype +float+)
-                    ("longitude" :datatype +float+)
-                    ("data" :datatype +text+)
+  (:table "routing"
+          :columns (("id" :datatype +uuid+)
+                    ("session_id" :datatype +uuid+)
+                    ("race_id" :datatype +text+)
+                    ("startdate" :datatype +text+)
+                    ("start_lat" :datatype +float+)
+                    ("start_lon" :datatype +float+)
+                    ("dest_lat" :datatype +float+)
+                    ("dest_lon" :datatype +float+)
+                    ("nmea_port" :datatype ++)
                     )
           :constraints ((:primary-key "pk_race_mark" :columns ("id"))
                         (:foreign-key "fk_race_session_id"

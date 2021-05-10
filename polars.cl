@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-03 18:50:53>
+;;; Last Modified <michael 2021-05-10 20:24:55>
 
 (in-package :virtualhelm)
 
@@ -112,7 +112,7 @@
           (loop
              :for angle :from 0 :to 1800
              :collect (loop
-                         :for wind :from 0 :to (* max-wind 10)
+                         :for wind :from 0d0 :to (* max-wind 10d0)
                          :collect (multiple-value-list
                                    (get-max-speed% (/ angle  10.d0) (/ wind 10.d0) polars options)))))
          (speed (make-array (list (length precomputed)
@@ -146,14 +146,17 @@
      :for angle :from 0.0d0 :to 170.0d0
      :for (speed sail) = (get-max-speed cpolars-speed angle windspeed)
      :for vmg = (* speed (cos (rad angle)))
+     :when (= speed 0d0)
+       :do (return (values (list best-vmg-up best-sail-up 00d0)
+                           (list (abs best-vmg-down) best-sail-down 180d0)))
      :when (< vmg best-vmg-down)
-     :do (setf best-twa-down angle
-               best-vmg-down vmg
-               best-sail-down sail)
+       :do (setf best-twa-down angle
+                 best-vmg-down vmg
+                 best-sail-down sail)
      :when (> vmg best-vmg-up)
-     :do (setf best-twa-up angle
-               best-vmg-up vmg
-               best-sail-up sail)
+       :do (setf best-twa-up angle
+                 best-vmg-up vmg
+                 best-sail-up sail)
      :finally (return (values (list best-vmg-up best-sail-up best-twa-up)
                               (list (abs best-vmg-down) best-sail-down best-twa-down)))))
 

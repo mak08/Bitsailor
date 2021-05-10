@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-06 00:24:24>
+;;; Last Modified <michael 2021-05-09 00:48:05>
 
 (in-package :virtualhelm)
 
@@ -32,6 +32,20 @@
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; User sign-up
+
+(defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
+  (log2:info "~a ~a ~a"  |emailAddress| |boatName| |password|)
+  (let ((email  |emailAddress|)
+        (boat |boatName|)
+        (password |password|)
+        (link-secret (create-uuid)))
+    (register-signup email link-secret boat password)
+    (send-mail email link-secret boat)))
  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-02 11:45:38>
+;;; Last Modified <michael 2021-05-08 20:40:43>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -24,6 +24,7 @@
    "*REACHED-DISTANCE*"
    ;; HTTP API
    "GET-PAGE"
+   "signUp"
    "getSession"
    "getLegInfo"
    "getWind"

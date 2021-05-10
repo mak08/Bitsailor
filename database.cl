@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-06 02:17:37>
+;;; Last Modified <michael 2021-05-10 00:52:32>
 
 (in-package :virtualhelm)
 
@@ -19,15 +19,15 @@
 ;;;
 ;;; ToDo: datatype definition should be provided by the SQL module...
 
-(defparameter +int+        "int")
-(defparameter +float+      "float")
-(defparameter +smallid+    "char(20)")     ;; XXXXXX-XXXXXX-XXXXXX
-(defparameter +uuid+       "char(36)")
-(defparameter +smallname+  "varchar(20)")
-(defparameter +largename+  "varchar(40)")
-(defparameter +string+     "text")
-(defparameter +text+       "text")
-(defparameter +timestamp+  "int")
+(defparameter +int+             "int")
+(defparameter +float+           "float")
+(defparameter +timestamp+       "int")
+(defparameter +id20+            "char(20)")     ;; XXXXXX-XXXXXX-XXXXXX
+(defparameter +uuid+            "char(36)")
+(defparameter +shortstring+     "varchar(40)")
+(defparameter +mediumstring+    "varchar(160)")
+(defparameter +longstring+      "varchar(320)")
+(defparameter +text+            "text")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Data model naming conventions
@@ -44,46 +44,71 @@
 ;;;
 
 (sql:defschema "virtualhelm"
-  (:table "session"
-          :columns (("id" :datatype +uuid+)
-                    ("user_id" :datatype +largename+))
-          :constraints ((:primary-key "pk_session" :columns ("id"))))
-
+  (:table "user"
+   :columns (("email" :datatype +mediumstring+)
+             ("boatname" :datatype +mediumstring+)
+             ("pwhash" :datatype +shortstring+)
+             ("status" :datatype +shortstring+))
+   :constraints ((:primary-key "pk_user" :columns ("email"))))
   (:table "routing"
-          :columns (("id" :datatype +uuid+)
-                    ("session_id" :datatype +uuid+)
-                    ("race_id" :datatype +text+)
-                    ("startdate" :datatype +text+)
-                    ("start_lat" :datatype +float+)
-                    ("start_lon" :datatype +float+)
-                    ("dest_lat" :datatype +float+)
-                    ("dest_lon" :datatype +float+)
-                    ("nmea_port" :datatype ++)
-                    )
-          :constraints ((:primary-key "pk_race_mark" :columns ("id"))
-                        (:foreign-key "fk_race_session_id"
-                                      :columns ("session_id")
-                                      :referenced-table "session"
-                                      :referenced-columns ("id")))))
+   :columns (("user_id" :datatype +mediumstring+)
+             ("race_id" :datatype +mediumstring+)
+             ("startdate" :datatype +shortstring+)
+             ("duration" :datatype +int+)
+             ("polars" :datatype +shortstring+)
+             ("options" :datatype +mediumstring+)
+             ("start_lat" :datatype +float+)
+             ("start_lon" :datatype +float+)
+             ("dest_lat" :datatype +float+)
+             ("dest_lon" :datatype +float+)
+             ("nmea_port" :datatype +shortstring+))
+   :constraints ((:primary-key "pk_routing" :columns ("user_id" "race_id")))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Create datatypes from schema
+
+(eval-when (:load-toplevel)
+  (edm:use-schema "virtualhelm"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Functions
 
-(defun deploy (&key (force nil))
-   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
-     (sql:create-schema (sql:get-schema-by-name "virtualhelm")))
-   (edm:use-schema "virtualhelm")
-   (values t))
+(defun get-users ()
+  (sql:tuples
+   (sqlite-client:with-current-connection (c *db*)
+     (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user))))
 
-(defun drop (&key (force nil))
-   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
-     (sql:%drop-schema "virtualhelm")))
+(defun get-user (boatname)
+  (let ((result
+          (sql:tuples
+           (sqlite-client:with-current-connection (c *db*)
+             (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'boatname boatname))))))
+    (when (= (length result) 1)
+      (aref result 0))))
 
-(defun clear ()
+(defun add-user (email password boatname status)
+  ;; (mbedtls:mbedtls-md "SWavelet_77" :result-type :chars)
   (sqlite-client:with-current-connection (c *db*)
-    (sql-exec c "PRAGMA foreign_keys = OFF;")
-    (sql::clear-schema (get-schema-by-name "tinysphere"))
-    (sql-exec c "PRAGMA foreign_keys = ON;")))
+    (sql:?upsert (make-instance 'virtualhelm.user :email email :pwhash password :boatname boatname :status status))))
+
+
+(defun vh-authorizer (handler request)
+  (or
+   (authorize-user request)
+   (default-authorizer handler request)))
+
+(defun vh-function-authorizer (handler request function)
+  (or
+   (authorize-user request)
+   (function-authorizer handler request function)))
+
+(defun authorize-user (request)
+  (multiple-value-bind (username password)
+      (http-credentials request)
+    (let ((user (get-user username)))
+      (and user
+           (string= (pwhash user) (md5 password))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unique identifiers
@@ -104,11 +129,30 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Hash values
 
-
 (defun sha256 (message)
-  (apply #'concatenate 'string
-         (map 'list (lambda (c) (format () "~2,'0x" c))
-              (mbedtls-md message :method "SHA256"))))
+  (mbedtls:mbedtls-md message :method "SHA256" :result-type :chars))
+
+(defun md5 (message)
+  (mbedtls:mbedtls-md message :method "MD5" :result-type :chars))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helpers - creating and resetting the database
+
+(defun deploy (&key (force nil))
+   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
+     (sql:create-schema (sql:get-schema-by-name "virtualhelm")))
+   (values t))
+
+(defun drop (&key (force nil))
+   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
+     (sql:%drop-schema "virtualhelm")))
+
+(defun clear ()
+  (sqlite-client:with-current-connection (c *db*)
+    (sql-exec c "PRAGMA foreign_keys = OFF;")
+    (sql::clear-schema (get-schema-by-name "tinysphere"))
+    (sql-exec c "PRAGMA foreign_keys = ON;")))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

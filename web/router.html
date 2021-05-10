@@ -29,6 +29,39 @@
 	  </div>
 
       <div class="menu">
+
+        <div class="cursor-wind">
+		  <div>
+          <label>Wind</label>
+		  </div>
+		  <div>
+          <label id="lb_windatposition">-.-.-.-</label>
+		  </div>
+        </div>
+
+		<div>	
+		<div class="cursor-vmg-up">
+          <label>VMG (kn)</label>
+		</div>
+		<div class="cursor-vmg-down">
+          <label id="lb_vmg_down">-.-.-.-</label>
+		  <label style="font-size:100%">↙↗</label>
+          <label id="lb_vmg_up">-.-.-.-</label>
+		</div>
+		</div>
+		
+		<div>	
+		<div class="cursor-dfs">
+          <label>Distances(nm)</label>
+		</div>
+
+		<div class="cursor-dtf">
+          <label id="lb_dfs">-.-.-.-</label>
+		  <label style="font-size:100%">⇤⇥</label>
+          <label id="lb_dtf">-.-.-.-</label>
+		</div>
+		</div>
+
 		<div id="motto">
 		<label>
 		  We sail within a vast sphere, ever drifting in uncertainty...
@@ -56,11 +89,9 @@
           <input id="tb_nmeaport" name="nmeaport" type="text"  maxlength="5" placeholder="10000"/>
         </div>
 
-		<div class="nmea-update">
-          <button id="bt_nmeaupdate">Update</button>
-		</div>
 		<div class="nmea-reset">
-          <button id="bt_nmeareset">Reset</button>
+          <button id="bt_nmeaupdate"> Update </button>
+          <button id="bt_nmeareset"> Reconnect </button>
 		</div>
 		
         <div class="delayed-label">
@@ -219,26 +250,10 @@
           <label style="margin: 2px 2px 2px 10px;">Bft</label>
         </div>
 		
-		<div class="cursor-dfs">
-          <label>gcStart</label>
-          <label id="lb_dfs">-.-.-.-</label>
-          <label>nm</label>
-		</div>
-		
-		<div class="cursor-dtf">
-          <label>gcFinish</label>
-          <label id="lb_dtf">-.-.-.-</label>
-          <label>nm</label>
-		</div>
-		
         <div class="cursor-position">
           <label id="lb_position">-.-.-.-</label>
         </div>
         
-        <div class="cursor-wind">
-          <label id="lb_windatposition">-.-.-.-</label>
-        </div>
-
 		<div class="forecast-info">
           <div class="forecast-header">
 			<label>Time</label>

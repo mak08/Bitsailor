@@ -10,18 +10,22 @@
  *******************************************************************************/
 
 * {
-    font-family: Arial, sans-serif;
-	margin: 0px;
-	padding: 0px;
+    font-family: Courier;
+	border-radius: 4px;
 }
 
-dummy {
-	color00: #ffffff
-	color00: #ededeb
-	color01: #8080a0
+td {
+	border-radius: 0px;
+}
+
+palette {
+	gridBG:  #f0f0f0;
+	color00: #ffffff;
+	color00: #ededeb;
+	color01: #8080a0;
 	color02: #464242;
 	color03: #222222;
-	color04: #000000
+	color04: #000000;
 	color05: #00c2f8;
 	color06: #308040;
 	color07: #504040;
@@ -35,9 +39,16 @@ html {
 	background-color: #222222;
 }
 
+code {
+	background-color:  #a0a0a0;
+}
 
 tr:hover {
 	background-color:  #a0a0a0;
+}
+
+ul {
+  list-style-type: square;
 }
 
 a:link {
@@ -58,42 +69,105 @@ a:active {
   color: #222222;
 }
 
+div {
+}
+
+
 /*******************************************************************************
  * Page layout
  *******************************************************************************/
 
-#race_list {
-	width: 100%;
-}
-
 
 .grid-container {
 	display: grid;
-	grid-template-columns: 10% 80% 10%;
+	grid-template-columns: 2fr 4fr 6fr 2fr;
 	grid-template-rows: auto;
-	grid-gap: 1px;
-	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
-	background-color: #ffffff;
-	padding: 2px;
+	grid-gap: 2px;
+
+	background-color: #F0F0F0;
+	padding: 8px;
+
 }
 
 .grid-container > div {
-    /* defining a background-color here makes the canvas intransparent */
     text-align: left;
     padding: 4px;
 }
 
-.table-header {
-	grid-row: 1;
+.welcome {
 	grid-column: 2;
+	grid-row: 1 / 5;
+}
+
+.signup {
+	grid-column: 3;
+	grid-row: 1;
+	background-color:grey;
+}
+
+.news {
+	grid-column: 3;
+	grid-row: 2 / 5;
+	height: 200px;
+	background-color:grey;
+}
+
+.table-header {
+	grid-column: 2 / 4;
+	grid-row: 6;
 	color: #ededeb;
 	background-color: #308040;
 
 }
 .race-selection-table {
-	grid-row: 2;
-	grid-column: 2;
+	grid-column: 2 / 4;
+	grid-row: 7;
 	color: #ededeb;
-	background-color: #464242;
+	background-color: #504040;
 }
 
+
+.faq {
+	grid-column: 2 / 4;
+	grid-row: 8;
+	color: #ededeb;
+	background-color: #308040;
+}
+
+.faq-content {
+	grid-column: 2 / 4;
+	grid-row: 9;
+	color: #ededeb;
+	background-color: #504040;
+}
+
+.issues {
+	grid-column: 2 / 4;
+	grid-row: 10;
+	color: #ededeb;
+	background-color: #308040;
+}
+
+.issues-content {
+	grid-column: 2 / 4;
+	grid-row: 11;
+	color: #ededeb;
+	background-color: #504040;
+}
+
+.contact {
+	display :grid;
+	grid-column: 2 / 4;
+	grid-row: 12;
+	font-size: 90%;
+	justify-content: end;
+	background-color:grey;
+}
+
+#race_list {
+	width: 100%;
+}
+
+#bt_submit {
+	font-size: 110%;
+}

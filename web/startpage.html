@@ -2,7 +2,7 @@
 <html lang="de">
   <head>
     <meta charset="utf-8">
-    <title>Router</title>
+    <title>Welcome - TinySphere Router</title>
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
     <link rel="stylesheet" href="css/startpage.css">
@@ -12,7 +12,78 @@
   </head>
   <body>
     <div class="grid-container">
-      <div class="table-header"><h2>Races</h2></div>
+
+	  <div class="welcome">
+		<h2>Welcome</h2>
+		<br>
+		<p>
+		  This is the TinySphere router start page. If you don't have a user yet, please use the form on the right to sign up.
+		</p>
+		<p>
+		  The router, and this site, are currently still under development. Please have a look at the FAQ and Known Issues before using the router.
+		</p>
+		<br>
+		<p style="font-size:80%;">
+		  All content and services on this site are provided without warranty, implied or otherwise, of fitness for any particular purpose. Use entirely at your own risk.
+		</p>
+		<p style="font-size:80%;">
+		  You shall be liable for any damages, losses or expenses of a third party caused by attempts to misuse the functions provided by this site.
+		</p>
+	  </div>
+
+	  <div class="signup">
+	  <form>
+		No user? Please sign up!<br><br>
+		<div>
+		  <label for="email">EMail:</label>
+		  <input type="email" id="in_email">
+		  <label for="boatname">Boat name:</label>
+		  <input id="in_boatname">
+		</div>
+		<div>
+		  <label for="password">New password:</label>
+		  <input type="password" id="in_pw1">		  
+		  <label for="password">Repeat:</label>
+		  <input type="password" id="in_pw2">
+		</div>
+		<div>
+		  <button type="button" id="bt_submit" >Submit</button>
+		</div>
+	  </form>
+	  </div>
+
+	  <div class="news">
+		News
+	  </div>
+
+	  <div class="faq"><h3>FAQ</h3></div>
+	  <div class="faq-content">
+	  	<ul>
+		</ul>
+	  </div>
+
+	  
+	  <div class="issues"><h3>Known Issues</h3></div>
+	  <div class="issues-content">
+	  	<ul>
+		  <li> Routing fails with an error message similar to
+			<pre><code> error Unexpected HTTP status 404 Not Found for URL
+https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
+			<p>This is due to a bug in the forecast availability check. The router attempts to download the new forecast too early, when NOAA did not provide the file yet.</p>
+			<p>Occasionally, production of forecasts is delayed or broken at NOAA.</p>
+			<p>In both cases, retry later or force the old forecast using manual cycle selection.</p>
+		  </li>
+		  
+		</ul>
+	  </div>
+	  
+	  <div class="contact">
+		<address>
+		  &copy; 2021 <a href="mailto:michael.kappert@gmx.net" style="background-color:grey;">Michael Kappert</a>
+		</address>
+	  </div>	
+	  
+      <div class="table-header"><h3>Supported races</h3></div>
 	  <div class="race-selection-table">
 		<table id="race_list">
 		  <thead>

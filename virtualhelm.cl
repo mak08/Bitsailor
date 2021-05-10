@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-25 01:27:09>
+;;; Last Modified <michael 2021-05-09 21:25:56>
 
 (in-package :virtualhelm)
 
@@ -17,6 +17,8 @@
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
+
+
 
 (defun run-virtual-helm ()
   (log2:info "Path: ~a " #.*compile-file-truename*)
@@ -72,7 +74,6 @@
          (race-def  (parse-json-file name)))
     (get-leg-data race-def)))
     
-
 ;; caution - get-leg-info also exists
 (defun get-leg-data (json-object)
   (cond
@@ -98,6 +99,6 @@
          (race-name (joref race-def "name")))
     (log2:info "Loading race ~a ~a" race-id race-name)
     (setf (gethash race-id *races-ht*) race-def)))
-    
+
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

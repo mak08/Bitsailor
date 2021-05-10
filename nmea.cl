@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-05-03 22:03:01>
+;;; Last Modified <michael 2021-05-08 01:04:14>
 
 (in-package :virtualhelm)
 
@@ -13,7 +13,7 @@
   (let ((nc (routing-nmea-connection routing)))
     (kill-nmea-listener (nmea-connection-listener% nc))
     (setf (nmea-connection-listener% nc) nil)
-    (close-nmea-socket% nc)))
+    (close-nmea-socket nc)))
 
 (defun reset-nmea-listener (user-id routing host port)
   ;; Reconnect socket, start listener thread if not running

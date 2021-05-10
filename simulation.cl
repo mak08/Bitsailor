@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-07 08:20:00>
+;;; Last Modified <michael 2021-05-10 18:18:47>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -141,7 +141,7 @@
         
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
-
+      (log2:info "Time ~a" step-time)
       (map nil (lambda (rp)
                  (let ((new-point-num
                          (expand-routepoint routing rp penalty hull foils start-pos left right step-size step-time params polars delta-angle)))
@@ -155,6 +155,10 @@
           ((or (null candidate)
                (= (length candidate) 0)
                (notany #'routepoint-p candidate))
+           (log2:warning "Routing aborted: Candidate: ~a, Length: ~A, Routepoints: ~a"
+                         (not (null candidate))
+                         (length candidate)
+                         (notany #'routepoint-p candidate))
            (setf error t))
           (t
            (setf reached (reached candidate destination reached-distance))
@@ -268,6 +272,7 @@
   "Compute HEADING resulting from TWA in WIND"
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
+(declaim (notinline twa-heading))
 
 (declaim (inline get-penalized-avg-speed))
 (defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalty hull foils)
@@ -328,11 +333,13 @@
               :with up-vmg-angle = (third up-vmg)
               :with down-vmg-angle = (third down-vmg)
               :for pointnum :from 0
+              :with added = 0
               :for twa :across all-twa-points
               :for heading-stbd = (twa-heading wind-dir twa)
               :for heading-port = (twa-heading wind-dir (- twa))
               :for is-stbd = (heading-between left right heading-stbd)
               :for is-port = (heading-between left right heading-port)
+              ;;:do (log2:info "~a < ~a <~a | ~a < ~a ~a > ~a" up-vmg-angle twa down-vmg-angle left heading-stbd heading-port right)  
               :when (and (> twa 0)
                          (<= (the double-float up-vmg-angle)
                              (the double-float twa)
@@ -340,7 +347,7 @@
                          (or is-stbd is-port))
                 :do (flet ((add-point (heading twa)
                              (progn
-                               (incf pointnum)
+                               (incf added)
                                (multiple-value-bind (speed sail reason)
                                    (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalty hull foils)
                                  (declare (double-float speed)
@@ -366,7 +373,7 @@
                         (add-point heading-stbd twa))
                       (when is-port
                         (add-point heading-port (- twa))))
-              :finally (return pointnum))))))))
+              :finally (return (values added pointnum)))))))))
 
 (defun get-routing-polars (routing)
   (let ((sails (encode-options (routing-options routing))))

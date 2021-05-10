@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-02 21:29:06>
+;;; Last Modified <michael 2021-05-10 00:32:20>
 
 (in-package :virtualhelm)
 
@@ -62,25 +62,26 @@
 
 (handle
  :request (:prefix "/function")
- :handler (:query-function t :realm "virtualhelm"))
+ :handler (:query-function t :realm "virtualhelm" :authorizer #'vh-authorizer))
 
 (handle
  :request (:prefix "/public")
  :handler (:query-function t :authentication nil))
 
-(register-function "vh.getSession")
-(register-function "vh.getLegInfo")
-(register-function "vh.getWind")
-(register-function "vh.probeWind")
-(register-function "vh.getWindForecast")
-(register-function "vh.getTWAPath")
-(register-function "vh.setParameter")
+(register-function "vh.signUp" :authorizer (constantly t))
+(register-function "vh.getSession"  :authorizer #'vh-function-authorizer)
+(register-function "vh.getLegInfo" :authorizer #'vh-function-authorizer)
+(register-function "vh.getWind" :authorizer #'vh-function-authorizer)
+(register-function "vh.probeWind" :authorizer #'vh-function-authorizer)
+(register-function "vh.getWindForecast" :authorizer #'vh-function-authorizer)
+(register-function "vh.getTWAPath" :authorizer #'vh-function-authorizer)
+(register-function "vh.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "vh.getRaceList" :authorizer (constantly t))
-(register-function "vh.resetNMEAConnection")
-(register-function "vh.getBoatPosition")
-(register-function "vh.setRoute")
-(register-function "vh.getRoute")
-(register-function "vh.checkWindow")
+(register-function "vh.resetNMEAConnection" :authorizer #'vh-function-authorizer)
+(register-function "vh.getBoatPosition" :authorizer #'vh-function-authorizer)
+(register-function "vh.setRoute" :authorizer #'vh-function-authorizer)
+(register-function "vh.getRoute" :authorizer #'vh-function-authorizer)
+(register-function "vh.checkWindow" :authorizer #'vh-function-authorizer)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
@@ -105,16 +106,21 @@
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web"))
                                      *source-root*))
-                   :authentication nil))
+           :authentication nil))
+
+(handle
+ :request (:prefix "/polars")
+ :handler (:static (namestring  *source-root*)
+           :authentication nil))
 
 (handle
  :request (:method :get
            :path "/start")
- :handler (:dynamic 'vh:get-page :realm "virtualhelm"))
+ :handler (:dynamic 'vh:get-page :realm "virtualhelm" :authorizer #'vh-authorizer))
 
 (handle
  :request (:method :get
-           :path "/intro")
+           :path "/public")
  :handler (:dynamic 'vh:get-page
            :authentication nil))
 

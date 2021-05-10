@@ -10,6 +10,8 @@ import * as Util from './Util.js';
         setupColors();
         getRaceList();
 
+        document.getElementById("bt_submit").addEventListener("click", onSubmit);
+
     };
   
     ////////////////////////////////////////////////////////////////////////////////
@@ -18,6 +20,40 @@ import * as Util from './Util.js';
     function onWindowResize (event) {
     }
 
+    const SIGNUPTEXT = `Thank you for requesting a user! 
+You should immediately receive an e-mail containing a link to complete your registration.
+If you do not receive an e-mail within a few minutes, please verify your e-mail address and check the spam folder.`
+
+    function validateEmail(email) {
+        const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
+    }
+    
+    function onSubmit (event) {
+        var email = document.getElementById("in_email").value;
+        var boat = document.getElementById("in_boatname").value;
+        var pw1 = document.getElementById("in_pw1").value;
+        var pw2 = document.getElementById("in_pw2").value;
+
+        if ( !validateEmail(email) ) {
+            alert("Invalid email, please correct and retry or report");
+        } else if ( pw1 != pw2 ) {
+            alert("Passwords don't match, please correct and retry");
+        } else {
+            Util.doGET("/public/vh.signUp",
+                       function (request) {
+                           alert(SIGNUPTEXT);
+                       },
+                       function (request) {
+                           alert(request.responseText);
+                       },
+                       {
+                           "emailAddress": email,
+                           "boatName": boat,
+                           "password": Util.MD5(pw1)
+                       });
+        }
+    }
     
     //////////////////////////////////////////////////////////////////////
     /// XHR requests
@@ -32,15 +68,15 @@ import * as Util from './Util.js';
                        var table = document.getElementById("race_list");
                        for (const race of races) {
                            var row = table.insertRow(-1);
+                           var date = race["start-time"];
                            appendTextCell(row, race.name);
                            appendTextCell(row, race.class);
-                           appendTextCell(row, race["start-time"]);
+                           appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
                            appendLinkCell(row, race.id, "/start?app=router&race=" + race.id);
                        }
                    },
-                   function (jqXHR, textStatus, errorThrown) {
-                       console.log(errorThrown);
-                       alert(errorThrown);
+                   function (xhr) {
+                       alert(xhr.responseText);
                    });
     }
     

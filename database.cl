@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-10 00:52:32>
+;;; Last Modified <michael 2021-05-10 22:59:32>
 
 (in-package :virtualhelm)
 
@@ -24,6 +24,7 @@
 (defparameter +timestamp+       "int")
 (defparameter +id20+            "char(20)")     ;; XXXXXX-XXXXXX-XXXXXX
 (defparameter +uuid+            "char(36)")
+(defparameter +tag+             "varchar(16)")
 (defparameter +shortstring+     "varchar(40)")
 (defparameter +mediumstring+    "varchar(160)")
 (defparameter +longstring+      "varchar(320)")
@@ -48,8 +49,10 @@
    :columns (("email" :datatype +mediumstring+)
              ("boatname" :datatype +mediumstring+)
              ("pwhash" :datatype +shortstring+)
-             ("status" :datatype +shortstring+))
-   :constraints ((:primary-key "pk_user" :columns ("email"))))
+             ("status" :datatype +tag+)
+             ("secret" :datatype +uuid+))
+   :constraints ((:primary-key "pk_user" :columns ("email"))
+                 (:unique-key "pk_boat" :columns ("boatname"))))
   (:table "routing"
    :columns (("user_id" :datatype +mediumstring+)
              ("race_id" :datatype +mediumstring+)
@@ -75,21 +78,22 @@
 
 (defun get-users ()
   (sql:tuples
-   (sqlite-client:with-current-connection (c *db*)
-     (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user))))
+     (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user)))
 
 (defun get-user (boatname)
   (let ((result
           (sql:tuples
-           (sqlite-client:with-current-connection (c *db*)
-             (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'boatname boatname))))))
+           (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'boatname boatname)))))
     (when (= (length result) 1)
       (aref result 0))))
 
-(defun add-user (email password boatname status)
-  ;; (mbedtls:mbedtls-md "SWavelet_77" :result-type :chars)
-  (sqlite-client:with-current-connection (c *db*)
-    (sql:?upsert (make-instance 'virtualhelm.user :email email :pwhash password :boatname boatname :status status))))
+(defun add-user (email password boatname status activation-secret)
+  (sql:?upsert (make-instance 'virtualhelm.user
+                              :email email
+                              :pwhash password
+                              :boatname boatname
+                              :status status
+                              :secret activation-secret)))
 
 
 (defun vh-authorizer (handler request)
@@ -103,12 +107,13 @@
    (function-authorizer handler request function)))
 
 (defun authorize-user (request)
-  (multiple-value-bind (username password)
-      (http-credentials request)
-    (let ((user (get-user username)))
-      (and user
-           (string= (pwhash user) (md5 password))))))
-
+  (sqlite-client:with-current-connection (c *db*)
+    (multiple-value-bind (username password)
+        (http-credentials request)
+      (let ((user (get-user username)))
+        (and user
+             (string= (status user) "active")
+             (string= (pwhash user) (md5 password)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Unique identifiers
@@ -149,9 +154,9 @@
 
 (defun clear ()
   (sqlite-client:with-current-connection (c *db*)
-    (sql-exec c "PRAGMA foreign_keys = OFF;")
-    (sql::clear-schema (get-schema-by-name "tinysphere"))
-    (sql-exec c "PRAGMA foreign_keys = ON;")))
+    (sql:sql-exec c "PRAGMA foreign_keys = OFF;")
+    (sql::clear-schema (sql:get-schema-by-name "virtualhelm"))
+    (sql:sql-exec c "PRAGMA foreign_keys = ON;")))
 
 
 ;;; EOF

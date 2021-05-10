@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-09 00:48:05>
+;;; Last Modified <michael 2021-05-10 22:53:21>
 
 (in-package :virtualhelm)
 
@@ -14,24 +14,25 @@
 ;;; Return the main page (this is currently the only HTML page)
 ;;; This function is called as a dynamic handler. It is NOT registered.
 (defun get-page (server handler request response)
-  (handler-case 
-      (let* ((user-id (http-authenticated-user handler request))
-             (session (find-or-create-session user-id request response))
-             (app (get-request-app request))
-             (race-id (get-routing-request-race-id request))
-             (routing (session-routing session race-id))
-             (path (merge-pathnames (make-pathname :name app :type "html")
-                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                      '("web"))))))
-        (log2:info "race-id: ~a" race-id)
-        (set-routing-parameters session routing (parameters request))
-        (setf (http-header response :|Content-Location|)
-              (get-routing-url session race-id))
-        (load-file path response))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
+  (sqlite-client:with-current-connection (c *db*)
+    (handler-case 
+        (let* ((user-id (http-authenticated-user handler request))
+               (session (find-or-create-session user-id request response))
+               (app (get-request-app request))
+               (race-id (get-routing-request-race-id request))
+               (routing (session-routing session race-id))
+               (path (merge-pathnames (make-pathname :name app :type "html")
+                                      (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                        '("web"))))))
+          (log2:info "race-id: ~a" race-id)
+          (set-routing-parameters session routing (parameters request))
+          (setf (http-header response :|Content-Location|)
+                (get-routing-url session race-id))
+          (load-file path response))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
 
 
 
@@ -40,71 +41,77 @@
 
 (defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
   (log2:info "~a ~a ~a"  |emailAddress| |boatName| |password|)
-  (let ((email  |emailAddress|)
-        (boat |boatName|)
-        (password |password|)
-        (link-secret (create-uuid)))
-    (register-signup email link-secret boat password)
-    (send-mail email link-secret boat)))
+  (sqlite-client:with-current-connection (c *db*)
+    (let ((email  |emailAddress|)
+          (boat |boatName|)
+          (password |password|)
+          (link-secret (create-uuid)))
+      (register-signup email link-secret boat password)
+      (send-mail email link-secret boat))))
  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
 (defun |setRoute| (handler request response &key |pointType| |lat| |lng|)
-  (handler-case
-      (let* ((user-id (http-authenticated-user handler request))
-             (session (find-or-create-session user-id request response))
-             (race-id (get-routing-request-race-id request))
-             (routing (session-routing session race-id))
-             (lat (coerce (read-from-string |lat|) 'double-float))
-             (lng (coerce (read-from-string |lng|) 'double-float))
-             (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
-        (log2:info "~a: Position=~a" |pointType| position)
-        (log2:trace "Session: ~a, Request: ~a" session request)
-        (when (point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
-          (log2:warning "~a ~a: ~a is on land" user-id race-id position))
-        (set-routing-parameter session routing |pointType| position)
-        (values
-         (with-output-to-string (s)
-           (json s routing))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
-
+  (sqlite-client:with-current-connection (c *db*)
+    (handler-case
+        (let* ((user-id (http-authenticated-user handler request))
+               (session (find-or-create-session user-id request response))
+               (race-id (get-routing-request-race-id request))
+               (routing (session-routing session race-id))
+               (lat (coerce (read-from-string |lat|) 'double-float))
+               (lng (coerce (read-from-string |lng|) 'double-float))
+               (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
+          (log2:info "~a: Position=~a" |pointType| position)
+          (log2:trace "Session: ~a, Request: ~a" session request)
+          (when (point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
+            (log2:warning "~a ~a: ~a is on land" user-id race-id position))
+          (set-routing-parameter session routing |pointType| position)
+          (values
+           (with-output-to-string (s)
+             (json s routing))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setParameter
 
 (defun |setParameter| (handler request response &key |name| (|value| nil))
-  (let* ((user-id (http-authenticated-user handler request))
-         (session (find-or-create-session user-id request response))
-         (race-id (get-routing-request-race-id request))
-         (routing (session-routing session race-id)))
-    (set-routing-parameter session routing |name| |value|) 
-    (setf (http-header response :|Content-Location|)
-          (get-routing-url session race-id))
-    (values "true")))
+  (sqlite-client:with-current-connection (c *db*)
+    
+    (let* ((user-id (http-authenticated-user handler request))
+           (session (find-or-create-session user-id request response))
+           (race-id (get-routing-request-race-id request))
+           (routing (session-routing session race-id)))
+      (set-routing-parameter session routing |name| |value|) 
+      (setf (http-header response :|Content-Location|)
+            (get-routing-url session race-id))
+      (values "true"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
 (defun |getRoute| (handler request response)
-  (let ((race-id (get-routing-request-race-id request)))
-    (handler-case
-        (let* ((user-id
-                (http-authenticated-user handler request))
-               (session
-                (find-or-create-session user-id request response))
-               (routing
-                (session-routing session race-id))
-               (routeinfo
-                (get-route routing)))
-          (values
-           (with-output-to-string (s)
-             (json s routeinfo))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+  (sqlite-client:with-current-connection (c *db*)
+
+    (let ((race-id (get-routing-request-race-id request)))
+      (handler-case
+          (let* ((user-id
+                   (http-authenticated-user handler request))
+                 (session
+                   (find-or-create-session user-id request response))
+                 (routing
+                   (session-routing session race-id))
+                 (routeinfo
+                   (get-route routing)))
+            (values
+             (with-output-to-string (s)
+               (json s routeinfo))))
+        (error (e)
+          (log2:error "~a" e)
+          (setf (status-code response) 500)
+          (setf (status-text response) (format nil "~a" e)))))))
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))
@@ -142,32 +149,36 @@
 ;;; JSON cannot print hashtables but SESSION now contains one.
 ;;; For now we just return the requested routing.
 (defun |getSession| (handler request response)
-  (let* ((user-id
-          (http-authenticated-user handler request))
-         (session
-          (find-or-create-session user-id request response))
-         (race-id
-          (get-routing-request-race-id request))
-         (routing
-          (session-routing session race-id))
-         (leg-data
-          (gethash race-id *races-ht*)))
-    (values
-     (with-output-to-string (s)
-       (json s routing)))))
+  (sqlite-client:with-current-connection (c *db*)
+
+    (let* ((user-id
+             (http-authenticated-user handler request))
+           (session
+             (find-or-create-session user-id request response))
+           (race-id
+             (get-routing-request-race-id request))
+           (routing
+             (session-routing session race-id))
+           (leg-data
+             (gethash race-id *races-ht*)))
+      (values
+       (with-output-to-string (s)
+         (json s routing))))))
 
 (defun |getLegInfo| (handler request response)
-  (let* ((user-id
-          (http-authenticated-user handler request))
-         (session
-          (find-or-create-session user-id request response))
-         (race-id
-          (get-routing-request-race-id request))
-         (leg-info
-           (get-leg-info race-id user-id)))
-    (values
-     (with-output-to-string (s)
-       (json s leg-info)))))
+  (sqlite-client:with-current-connection (c *db*)
+
+    (let* ((user-id
+             (http-authenticated-user handler request))
+           (session
+             (find-or-create-session user-id request response))
+           (race-id
+             (get-routing-request-race-id request))
+           (leg-info
+             (get-leg-info race-id user-id)))
+      (values
+       (with-output-to-string (s)
+         (json s leg-info))))))
 
 (defun get-leg-info (race-id user-id)
   (gethash race-id *races-ht*))
@@ -194,92 +205,95 @@
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore request |ySteps| |xSteps|))
-  (log2:info "Basetime:~a Offset:~a Time:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |north| |south| |west| |east|)
-  (assert (and |basetime| (or |time| |offset|)))
-  (handler-case
-      (let* ((*read-default-float-format*
-              'double-float)
-             (base-time
-              (local-time:parse-rfc3339-timestring |basetime|))
-             (requested-time
-              (if |time|
-                  (local-time:parse-rfc3339-timestring |time|)
-                  (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
-        (log2:info "Requested time: ~a" requested-time)
-        (multiple-value-bind (date cycle)
-            (timestamp-to-timespec base-time)
-          (let* ((cycle-start-time (timespec-to-timestamp date cycle))
-                 (user-id (http-authenticated-user handler request))
-                 (session (find-or-create-session user-id request response))
-                 (ddx (read-from-string |ddx|))
-                 (ddy (read-from-string |ddy|))
-                 (north (read-from-string |north|))
-                 (south (read-from-string |south|))
-                 (east (read-from-string |east|))
-                 (west (read-from-string |west|)))
-            (log2:info "Using cycle: ~a/~a ~a" date cycle cycle-start-time)
-            (when (< west 0d0) (incf west 360d0))
-            (when (< east 0d0) (incf east 360d0))
-            (when (< east west) (incf east 360d0))
+  (sqlite-client:with-current-connection (c *db*)
+
+    (log2:info "Basetime:~a Offset:~a Time:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |north| |south| |west| |east|)
+    (assert (and |basetime| (or |time| |offset|)))
+    (handler-case
+        (let* ((*read-default-float-format*
+                 'double-float)
+               (base-time
+                 (local-time:parse-rfc3339-timestring |basetime|))
+               (requested-time
+                 (if |time|
+                     (local-time:parse-rfc3339-timestring |time|)
+                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
+          (log2:info "Requested time: ~a" requested-time)
+          (multiple-value-bind (date cycle)
+              (timestamp-to-timespec base-time)
+            (let* ((cycle-start-time (timespec-to-timestamp date cycle))
+                   (user-id (http-authenticated-user handler request))
+                   (session (find-or-create-session user-id request response))
+                   (ddx (read-from-string |ddx|))
+                   (ddy (read-from-string |ddy|))
+                   (north (read-from-string |north|))
+                   (south (read-from-string |south|))
+                   (east (read-from-string |east|))
+                   (west (read-from-string |west|)))
+              (log2:info "Using cycle: ~a/~a ~a" date cycle cycle-start-time)
+              (when (< west 0d0) (incf west 360d0))
+              (when (< east 0d0) (incf east 360d0))
+              (when (< east west) (incf east 360d0))
             
-            (assert (and (plusp ddx)
-                         (plusp ddy)
-                         (< south north)))
-            (let ((wind-data
-                   (loop
-                      :for lat :from north :downto south :by ddy
-                      :collect (loop
-                                  :for lon :from west :to east :by ddx
-                                  :collect (multiple-value-bind (dir speed)
-                                               (let ((nlon
-                                                      (if (> lon 0) (- lon 360) lon)))
-                                                 (cl-weather:vr-prediction lat nlon :date date :cycle cycle :timestamp requested-time))
-                                             (list (round-to-digits dir 2)
-                                                   (round-to-digits speed 2)))))))
-              (let ((encoding (http-header request :accept-encoding))
-                    (body
-                     (with-output-to-string (s)
-                       (json s
-                             (let ((time cycle-start-time))
-                               (make-forecast-data
-                                :basetime (format-datetime nil cycle-start-time)
-                                :time (format-datetime nil requested-time)
-                                :maxoffset 384 ;; (dataset-max-offset dataset)
-                                :cycle (format-timestring nil
-                                                          time
-                                                          :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                                :data wind-data))))))
-               (values body))))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))
-    #+ccl(ccl::invalid-memory-access (e)
-           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-           (setf (status-code response) 500)
-           (setf (status-text response) (format nil "~a" e)))))
+              (assert (and (plusp ddx)
+                           (plusp ddy)
+                           (< south north)))
+              (let ((wind-data
+                      (loop
+                        :for lat :from north :downto south :by ddy
+                        :collect (loop
+                                   :for lon :from west :to east :by ddx
+                                   :collect (multiple-value-bind (dir speed)
+                                                (let ((nlon
+                                                        (if (> lon 0) (- lon 360) lon)))
+                                                  (cl-weather:vr-prediction lat nlon :date date :cycle cycle :timestamp requested-time))
+                                              (list (round-to-digits dir 2)
+                                                    (round-to-digits speed 2)))))))
+                (let ((encoding (http-header request :accept-encoding))
+                      (body
+                        (with-output-to-string (s)
+                          (json s
+                                (let ((time cycle-start-time))
+                                  (make-forecast-data
+                                   :basetime (format-datetime nil cycle-start-time)
+                                   :time (format-datetime nil requested-time)
+                                   :maxoffset 384 ;; (dataset-max-offset dataset)
+                                   :cycle (format-timestring nil
+                                                             time
+                                                             :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
+                                   :data wind-data))))))
+                  (values body))))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e)))
+      #+ccl(ccl::invalid-memory-access (e)
+             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
+             (setf (status-code response) 500)
+             (setf (status-text response) (format nil "~a" e))))))
 
 (defun |getTWAPath| (handler request response &key |basetime| |time| |latA| |lngA| |lat| |lng|)
-  (handler-case
-      (let* ((*read-default-float-format* 'double-float)
-             (user-id
-              (http-authenticated-user handler request))
-             (session (find-or-create-session user-id request response))
-             (race-id (get-routing-request-race-id request))
-             (routing (session-routing session race-id))
-             (base-time |basetime|)
-             (time (parse-datetime |time|))
-             (lat-a (read-from-string |latA|))
-             (lng-a (read-from-string |lngA|))
-             (lat (read-from-string |lat|))
-             (lng (read-from-string |lng|)))
-        (values
-         (with-output-to-string (s)
-           (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
+  (sqlite-client:with-current-connection (c *db*)
+    (handler-case
+        (let* ((*read-default-float-format* 'double-float)
+               (user-id
+                 (http-authenticated-user handler request))
+               (session (find-or-create-session user-id request response))
+               (race-id (get-routing-request-race-id request))
+               (routing (session-routing session race-id))
+               (base-time |basetime|)
+               (time (parse-datetime |time|))
+               (lat-a (read-from-string |latA|))
+               (lng-a (read-from-string |lngA|))
+               (lat (read-from-string |lat|))
+               (lng (read-from-string |lng|)))
+          (values
+           (with-output-to-string (s)
+             (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWindForecast
@@ -291,47 +305,48 @@
 
 (defun |getWindForecast| (handler request response &key |time| |lat| |lng|)
   (declare (ignore handler))
-  (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
-  (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
-  (handler-case
-      (let ((*read-default-float-format* 'double-float))
-        (let* ((forecast-time
-                (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
-               (lat (read-from-string |lat|))
-               (lng (read-from-string |lng|)))
-          (multiple-value-bind  (date1 cycle1)
-              (available-cycle forecast-time)
-            (multiple-value-bind (date0 cycle0)
-                (previous-cycle date1 cycle1) 
-              (multiple-value-bind (dir1 speed1)
-                  (vr-prediction lat lng :timestamp forecast-time :date date1 :cycle cycle1)
-                (multiple-value-bind (dir0 speed0)
-                    (vr-prediction lat lng :timestamp forecast-time :date date0 :cycle cycle0)
-                  (multiple-value-bind (dir speed)
-                      (interpolated-prediction lat lng (interpolation-parameters forecast-time))
-                    (values
-                     (with-output-to-string (s)
-                       (json s (make-forecast
-                                :previous (make-windinfo :date date0
-                                                         :cycle cycle0
-                                                         :dir (round-to-digits dir0 2)
-                                                         :speed (round-to-digits (m/s-to-knots speed0) 2))
-                                :current (make-windinfo :date date1
-                                                        :cycle cycle1
-                                                        :dir (round-to-digits dir1 2)
-                                                        :speed (round-to-digits (m/s-to-knots speed1) 2))
-                                :interpolated (make-windinfo :date date1
-                                                             :cycle cycle1
-                                                             :dir (round-to-digits dir 2)
-                                                             :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))
-    #+ccl(ccl::invalid-memory-access (e)
-           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-           (setf (status-code response) 500)
-           (setf (status-text response) (format nil "~a" e)))))
+  (sqlite-client:with-current-connection (c *db*)
+    (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
+    (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
+    (handler-case
+        (let ((*read-default-float-format* 'double-float))
+          (let* ((forecast-time
+                   (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
+                 (lat (read-from-string |lat|))
+                 (lng (read-from-string |lng|)))
+            (multiple-value-bind  (date1 cycle1)
+                (available-cycle forecast-time)
+              (multiple-value-bind (date0 cycle0)
+                  (previous-cycle date1 cycle1) 
+                (multiple-value-bind (dir1 speed1)
+                    (vr-prediction lat lng :timestamp forecast-time :date date1 :cycle cycle1)
+                  (multiple-value-bind (dir0 speed0)
+                      (vr-prediction lat lng :timestamp forecast-time :date date0 :cycle cycle0)
+                    (multiple-value-bind (dir speed)
+                        (interpolated-prediction lat lng (interpolation-parameters forecast-time))
+                      (values
+                       (with-output-to-string (s)
+                         (json s (make-forecast
+                                  :previous (make-windinfo :date date0
+                                                           :cycle cycle0
+                                                           :dir (round-to-digits dir0 2)
+                                                           :speed (round-to-digits (m/s-to-knots speed0) 2))
+                                  :current (make-windinfo :date date1
+                                                          :cycle cycle1
+                                                          :dir (round-to-digits dir1 2)
+                                                          :speed (round-to-digits (m/s-to-knots speed1) 2))
+                                  :interpolated (make-windinfo :date date1
+                                                               :cycle cycle1
+                                                               :dir (round-to-digits dir 2)
+                                                               :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e)))
+      #+ccl(ccl::invalid-memory-access (e)
+             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
+             (setf (status-code response) 500)
+             (setf (status-text response) (format nil "~a" e))))))
 
 (defun timestamp-truncate (timestamp seconds)
   (universal-to-timestamp (* seconds (truncate (timestamp-to-universal timestamp) seconds))))
@@ -341,43 +356,44 @@
 ;;; Probe Wind
 
 (defun |probeWind| (handler request response &key |time| |lat| |lng| |date| |cycle|)
-  (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
-  (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
-  (handler-case
-      (let ((*read-default-float-format* 'double-float)
-            (race-id (get-routing-request-race-id request)))
-        (let* ((user-id
-                 (http-authenticated-user handler request))
-               (session
-                 (find-or-create-session user-id request response))
-               (routing
-                (session-routing session race-id))
-               (forecast-time
-                (parse-rfc3339-timestring |time|))
-               (lat (read-from-string |lat|))
-               (lng (read-from-string |lng|)))
-          (multiple-value-bind  (default-date default-cycle)
-              (available-cycle (now))
-            (multiple-value-bind (date cycle)
-                (values (or |date| default-date)
-                        (or (and |cycle| (read-from-string |cycle|))
-                            default-cycle))
-              (multiple-value-bind (dir speed)
-                  (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :date date :cycle cycle)
-                                                                 :current (prediction-parameters forecast-time :date date :cycle cycle)))
-                (values
-                 (with-output-to-string (s)
-                   (json s
-                         (list (round-to-digits dir 2)
-                               (round-to-digits (m/s-to-knots speed) 2))))))))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))
-    #+ccl(ccl::invalid-memory-access (e)
-           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-           (setf (status-code response) 500)
-           (setf (status-text response) (format nil "~a" e)))))
+  (sqlite-client:with-current-connection (c *db*)
+    (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
+    (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
+    (handler-case
+        (let ((*read-default-float-format* 'double-float)
+              (race-id (get-routing-request-race-id request)))
+          (let* ((user-id
+                   (http-authenticated-user handler request))
+                 (session
+                   (find-or-create-session user-id request response))
+                 (routing
+                   (session-routing session race-id))
+                 (forecast-time
+                   (parse-rfc3339-timestring |time|))
+                 (lat (read-from-string |lat|))
+                 (lng (read-from-string |lng|)))
+            (multiple-value-bind  (default-date default-cycle)
+                (available-cycle (now))
+              (multiple-value-bind (date cycle)
+                  (values (or |date| default-date)
+                          (or (and |cycle| (read-from-string |cycle|))
+                              default-cycle))
+                (multiple-value-bind (dir speed)
+                    (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :date date :cycle cycle)
+                                                                   :current (prediction-parameters forecast-time :date date :cycle cycle)))
+                  (values
+                   (with-output-to-string (s)
+                     (json s
+                           (list (round-to-digits dir 2)
+                                 (round-to-digits (m/s-to-knots speed) 2))))))))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e)))
+      #+ccl(ccl::invalid-memory-access (e)
+             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
+             (setf (status-code response) 500)
+             (setf (status-text response) (format nil "~a" e))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Batch routing
@@ -426,44 +442,47 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (let* ((user-id (http-authenticated-user handler request))
-         (race-id (get-routing-request-race-id request))
-         (session (find-or-create-session user-id request response))
-         (routing (session-routing session race-id))
-         (host |host|)
-         (port |port|))
-    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
-    (unless (ignore-errors
-             (numberp (parse-integer port)))
-      (error "Invalid NMEA port ~a" port))
-    (unless (routing-nmea-connection routing)
-      (setf (routing-nmea-connection routing)
-            (make-nmea-connection))
-      (reset-nmea-listener user-id routing host port))
-    (with-output-to-string (s)
-      (json s
-            (get-nmea-position (routing-nmea-connection routing) host port)))))
+  (sqlite-client:with-current-connection (c *db*)
+
+    (let* ((user-id (http-authenticated-user handler request))
+           (race-id (get-routing-request-race-id request))
+           (session (find-or-create-session user-id request response))
+           (routing (session-routing session race-id))
+           (host |host|)
+           (port |port|))
+      (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
+      (unless (ignore-errors
+               (numberp (parse-integer port)))
+        (error "Invalid NMEA port ~a" port))
+      (unless (routing-nmea-connection routing)
+        (setf (routing-nmea-connection routing)
+              (make-nmea-connection))
+        (reset-nmea-listener user-id routing host port))
+      (with-output-to-string (s)
+        (json s
+              (get-nmea-position (routing-nmea-connection routing) host port))))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (let* ((user-id (http-authenticated-user handler request))
-         (race-id (get-routing-request-race-id request))
-         (session (find-or-create-session user-id request response))
-         (routing (session-routing session race-id))
-         (host |host|)
-         (port |port|))
-    (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
-    (unless (routing-nmea-connection routing)
-      (setf (routing-nmea-connection routing)
-            (make-nmea-connection))) 
-    (cond ((equal port "")
-           (stop-nmea-listener routing host port)
-           (format nil "Disconnected from ~a:~a" host port))
-          (t
-           (unless (ignore-errors
-                    (numberp (parse-integer port)))
-             (error "Invalid NMEA port ~a" port))
-           (reset-nmea-listener user-id routing host port)
-           (format nil "Connected to ~a:~a" host port)))))
+  (sqlite-client:with-current-connection (c *db*)
+    (let* ((user-id (http-authenticated-user handler request))
+           (race-id (get-routing-request-race-id request))
+           (session (find-or-create-session user-id request response))
+           (routing (session-routing session race-id))
+           (host |host|)
+           (port |port|))
+      (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
+      (unless (routing-nmea-connection routing)
+        (setf (routing-nmea-connection routing)
+              (make-nmea-connection))) 
+      (cond ((equal port "")
+             (stop-nmea-listener routing host port)
+             (format nil "Disconnected from ~a:~a" host port))
+            (t
+             (unless (ignore-errors
+                      (numberp (parse-integer port)))
+               (error "Invalid NMEA port ~a" port))
+             (reset-nmea-listener user-id routing host port)
+             (format nil "Connected to ~a:~a" host port))))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

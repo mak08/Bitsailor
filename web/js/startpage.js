@@ -36,9 +36,11 @@ If you do not receive an e-mail within a few minutes, please verify your e-mail 
         var pw2 = document.getElementById("in_pw2").value;
 
         if ( !validateEmail(email) ) {
-            alert("Invalid email, please correct and retry or report");
+            alert("Invalid email address. Not submitted.");
         } else if ( pw1 != pw2 ) {
-            alert("Passwords don't match, please correct and retry");
+            alert("Passwords don't match. Not submitted.");
+        } else if ( !pw1 || pw1.length < 6 ) {
+            alert("Short password. Please use at least 6 characters.");
         } else {
             Util.doGET("/public/vh.signUp",
                        function (request) {

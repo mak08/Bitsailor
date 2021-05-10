@@ -59,6 +59,12 @@
 	  <div class="faq"><h3>FAQ</h3></div>
 	  <div class="faq-content">
 	  	<ul>
+		  <li> UI wind differs from wind displayed in waypoint info.
+			<p>The router delays the switch to the latest GFS cycle to match the update policy of the game.<br>
+			  This is controlled by a backend variable *merge-start*, currently no accessible to the client.<br>
+			  The UI alwys displays the selected cycle, or the latest cycle if none is selected.
+			</p>
+		  </li>
 		</ul>
 	  </div>
 
@@ -73,7 +79,6 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 			<p>Occasionally, production of forecasts is delayed or broken at NOAA.</p>
 			<p>In both cases, retry later or force the old forecast using manual cycle selection.</p>
 		  </li>
-		  
 		</ul>
 	  </div>
 	  

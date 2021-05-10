@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-06 23:27:33>
+;;; Last Modified <michael 2021-05-10 22:52:58>
 
 (in-package :virtualhelm)
 
@@ -14,7 +14,6 @@
                        (make-latlng :lat lat1 :lng lon1))
       seconds)))
 
-
 (defparameter *fc* nil)
 (defun get-fc ()
   (setf *fc* (get-forecast (get-dataset 'noaa-dataset) (now))))
@@ -24,7 +23,6 @@
     (unless session
       (error "~a: no such session" session-id)) 
     (get-route (session-routing session race-id))))
-
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))

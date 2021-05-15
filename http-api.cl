@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-10 22:53:21>
+;;; Last Modified <michael 2021-05-13 01:58:31>
 
 (in-package :virtualhelm)
 
@@ -9,10 +9,8 @@
 ;;; HTTP API
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; get-page
-;;;
-;;; Return the main page (this is currently the only HTML page)
-;;; This function is called as a dynamic handler. It is NOT registered.
+;;; Dynamic handlers
+
 (defun get-page (server handler request response)
   (sqlite-client:with-current-connection (c *db*)
     (handler-case 
@@ -34,6 +32,53 @@
         (setf (status-code response) 500)
         (setf (status-text response) (format nil "~a" e))))))
 
+(defun start-page (server handler request response)
+  (handler-case 
+      (let* ((path
+               (merge-pathnames (make-pathname :name "startpage" :type "html")
+                                (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                  '("web"))))))
+        (load-file path response))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
+
+(defun router (server handler request response)
+  (sqlite-client:with-current-connection (c *db*)
+    (handler-case 
+        (let* ((user-id (http-authenticated-user handler request))
+               (session (find-or-create-session user-id request response))
+               (app (get-request-app request))
+               (race-id (get-routing-request-race-id request))
+               (routing (session-routing session race-id))
+               (path (merge-pathnames (make-pathname :name "router" :type "html")
+                                      (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                        '("web"))))))
+          (log2:info "race-id: ~a" race-id)
+          (set-routing-parameters session routing (parameters request))
+          (setf (http-header response :|Content-Location|)
+                (get-routing-url session race-id))
+          (load-file path response))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
+
+
+(defun activate-account (server handler request response)
+  (sqlite-client:with-current-connection (c *db*)
+    (let* ((secret (cadr (path request)))
+           (user (get-user-by-secret secret)))
+      (cond
+        ((null user)
+         (setf (http-body response)
+               (format nil "This link is invalid or has expired. Please re-register your e-mail address.")))
+        (t
+         (setf (secret user) "")
+         (setf (status user) "active")
+         (sql:?upsert user)
+         (setf (http-body response) (format nil "Successfully activated ~a" user)))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -47,8 +92,8 @@
           (password |password|)
           (link-secret (create-uuid)))
       (register-signup email link-secret boat password)
-      (send-mail email link-secret boat))))
- 
+      (send-email email link-secret boat))))
+    
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
 (defun |setRoute| (handler request response &key |pointType| |lat| |lng|)

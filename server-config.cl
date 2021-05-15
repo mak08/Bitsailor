@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-10 00:32:20>
+;;; Last Modified <michael 2021-05-12 22:37:41>
 
 (in-package :virtualhelm)
 
@@ -116,14 +116,20 @@
 (handle
  :request (:method :get
            :path "/start")
- :handler (:dynamic 'vh:get-page :realm "virtualhelm" :authorizer #'vh-authorizer))
+ :handler (:dynamic 'vh::start-page
+           :authentication nil))
 
 (handle
  :request (:method :get
-           :path "/public")
- :handler (:dynamic 'vh:get-page
+           :path "/router")
+ :handler (:dynamic 'vh::router
+           :realm "virtualhelm"
+           :authorizer #'vh-authorizer))
+(handle 
+ :request (:method :get
+           :prefix "/activate-account")
+ :handler (:dynamic 'vh::activate-account
            :authentication nil))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

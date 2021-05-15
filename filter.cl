@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-10 12:35:45>
+;;; Last Modified <michael 2021-05-13 02:10:41>
 
 (in-package :virtualhelm)
 
@@ -67,7 +67,6 @@
 (defvar *use-bitmap* t)
 
 (defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (use-bitmap *use-bitmap*))
-  (log2:info "Have points: ~a" (not (every #'null isochrone)))
   (let ((filtered
           (loop
             :for p :across isochrone

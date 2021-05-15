@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-08 20:40:43>
+;;; Last Modified <michael 2021-05-12 01:04:36>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -17,6 +17,7 @@
         "RDPARSE"
         #-ccl"BABEL")
   (:export
+   "*DB*"
    "*SERVER-CONFIG*"
    "*POLARS-DIR*"
    "*TWA-STEPS*"
@@ -24,6 +25,7 @@
    "*REACHED-DISTANCE*"
    ;; HTTP API
    "GET-PAGE"
+   "ACTIVATE-ACCOUNT"
    "signUp"
    "getSession"
    "getLegInfo"

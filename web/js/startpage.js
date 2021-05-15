@@ -45,6 +45,7 @@ If you do not receive an e-mail within a few minutes, please verify your e-mail 
             Util.doGET("/public/vh.signUp",
                        function (request) {
                            alert(SIGNUPTEXT);
+                           alert(request.responseText);
                        },
                        function (request) {
                            alert(request.responseText);
@@ -74,7 +75,7 @@ If you do not receive an e-mail within a few minutes, please verify your e-mail 
                            appendTextCell(row, race.name);
                            appendTextCell(row, race.class);
                            appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
-                           appendLinkCell(row, race.id, "/start?app=router&race=" + race.id);
+                           appendLinkCell(row, race.id, "/router?race=" + race.id);
                        }
                    },
                    function (xhr) {

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-10 22:59:32>
+;;; Last Modified <michael 2021-05-13 01:28:57>
 
 (in-package :virtualhelm)
 
@@ -87,14 +87,20 @@
     (when (= (length result) 1)
       (aref result 0))))
 
+(defun get-user-by-secret (secret)
+  (let ((result
+          (sql:tuples
+           (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'secret secret)))))
+    (when (= (length result) 1)
+      (aref result 0))))
+
 (defun add-user (email password boatname status activation-secret)
   (sql:?upsert (make-instance 'virtualhelm.user
                               :email email
-                              :pwhash password
+                              :pwhash (string-upcase password)
                               :boatname boatname
                               :status status
                               :secret activation-secret)))
-
 
 (defun vh-authorizer (handler request)
   (or

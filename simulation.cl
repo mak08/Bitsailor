@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-10 18:18:47>
+;;; Last Modified <michael 2021-05-16 01:14:56>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -89,7 +89,6 @@
           (error nil)
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
-          (stepsum 0 (+ stepsum step-size))
           (pointnum 0)
           (hull (routing-hull routing))
           (foils  (routing-foils routing))
@@ -98,17 +97,20 @@
           (max-points 360 (min +max-iso-points+ (+ max-points 12)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points)) 
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
-          (step-size (step-size start-time)
-                     (step-size start-time step-time))
-          (penalty (get-penalty routing :step-size step-size)
-                   (get-penalty routing :step-size step-size))
+          (stepper (make-stepper start-time))
+          (penalty (get-penalty routing)
+                   (get-penalty routing))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
+          (params (interpolation-parameters start-time cycle)
+                  (interpolation-parameters step-time cycle))
+          (base-time (base-time params)
+                     (base-time params))
+          (step-size (funcall stepper)
+                     (funcall stepper))
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
                      (adjust-timestamp step-time (:offset :sec step-size)))
-          (params (interpolation-parameters step-time cycle)
-                  (interpolation-parameters step-time cycle))
-          (base-time (base-time params))
+          (stepsum 0 (+ stepsum step-size))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -138,10 +140,9 @@
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
       (declare (vector next-isochrone))
-        
+
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
-      (log2:info "Time ~a" step-time)
       (map nil (lambda (rp)
                  (let ((new-point-num
                          (expand-routepoint routing rp penalty hull foils start-pos left right step-size step-time params polars delta-angle)))
@@ -200,29 +201,33 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
-(defun step-size (start-time &optional (step-time nil))
-  (cond
-    ((null step-time)
-     ;; First step - runs up to full 10min 
-     (let* ((time (timestamp-to-unix start-time)))
-       (- (* 600 (truncate (+ time 600) 600))
-          time)))
-    (t
-     (let* ((hour-gap
-              (+ 3600 (timestamp-difference (timestamp-minimize-part start-time :min)
-                                            start-time)))
-            (start
-              (unix-to-timestamp (* 600 (ceiling (timestamp-to-unix start-time) 600))))
-            (delta-t
-              (timestamp-difference step-time start))
-            (step
-              (cond ((<= delta-t (+ hour-gap (* 35 600)))
-                     600)
-                    ((<= delta-t (+ hour-gap (* 287 600)))
-                     900)
-                    (t
-                     1800))))
-       step))))
+(defun make-stepper (start-time)
+  (let ((step-time start-time))
+    (lambda ()
+      (let ((step-size
+              (cond
+                ((equal step-time start-time)
+                 ;; First step - runs up to full 10min 
+                 (let* ((time (timestamp-to-unix start-time)))
+                   (- (* 600 (truncate (+ time 600) 600))
+                      time)))
+                (t
+                 (let* ((hour-gap
+                          (+ 3600 (timestamp-difference (timestamp-minimize-part start-time :min)
+                                                        start-time)))
+                        (start
+                          (unix-to-timestamp (* 600 (ceiling (timestamp-to-unix start-time) 600))))
+                        (delta-t
+                          (timestamp-difference step-time start)))
+                   (cond ((<= delta-t (+ hour-gap (* 35 600)))
+                          600)
+                         ((<= delta-t (+ hour-gap (* 287 600)))
+                          900)
+                         (t
+                          1800)))))))
+        (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
+        (values step-size
+                step-time)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed
@@ -549,7 +554,10 @@
          (heading (course-angle startpos targetpos))
          (curpos-twa (copy-latlng startpos))
          (curpos-hdg (copy-latlng startpos))
-         (wind-dir (interpolated-prediction (latlng-lat startpos) (latlng-lng startpos) (interpolation-parameters time base-time)))
+         (wind-dir (interpolated-prediction (latlng-lat startpos)
+                                            (latlng-lng startpos)
+                                            (interpolation-parameters time
+                                                                      base-time)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
          (twa-path nil)
          (hdg-path nil))
@@ -563,7 +571,6 @@
       (push (list time (copy-latlng curpos-twa)) twa-path)
       (push (list time (copy-latlng curpos-hdg)) hdg-path)
       ;; Create new timestamp, Increment time
-      (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment))))
       ;; Determine next position - TWA
       (multiple-value-bind (wind-dir wind-speed)
           (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time base-time))
@@ -582,7 +589,8 @@
           (multiple-value-bind (speed)
               (get-penalized-avg-speed nil nil wind-speed polars heading-twa penalty hull foils)
             (setf curpos-hdg
-                  (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading))))))))
+                  (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading)))))
+      (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment)))))))
 
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))

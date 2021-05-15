@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-09 21:25:56>
+;;; Last Modified <michael 2021-05-13 01:22:17>
 
 (in-package :virtualhelm)
 
@@ -17,8 +17,6 @@
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
-
-
 
 (defun run-virtual-helm ()
   (log2:info "Path: ~a " #.*compile-file-truename*)

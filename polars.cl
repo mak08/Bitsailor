@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-10 20:24:55>
+;;; Last Modified <michael 2021-05-15 22:46:58>
 
 (in-package :virtualhelm)
 
@@ -104,10 +104,7 @@
          (max-wind (aref tws (1- (length tws))))
          (twa-steps (if (null *twa-steps*)
                         twa
-                        (remove-duplicates
-                         (merge 'vector twa
-                                (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s) #'<=)
-                         :test #'eql)))
+                        (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
          (precomputed
           (loop
              :for angle :from 0 :to 1800
@@ -146,9 +143,6 @@
      :for angle :from 0.0d0 :to 170.0d0
      :for (speed sail) = (get-max-speed cpolars-speed angle windspeed)
      :for vmg = (* speed (cos (rad angle)))
-     :when (= speed 0d0)
-       :do (return (values (list best-vmg-up best-sail-up 00d0)
-                           (list (abs best-vmg-down) best-sail-down 180d0)))
      :when (< vmg best-vmg-down)
        :do (setf best-twa-down angle
                  best-vmg-down vmg
@@ -157,8 +151,12 @@
        :do (setf best-twa-up angle
                  best-vmg-up vmg
                  best-sail-up sail)
-     :finally (return (values (list best-vmg-up best-sail-up best-twa-up)
-                              (list (abs best-vmg-down) best-sail-down best-twa-down)))))
+     :finally (return
+                (if (= best-vmg-up best-vmg-down)
+                    (values (list best-vmg-up best-sail-up 00d0)
+                            (list (abs best-vmg-down) best-sail-down 180d0))
+                    (values (list best-vmg-up best-sail-up best-twa-up)
+                            (list (abs best-vmg-down) best-sail-down best-twa-down))))))
 
 (defun get-max-speed% (angle wind-speed polars options)
   (do

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-13 01:58:31>
+;;; Last Modified <michael 2021-05-17 00:20:45>
 
 (in-package :virtualhelm)
 
@@ -32,6 +32,7 @@
         (setf (status-code response) 500)
         (setf (status-text response) (format nil "~a" e))))))
 
+;;; This function is called from a dynamic handler
 (defun start-page (server handler request response)
   (handler-case 
       (let* ((path
@@ -44,6 +45,7 @@
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
 
+;;; This function is called from a dynamic handler
 (defun router (server handler request response)
   (sqlite-client:with-current-connection (c *db*)
     (handler-case 
@@ -65,21 +67,23 @@
         (setf (status-code response) 500)
         (setf (status-text response) (format nil "~a" e))))))
 
-
+;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
   (sqlite-client:with-current-connection (c *db*)
     (let* ((secret (cadr (path request)))
-           (user (get-user-by-secret secret)))
+           (provisional (get-user-prov-by-secret secret)))
       (cond
-        ((null user)
+        ((null provisional)
          (setf (http-body response)
                (format nil "This link is invalid or has expired. Please re-register your e-mail address.")))
         (t
-         (setf (secret user) "")
-         (setf (status user) "active")
-         (sql:?upsert user)
-         (setf (http-body response) (format nil "Successfully activated ~a" user)))))))
-
+         (let ((user (make-instance 'virtualhelm.user :email (email provisional)
+                                                      :boatname (boatname provisional)
+                                                      :pwhash (pwhash provisional)
+                                                      :status (status provisional))))
+           (sql:?delete 'virtualhelm.user_prov :where (sql:?= 'email  (email provisional)))
+           (sql:?upsert user)
+           (setf (http-body response) (format nil "Successfully activated ~a" user))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; User sign-up
@@ -87,12 +91,23 @@
 (defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
   (log2:info "~a ~a ~a"  |emailAddress| |boatName| |password|)
   (sqlite-client:with-current-connection (c *db*)
-    (let ((email  |emailAddress|)
-          (boat |boatName|)
-          (password |password|)
-          (link-secret (create-uuid)))
-      (register-signup email link-secret boat password)
-      (send-email email link-secret boat))))
+    (let* ((email |emailAddress|)
+           (boat |boatName|)
+           (password |password|)
+           (link-secret (create-uuid)))
+      (multiple-value-bind (success message)
+          (register-signup email link-secret boat password)
+        (cond
+          (success
+           (send-email email link-secret boat)
+           "Activation e-mail sent")
+          (t
+           (setf (status-code response) 400)
+           (case message
+             (:boatname-exists
+              (format nil "~a is already taken" boat))
+             (othwerwise
+              "An error occurred"))))))))
     
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute

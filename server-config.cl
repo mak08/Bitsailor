@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-12 22:37:41>
+;;; Last Modified <michael 2021-05-16 16:14:20>
 
 (in-package :virtualhelm)
 
@@ -60,6 +60,9 @@
 ;;; QUERY-FUNCTION endpoint
 ;;; -------------
 
+;;; TODO: Function handlers don't require separate authorization.
+;;;       Remove one endpoint.
+
 (handle
  :request (:prefix "/function")
  :handler (:query-function t :realm "virtualhelm" :authorizer #'vh-authorizer))
@@ -69,7 +72,7 @@
  :handler (:query-function t :authentication nil))
 
 (register-function "vh.signUp" :authorizer (constantly t))
-(register-function "vh.getSession"  :authorizer #'vh-function-authorizer)
+(register-function "vh.getSession" :authorizer #'vh-function-authorizer)
 (register-function "vh.getLegInfo" :authorizer #'vh-function-authorizer)
 (register-function "vh.getWind" :authorizer #'vh-function-authorizer)
 (register-function "vh.probeWind" :authorizer #'vh-function-authorizer)
@@ -116,19 +119,26 @@
 (handle
  :request (:method :get
            :path "/start")
- :handler (:dynamic 'vh::start-page
+ :handler (:dynamic 'start-page
            :authentication nil))
 
 (handle
  :request (:method :get
            :path "/router")
- :handler (:dynamic 'vh::router
+ :handler (:dynamic 'router
            :realm "virtualhelm"
            :authorizer #'vh-authorizer))
 (handle 
  :request (:method :get
            :prefix "/activate-account")
- :handler (:dynamic 'vh::activate-account
+ :handler (:dynamic 'activate-account
+           :authentication nil))
+;;; We can't match root for now, match length priority is not implemented or does not work...
+(handle 
+ :request (:prefix "")
+ :handler (:static (namestring
+                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                                     *source-root*))
            :authentication nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

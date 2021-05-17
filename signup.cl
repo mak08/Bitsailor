@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-05-13 01:20:20>
+;;; Last Modified <michael 2021-05-16 23:36:43>
 
 
 (in-package :virtualhelm)
@@ -23,6 +23,7 @@ Best Regards
 ")
 
 (defun send-email (email activation-secret boat)
+  (declare (ignore boat))
   (let* ((mailcmd "mail")
          (recipient email)
          (subject "Activation link")  
@@ -36,12 +37,25 @@ Best Regards
      (get-output-stream-string out))
     activation-link))
 
-(defun register-signup (email activation-secret boat password)
-  ;; Reserve boatname by creating an inactive entry in USER.
+(defun register-signup (email activation-secret boatname password)
+  ;; Check if the boat name can be reserved.
+  ;; If not, return NIL and a message describing the reason.
+  ;; If yes, reserve boatname by creating an inactive entry in USER.
+  ;; Return t.
   (let ((user
-          (ignore-errors
-           (add-user email password boat "inactive" activation-secret))))
-    user))
+          (get-user-by-boatname boatname))
+        (provisional
+          (get-user-prov-by-boatname boatname)))
+    (cond
+      ((or (and user
+                (not (string-equal (email user) email)))
+           (and provisional
+                (not (string-equal (email provisional) email))))
+       (values nil :boatname-exists))
+      (t
+       ;; Boatname not taken or belongs to current email
+       (add-user-provisional email password boatname "active" activation-secret)
+       (values t :ok)))))
 
 
 ;;; EOF

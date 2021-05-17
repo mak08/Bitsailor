@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-13 01:28:57>
+;;; Last Modified <michael 2021-05-17 00:10:28>
 
 (in-package :virtualhelm)
 
@@ -49,6 +49,13 @@
    :columns (("email" :datatype +mediumstring+)
              ("boatname" :datatype +mediumstring+)
              ("pwhash" :datatype +shortstring+)
+             ("status" :datatype +tag+))
+   :constraints ((:primary-key "pk_user" :columns ("email"))
+                 (:unique-key "pk_boat" :columns ("boatname"))))
+  (:table "user_prov"
+   :columns (("email" :datatype +mediumstring+)
+             ("boatname" :datatype +mediumstring+)
+             ("pwhash" :datatype +shortstring+)
              ("status" :datatype +tag+)
              ("secret" :datatype +uuid+))
    :constraints ((:primary-key "pk_user" :columns ("email"))
@@ -80,27 +87,53 @@
   (sql:tuples
      (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user)))
 
-(defun get-user (boatname)
-  (let ((result
-          (sql:tuples
-           (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'boatname boatname)))))
-    (when (= (length result) 1)
-      (aref result 0))))
-
 (defun get-user-by-secret (secret)
+  (get-user-by-column 'secret secret))
+
+(defun get-user-by-email (email)
+  (get-user-by-column 'email email))
+
+(defun get-user-by-boatname (boatname)
+  (get-user-by-column 'boatname boatname))
+
+(defun get-user-prov-by-boatname (boatname)
+  (get-user-prov-by-column 'boatname boatname))
+
+(defun get-user-prov-by-secret (secret)
+  (get-user-prov-by-column 'secret secret))
+
+(defun get-user-by-column (column value)
   (let ((result
           (sql:tuples
-           (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user :where (sql:?= 'secret secret)))))
+           (sql:?select '* :from 'virtualhelm.user
+                           :into 'virtualhelm.user
+                           :where (sql:?= column value)))))
     (when (= (length result) 1)
       (aref result 0))))
 
-(defun add-user (email password boatname status activation-secret)
-  (sql:?upsert (make-instance 'virtualhelm.user
+(defun get-user-prov-by-column (column value)
+  (let ((result
+          (sql:tuples
+           (sql:?select '* :from 'virtualhelm.user_prov
+                           :into 'virtualhelm.user_prov
+                           :where (sql:?= column value)))))
+    (when (= (length result) 1)
+      (aref result 0))))
+
+(defun add-user-provisional (email password boatname status activation-secret)
+  (sql:?upsert (make-instance 'virtualhelm.user_prov
                               :email email
                               :pwhash (string-upcase password)
                               :boatname boatname
                               :status status
                               :secret activation-secret)))
+
+(defun add-user (email password boatname status)
+  (sql:?upsert (make-instance 'virtualhelm.user
+                              :email email
+                              :pwhash (string-upcase password)
+                              :boatname boatname
+                              :status status)))
 
 (defun vh-authorizer (handler request)
   (or
@@ -116,7 +149,7 @@
   (sqlite-client:with-current-connection (c *db*)
     (multiple-value-bind (username password)
         (http-credentials request)
-      (let ((user (get-user username)))
+      (let ((user (get-user-by-boatname username)))
         (and user
              (string= (status user) "active")
              (string= (pwhash user) (md5 password)))))))

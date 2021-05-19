@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-17 00:20:45>
+;;; Last Modified <michael 2021-05-19 22:33:08>
 
 (in-package :virtualhelm)
 
@@ -89,12 +89,13 @@
 ;;; User sign-up
 
 (defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
-  (log2:info "~a ~a ~a"  |emailAddress| |boatName| |password|)
+  (declare (ignore handler request))
   (sqlite-client:with-current-connection (c *db*)
-    (let* ((email |emailAddress|)
-           (boat |boatName|)
+    (let* ((email (decode-uri-component |emailAddress|))
+           (boat (decode-uri-component |boatName|))
            (password |password|)
            (link-secret (create-uuid)))
+      (log2:info "~a ~a" email boat)
       (multiple-value-bind (success message)
           (register-signup email link-secret boat password)
         (cond
@@ -108,7 +109,22 @@
               (format nil "~a is already taken" boat))
              (othwerwise
               "An error occurred"))))))))
-    
+
+(defun decode-uri-component (s)
+  (let ((*read-base* 16))
+    (do
+     ((k 0)
+      (result (make-array 0 :element-type 'character :adjustable t :fill-pointer t)))
+     ((>= k (length s))
+      result)
+      (cond
+        ((eql (aref s k) #\%)
+         (vector-push-extend (code-char (read-from-string (subseq s (1+ k) (+ k 3)))) result)
+         (incf k 3))
+        (t
+         (vector-push-extend (aref s k) result)
+         (incf k))))))
+  
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
 (defun |setRoute| (handler request response &key |pointType| |lat| |lng|)

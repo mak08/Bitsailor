@@ -55,8 +55,8 @@ If you do not receive an e-mail within a few minutes, please verify your e-mail 
                            alert(request.responseText);
                        },
                        {
-                           "emailAddress": email,
-                           "boatName": boat,
+                           "emailAddress": encodeURIComponent(email),
+                           "boatName": encodeURIComponent(boat),
                            "password": Util.MD5(pw1)
                        });
         }

@@ -1,36 +1,40 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-05-16 23:36:43>
+;;; Last Modified <michael 2021-05-19 00:16:58>
 
 
 (in-package :virtualhelm)
 
+(defvar *mailhost* "bitsailor.net")
+(defvar *mailuser* "harbormaster")
+
 (defparameter +email-template+ "
 Hello,
 
-you (or someone pretending to be you) have asked to register a user account at sailsphere.com.
+you (or someone pretending to be you) have asked to register a user account at ~a.
 If this wasn't you, please ignore this email and your address will be removed from our records.
 
 To activate this account, please click the following link within the next 24 hours:
 
-https://sailsphere.com/activate-account/~a
+https://~a/activate-account/~a
 
 Best Regards
+~a
 
 --
 
 ")
 
-(defun send-email (email activation-secret boat)
+(defun send-email (email activation-secret boat &key (mailuser *mailuser*) (hostname *mailhost*))
   (declare (ignore boat))
   (let* ((mailcmd "mail")
          (recipient email)
          (subject "Activation link")  
-         (in (make-string-input-stream (format nil +email-template+ activation-secret)))
+         (in (make-string-input-stream (format nil +email-template+ hostname hostname activation-secret mailuser)))
          (out (make-string-output-stream))
-         (activation-link (format nil "http:aguas-13:8080/activate-account/~a" activation-secret))
-         (command (format nil "su rs -c '~a -s \"~a\" -S \"from=rs@sailsphere.com\" ~a'" mailcmd subject recipient)))
+         (activation-link (format nil "https://~a/activate-account/~a" hostname activation-secret))
+         (command (format nil "su ~a -c '~a -s \"~a\" -S \"from=~a@~a\" ~a'" mailuser mailcmd subject mailuser hostname recipient)))
     (log2:info "Command: ~a~%" command)
     (ignore-errors
      (uiop:run-program command :input in :output out)

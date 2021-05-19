@@ -34,6 +34,12 @@
 
 	  <div class="news">
 		<h4>News</h4>
+		<ul>
+		  <li><b>2021-05-16</b><br>
+			Moved to bitsailor.net
+		  </li>
+		</ul>
+		
 	  </div>
 
 	  <div class="faq"><h3>FAQ</h3></div>
@@ -52,6 +58,18 @@
 	  <div class="issues"><h3>Known Issues</h3></div>
 	  <div class="issues-content">
 	  	<ul>
+		  <li>Isochrones run past destination
+			<p>The route search terminates when a route point is generated that is closer to the destination than a given target distance.
+			  Sometimes, especially in routings longer than 2.5days and strong wind conditions, no such point is ever generated.</p>
+			<p>Move the target point closer to an isochrone to workaround this issue.</p> 
+		  </li>
+
+		  <li>Route does not reach destination
+			<p>This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.</p>
+			<p>You can usually work around this by moving the target behind or sideways from your actual destination.</p> 
+			<p>Also see "Isochrones run past destination"</p>
+		  </li>
+		  
 		  <li> Routing fails with an error message similar to
 			<pre><code> error Unexpected HTTP status 404 Not Found for URL
 https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
@@ -63,6 +81,11 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 	  </div>
 	  
 	  <div class="contact">
+        <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank">
+          <input type="hidden" name="cmd" value="_s-xclick" />
+          <input type="hidden" name="hosted_button_id" value="ZUPP95R3A3686" />
+          <input type="image" width="70" height="18" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" title="Donate to VR Dashboard" alt="Donate with PayPal button" />
+        </form>
 		<address>
 		  &copy; 2021 <a href="mailto:michael.kappert@gmx.net" style="background-color:grey;">Michael Kappert</a>
 		</address>

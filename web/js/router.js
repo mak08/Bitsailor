@@ -93,6 +93,7 @@ import * as Util from './Util.js';
         $("#sel_forecastbundle").change(onSetParameter);
         $("#sel_duration").change(onSetParameter);
         $("#cb_displaywind").change(onDisplaywind);
+        $("#cb_displaytracks").change(onDisplayTracks);
         
         // Tracks & Isochrones display is handled by the client directly
         $("#cb_tracks").change(onSetClientParameter);
@@ -203,7 +204,12 @@ import * as Util from './Util.js';
             $("#wind-canvas").hide();
         }
     }
-    
+
+    function onDisplayTracks (event) {
+        clearRoute();
+        displayRouting(currentRouting);
+    }
+
     function onAdjustIndex (event) {
         var source = event.target.id;
         if (source == "bt_dec6")
@@ -358,7 +364,8 @@ import * as Util from './Util.js';
         twaTime = marker.get('time');
         redrawWindByTime(twaTime);
     }
-    
+
+
     //////////////////////////////////////////////////////////////////////
     /// XHR requests
     
@@ -485,11 +492,41 @@ import * as Util from './Util.js';
     function displayRouting (data) {
         var best = data.best;
 
+        createIsochrones(data.isochrones);
+
         // Sometimes the first track mark is covered by the startMarker.
         startMarker.set('time', best[0].time);
 
         var markerIcon = "img/marker_32x12.png";
         var redMarkerIcon = "img/marker_red_32x12.png";
+
+        var isDisplayTracks = document.getElementById('cb_displaytracks').checked;
+        if (isDisplayTracks) {
+            var tracks = data.tracks;
+            for ( var i = 0; i < tracks.length; i++ ) {
+                var track = new google.maps.Polyline({
+                    geodesic: true,
+                    strokeColor: '#d00000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 1.5
+                });
+                track.setPath(tracks[i]);
+                track.setMap(googleMap);
+                routeTracks[i] = track;
+            }
+        }
+
+        var bestPath = best.map(entry => entry.position);
+        var bestTrack = new google.maps.Polyline({
+            geodesic: true,
+            strokeColor: '#d00000',
+            strokeOpacity: 1.0,
+            strokeWeight: 3
+        });
+        bestTrack.setPath(bestPath);
+        bestTrack.setMap(googleMap);
+        routeTracks[routeTracks.length] = bestTrack;
+         
         for ( var i = 0; i < best.length; i++ ) {
             var trackMarker = new google.maps.Marker({
                 position: best[i].position,
@@ -501,21 +538,7 @@ import * as Util from './Util.js';
             addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
             trackMarkers[i] = trackMarker;
         }
-        
-        var tracks = data.tracks;
-        for ( var i = 0; i < tracks.length; i++ ) {
-            var track = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#d00000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1.5
-            });
-            track.setPath(tracks[i]);
-            track.setMap(googleMap);
-            routeTracks[i] = track;
-        }
 
-        createIsochrones(data.isochrones);
         
         $("#lb_from").text(data.stats.start);
         $("#lb_duration").text(data.stats.duration);

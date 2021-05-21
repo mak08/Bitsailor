@@ -262,16 +262,26 @@ input[type=checkbox] {
 
 }
 
+/* Display tracks */
+.displaytracks-label {
+	grid-row: 8;
+	grid-column: 1;
+}
+.displaytracks-checkbox {
+	grid-row: 8;
+	grid-column: 2;
+}
+
 /* Execute */
 .execute-button {
-	grid-row: 8;
+	grid-row: 10;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 9;
+	grid-row: 11;
 	grid-column: 1;
 
 }
@@ -294,13 +304,13 @@ input[type=checkbox] {
 
 /* Current TWA */
 .current-twa-label {
-	grid-row: 11;
+	grid-row: 15;
 	grid-column: 1;
 	color: #60B260;
 	font-weight: bold;
 }
 .current-twa {
-	grid-row: 11;
+	grid-row: 15;
 	grid-column: 2;
 	color: #60B260;
 	font-weight: bold;
@@ -308,99 +318,99 @@ input[type=checkbox] {
 
 /* Current Heading */
 .current-heading-label {
-	grid-row: 12;
+	grid-row: 16;
 	grid-column: 1;
 	color: #00c2f8;
 	font-weight: bold;
 }
 .current-heading {
-	grid-row: 12;
+	grid-row: 16;
 	grid-column: 2;
 	color: #00c2f8;
 }
 
 /* Statistics */
 .statistics-label {
-	grid-row: 13;
+	grid-row: 17;
 	grid-column: 1;
 	font-style: italic;
 	font-weight: bold;
 }
 
 .statistics-from-label {
-	grid-row: 14;
+	grid-row: 18;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-from {
-	grid-row: 14;
+	grid-row: 18;
 	grid-column: 2;
 	align-self: flex-start;
 }
 
 .statistics-duration-label {
-	grid-row: 15;
+	grid-row: 19;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-duration {
-	grid-row: 15;
+	grid-row: 19;
 	grid-column: 2;
 	align-self: flex-start;
 }
 
 .statistics-sails-label {
-	grid-row: 16;
+	grid-row: 20;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-sails {
-	grid-row: 16;
+	grid-row: 20;
 	grid-column: 2;
 	align-self: flex-start;
 	overflow: auto;
 }
 
 .statistics-min-wind-label {
-	grid-row: 17;
+	grid-row: 21;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-min-wind {
-	grid-row: 17;
+	grid-row: 21;
 	grid-column: 2;
 	align-self: flex-start;
 }
 
 .statistics-min-twa-label {
-	grid-row: 18;
+	grid-row: 22;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-min-twa {
-	grid-row: 18;
+	grid-row: 22;
 	grid-column: 2;
 	align-self: flex-start;
 }
 
 .statistics-polars-label {
-	grid-row: 19;
+	grid-row: 23;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-polars {
-	grid-row: 19;
+	grid-row: 23;
 	grid-column: 2;
 	align-self: flex-start;
 }
 
 .statistics-maxspeed-label {
-	grid-row: 20;
+	grid-row: 24;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-maxspeed {
-	grid-row: 20;
+	grid-row: 24;
 	grid-column: 2;
 	align-self: flex-start;
 }

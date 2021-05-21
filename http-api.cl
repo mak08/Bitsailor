@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-19 22:33:08>
+;;; Last Modified <michael 2021-05-21 18:04:54>
 
 (in-package :virtualhelm)
 
@@ -236,7 +236,7 @@
            (routing
              (session-routing session race-id))
            (leg-data
-             (gethash race-id *races-ht*)))
+             (race-info race-id)))
       (values
        (with-output-to-string (s)
          (json s routing))))))
@@ -251,13 +251,10 @@
            (race-id
              (get-routing-request-race-id request))
            (leg-info
-             (get-leg-info race-id user-id)))
+             (race-info race-id)))
       (values
        (with-output-to-string (s)
          (json s leg-info))))))
-
-(defun get-leg-info (race-id user-id)
-  (gethash race-id *races-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -497,12 +494,12 @@
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
+  (load-race-definitions-rs)
   (let ((races (list)))
-    (maphash 
+    (map-races 
      (lambda (k v)
        (declare (ignore k))
-       (push (get-raceinfo v) races))
-     *races-ht*)
+       (push (get-raceinfo v) races)))
     (with-output-to-string (s)
       (json s races))))
 

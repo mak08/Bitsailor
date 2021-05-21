@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-16 01:14:56>
+;;; Last Modified <michael 2021-05-21 18:53:42>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -97,7 +97,7 @@
           (max-points 360 (min +max-iso-points+ (+ max-points 12)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points)) 
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
-          (stepper (make-stepper start-time))
+          (stepper (make-stepper start-time  (routing-stepmax routing)))
           (penalty (get-penalty routing)
                    (get-penalty routing))
           ;; Get wind data for simulation time
@@ -201,7 +201,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
-(defun make-stepper (start-time)
+(defun make-stepper (start-time step-max)
   (let ((step-time start-time))
     (lambda ()
       (let ((step-size
@@ -219,7 +219,10 @@
                           (unix-to-timestamp (* 600 (ceiling (timestamp-to-unix start-time) 600))))
                         (delta-t
                           (timestamp-difference step-time start)))
-                   (cond ((<= delta-t (+ hour-gap (* 35 600)))
+                   (cond ((and (< step-max 21600) ;; 6*3600s
+                               (<= delta-t (+ hour-gap (* 119 60))))
+                          120)
+                         ((<= delta-t (+ hour-gap (* 35 600)))
                           600)
                          ((<= delta-t (+ hour-gap (* 287 600)))
                           900)
@@ -385,7 +388,7 @@
     (get-combined-polars (routing-polars routing) sails)))
 
 (defun get-routing-race-info (routing)
-  (gethash (routing-race-id routing) *races-ht*))
+  (race-info (routing-race-id routing)))
 
 (defun normalized-destination (routing)
   (if (>= (- (latlng-lng (routing-dest routing))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-15 22:46:58>
+;;; Last Modified <michael 2021-05-22 01:26:29>
 
 (in-package :virtualhelm)
 
@@ -91,7 +91,7 @@
       ((< index (length vmg))
        (values-list (aref vmg index)))
       (T
-       (log2:warning "Windpseed ~a exceeds interpolation range 0..~a" windspeed (/ (length vmg) 10d0))
+       (log2:trace "Windpseed ~a exceeds interpolation range 0..~a" windspeed (/ (length vmg) 10d0))
        (values-list (aref vmg (1- (length vmg))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

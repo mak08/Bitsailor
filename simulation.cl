@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-21 18:53:42>
+;;; Last Modified <michael 2021-05-22 17:11:33>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -202,29 +202,34 @@
 ;;; Stepping
 
 (defun make-stepper (start-time step-max)
-  (let ((step-time start-time))
+  (let* ((step-time
+           start-time)
+         (start-seconds
+           (timestamp-to-unix start-time))
+         (start
+          (* 600 (ceiling start-seconds 600)))
+         (hour-fill
+           (- 3600 (mod start 3600)))
+         (hour-fill-2
+           (if (<= step-max 21600)
+               0
+               hour-fill)))
+    (log2:info "HF1: ~a HF2: ~a" hour-fill hour-fill-2)
     (lambda ()
       (let ((step-size
               (cond
                 ((equal step-time start-time)
-                 ;; First step - runs up to full 10min 
-                 (let* ((time (timestamp-to-unix start-time)))
-                   (- (* 600 (truncate (+ time 600) 600))
-                      time)))
+                 ;; First step - runs up to full 10min
+                 (- 600 (mod start-seconds 600)))
                 (t
-                 (let* ((hour-gap
-                          (+ 3600 (timestamp-difference (timestamp-minimize-part start-time :min)
-                                                        start-time)))
-                        (start
-                          (unix-to-timestamp (* 600 (ceiling (timestamp-to-unix start-time) 600))))
-                        (delta-t
-                          (timestamp-difference step-time start)))
-                   (cond ((and (< step-max 21600) ;; 6*3600s
-                               (<= delta-t (+ hour-gap (* 119 60))))
+                 (let ((delta-t
+                         (timestamp-difference step-time (unix-to-timestamp start))))
+                   (cond ((and (<= step-max 21600) ;; 6*3600s
+                               (< delta-t (+ hour-fill (* 120 60))))
                           120)
-                         ((<= delta-t (+ hour-gap (* 35 600)))
+                         ((< delta-t (+ hour-fill-2 (* 36 600)))
                           600)
-                         ((<= delta-t (+ hour-gap (* 287 600)))
+                         ((< delta-t (+ hour-fill-2 (* 288 600)))
                           900)
                          (t
                           1800)))))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-21 18:04:54>
+;;; Last Modified <michael 2021-05-23 00:03:36>
 
 (in-package :virtualhelm)
 
@@ -81,9 +81,9 @@
                                                       :boatname (boatname provisional)
                                                       :pwhash (pwhash provisional)
                                                       :status (status provisional))))
-           (sql:?delete 'virtualhelm.user_prov :where (sql:?= 'email  (email provisional)))
+           (sql:?delete 'virtualhelm.user_prov :where (sql:?= 'email (email provisional)))
            (sql:?upsert user)
-           (setf (http-body response) (format nil "Successfully activated ~a" user))))))))
+           (load-file "web/activated.html" response)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; User sign-up
@@ -601,14 +601,12 @@
            (log2:info "New session ~a created." session-id)))
     session))
 
-
 (defun load-file (path response)
   (with-open-file (f path :element-type '(unsigned-byte 8))
     (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
       (read-sequence buffer f)
       (setf (http-body response) buffer)))
   (setf (http-header response :|Content-Type|) "text/html"))
-
 
 (defun get-routing-url (session race-id)
   (let ((routing (session-routing session race-id)))

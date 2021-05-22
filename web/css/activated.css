@@ -95,105 +95,14 @@ input {
     padding: 4px;
 }
 
-.signup-label {
+.text {
 	grid-column: 2 / 5;
 	grid-row: 2;
 }
 
-.email-label {
-	grid-column: 2;
-	grid-row: 3;
-}
-.email-input {
-	grid-column: 3;
-	grid-row: 3;
-}
-
-.boatname-label {
-	grid-column: 2;
-	grid-row: 4;
-}
-.boatname-input {
-	grid-column: 3;
-	grid-row: 4;
-}
-.boatname-text {
-	grid-column: 4;
+.ack {
+	grid-column: 3 / 4;
 	grid-row: 4;
 }
 
-.pw1-label {
-	grid-column: 2;
-	grid-row: 5;
-}
-.pw1-input {
-	grid-column: 3;
-	grid-row: 5;
-}
-.pw1-text {
-	grid-column: 4;
-	grid-row: 5;
-}
 
-.pw2-label {
-	grid-column: 2;
-	grid-row: 6;
-}
-.pw2-input {
-	grid-column: 3;
-	grid-row: 6;
-}
-.pw2-text {
-	grid-column: 4;
-	grid-row: 6;
-}
-
-.bt-submit {
-	grid-column: 4;
-	grid-row: 7;
-}
-
-
-#bt_submit {
-	font-size: 110%;
-	cursor: pointer;
-}
-
-
-/* The Modal (background) */
-.modal {
-  display: none; /* Hidden by default */
-  position: fixed; /* Stay in place */
-  z-index: 1; /* Sit on top */
-  left: 0;
-  top: 0;
-  width: 100%; /* Full width */
-  height: 100%; /* Full height */
-  overflow: auto; /* Enable scroll if needed */
-  background-color: rgb(0,0,0); /* Fallback color */
-  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
-}
-
-/* Modal Content/Box */
-.modal-content {
-  background-color: #fefefe;
-  margin: 15% auto; /* 15% from the top and centered */
-  padding: 20px;
-  border: 1px solid #888;
-  width: 80%; /* Could be more or less, depending on screen size */
-}
-
-/* The Close Button */
-.close {
-  color: #aaa;
-  float: right;
-  font-size: 28px;
-  font-weight: bold;
-}
-
-.close:hover,
-.close:focus {
-  color: black;
-  text-decoration: none;
-  cursor: pointer;
-}

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-23 14:15:53>
+;;; Last Modified <michael 2021-05-23 15:20:22>
 
 (in-package :virtualhelm)
 
@@ -77,16 +77,17 @@
          (setf (http-body response)
                (format nil "This link is invalid or has expired. Please re-register your e-mail address.")))
         (t
-         (let ((user (make-instance 'virtualhelm.user :email (email provisional)
-                                                      :boatname (boatname provisional)
-                                                      :pwhash (pwhash provisional)
-                                                      :status (status provisional)))
-               (activated
+         (sql:?delete 'virtualhelm.user_prov
+                      :where (sql:?= (sql:?upper 'email)
+                                     (string-upcase (email provisional))))
+         (add-user (email provisional)
+                   (pwhash provisional)
+                   (boatname provisional)
+                   (status provisional))
+         (let ((activated
                  (merge-pathnames (make-pathname :name "activated" :type "html")
                                   (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                                                     '("web"))))))
-           (sql:?delete 'virtualhelm.user_prov :where (sql:?= 'email (email provisional)))
-           (sql:?upsert user)
            (load-file activated response)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

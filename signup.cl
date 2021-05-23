@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-05-19 00:16:58>
+;;; Last Modified <michael 2021-05-23 15:13:57>
 
 
 (in-package :virtualhelm)
@@ -41,15 +41,15 @@ Best Regards
      (get-output-stream-string out))
     activation-link))
 
-(defun register-signup (email activation-secret boatname password)
+(defun register-signup (email activation-secret boatname pwhash)
   ;; Check if the boat name can be reserved.
   ;; If not, return NIL and a message describing the reason.
   ;; If yes, reserve boatname by creating an inactive entry in USER.
   ;; Return t.
-  (let ((user
-          (get-user-by-boatname boatname))
-        (provisional
-          (get-user-prov-by-boatname boatname)))
+  (let* ((user
+           (get-user-by-boatname boatname))
+         (provisional
+           (get-user-prov-by-boatname boatname)))
     (cond
       ((or (and user
                 (not (string-equal (email user) email)))
@@ -58,7 +58,7 @@ Best Regards
        (values nil :boatname-exists))
       (t
        ;; Boatname not taken or belongs to current email
-       (add-user-provisional email password boatname "active" activation-secret)
+       (add-user-provisional email pwhash boatname "active" activation-secret)
        (values t :ok)))))
 
 

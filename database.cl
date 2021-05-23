@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-17 00:10:28>
+;;; Last Modified <michael 2021-05-23 15:12:41>
 
 (in-package :virtualhelm)
 
@@ -91,23 +91,31 @@
   (get-user-by-column 'secret secret))
 
 (defun get-user-by-email (email)
-  (get-user-by-column 'email email))
+  (get-user-by-column 'email email :case-sensitive nil))
 
 (defun get-user-by-boatname (boatname)
-  (get-user-by-column 'boatname boatname))
+  (get-user-by-column 'boatname boatname :case-sensitive nil))
 
 (defun get-user-prov-by-boatname (boatname)
-  (get-user-prov-by-column 'boatname boatname))
+  (get-user-prov-by-column 'boatname boatname :case-sensitive nil))
 
 (defun get-user-prov-by-secret (secret)
   (get-user-prov-by-column 'secret secret))
 
-(defun get-user-by-column (column value)
-  (let ((result
-          (sql:tuples
-           (sql:?select '* :from 'virtualhelm.user
-                           :into 'virtualhelm.user
-                           :where (sql:?= column value)))))
+(defun get-user-by-column (column value &key (case-sensitive t))
+  (let* ((colval
+           (if case-sensitive
+               column
+               (sql:?upper column)))
+         (compval
+           (if case-sensitive
+               value 
+               (string-upcase value)))
+         (result
+           (sql:tuples
+            (sql:?select '* :from 'virtualhelm.user
+                            :into 'virtualhelm.user
+                            :where (sql:?= colval compval)))))
     (when (= (length result) 1)
       (aref result 0))))
 
@@ -120,18 +128,18 @@
     (when (= (length result) 1)
       (aref result 0))))
 
-(defun add-user-provisional (email password boatname status activation-secret)
+(defun add-user-provisional (email pwhash boatname status activation-secret)
   (sql:?upsert (make-instance 'virtualhelm.user_prov
                               :email email
-                              :pwhash (string-upcase password)
+                              :pwhash (string-upcase pwhash)
                               :boatname boatname
                               :status status
                               :secret activation-secret)))
 
-(defun add-user (email password boatname status)
+(defun add-user (email pwhash boatname status)
   (sql:?upsert (make-instance 'virtualhelm.user
                               :email email
-                              :pwhash (string-upcase password)
+                              :pwhash (string-upcase pwhash)
                               :boatname boatname
                               :status status)))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-23 15:20:22>
+;;; Last Modified <michael 2021-05-23 15:27:37>
 
 (in-package :virtualhelm)
 
@@ -693,16 +693,6 @@
             (read-from-string value)))
        (setf (routing-stepmax routing)
              (* duration-hrs 3600))))
-    ((string= name "mode")
-     (cond
-       ((string= value "maxorigin")
-        (setf (routing-mode routing) +max-origin+))
-       ((string= value "mindestination")
-        (setf (routing-mode routing) +min-destination+))
-       ((string= value "convhull")
-        (error "NYI"))
-       (t
-        (error "Invalid search mode"))))
     ((string= name "searchangle")
      (let ((fan (read-from-string value)))
        (setf (routing-fan routing) fan)))

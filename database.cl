@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-23 15:12:41>
+;;; Last Modified <michael 2021-05-23 15:32:25>
 
 (in-package :virtualhelm)
 
@@ -82,6 +82,11 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Functions
+(defun get-user-by-column (column value &key (case-sensitive t))
+  (get-by-column 'virtualhelm.user column value :case-sensitive case-sensitive))
+
+(defun get-user-prov-by-column (column value &key (case-sensitive t))
+  (get-by-column 'virtualhelm.user_prov column value :case-sensitive case-sensitive))
 
 (defun get-users ()
   (sql:tuples
@@ -102,7 +107,7 @@
 (defun get-user-prov-by-secret (secret)
   (get-user-prov-by-column 'secret secret))
 
-(defun get-user-by-column (column value &key (case-sensitive t))
+(defun get-by-column (table column value &key (case-sensitive t))
   (let* ((colval
            (if case-sensitive
                column
@@ -113,20 +118,12 @@
                (string-upcase value)))
          (result
            (sql:tuples
-            (sql:?select '* :from 'virtualhelm.user
-                            :into 'virtualhelm.user
+            (sql:?select '* :from table
+                            :into table
                             :where (sql:?= colval compval)))))
     (when (= (length result) 1)
       (aref result 0))))
 
-(defun get-user-prov-by-column (column value)
-  (let ((result
-          (sql:tuples
-           (sql:?select '* :from 'virtualhelm.user_prov
-                           :into 'virtualhelm.user_prov
-                           :where (sql:?= column value)))))
-    (when (= (length result) 1)
-      (aref result 0))))
 
 (defun add-user-provisional (email pwhash boatname status activation-secret)
   (sql:?upsert (make-instance 'virtualhelm.user_prov

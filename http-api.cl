@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-23 00:03:36>
+;;; Last Modified <michael 2021-05-23 14:15:53>
 
 (in-package :virtualhelm)
 
@@ -80,10 +80,14 @@
          (let ((user (make-instance 'virtualhelm.user :email (email provisional)
                                                       :boatname (boatname provisional)
                                                       :pwhash (pwhash provisional)
-                                                      :status (status provisional))))
+                                                      :status (status provisional)))
+               (activated
+                 (merge-pathnames (make-pathname :name "activated" :type "html")
+                                  (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                    '("web"))))))
            (sql:?delete 'virtualhelm.user_prov :where (sql:?= 'email (email provisional)))
            (sql:?upsert user)
-           (load-file "web/activated.html" response)))))))
+           (load-file activated response)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; User sign-up
@@ -602,11 +606,14 @@
     session))
 
 (defun load-file (path response)
+  ;; The FILE-HANDLER response handler does a lot more - 
+  ;; Think about redesigning this
   (with-open-file (f path :element-type '(unsigned-byte 8))
     (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
       (read-sequence buffer f)
       (setf (http-body response) buffer)))
-  (setf (http-header response :|Content-Type|) "text/html"))
+  (setf (http-header response :|Content-Type|)
+        (get-mime-for-extension (pathname-type path))))
 
 (defun get-routing-url (session race-id)
   (let ((routing (session-routing session race-id)))

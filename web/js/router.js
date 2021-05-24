@@ -946,13 +946,32 @@ import * as Util from './Util.js';
             onSelectIsochrone(iso);
         });
     }
+
+
+    function isochroneTime (isochrone) {
+        var millis = new Date(isochrone.time).getTime();
+        var date =  new Date(millis + isochrone.offset * 3600 * 1000);
+        return date;
+    }
     
-    function getTWAPath(event) {
+    function getIsochroneByTime (time) {
+        var refTime = new Date(time);
+        var isochrones = currentRouting.isochrones;
+        for (const iso of isochrones) {
+            var isoT = isochroneTime(iso);
+            if ( isoT <= refTime) {
+                return iso;
+            }
+        }
+        return null;
+    }
+    
+    function getTWAPath (event) {
         var latA, lngA, time ;
         if ( twaAnchor.lat === undefined || twaTime === undefined ) {
             latA = startMarker.getPosition().lat();
             lngA = startMarker.getPosition().lng();
-            time = $('#lb_index').text();
+            time = startMarker.get('time');
         } else {
             latA = twaAnchor.lat();
             lngA = twaAnchor.lng();
@@ -964,7 +983,12 @@ import * as Util from './Util.js';
         if (document.getElementById("cb_manualcycle").checked) {
             baseTime = getManualCycle();
         } else {
-            baseTime  = availableForecastCycle();
+            var isochrone = getIsochroneByTime(time);
+            if (isochrone) {
+                baseTime = isochrone.time;
+            } else {
+                baseTime = availableForecastCycle();
+            }
         }
         $.ajax({
             url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,

@@ -650,24 +650,28 @@ import * as Util from './Util.js';
         setRoutePoint('dest', destPos);
         
         googleMap.panTo(startMarker.getPosition());
-        
+
+        var gateCount = 1; 
         for (const gate of leg.gates) {
             var mark0 = new google.maps.Marker({
                 position: {"lat": gate[0].latitude,
                            "lng": gate[0].longitude},
                 map: googleMap,
-                icon: markPort,
-                title: gate[0].__type,
+                // icon: markPort,
+                label: `${ gateCount }`,
+                title: `Gate ${ gateCount }`,
                 draggable: false
             });
             var mark1 = new google.maps.Marker({
                 position: {"lat": gate[1].latitude,
                            "lng": gate[1].longitude},
                 map: googleMap,
-                icon: markPort,
-                title: gate[1].__type,
+                // icon: markPort,
+                label: `${ gateCount }`,
+                title: `Gate ${ gateCount }`,
                 draggable: false
             });
+            gateCount++;
         }
     }
 

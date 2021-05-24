@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-03 22:00:34>
+;;; Last Modified <michael 2021-05-23 23:46:07>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -24,7 +24,7 @@
   (minwind nil)                         ; m/s !!
   (start +LESSABLES+)                   ; set-paramater needs a valid initial values
   (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.
-  (fan 90)                              ; FIXME: Larger value yields narrower search, increases time. Looks like a bug.
+  (fan 90)                              ; FIXME: Larger value yields narrower search, increases time.
   (stepmax +12h+ :type fixnum)
   (nmea-connection))
 

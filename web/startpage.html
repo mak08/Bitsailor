@@ -19,7 +19,7 @@
 		<p>
 		  This is the BitSailor router start page. If you don't have a user yet, please <a href="signup.html">sign up</a>.
 		<p>
-		  Log in to the router page with you <b>boat name</b>.
+		  Log in to the router pages (see links in the table below) with you <b>boat name</b>.
 		<p>
 		  The router, and this site, are currently still under development. Please have a look at the FAQ and Known Issues before using the router.
 		<br>
@@ -34,28 +34,76 @@
 	  <div class="news">
 		<h4>News</h4>
 		<ul>
+		  <li><b>2021-05-22</b><br>
+			Added short (6 or 3hrs) routing using 2min steps
+		  </li>
 		  <li><b>2021-05-16</b><br>
 			Moved to bitsailor.net
+		  </li>
+		</ul>
+	  </div>
+
+	  <div class="instructions"><h3>Instructions</h3></div>
+	  <div class="instructions-content"  style="font-size:90%">
+		<h4>Basic usage</h4>
+	  	<ol>
+		  <li>
+			Drag&amp;drop the <img src="img/start_32x20.png">start and <img src="img/finish_32x20.png">finish flags or use the context menu to position them.
+		  </li>
+		  <li>
+			Select the maximum duration.
+		  </li>
+		  <li>
+			Tick the 'Start time' box to specify a start time, or leave it unchecked to use the current time.
+		  </li>
+		  <li>
+			Press 'Execute'.<br>
+			<p>
+			  Routing may take several minutes. <em>Please avoid frequent long routings.</em><br>
+			  Short routings (up to 4 days) only take a few seconds.
+			</p>
+		  </li>
+		</ol>
+		<h4>NMEA</h4>
+		<ol>
+		  <li>
+			Enter your NMEA port in the input field and press 'Reconnect'.
+		  </li>
+		  <li>
+			Press 'Update' to acquire your boat position from realsail.net.
+			<p>
+			  The start flag is moved to your boat position and the NMEA timestamp is entered as the start time.
+			</p>
+			<p>
+			  It may take up to a minute until a position is available.<br>
+			  If another client connects to the NMEA port, your connection may be terminated. 
+			</p>
+		  </li>
+		</ol>
+		<h4>TWA tool</h4>
+		<ul>
+		  <li>
+			<p>
+			  When routing is complete and the route is displayed, click on any waypoint to anchor the TWA tool on the waypoint.<br>
+			  Click on the map to change the TWA. The blue path represents a fixed heading.
+			</p>
+			<p style="font-size:80%">
+			  Please note, during wind updates the TWA tool may attempt to use a forecast that is not yet available.
+			  In this case, retry later or select the cycle manually using the 'Cycle' checkbox.
+			</p>
+		  </li>
+		</ul>
+		<h4>Waypoints and Isochrones</h4>
+		<ul>
+		  <li>
+			Clicking on a waypoint or an isochrone sets the wind interpolation to the corresponding time.
 		  </li>
 		</ul>
 		
 	  </div>
 
-	  <div class="faq"><h3>FAQ</h3></div>
-	  <div class="faq-content">
-	  	<ul>
-		  <li> UI wind differs from wind displayed in waypoint info.
-			<p>The router delays the switch to the latest GFS cycle to match the update policy of the game.<br>
-			  This is controlled by a backend variable *merge-start* (currently no customizable).<br>
-			  The UI alwys displays the selected cycle, or the latest cycle if none is selected.
-			</p>
-		  </li>
-		</ul>
-	  </div>
-
-	  
-	  <div class="issues"><h3>Known Issues</h3></div>
-	  <div class="issues-content">
+	  <div class="issues"><h3>Troubleshooting / Known Issues</h3></div>
+	  <div class="issues-content" style="font-size:90%;">
 	  	<ul>
 		  <li>Isochrones run past destination
 			<p>The route search terminates when a route point is generated that is closer to the destination than a given target distance.
@@ -64,17 +112,27 @@
 		  </li>
 
 		  <li>Route does not reach destination
-			<p>This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.</p>
-			<p>You can usually work around this by moving the target behind or sideways from your actual destination.</p> 
-			<p>Also see "Isochrones run past destination"</p>
+			<p>
+			  This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.<br>
+			  You can usually work around this by moving the target behind or sideways from your actual destination.<br>
+			  Also see "Isochrones run past destination"
+			</p>
 		  </li>
 		  
 		  <li> Routing fails with an error message similar to
 			<pre><code> error Unexpected HTTP status 404 Not Found for URL
 https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
-			<p>This is due to a bug in the forecast availability check. The router attempts to download the new forecast too early, when NOAA did not provide the file yet.</p>
-			<p>Occasionally, production of forecasts is delayed or broken at NOAA.</p>
-			<p>In both cases, retry later or force the old forecast using manual cycle selection.</p>
+			<p>
+			  This is due to a bug in the forecast availability check. The router attempts to download the new forecast too early, when NOAA did not provide the file yet.<br>
+			  Occasionally, production of forecasts is delayed or broken at NOAA.
+			</p>
+			<p>
+			  In both cases, retry later or force the old forecast using manual cycle selection.
+			</p>
+		  </li>
+		  <li> UI wind differs from wind displayed in waypoint info.
+			<p>The router delays the switch to the latest GFS cycle to match the update policy of the game.<br>
+			  The UI alwys displays the selected cycle, or the latest cycle if none is selected.
 		  </li>
 		</ul>
 	  </div>

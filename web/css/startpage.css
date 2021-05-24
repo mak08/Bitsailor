@@ -120,31 +120,44 @@ div {
 	background-color: #504040;
 }
 
-
-.faq {
+.instructions {
 	grid-column: 2 / 4;
 	grid-row: 8;
 	color: #ededeb;
 	background-color: #308040;
 }
 
-.faq-content {
+.instructions-content {
 	grid-column: 2 / 4;
 	grid-row: 9;
 	color: #ededeb;
 	background-color: #504040;
 }
 
-.issues {
+.faq {
 	grid-column: 2 / 4;
 	grid-row: 10;
 	color: #ededeb;
 	background-color: #308040;
 }
 
-.issues-content {
+.faq-content {
 	grid-column: 2 / 4;
 	grid-row: 11;
+	color: #ededeb;
+	background-color: #504040;
+}
+
+.issues {
+	grid-column: 2 / 4;
+	grid-row: 12;
+	color: #ededeb;
+	background-color: #308040;
+}
+
+.issues-content {
+	grid-column: 2 / 4;
+	grid-row: 13;
 	color: #ededeb;
 	background-color: #504040;
 }
@@ -154,7 +167,7 @@ div {
 	display :flex;
 	flex-direction: row;
 	grid-column: 2 / 4;
-	grid-row: 12;
+	grid-row: 14;
 	font-size: 90%;
 	justify-content: space-between;
 	background-color:grey;

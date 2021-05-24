@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-22 17:11:33>
+;;; Last Modified <michael 2021-05-24 01:35:25>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -370,18 +370,7 @@
                                       (new-pos (add-distance-estimate (routepoint-position routepoint)
                                                                       distance
                                                                       heading)))
-                                   (add-routepoint routepoint
-                                                   start-pos
-                                                   new-pos
-                                                   delta-angle
-                                                   left
-                                                   step-time
-                                                   heading
-                                                   speed
-                                                   sail
-                                                   reason
-                                                   wind-dir
-                                                   wind-speed))))))
+                                   (add-routepoint routepoint start-pos new-pos delta-angle left step-time heading speed sail reason wind-dir wind-speed))))))
                       (when is-stbd
                         (add-point heading-stbd twa))
                       (when is-port
@@ -441,8 +430,8 @@
        (push point current-path))
       (t
        (push (make-isochrone :time (isochrone-time isochrone)
-                              :offset (isochrone-offset isochrone)
-                              :path current-path)
+                             :offset (isochrone-offset isochrone)
+                             :path current-path)
              isochrones)
        (setf current-path (list point))))))
 

@@ -1,19 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-13 02:10:41>
+;;; Last Modified <michael 2021-05-24 01:39:37>
 
 (in-package :virtualhelm)
-
-(defstruct criterion distfn compfn)
-
-(defvar +max-origin+
-  (make-criterion :distfn #'routepoint-origin-distance
-                  :compfn #'>))
-
-(defvar +min-destination+
-  (make-criterion :distfn #'routepoint-destination-distance
-                  :compfn #'<))
 
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate (normalize-heading origin-angle) delta-angle))

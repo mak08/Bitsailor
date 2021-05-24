@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-16 16:14:20>
+;;; Last Modified <michael 2021-05-24 15:37:55>
 
 (in-package :virtualhelm)
 
@@ -36,6 +36,13 @@
         :port "8080"
         :max-handlers 10)
 
+(server :hostname "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
+        :protocol :http
+        :mt-method :ondemand
+        ;; :mt-method :pooled
+        :port "8088"
+        :max-handlers 10)
+          
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----
 ;;; Users
@@ -54,6 +61,10 @@
 (redirect
  :from (:regex ".*/")
  :to (:path "index.html"))
+
+(redirect
+ :from (:scheme "http" :port ("8088"))
+ :to (:scheme "https" :port "443"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -------------

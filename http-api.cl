@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-23 15:27:37>
+;;; Last Modified <michael 2021-05-27 22:57:28>
 
 (in-package :virtualhelm)
 
@@ -297,50 +297,49 @@
                      (local-time:parse-rfc3339-timestring |time|)
                      (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
           (log2:info "Requested time: ~a" requested-time)
-          (multiple-value-bind (date cycle)
-              (timestamp-to-timespec base-time)
-            (let* ((cycle-start-time (timespec-to-timestamp date cycle))
-                   (user-id (http-authenticated-user handler request))
-                   (session (find-or-create-session user-id request response))
-                   (ddx (read-from-string |ddx|))
-                   (ddy (read-from-string |ddy|))
-                   (north (read-from-string |north|))
-                   (south (read-from-string |south|))
-                   (east (read-from-string |east|))
-                   (west (read-from-string |west|)))
-              (log2:info "Using cycle: ~a/~a ~a" date cycle cycle-start-time)
-              (when (< west 0d0) (incf west 360d0))
-              (when (< east 0d0) (incf east 360d0))
-              (when (< east west) (incf east 360d0))
+          (let* ((cycle (make-cycle :timestamp base-time))
+                 (cycle-start-time base-time)
+                 (user-id (http-authenticated-user handler request))
+                 (session (find-or-create-session user-id request response))
+                 (ddx (read-from-string |ddx|))
+                 (ddy (read-from-string |ddy|))
+                 (north (read-from-string |north|))
+                 (south (read-from-string |south|))
+                 (east (read-from-string |east|))
+                 (west (read-from-string |west|)))
+            (log2:info "Using cycle: ~a" cycle)
+            (when (< west 0d0) (incf west 360d0))
+            (when (< east 0d0) (incf east 360d0))
+            (when (< east west) (incf east 360d0))
             
-              (assert (and (plusp ddx)
-                           (plusp ddy)
-                           (< south north)))
-              (let ((wind-data
-                      (loop
-                        :for lat :from north :downto south :by ddy
-                        :collect (loop
-                                   :for lon :from west :to east :by ddx
-                                   :collect (multiple-value-bind (dir speed)
-                                                (let ((nlon
-                                                        (if (> lon 0) (- lon 360) lon)))
-                                                  (cl-weather:vr-prediction lat nlon :date date :cycle cycle :timestamp requested-time))
-                                              (list (round-to-digits dir 2)
-                                                    (round-to-digits speed 2)))))))
-                (let ((encoding (http-header request :accept-encoding))
-                      (body
-                        (with-output-to-string (s)
-                          (json s
-                                (let ((time cycle-start-time))
-                                  (make-forecast-data
-                                   :basetime (format-datetime nil cycle-start-time)
-                                   :time (format-datetime nil requested-time)
-                                   :maxoffset 384 ;; (dataset-max-offset dataset)
-                                   :cycle (format-timestring nil
-                                                             time
-                                                             :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                                   :data wind-data))))))
-                  (values body))))))
+            (assert (and (plusp ddx)
+                         (plusp ddy)
+                         (< south north)))
+            (let ((wind-data
+                    (loop
+                      :for lat :from north :downto south :by ddy
+                      :collect (loop
+                                 :for lon :from west :to east :by ddx
+                                 :collect (multiple-value-bind (dir speed)
+                                              (let ((nlon
+                                                      (if (> lon 0) (- lon 360) lon)))
+                                                (cl-weather:vr-prediction lat nlon :cycle cycle :timestamp requested-time))
+                                            (list (round-to-digits dir 2)
+                                                  (round-to-digits speed 2)))))))
+              (let ((encoding (http-header request :accept-encoding))
+                    (body
+                      (with-output-to-string (s)
+                        (json s
+                              (let ((time cycle-start-time))
+                                (make-forecast-data
+                                 :basetime (format-datetime nil cycle-start-time)
+                                 :time (format-datetime nil requested-time)
+                                 :maxoffset 384 ;; (dataset-max-offset dataset)
+                                 :cycle (format-timestring nil
+                                                           time
+                                                           :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
+                                 :data wind-data))))))
+                (values body)))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
@@ -390,33 +389,32 @@
         (let ((*read-default-float-format* 'double-float))
           (let* ((forecast-time
                    (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
-                 (lat (read-from-string |lat|))
-                 (lng (read-from-string |lng|)))
-            (multiple-value-bind  (date1 cycle1)
-                (available-cycle forecast-time)
-              (multiple-value-bind (date0 cycle0)
-                  (previous-cycle date1 cycle1) 
-                (multiple-value-bind (dir1 speed1)
-                    (vr-prediction lat lng :timestamp forecast-time :date date1 :cycle cycle1)
-                  (multiple-value-bind (dir0 speed0)
-                      (vr-prediction lat lng :timestamp forecast-time :date date0 :cycle cycle0)
-                    (multiple-value-bind (dir speed)
-                        (interpolated-prediction lat lng (interpolation-parameters forecast-time))
-                      (values
-                       (with-output-to-string (s)
-                         (json s (make-forecast
-                                  :previous (make-windinfo :date date0
-                                                           :cycle cycle0
-                                                           :dir (round-to-digits dir0 2)
-                                                           :speed (round-to-digits (m/s-to-knots speed0) 2))
-                                  :current (make-windinfo :date date1
-                                                          :cycle cycle1
-                                                          :dir (round-to-digits dir1 2)
-                                                          :speed (round-to-digits (m/s-to-knots speed1) 2))
-                                  :interpolated (make-windinfo :date date1
-                                                               :cycle cycle1
-                                                               :dir (round-to-digits dir 2)
-                                                               :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))))
+                 (lat
+                   (read-from-string |lat|))
+                 (lng
+                   (read-from-string |lng|))
+                 (cycle1
+                   (available-cycle forecast-time))
+                 (cycle0
+                   (previous-cycle cycle1))) 
+            (multiple-value-bind (dir1 speed1)
+                (vr-prediction lat lng :timestamp forecast-time :cycle cycle1)
+              (multiple-value-bind (dir0 speed0)
+                  (vr-prediction lat lng :timestamp forecast-time :cycle cycle0)
+                (multiple-value-bind (dir speed)
+                    (interpolated-prediction lat lng (interpolation-parameters forecast-time))
+                  (values
+                   (with-output-to-string (s)
+                     (json s (make-forecast
+                              :previous (make-windinfo :cycle cycle0
+                                                       :dir (round-to-digits dir0 2)
+                                                       :speed (round-to-digits (m/s-to-knots speed0) 2))
+                              :current (make-windinfo :cycle cycle1
+                                                      :dir (round-to-digits dir1 2)
+                                                      :speed (round-to-digits (m/s-to-knots speed1) 2))
+                              :interpolated (make-windinfo :cycle cycle1
+                                                           :dir (round-to-digits dir 2)
+                                                           :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
@@ -433,7 +431,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Probe Wind
 
-(defun |probeWind| (handler request response &key |time| |lat| |lng| |date| |cycle|)
+(defun |probeWind| (handler request response &key |time| |lat| |lng| |cycle|)
   (sqlite-client:with-current-connection (c *db*)
     (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
     (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
@@ -449,29 +447,25 @@
                  (forecast-time
                    (parse-rfc3339-timestring |time|))
                  (lat (read-from-string |lat|))
-                 (lng (read-from-string |lng|)))
-            (multiple-value-bind  (default-date default-cycle)
-                (available-cycle (now))
-              (multiple-value-bind (date cycle)
-                  (values (or |date| default-date)
-                          (or (and |cycle| (read-from-string |cycle|))
-                              default-cycle))
-                (multiple-value-bind (dir speed)
-                    (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :date date :cycle cycle)
-                                                                   :current (prediction-parameters forecast-time :date date :cycle cycle)))
-                  (values
-                   (with-output-to-string (s)
-                     (json s
-                           (list (round-to-digits dir 2)
-                                 (round-to-digits (m/s-to-knots speed) 2))))))))))
+                 (lng (read-from-string |lng|))
+                 (default-cycle
+                   (available-cycle (now)))
+                 (cycle
+                   (or (and |cycle|
+                            (make-cycle (parse-timestring |cycle|)))
+                       default-cycle)))
+            (multiple-value-bind (dir speed)
+                (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :cycle cycle)
+                                                               :current (prediction-parameters forecast-time :cycle cycle)))
+              (values
+               (with-output-to-string (s)
+                 (json s
+                       (list (round-to-digits dir 2)
+                             (round-to-digits (m/s-to-knots speed) 2))))))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e)))
-      #+ccl(ccl::invalid-memory-access (e)
-             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-             (setf (status-code response) 500)
-             (setf (status-text response) (format nil "~a" e))))))
+        (setf (status-text response) (format nil "~a" e))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Batch routing
@@ -681,7 +675,7 @@
        (t
         (assert (eql (length value)
                      (length "2020-10-24T00:00:00Z")))
-        (setf (routing-cycle routing) value))))
+        (setf (routing-cycle routing) (make-cycle :timestamp (parse-timestring value))))))
     ((string= name "polars")
      (setf (routing-polars routing)  value))
     ((string= name "options")

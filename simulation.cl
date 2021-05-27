@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-27 22:10:36>
+;;; Last Modified <michael 2021-05-28 01:18:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -541,6 +541,7 @@
          (hull (routing-hull routing))
          (foils  (routing-foils routing))
          (time (or time (now)))
+         (cycle (make-cycle :timestamp (parse-timestring base-time)))
          (time-increment +10min+)
          (first-increment
           (let* ((utime (timestamp-to-unix time)))
@@ -553,8 +554,7 @@
          (curpos-hdg (copy-latlng startpos))
          (wind-dir (interpolated-prediction (latlng-lat startpos)
                                             (latlng-lng startpos)
-                                            (interpolation-parameters time
-                                                                      base-time)))
+                                            (interpolation-parameters time cycle)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
          (twa-path nil)
          (hdg-path nil))
@@ -570,7 +570,7 @@
       ;; Create new timestamp, Increment time
       ;; Determine next position - TWA
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time base-time))
+          (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
             (get-penalized-avg-speed nil nil wind-speed polars twa penalty hull foils)
@@ -580,7 +580,7 @@
                   (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
       ;; Determine next position - HDG
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-hdg) (latlng-lng curpos-hdg) (interpolation-parameters time base-time))
+          (interpolated-prediction (latlng-lat curpos-hdg) (latlng-lng curpos-hdg) (interpolation-parameters time cycle))
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)

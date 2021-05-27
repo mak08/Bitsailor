@@ -24,7 +24,7 @@ import * as Util from './Util.js';
     
     var startMarker = {};
     var destinationMarker = {};
-    var twaAnchor = {};
+    var twaAnchor = undefined;
     
     var courseGCLine = null;
     var routeTracks = [];
@@ -899,8 +899,8 @@ import * as Util from './Util.js';
             ortho.setMap(null);
         }
         var start;
-        if (twaAnchor.lat) {
-            start = twaAnchor;
+        if (twaAnchor) {
+            start = twaAnchor.getPosition();
         } else {
             start = startMarker.position;
         }
@@ -983,7 +983,7 @@ import * as Util from './Util.js';
     
     function getTWAPath (event) {
         var latA, lngA, time ;
-        if ( twaAnchor.lat === undefined) {
+        if ( twaAnchor === undefined) {
             latA = startMarker.getPosition().lat();
             lngA = startMarker.getPosition().lng();
             time = startMarker.get('time');

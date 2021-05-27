@@ -19,11 +19,11 @@
 
   <body>
 
-    <div class="grid-container">
+    <div class="grid-container" id="container">
 
       <div class="header">
 		<div id="appname">
-			 BitSailor Router
+			 <a href="start" style="color:white">BitSailor</a> Router
 			 <span style="font-size:70%"><em>/ realsail edition</em><span>
 		</div>	 
 	  </div>
@@ -76,7 +76,7 @@
         <canvas id="wind-canvas"/>
       </div>  
 
-      <div class="controls">
+      <div class="controls" id="controls">
 
         <div class="settings-label">
           <label></label>
@@ -151,6 +151,16 @@
         </div>
         <div class="displaytracks-checkbox">
           <input id="cb_displaytracks" name="displaytracks" type="checkbox"/>
+        </div>
+
+        <div class="cursor-label">
+          <label>Map cursor</label>
+        </div>
+        <div class="cursor-select" id="map_cursor">
+		  <input type="radio" id="rb_crosshair" name="cursor" value="crosshair" checked="true">
+		  <label for="corsshair">crosshair</label>
+		  <input type="radio" id="rb_default" name="cursor" value="default">
+		  <label for="female">default</label>
         </div>
 
         <div class="execute-button">

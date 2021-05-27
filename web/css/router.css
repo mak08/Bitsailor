@@ -268,6 +268,16 @@ input[type=checkbox] {
 	grid-column: 2;
 }
 
+/* Display tracks */
+.cursor-label {
+	grid-row: 9;
+	grid-column: 1;
+}
+.cursor-select {
+	grid-row: 9;
+	grid-column: 2;
+}
+
 /* Execute */
 .execute-button {
 	grid-row: 10;

@@ -93,6 +93,8 @@ import * as Util from './Util.js';
         $("#sel_duration").change(onSetParameter);
         $("#cb_displaywind").change(onDisplaywind);
         $("#cb_displaytracks").change(onDisplayTracks);
+        $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
+        $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
         
         // Tracks & Isochrones display is handled by the client directly
         $("#cb_tracks").change(onSetClientParameter);
@@ -179,7 +181,7 @@ import * as Util from './Util.js';
         var fc = truncate(availDate, 6 * 3600 * 1000);
         return new Date(fc).toISOString();
     }
-        
+    
     // Event handler for context menu mapMenu 
     function onContextMenu (point) {
         var mapMenu=$("#mapMenu")[0];
@@ -209,6 +211,10 @@ import * as Util from './Util.js';
         displayRouting(currentRouting);
     }
 
+    function onCursorSelect (event, type) {
+        googleMap.setOptions({draggableCursor:type});
+    }
+        
     function onAdjustIndex (event) {
         var source = event.target.id;
         if (source == "bt_dec6")

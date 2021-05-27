@@ -25,7 +25,6 @@ import * as Util from './Util.js';
     var startMarker = {};
     var destinationMarker = {};
     var twaAnchor = {};
-    var twaTime = {};
     
     var courseGCLine = null;
     var routeTracks = [];
@@ -171,7 +170,7 @@ import * as Util from './Util.js';
             redrawWindByOffset(forecastData.basetime, ir_index.value);
         } else {
             var baseTime = availableForecastCycle();
-            redrawWindByTime(baseTime, ir_index.value);
+            redrawWindByOffset(baseTime, ir_index.value);
         }
     }
 
@@ -360,9 +359,19 @@ import * as Util from './Util.js';
     }
     
     function onMarkerClicked (marker) {
-        twaAnchor = marker.getPosition();
-        twaTime = marker.get('time');
-        redrawWindByTime(twaTime);
+        twaAnchor = marker;
+        
+        var time = marker.get('time');
+        var isochrone = getIsochroneByTime(time);
+        var baseTime;
+
+        if (isochrone) {
+            baseTime = isochrone.time;
+        } else {
+            baseTime = availableForecastCycle();
+        }
+        
+        redrawWindByTime(time, baseTime);
     }
 
 
@@ -968,14 +977,14 @@ import * as Util from './Util.js';
     
     function getTWAPath (event) {
         var latA, lngA, time ;
-        if ( twaAnchor.lat === undefined || twaTime === undefined ) {
+        if ( twaAnchor.lat === undefined) {
             latA = startMarker.getPosition().lat();
             lngA = startMarker.getPosition().lng();
             time = startMarker.get('time');
         } else {
-            latA = twaAnchor.lat();
-            lngA = twaAnchor.lng();
-            time = twaTime;
+            latA = twaAnchor.getPosition().lat();
+            lngA = twaAnchor.getPosition().lng();
+            time = twaAnchor.get('time');
         }
         var lat = event.latLng.lat();
         var lng = event.latLng.lng();
@@ -1003,13 +1012,7 @@ import * as Util from './Util.js';
         });
     }
     
-    function redrawWindByTime (time) {
-        var baseTime;
-        if (document.getElementById("cb_manualcycle").checked) {
-            baseTime = getManualCycle();
-        } else {
-            baseTime  = availableForecastCycle();
-        }
+    function redrawWindByTime (time, baseTime) {
         getWind("basetime=" + baseTime + "&" + "time=" + time);
     }
     

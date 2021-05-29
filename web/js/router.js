@@ -34,7 +34,7 @@ import * as Util from './Util.js';
     var polars = null;
     var forecastData = {};
     var forecastCycle;
-    var windData = [];
+    var windData = null;
     var currentRouting = {};
     var twaPath = [];
     var hdgPath = [];
@@ -177,7 +177,8 @@ import * as Util from './Util.js';
     }
 
     function availableForecastCycle (d=new Date()) {
-        var availDate = d - 210 * 60 * 1000;
+        // Display cycle only when it's (supposed to be) fully available
+        var availDate = d - 300 * 60 * 1000;
         var fc = truncate(availDate, 6 * 3600 * 1000);
         return new Date(fc).toISOString();
     }
@@ -214,7 +215,7 @@ import * as Util from './Util.js';
     function onCursorSelect (event, type) {
         googleMap.setOptions({draggableCursor:type});
     }
-        
+    
     function onAdjustIndex (event) {
         var source = event.target.id;
         if (source == "bt_dec6")
@@ -541,7 +542,7 @@ import * as Util from './Util.js';
         bestTrack.setPath(bestPath);
         bestTrack.setMap(googleMap);
         routeTracks[routeTracks.length] = bestTrack;
-         
+        
         for ( var i = 0; i < best.length; i++ ) {
             var trackMarker = new google.maps.Marker({
                 position: best[i].position,
@@ -982,40 +983,33 @@ import * as Util from './Util.js';
     }
     
     function getTWAPath (event) {
-        var latA, lngA, time ;
-        if ( twaAnchor === undefined) {
-            latA = startMarker.getPosition().lat();
-            lngA = startMarker.getPosition().lng();
-            time = startMarker.get('time');
-        } else {
-            latA = twaAnchor.getPosition().lat();
-            lngA = twaAnchor.getPosition().lng();
-            time = twaAnchor.get('time');
-        }
-        var lat = event.latLng.lat();
-        var lng = event.latLng.lng();
-        var baseTime;
-        if (document.getElementById("cb_manualcycle").checked) {
-            baseTime = getManualCycle();
-        } else {
+        if ( twaAnchor ) {
+            var latA = twaAnchor.getPosition().lat();
+            var lngA = twaAnchor.getPosition().lng();
+            var time = twaAnchor.get('time');
+            var lat = event.latLng.lat();
+            var lng = event.latLng.lng();
             var isochrone = getIsochroneByTime(time);
+            var baseTime;
             if (isochrone) {
                 baseTime = isochrone.time;
             } else {
                 baseTime = availableForecastCycle();
             }
+            $.ajax({
+                url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+                dataType: 'json'
+            }).done( function(data) {
+                drawTWAPath(data.twapath);
+                drawHDGPath(data.hdgpath);
+                $("#lb_twa").text(data.twa);
+                $("#lb_twa_heading").text(data.heading);
+            }).fail( function (jqXHR, textStatus, errorThrown) {
+                alert(textStatus + ' ' + errorThrown);
+            });
+        } else {
+            console.log('No TWA anchor');
         }
-        $.ajax({
-            url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
-            dataType: 'json'
-        }).done( function(data) {
-            drawTWAPath(data.twapath);
-            drawHDGPath(data.hdgpath);
-            $("#lb_twa").text(data.twa);
-            $("#lb_twa_heading").text(data.heading);
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
     }
     
     function redrawWindByTime (time, baseTime) {
@@ -1107,54 +1101,56 @@ import * as Util from './Util.js';
     }
 
     function updateWindInfo (event) {
-        
-        var zoom = googleMap.getZoom();
-        
-        $("#lb_position").text(formatLatLngPosition(event.latLng));
-        
-        var bounds = getMapBounds();
-
-        var curLat = event.latLng.lat();
-        var curLng = event.latLng.lng();
-
-        var destLat = destinationMarker.getPosition().lat();
-        var destLng = destinationMarker.getPosition().lng();
-
-        var dtf = Util.gcDistance({"lat": curLat, "lon": curLng},
-                                  {"lat": destLat, "lon": destLng});
-
-        var lbDTF = document.getElementById("lb_dtf");
-        lbDTF.innerText = dtf.toFixed(2);
-
-        var startLat = startMarker.getPosition().lat();
-        var startLng = startMarker.getPosition().lng();
-
-        var dfs = Util.gcDistance({"lat": curLat, "lon": curLng},
-                                  {"lat": startLat, "lon": startLng});
-
-        var lbDFS = document.getElementById("lb_dfs");
-        lbDFS.innerText = dfs.toFixed(2);
-        
+        if (windData) {
+            var zoom = googleMap.getZoom();
             
-        var iLat = Math.round((curLat - bounds.north) / (bounds.south - bounds.north) * ySteps);
-        var iLng = Math.round(Util.arcLength(bounds.west, curLng) / Util.arcLength(bounds.west, bounds.east) * xSteps);
+            $("#lb_position").text(formatLatLngPosition(event.latLng));
+            
+            var bounds = getMapBounds();
 
-        var wind = windData[iLat][iLng];
-        if (wind) {
-            var windDir = wind[0].toFixed(0);
-            var windSpeed = Util.ms2knots(windData[iLat][iLng][1]).toFixed(1);
-            $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
+            var curLat = event.latLng.lat();
+            var curLng = event.latLng.lng();
 
-            var lbVMGUp = document.getElementById("lb_vmg_up");
-            var lbVMGDown = document.getElementById("lb_vmg_down");
-            var vmg = getVMG(windSpeed);
+            var destLat = destinationMarker.getPosition().lat();
+            var destLng = destinationMarker.getPosition().lng();
 
-            lbVMGUp.innerHTML = vmg.up;
-            lbVMGDown.innerHTML = vmg.down;
+            var dtf = Util.gcDistance({"lat": curLat, "lon": curLng},
+                                      {"lat": destLat, "lon": destLng});
+
+            var lbDTF = document.getElementById("lb_dtf");
+            lbDTF.innerText = dtf.toFixed(2);
+
+            var startLat = startMarker.getPosition().lat();
+            var startLng = startMarker.getPosition().lng();
+
+            var dfs = Util.gcDistance({"lat": curLat, "lon": curLng},
+                                      {"lat": startLat, "lon": startLng});
+
+            var lbDFS = document.getElementById("lb_dfs");
+            lbDFS.innerText = dfs.toFixed(2);
             
             
+            var iLat = Math.round((curLat - bounds.north) / (bounds.south - bounds.north) * ySteps);
+            var iLng = Math.round(Util.arcLength(bounds.west, curLng) / Util.arcLength(bounds.west, bounds.east) * xSteps);
+
+            var wind = windData[iLat][iLng];
+            if (wind) {
+                var windDir = wind[0].toFixed(0);
+                var windSpeed = Util.ms2knots(windData[iLat][iLng][1]).toFixed(1);
+                $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
+
+                var lbVMGUp = document.getElementById("lb_vmg_up");
+                var lbVMGDown = document.getElementById("lb_vmg_down");
+                var vmg = getVMG(windSpeed);
+
+                lbVMGUp.innerHTML = vmg.up;
+                lbVMGDown.innerHTML = vmg.down;
+                
+            } else {
+                console.log(`No wind data at ${iLat}, ${iLng}`);
+            }
         } else {
-            console.log(`No wind data at ${iLat}, ${iLng}`);
+            console.log(`No wind data loaded`);
         }
 
     }

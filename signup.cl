@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-05-23 15:13:57>
+;;; Last Modified <michael 2021-05-29 13:43:19>
 
 
 (in-package :virtualhelm)
@@ -18,6 +18,10 @@ If this wasn't you, please ignore this email and your address will be removed fr
 To activate this account, please click the following link within the next 24 hours:
 
 https://~a/activate-account/~a
+
+For questions,tips and suggestions, please join us on Discord:
+https://discord.gg/ysnbv4Ke
+
 
 Best Regards
 ~a

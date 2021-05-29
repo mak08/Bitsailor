@@ -56,9 +56,9 @@ import * as Util from './Util.js';
         if ( !validateEmail(email) ) {
             displayDialog("Invalid email address. Not submitted.", cbErrorConfirm);
         } else if ( pw1 != pw2 ) {
-            displayDailog("Passwords don't match. Not submitted.", cbErrorConfirm);
+            displayDialog("Passwords don't match. Not submitted.", cbErrorConfirm);
         } else if ( !pw1 || pw1.length < 6 ) {
-            displayDailog("Short password. Please use at least 6 characters.", cbErrorConfirm);
+            displayDialog("Short password. Please use at least 6 characters.", cbErrorConfirm);
         } else if ( boat.length < 3 ) {
             displayDialog("Please make the boat name at least 3 characters long.", cbErrorConfirm);
         } else {

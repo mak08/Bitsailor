@@ -118,8 +118,22 @@
 			  Also see "Isochrones run past destination"
 			</p>
 		  </li>
-		  
+
 		  <li> Routing fails with an error message similar to
+			<pre><code>error The value NIL is not of type VIRTUALHELM::POLARS</code></pre>
+			<p>
+			  The router stores some of your race-related settings when you load a race, among the the polars used for this race.
+			  If the server crashed and restarted while, the settings are lost.
+			</p>
+			<p>
+			  Reloading the page should get rid of this error. 
+			</p>
+		  </li>
+
+		  <li> Routing fails with an error message similar to
+			<pre><code> error File /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
+			<p>
+			  or
 			<pre><code> error Unexpected HTTP status 404 Not Found for URL
 https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
 			<p>

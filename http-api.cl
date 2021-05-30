@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-27 22:57:28>
+;;; Last Modified <michael 2021-05-30 17:16:59>
 
 (in-package :virtualhelm)
 
@@ -172,6 +172,35 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
+
+(defun |getRouteRS| (handler request response &key
+                                                (|polarsID| "aA32bToWbF")
+                                                |latStart|
+                                                |lonStart|
+                                                |latDest|
+                                                |lonDest|)
+  (sqlite-client:with-current-connection (c *db*)
+    (handler-case
+        (let* ((*read-default-float-format* 'double-float)
+               (lat-start (read-from-string |latStart|))
+               (lon-start (read-from-string |lonStart|))
+               (lat-dest (read-from-string  |latDest|))
+               (lon-dest (read-from-string |lonDest|))
+               (user-id
+                 (http-authenticated-user handler request))
+               (routing
+                 (make-routing :polars |polarsID|
+                               :start (make-latlng :lat lat-start :lng lon-start)
+                               :dest  (make-latlng :lat lat-dest :lng lon-dest)))
+               (routeinfo
+                 (get-route routing)))
+          (values
+           (with-output-to-string (s)
+             (json s routeinfo))))
+      (error (e)
+        (log2:error "~a" e)
+        (setf (status-code response) 500)
+        (setf (status-text response) (format nil "~a" e))))))
 
 (defun |getRoute| (handler request response)
   (sqlite-client:with-current-connection (c *db*)

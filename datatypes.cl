@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-23 23:46:07>
+;;; Last Modified <michael 2021-05-30 12:32:02>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -91,7 +91,7 @@
   predecessor position time heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance)
 
 (defstruct trackpoint
-  time cycle position heading dtf speed sail penalty twd tws twa)
+  time position heading dtf speed sail penalty twd tws twa)
 
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)

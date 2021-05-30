@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-24 15:37:55>
+;;; Last Modified <michael 2021-05-30 17:19:29>
 
 (in-package :virtualhelm)
 
@@ -95,6 +95,7 @@
 (register-function "vh.getBoatPosition" :authorizer #'vh-function-authorizer)
 (register-function "vh.setRoute" :authorizer #'vh-function-authorizer)
 (register-function "vh.getRoute" :authorizer #'vh-function-authorizer)
+(register-function "vh.getRouteRS" :authorizer #'vh-function-authorizer)
 (register-function "vh.checkWindow" :authorizer #'vh-function-authorizer)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

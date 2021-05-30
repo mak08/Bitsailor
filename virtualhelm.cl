@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-21 18:11:14>
+;;; Last Modified <michael 2021-05-30 11:09:11>
 
 (in-package :virtualhelm)
 
@@ -30,7 +30,6 @@
       (t
        (log2:warning "~a does not exist" rcfile)))
 
-    
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
     (ensure-map)
@@ -38,10 +37,15 @@
     
     (load-race-definitions-rs)
     (load-all-polars-rs)
-    (log2:info "Loading server configuration ~a" *server-config*)
-    (polarcl:load-configuration *server-config*)
+
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
-    (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")))
+    (log2:info "Starting weather updates")
+    (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")
+
+    ;; Start web server
+    (log2:info "Starting web server ~a" *server-config*)
+    (polarcl:load-configuration *server-config*)))
+
 
 (defvar *races-ht* (make-hash-table :test #'equalp))
 (defvar *races-dir*

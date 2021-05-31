@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-31 20:43:51>
+;;; Last Modified <michael 2021-05-31 21:51:24>
 
 
 (in-package :virtualhelm)
@@ -125,7 +125,7 @@
       result)
       (cond
         ((eql (aref s k) #\%)
-         (vector-push-extend (code-char (read-from-string (subseq s (1+ k) (+ k 3)))) result)
+         (vector-push-extend (code-char (read-arg (subseq s (1+ k) (+ k 3)))) result)
          (incf k 3))
         (t
          (vector-push-extend (aref s k) result)
@@ -140,8 +140,8 @@
                (session (find-or-create-session user-id request response))
                (race-id (get-routing-request-race-id request))
                (routing (session-routing session race-id))
-               (lat (coerce (read-from-string |lat|) 'double-float))
-               (lng (coerce (read-from-string |lng|) 'double-float))
+               (lat (coerce (read-arg |lat|) 'double-float))
+               (lng (coerce (read-arg |lng|) 'double-float))
                (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
           (log2:info "~a: Position=~a" |pointType| position)
           (log2:trace "Session: ~a, Request: ~a" session request)
@@ -179,18 +179,20 @@
                                                 |latStart|
                                                 |lonStart|
                                                 |latDest|
-                                                |lonDest|)
+                                                |lonDest|
+                                                (|duration| "86400"))
   (sqlite-client:with-current-connection (c *db*)
     (handler-case
         (let* ((*read-default-float-format* 'double-float)
-               (lat-start (coerce (read-from-string |latStart|) 'double-float))
-               (lon-start (coerce (read-from-string |lonStart|) 'double-float))
-               (lat-dest (coerce (read-from-string  |latDest|) 'double-float))
-               (lon-dest (coerce (read-from-string |lonDest|) 'double-float))
-               (user-id
-                 (http-authenticated-user handler request))
+               (lat-start (coerce (read-arg |latStart|) 'double-float))
+               (lon-start (coerce (read-arg |lonStart|) 'double-float))
+               (lat-dest (coerce (read-arg  |latDest|) 'double-float))
+               (lon-dest (coerce (read-arg |lonDest|) 'double-float))
+               (duration (min (* 48 60 60)  ;; 2d
+                              (read-arg |duration|)))
                (routing
                  (make-routing :polars |polarsID|
+                               :stepmax duration
                                :start (make-latlng :lat lat-start :lng lon-start)
                                :dest  (make-latlng :lat lat-dest :lng lon-dest)))
                (routeinfo
@@ -325,18 +327,18 @@
                (requested-time
                  (if |time|
                      (local-time:parse-rfc3339-timestring |time|)
-                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-from-string |offset|))))))
+                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|))))))
           (log2:info "Requested time: ~a" requested-time)
           (let* ((cycle (make-cycle :timestamp base-time))
                  (cycle-start-time base-time)
                  (user-id (http-authenticated-user handler request))
                  (session (find-or-create-session user-id request response))
-                 (ddx (read-from-string |ddx|))
-                 (ddy (read-from-string |ddy|))
-                 (north (read-from-string |north|))
-                 (south (read-from-string |south|))
-                 (east (read-from-string |east|))
-                 (west (read-from-string |west|)))
+                 (ddx (read-arg |ddx|))
+                 (ddy (read-arg |ddy|))
+                 (north (read-arg |north|))
+                 (south (read-arg |south|))
+                 (east (read-arg |east|))
+                 (west (read-arg |west|)))
             (log2:info "Using cycle: ~a" cycle)
             (when (< west 0d0) (incf west 360d0))
             (when (< east 0d0) (incf east 360d0))
@@ -390,10 +392,10 @@
                (routing (session-routing session race-id))
                (base-time |basetime|)
                (time (parse-datetime |time|))
-               (lat-a (read-from-string |latA|))
-               (lng-a (read-from-string |lngA|))
-               (lat (read-from-string |lat|))
-               (lng (read-from-string |lng|)))
+               (lat-a (read-arg |latA|))
+               (lng-a (read-arg |lngA|))
+               (lat (read-arg |lat|))
+               (lng (read-arg |lng|)))
           (values
            (with-output-to-string (s)
              (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
@@ -420,9 +422,9 @@
           (let* ((forecast-time
                    (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
                  (lat
-                   (read-from-string |lat|))
+                   (read-arg |lat|))
                  (lng
-                   (read-from-string |lng|))
+                   (read-arg |lng|))
                  (cycle1
                    (available-cycle forecast-time))
                  (cycle0
@@ -476,8 +478,8 @@
                    (session-routing session race-id))
                  (forecast-time
                    (parse-rfc3339-timestring |time|))
-                 (lat (read-from-string |lat|))
-                 (lng (read-from-string |lng|))
+                 (lat (read-arg |lat|))
+                 (lng (read-arg |lng|))
                  (default-cycle
                    (available-cycle (now)))
                  (cycle
@@ -666,8 +668,8 @@
              (unless startlon
                (error "Missing startlon"))
              (push (list "start"
-                         (make-latlng :lat (read-from-string value)
-                                      :lng (read-from-string startlon)))
+                         (make-latlng :lat (read-arg value)
+                                      :lng (read-arg startlon)))
                    result-pairs)))
           ((string= name "startlon")
            )
@@ -702,11 +704,11 @@
      (setf (routing-minwind routing) (string= value "true")))
     ((string= name "duration")
      (let ((duration-hrs
-            (read-from-string value)))
+            (read-arg value)))
        (setf (routing-stepmax routing)
              (* duration-hrs 3600))))
     ((string= name "searchangle")
-     (let ((fan (read-from-string value)))
+     (let ((fan (read-arg value)))
        (setf (routing-fan routing) fan)))
     ((string= name "start")
      (setf (routing-start routing)

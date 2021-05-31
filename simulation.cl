@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-30 17:33:50>
+;;; Last Modified <michael 2021-05-31 20:51:34>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -34,6 +34,7 @@
 (defvar *isochrones* nil)
 (defvar *best-route*)
 (defvar *manoeuvering-penalty* nil)
+(defvar *tracks* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
@@ -135,7 +136,8 @@
                             :stats (get-statistics best-route)
                             :polars (cpolars-label polars)
                             :maxspeed (cpolars-maxspeed polars)
-                            :tracks (extract-tracks start-pos (course-angle start-pos destination) isochrone)
+                            :tracks (when *tracks*
+                                      (extract-tracks start-pos (course-angle start-pos destination) isochrone))
                             :isochrones (prepare-routepoints isochrones))))
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+
+  <head>
+    <meta charset="utf-8">
+    <title>Sign up - BitSailor</title>
+    <meta name="description" content="Web UI">
+    <meta name="author" content="Michael Kappert">
+    <link rel="stylesheet" href="css/routing.css">
+    <script src="js/colors.js"></script>
+    <script type="module" src="js/routing.js"></script>
+  </head>
+
+  <body>
+
+	<div>
+
+	  <form>
+		
+		<div class="grid-container" id="div_routing">
+
+		  <div class="routing-label"> 
+			<label> Please fill in the fields below and press &lt;Submit&gt;. </label>
+		  </div>
+		  
+		  <div class="startlat-label">
+			<label for="startlat">Start lat:</label>
+		  </div>
+		  <div class="startlat-input">
+			<input id="startlat">
+		  </div>
+		  <div class="startlon-label">
+			<label for="startlon">Start lon:</label>
+		  </div>
+		  <div class="startlon-input">
+			<input id="startlon">
+		  </div>
+
+		  <div class="destlat-label">
+			<label for="destlat">Dest lat:</label>
+		  </div>
+		  <div class="destlat-input">
+			<input id="destlat">		  
+		  </div>
+		  
+		  <div class="destlon-label">
+			<label for="destlon">Dest lon:</label>
+		  </div>
+		  <div class="destlon-input">
+			<input id="destlon">
+		  </div>
+
+		  <div class="bt-submit">
+			<button type="button" id="bt_submit" >Submit</button>
+		  </div>
+
+		</div>
+
+	  </form>
+
+	  <div class="modal" id="md_dialog">
+		<!-- Modal content -->
+		<div class="modal-content">
+		  <label id="lb_dialog"></label><br>
+		  <button type="button" id="bt_dialog_confirm" >OK</button>
+		</div>
+	  </div>
+	  
+	</div>
+
+  </body>
+
+</html>

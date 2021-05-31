@@ -1,7 +1,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-31 01:31:57>
+;;; Last Modified <michael 2021-05-31 20:43:51>
+
 
 (in-package :virtualhelm)
 
@@ -25,7 +26,7 @@
           (log2:info "race-id: ~a" race-id)
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
-                (get-routing-url session race-id))
+                (path request))
           (load-file path response))
       (error (e)
         (log2:error "~a" e)
@@ -60,7 +61,7 @@
           (log2:info "race-id: ~a" race-id)
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
-                (get-routing-url session race-id))
+                (path request))
           (load-file path response))
       (error (e)
         (log2:error "~a" e)
@@ -167,7 +168,7 @@
            (routing (session-routing session race-id)))
       (set-routing-parameter session routing |name| |value|) 
       (setf (http-header response :|Content-Location|)
-            (get-routing-url session race-id))
+            (path request))
       (values "true"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -638,18 +639,6 @@
       (setf (http-body response) buffer)))
   (setf (http-header response :|Content-Type|)
         (get-mime-for-extension (pathname-type path))))
-
-(defun get-routing-url (session race-id)
-  (let ((routing (session-routing session race-id)))
-    (format nil "/vh?~@{~a=~a~^&~}"
-            "app" "main" 
-            "race" race-id
-            "forecastbundle" (routing-dataset routing)
-            "starttime" (routing-starttime routing)
-            "polars" (routing-polars routing)
-            "options" (format nil "~{~a~^,~}" (routing-options routing))
-            "minwind" (if (routing-minwind routing) "true" "false")
-            "duration" (/ (routing-stepmax routing) 3600))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races

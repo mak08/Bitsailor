@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-30 17:16:59>
+;;; Last Modified <michael 2021-05-31 01:31:57>
 
 (in-package :virtualhelm)
 
@@ -182,10 +182,10 @@
   (sqlite-client:with-current-connection (c *db*)
     (handler-case
         (let* ((*read-default-float-format* 'double-float)
-               (lat-start (read-from-string |latStart|))
-               (lon-start (read-from-string |lonStart|))
-               (lat-dest (read-from-string  |latDest|))
-               (lon-dest (read-from-string |lonDest|))
+               (lat-start (coerce (read-from-string |latStart|) 'double-float))
+               (lon-start (coerce (read-from-string |lonStart|) 'double-float))
+               (lat-dest (coerce (read-from-string  |latDest|) 'double-float))
+               (lon-dest (coerce (read-from-string |lonDest|) 'double-float))
                (user-id
                  (http-authenticated-user handler request))
                (routing

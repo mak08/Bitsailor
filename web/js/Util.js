@@ -12,8 +12,14 @@ function doGET (url, success, error, queryParams) {
             }
         }
     }
+    
+    xhr.onerror = function (e) {
+        console.error(xhr.statusText);
+        alert(xhr.statusText);
+    };
+
     xhr.open("GET", url + makeQuery(queryParams), true);
-    xhr.send();
+    xhr.send(null);
 }
 
 

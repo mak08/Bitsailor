@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-31 21:51:24>
+;;; Last Modified <michael 2021-06-02 00:37:39>
 
 
 (in-package :virtualhelm)
@@ -218,6 +218,11 @@
                    (session-routing session race-id))
                  (routeinfo
                    (get-route routing)))
+            (log2:info "~a ~a ~a completed in: ~a"
+                       user-id
+                       race-id
+                       (routeinfo-stats routeinfo)
+                       (routeinfo-runtime routeinfo))
             (values
              (with-output-to-string (s)
                (json s routeinfo))))
@@ -278,6 +283,18 @@
        (with-output-to-string (s)
          (json s routing))))))
 
+
+(defun |removeSession| (handler request response)
+  (sqlite-client:with-current-connection (c *db*)
+    (let* ((user-id
+             (http-authenticated-user handler request))
+           (session
+             (find-or-create-session user-id request response)))
+      (remove-session session)
+      (values
+       (with-output-to-string (s)
+         (json s t))))))
+
 (defun |getLegInfo| (handler request response)
   (sqlite-client:with-current-connection (c *db*)
 
@@ -314,7 +331,7 @@
 ;;; Returns an error if the requested time is in the past or in the future of the requested cycle, or if $|offset| is too large.
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
-  (declare (ignore request |ySteps| |xSteps|))
+  (declare (ignore |ySteps| |xSteps|))
   (sqlite-client:with-current-connection (c *db*)
 
     (log2:info "Basetime:~a Offset:~a Time:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |north| |south| |west| |east|)
@@ -484,7 +501,7 @@
                    (available-cycle (now)))
                  (cycle
                    (or (and |cycle|
-                            (make-cycle (parse-timestring |cycle|)))
+                            (make-cycle :timestamp (parse-timestring |cycle|)))
                        default-cycle)))
             (multiple-value-bind (dir speed)
                 (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :cycle cycle)
@@ -525,14 +542,16 @@
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  (load-race-definitions-rs)
-  (let ((races (list)))
-    (map-races 
-     (lambda (k v)
-       (declare (ignore k))
-       (push (get-raceinfo v) races)))
-    (with-output-to-string (s)
-      (json s races))))
+  (let ((filename  (merge-pathnames *races-dir-rs* (make-pathname :name "Races" :type "json"))))
+    (log2:info "Loading races from ~a" filename)
+    (load-race-definitions-rs filename)
+    (let ((races (list)))
+      (map-races 
+       (lambda (k v)
+         (declare (ignore k))
+         (push (get-raceinfo v) races)))
+      (with-output-to-string (s)
+        (json s races)))))
 
 (defun get-raceinfo (race)
   (make-raceinfo
@@ -631,6 +650,9 @@
                                (create-session :session-id session-id :race-id race-id)))
            (log2:info "New session ~a created." session-id)))
     session))
+
+(defun remove-session (session)
+  (log2:info "Removing session ~a" session))
 
 (defun load-file (path response)
   ;; The FILE-HANDLER response handler does a lot more - 

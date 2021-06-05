@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-31 20:51:34>
+;;; Last Modified <michael 2021-06-04 17:50:38>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -70,12 +70,12 @@
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
          (cycle (or (routing-cycle routing) (available-cycle (now))))
          (isochrones nil))
-    (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a"
-               (format-latlng nil start-pos)
-               (format-latlng nil destination)
-               start-time
-               dest-heading
-               (routing-fan routing))
+    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a"
+                (format-latlng nil start-pos)
+                (format-latlng nil destination)
+                start-time
+                dest-heading
+                (routing-fan routing))
     (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
@@ -84,7 +84,7 @@
                                  ((< (* (routing-stepmax routing)) (* 48 60 60))  150)
                                  (T 300))
                                (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
-          (dummy (log2:info "Max speed: ~,1,,,f Reached distance: ~a"
+          (dummy (log2:trace "Max speed: ~,1,,,f Reached distance: ~a"
                             (cpolars-maxspeed polars)
                             reached-distance))
           (error nil)
@@ -128,17 +128,21 @@
          ((or reached
               error
               (>= stepsum (routing-stepmax routing)))
-          (log-stats elapsed0 stepnum pointnum)
-          (let ((best-route (construct-route isochrone destination)))
-            (setf *best-route* best-route)
-            (setf *isochrones*  isochrones)
-            (make-routeinfo :best best-route
-                            :stats (get-statistics best-route)
-                            :polars (cpolars-label polars)
-                            :maxspeed (cpolars-maxspeed polars)
-                            :tracks (when *tracks*
-                                      (extract-tracks start-pos (course-angle start-pos destination) isochrone))
-                            :isochrones (prepare-routepoints isochrones))))
+          
+          (let ((elapsed (timestamp-difference (now) elapsed0)))
+            (multiple-value-bind  (best-route best-path)
+                (construct-route isochrone destination)
+              (log-stats elapsed stepnum pointnum)
+              (setf *best-route* best-route)
+              (setf *isochrones* isochrones)
+              (make-routeinfo :best best-route
+                              :path best-path
+                              :stats (get-statistics best-route elapsed stepnum pointnum)
+                              :polars (cpolars-label polars)
+                              :maxspeed (cpolars-maxspeed polars)
+                              :tracks (when *tracks*
+                                        (extract-tracks start-pos (course-angle start-pos destination) isochrone))
+                              :isochrones (prepare-routepoints isochrones)))))
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
       (declare (vector next-isochrone))
@@ -177,7 +181,7 @@
                                          :path (extract-points isochrone))))
                (push iso isochrones)))))
         (when reached
-          (log2:info "Reached destination at ~a" step-time))))))
+          (log2:trace "Reached destination at ~a" step-time))))))
 
 (defun reached (candidate destination &optional (reached-distance  +reached-distance+))
   (some (lambda (p)
@@ -216,7 +220,6 @@
            (if (<= step-max 21600)
                0
                hour-fill)))
-    (log2:info "HF1: ~a HF2: ~a" hour-fill hour-fill-2)
     (lambda ()
       (let ((step-size
               (cond
@@ -242,6 +245,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed
 
+
+(unless (boundp '+foil-speeds+)
+(defconstant +foil-speeds+ (map 'vector #'knots-to-m/s
+                                #(0.0d0 11.0d0 16.0d0 35.0d0 40.0d0 70.0d0)) )
+(defconstant +foil-angles+ #(0.0d0 70.0d0 80.0d0 160.0d0 170.0d0 180.0d0))
+(defconstant +foil-matrix+ #2a((1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
+                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
+)
+
 (declaim (inline foiling-factor))
 (defun foiling-factor (speed twa)
   (multiple-value-bind
@@ -257,30 +273,17 @@
                      (aref +foil-matrix+ (1+ speed-index) angle-index)
                      (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
 
-(unless (boundp '+foil-speeds+)
-(defconstant +foil-speeds+ (map 'vector #'knots-to-m/s
-                                #(0.0d0 11.0d0 16.0d0 35.0d0 40.0d0 70.0d0)) )
-(defconstant +foil-angles+ #(0.0d0 70.0d0 80.0d0 160.0d0 170.0d0 180.0d0))
-(defconstant +foil-matrix+ #2a((1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
-)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Aux functions
 
-(defun log-stats (elapsed0 stepnum pointnum)
-  (let* ((elapsed (timestamp-difference (now) elapsed0)))
-    (log2:info "Elapsed ~2$, Positions ~a, Isochrones ~a | p/s=~2$ | s/i=~4$ | p/i=~2$"
-               elapsed
-               pointnum
-               stepnum
-               (/ pointnum elapsed)
-               (/ elapsed stepnum)
-               (coerce (/ pointnum stepnum) 'float))))
+(defun log-stats (elapsed stepnum pointnum)
+  (log2:trace "Elapsed ~2$, Positions ~a, Isochrones ~a | p/s=~2$ | s/i=~4$ | p/i=~2$"
+              elapsed
+              pointnum
+              stepnum
+              (/ pointnum elapsed)
+              (/ elapsed stepnum)
+              (coerce (/ pointnum stepnum) 'float)))
 
 (declaim (inline twa-heading))
 (defun twa-heading (wind-dir angle)
@@ -467,12 +470,15 @@
                  (push (routepoint-position p) v))))
 
 (defun construct-route (isochrone destination)
-  (let ((best (best-point isochrone destination))
-        (route nil))
-    (do ((cur-point best (routepoint-predecessor cur-point))
+  (let  ((best (best-point isochrone destination)))
+    (do ((route nil)
+         (path nil)
+         (cur-point best (routepoint-predecessor cur-point))
          (successor nil cur-point))
         ((null cur-point)
-         route)
+         (values route
+                 path))
+      (push (routepoint-position cur-point) path)
       (when (or (null successor)
                 (routepoint-penalty cur-point)
                 (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
@@ -493,7 +499,7 @@
                    min-point point)))
      :finally (return min-point)))
 
-(defun get-statistics (track)
+(defun get-statistics (track elapsed stepnum pointnum)
   (let ((sails nil)
         (min-wind 100)
         (max-wind 0)
@@ -521,7 +527,10 @@
                      :min-wind min-wind
                      :max-wind max-wind
                      :min-twa min-twa
-                     :max-twa max-twa)))
+                     :max-twa max-twa
+                     :calctime elapsed
+                     :steps stepnum
+                     :points pointnum)))
 
 (defun encode-duration (seconds)
   (multiple-value-bind (days rest-hours)

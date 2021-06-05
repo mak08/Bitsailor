@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-31 20:55:43>
+;;; Last Modified <michael 2021-06-01 22:01:11>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -32,6 +32,7 @@
    "ACTIVATE-ACCOUNT"
    "signUp"
    "getSession"
+   "removeSession"
    "getLegInfo"
    "getWind"
    "getWindForecast"

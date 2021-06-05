@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-05-30 17:19:29>
+;;; Last Modified <michael 2021-06-05 16:00:01>
 
 (in-package :virtualhelm)
 
@@ -18,6 +18,15 @@
 (setf (log2:log-level "polarcl") log2:+info+)
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+info+)
 (setf (log2:log-level "polarcl:handler-thread") log2:+info+)
+(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
+
+
+(setf (log2:log-level "polarcl:server-loop-ondemand") log2:+debug+)
+(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
+(setf (log2:log-level "virtualhelm") log2:+info+)
+(setf (log2:log-level "cl-weather") log2:+error+)
+(setf (log2:log-level "mbedtls") log2:+error+)
+(setf (log2:log-level "polarcl") log2:+error+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -------
@@ -34,14 +43,7 @@
         :mt-method :ondemand
         ;; :mt-method :pooled
         :port "8080"
-        :max-handlers 10)
-
-(server :hostname "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
-        :protocol :http
-        :mt-method :ondemand
-        ;; :mt-method :pooled
-        :port "8088"
-        :max-handlers 10)
+        :max-handlers 12)
           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----
@@ -71,19 +73,13 @@
 ;;; QUERY-FUNCTION endpoint
 ;;; -------------
 
-;;; TODO: Function handlers don't require separate authorization.
-;;;       Remove one endpoint.
-
 (handle
  :request (:prefix "/function")
- :handler (:query-function t :realm "virtualhelm" :authorizer #'vh-authorizer))
-
-(handle
- :request (:prefix "/public")
  :handler (:query-function t :authentication nil))
 
 (register-function "vh.signUp" :authorizer (constantly t))
 (register-function "vh.getSession" :authorizer #'vh-function-authorizer)
+(register-function "vh.removeSession" :authorizer #'vh-function-authorizer)
 (register-function "vh.getLegInfo" :authorizer #'vh-function-authorizer)
 (register-function "vh.getWind" :authorizer #'vh-function-authorizer)
 (register-function "vh.probeWind" :authorizer #'vh-function-authorizer)

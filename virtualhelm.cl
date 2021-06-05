@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-30 11:09:11>
+;;; Last Modified <michael 2021-06-01 21:48:31>
 
 (in-package :virtualhelm)
 
@@ -35,7 +35,6 @@
     (ensure-map)
     (ensure-bitmap)
     
-    (load-race-definitions-rs)
     (load-all-polars-rs)
 
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
@@ -75,11 +74,10 @@
                    *source-root*)
   "A string designating the directory containing polar files")
 
-(defun load-race-definitions-rs ()
+(defun load-race-definitions-rs (filename)
   (bordeaux-threads:with-lock-held (+races-ht-lock+)
     (clrhash *races-ht*)
-    (let* ((filename (merge-pathnames *races-dir-rs* (make-pathname :name "Races" :type "json")))
-           (races (parse-json-file filename)))
+    (let* ((races (parse-json-file filename)))
       (loop
         :for race :across (joref races "results")
         :do (store-leg-data-rs race)))))
@@ -113,7 +111,7 @@
 (defun store-leg-data-rs (race-def)
   (let* ((race-id (joref race-def "objectId"))
          (race-name (joref race-def "name")))
-    (log2:info "Loading race ~a ~a" race-id race-name)
+    (log2:trace "Loading race ~a ~a" race-id race-name)
     (setf (gethash race-id *races-ht*) race-def)))
 
 ;;; EOF

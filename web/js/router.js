@@ -622,6 +622,19 @@ import * as Util from './Util.js';
         });
     }
 
+
+    function removeSession () {
+        $.ajax({
+            url: "/function/vh.removeSession",
+            dataType: 'json'
+        }).done( function(result, status, xhr) {
+            console.log("Removed " + result); 
+        }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert(textStatus + ' ' + errorThrown);
+        });
+    }
+
+    
     function getLegInfo () {
         $.ajax({
             url: "/function/vh.getLegInfo",
@@ -1316,6 +1329,7 @@ import * as Util from './Util.js';
 
     function pickleSession () {
         // Attempt to tell tell the server that the client is gone.
+        removeSession();
         console.log('Goodbye');
     }
 

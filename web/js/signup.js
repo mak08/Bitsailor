@@ -65,7 +65,7 @@ import * as Util from './Util.js';
             document.getElementById("div_signup").style.cursor = "progress";
             document.getElementById("bt_submit").style.cursor = "progress";
 
-            Util.doGET("/public/vh.signUp",
+            Util.doGET("/function/vh.signUp",
                        
                        function (request) {
                            document.getElementById("div_signup").style.cursor = "default";

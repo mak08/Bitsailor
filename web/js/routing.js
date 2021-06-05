@@ -36,36 +36,51 @@ import * as Util from './Util.js';
         mdSuccess.style.display = "none";
     }
     
-    function onSubmit (event) {
+    async function onSubmit (event) {
         var startlat = document.getElementById("startlat").value;
         var startlon = document.getElementById("startlon").value;
         var destlat = document.getElementById("destlat").value;
         var destlon = document.getElementById("destlon").value;
+        var threads = document.getElementById("threads").value;
+        var duration = document.getElementById("duration").value;
+        var delay = document.getElementById("delay").value;
 
         document.getElementById("div_routing").style.cursor = "progress";
         document.getElementById("bt_submit").style.cursor = "progress";
 
-        Util.doGET("/function/vh.getRouteRS",
-                   function (request) {
-                       document.getElementById("div_routing").style.cursor = "default";
-                       document.getElementById("bt_submit").style.cursor = "default";
-                       
-                       displayDialog("Got route: " + request.responseText, cbSuccessConfirm);
-                       
-                   },
-                   function (request) {
-                       document.getElementById("div_routing").style.cursor = "default";
-                       document.getElementById("bt_submit").style.cursor = "default";
-                       
-                       displayDialog(request.responseText, cbErrorConfirm);
-                   },
-                   {
-                       "latStart": startlat,
-                       "lonStart": startlon,
-                       "latDest": destlat,
-                       "lonDest": destlon
-                   });
+        for (var i = 0; i<threads; i++ ) {
+            console.log('Started #' + i); 
+            Util.doGET("/function/vh.getRouteRS",
+                       function (request) {
+                           document.getElementById("div_routing").style.cursor = "default";
+                           document.getElementById("bt_submit").style.cursor = "default";
+                           
+                           console.log('Finished #' + i); 
+                           
+                       },
+                       function (request) {
+                           document.getElementById("div_routing").style.cursor = "default";
+                           document.getElementById("bt_submit").style.cursor = "default";
+                           
+                           console.log('Error: #' + i); 
+
+                       },
+                       {
+                           "duration": duration * 3600,
+                           "latStart": startlat,
+                           "lonStart": startlon,
+                           "latDest": destlat,
+                           "lonDest": destlon
+                       });
+            await sleep(delay);
+        }
     }
+
+
+    function sleep (ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
     
     document.addEventListener("DOMContentLoaded", function(event) {
         setUp()

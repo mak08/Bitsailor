@@ -1,11 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-02 11:00:11>
+;;; Last Modified <michael 2021-06-01 21:49:08>
 
 (in-package :virtualhelm)
-
-
 
 (defvar *polars-dir-rs*
   (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")

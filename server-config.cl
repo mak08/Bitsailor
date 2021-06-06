@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-06-05 16:00:01>
+;;; Last Modified <michael 2021-06-06 01:28:53>
 
 (in-package :virtualhelm)
 
@@ -22,7 +22,8 @@
 
 
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+debug+)
-(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
+(setf (log2:log-level "virtualhelm:log-stats") log2:+debug+)
+(setf (log2:log-level "virtualhelm:get-route") log2:+info+)
 (setf (log2:log-level "virtualhelm") log2:+info+)
 (setf (log2:log-level "cl-weather") log2:+error+)
 (setf (log2:log-level "mbedtls") log2:+error+)

@@ -1,16 +1,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-24 01:39:37>
+;;; Last Modified <michael 2021-06-06 02:05:28>
 
 (in-package :virtualhelm)
 
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
-  (truncate (normalize-heading origin-angle) delta-angle))
+  (truncate origin-angle delta-angle))
 
 (defun-t add-routepoint null ((predecessor routepoint)
                               (start-pos latlng)
                               (position latlng)
+                              (origin-distance double-float)
+                              (origin-angle double-float)
                               (delta-angle double-float)
                               (left double-float)
                               step-time
@@ -20,14 +22,12 @@
                               reason
                               wind-dir
                               wind-speed)
-  (declare (special next-isochrone))
+  (declare (special next-isochrone max-dist min-angle))
   (let*
       ((maxpoints (length next-isochrone))
        (offset (bucket left delta-angle))
-       (origin-distance (course-distance start-pos position))
-       (origin-angle (course-angle-d start-pos position origin-distance))
-       (bucket (bucket origin-angle delta-angle)))
-
+       (bucket (bucket origin-angle delta-angle))
+       (max-bucket (bucket origin-angle min-angle)))
     (when
         (or (< bucket 0)
             (>= bucket maxpoints))
@@ -38,23 +38,22 @@
     (when (or (null (aref next-isochrone bucket))
               (> origin-distance
                  (routepoint-origin-distance (aref next-isochrone bucket))))
-      (setf (aref next-isochrone bucket)
-            (create-routepoint predecessor
-                               position
-                               step-time
-                               heading
-                               nil
-                               speed
-                               sail
-                               reason
-                               wind-dir
-                               wind-speed
-                               origin-angle
-                               origin-distance))))
+      (when (> origin-distance (aref max-dist max-bucket))
+        (setf (aref max-dist max-bucket) origin-distance)
+        (setf (aref next-isochrone bucket)
+              (create-routepoint predecessor
+                                 position
+                                 step-time
+                                 heading
+                                 nil
+                                 speed
+                                 sail
+                                 reason
+                                 wind-dir
+                                 wind-speed
+                                 origin-angle
+                                 origin-distance)))))
   (values))
-
-
-(defvar *use-bitmap* t)
 
 (defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (use-bitmap *use-bitmap*))
   (let ((filtered

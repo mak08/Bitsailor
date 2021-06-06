@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-04 17:50:38>
+;;; Last Modified <michael 2021-06-06 02:01:52>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -23,22 +23,8 @@
 
 (in-package :virtualhelm)
 
-;;; time in seconds
-(defconstant +10min+ (* 10 60))
-(defconstant +12h+ (* 12 60 60))
-(defconstant +24h+ (* 24 60 60))
-
-(defconstant  +max-iso-points+ 1500)
-
-(defconstant +reached-distance+ 30000d0)
-(defvar *isochrones* nil)
-(defvar *best-route*)
-(defvar *manoeuvering-penalty* nil)
-(defvar *tracks* nil)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
-
 
 (declaim (inline twa-boatspeed))
 (defun twa-boatspeed (polars wind-speed angle)
@@ -70,12 +56,14 @@
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
          (cycle (or (routing-cycle routing) (available-cycle (now))))
          (isochrones nil))
-    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a"
+    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a"
                 (format-latlng nil start-pos)
                 (format-latlng nil destination)
                 start-time
                 dest-heading
-                (routing-fan routing))
+                (routing-fan routing)
+                left
+                right)
     (log2:info "Using cycle ~a" cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
@@ -96,7 +84,9 @@
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
           (max-points 360 (min +max-iso-points+ (+ max-points 12)))
-          (delta-angle (/ 360d0 max-points) (/ 360d0 max-points)) 
+          (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
+          (max-dist (make-array +max-iso-points+ :initial-element 0d0))
+          (min-angle (/ 360d0 +max-iso-points+))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           (penalty (get-penalty routing)
@@ -146,6 +136,7 @@
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
       (declare (vector next-isochrone))
+      (declare (special max-dist min-angle))
 
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
@@ -183,7 +174,7 @@
         (when reached
           (log2:trace "Reached destination at ~a" step-time))))))
 
-(defun reached (candidate destination &optional (reached-distance  +reached-distance+))
+(defun reached (candidate destination reached-distance)
   (some (lambda (p)
           (and p
                (< (fast-course-distance (routepoint-position p) destination) reached-distance)))
@@ -350,19 +341,15 @@
            (loop
               :with up-vmg-angle = (third up-vmg)
               :with down-vmg-angle = (third down-vmg)
-              :for pointnum :from 0
               :with added = 0
               :for twa :across all-twa-points
               :for heading-stbd = (twa-heading wind-dir twa)
               :for heading-port = (twa-heading wind-dir (- twa))
-              :for is-stbd = (heading-between left right heading-stbd)
-              :for is-port = (heading-between left right heading-port)
               ;;:do (log2:info "~a < ~a <~a | ~a < ~a ~a > ~a" up-vmg-angle twa down-vmg-angle left heading-stbd heading-port right)  
               :when (and (> twa 0)
                          (<= (the double-float up-vmg-angle)
                              (the double-float twa)
-                             (the double-float down-vmg-angle))
-                         (or is-stbd is-port))
+                             (the double-float down-vmg-angle)))
                 :do (flet ((add-point (heading twa)
                              (progn
                                (incf added)
@@ -374,13 +361,14 @@
                                      ((distance (* speed step-size))
                                       (new-pos (add-distance-estimate (routepoint-position routepoint)
                                                                       distance
-                                                                      heading)))
-                                   (add-routepoint routepoint start-pos new-pos delta-angle left step-time heading speed sail reason wind-dir wind-speed))))))
-                      (when is-stbd
-                        (add-point heading-stbd twa))
-                      (when is-port
-                        (add-point heading-port (- twa))))
-              :finally (return (values added pointnum)))))))))
+                                                                      heading))
+                                      (origin-distance (course-distance start-pos new-pos))
+                                      (origin-angle (normalize-heading (course-angle-d start-pos new-pos origin-distance))))
+                                   (when (heading-between right origin-angle left)
+                                     (add-routepoint routepoint start-pos new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
+                      (add-point heading-stbd twa)
+                      (add-point heading-port (- twa)))
+              :finally (return added))))))))
 
 (defun get-routing-polars (routing)
   (let ((sails (encode-options (routing-options routing))))

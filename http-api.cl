@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-02 00:37:39>
+;;; Last Modified <michael 2021-06-06 12:54:13>
 
 
 (in-package :virtualhelm)
@@ -188,7 +188,7 @@
                (lon-start (coerce (read-arg |lonStart|) 'double-float))
                (lat-dest (coerce (read-arg  |latDest|) 'double-float))
                (lon-dest (coerce (read-arg |lonDest|) 'double-float))
-               (duration (min (* 48 60 60)  ;; 2d
+               (duration (min (* *rs-max-hours* 60 60)  ;; 2d
                               (read-arg |duration|)))
                (routing
                  (make-routing :polars |polarsID|

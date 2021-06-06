@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-01 22:01:11>
+;;; Last Modified <michael 2021-06-06 12:56:11>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -25,8 +25,8 @@
    "*RACES-DIR*"
    "*RACES-DIR-RS*"
    "*TRACKS*"
+   "*RS-MAX-HOURS*"
    "*USE-BITMAP*"
-   "*REACHED-DISTANCE*"
    ;; HTTP API
    "GET-PAGE"
    "ACTIVATE-ACCOUNT"

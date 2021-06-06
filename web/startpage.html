@@ -18,13 +18,19 @@
 		<br>
 		<p>
 		  This is the BitSailor router start page. If you don't have a user yet, please <a href="signup.html">sign up</a>.
+		</p>
 		<p>
 		  Log in to the router page (see links in the table below) with you <b>boat name</b>.
+		</p>
 		<p>
 		  The router, and this site, are currently still under development. Please have a look at the Known Issues before using the router.
-		<br>
+		</p>
+
+		<p><b>Please join us on <a href="https://discord.gg/UYGzPhWm">Discord</a></b></p>
+		  
 		<p style="font-size:80%;">
 		  All content and services on this site are provided without warranty, implied or otherwise, of fitness for any particular purpose. Use entirely at your own risk.
+		  </p>	
 		<p style="font-size:80%;">
 		  You shall be liable for any damages, losses or expenses of a third party caused by attempts to misuse the functions provided by this site.
 		</p>
@@ -34,6 +40,9 @@
 	  <div class="news">
 		<h4>News</h4>
 		<ul>
+		  <li><b>2021-06-06</b><br>
+			Improved search algorithm
+		  </li>
 		  <li><b>2021-05-22</b><br>
 			Added short (6 or 3hrs) routing using 2min steps
 		  </li>
@@ -105,13 +114,20 @@
 	  <div class="issues"><h3>Troubleshooting / Known Issues</h3></div>
 	  <div class="issues-content" style="font-size:90%;">
 	  	<ul>
-		  <li>Isochrones run past destination
+
+		  <li><b>Activation e-mail not received</b>
+			<p>Some e-mail providers may classify the sender domain as spam. Please check your spam folder.</p>
+			<p>Some providers seem to have technical difficulties accepting e-mail from bitsailor.net, notably <b>orange.fr</b>.</p>
+			<p>If you are affected, please try a different e-mail address. For example, GMail is known to work and it is easy to register an e-mail address there.</p> 
+		  </li>
+
+		  <li><b>Isochrones run past destination</b>
 			<p>The route search terminates when a route point is generated that is closer to the destination than a given target distance.
 			  Sometimes, especially in routings longer than 2.5days and strong wind conditions, no such point is ever generated.</p>
 			<p>Move the target point closer to an isochrone to workaround this issue.</p> 
 		  </li>
 
-		  <li>Route does not reach destination
+		  <li><b>Route does not reach destination</b>
 			<p>
 			  This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.<br>
 			  You can usually work around this by moving the target behind or sideways from your actual destination.<br>
@@ -119,7 +135,7 @@
 			</p>
 		  </li>
 
-		  <li> Routing fails with an error message similar to
+		  <li><b>Routing fails with an error message similar to</b>
 			<pre><code>error The value NIL is not of type VIRTUALHELM::POLARS</code></pre>
 			<p>
 			  The router stores some of your race-related settings when you load a race, among the the polars used for this race.
@@ -130,7 +146,7 @@
 			</p>
 		  </li>
 
-		  <li> Routing fails with an error message similar to
+		  <li><b>Routing fails with an error message</b> similar to
 			<pre><code> error File /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
 			<p>
 			  or
@@ -144,7 +160,7 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 			  In both cases, retry later or force the old forecast using manual cycle selection.
 			</p>
 		  </li>
-		  <li> UI wind differs from wind displayed in waypoint info.
+		  <li><b>UI wind differs from wind displayed in waypoint info.</b>
 			<p>The router delays the switch to the latest GFS cycle to match the update policy of the game.<br>
 			  The UI alwys displays the selected cycle, or the latest cycle if none is selected.
 		  </li>

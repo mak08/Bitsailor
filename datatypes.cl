@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-06 01:24:23>
+;;; Last Modified <michael 2021-06-06 15:57:01>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -53,7 +53,7 @@
 (defun routing-winches (routing)
   (member "winch" (routing-options routing) :test #'string=))
 
-(defstruct routeinfo best path polars maxspeed stats tracks isochrones runtime)
+(defstruct routeinfo status best path polars maxspeed stats tracks isochrones)
 
 (defmethod print-object ((thing routeinfo) stream)
   (let ((stats (or (routeinfo-stats thing)

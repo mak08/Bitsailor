@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-06-06 01:28:53>
+;;; Last Modified <michael 2021-06-09 20:42:57>
 
 (in-package :virtualhelm)
 
@@ -25,9 +25,7 @@
 (setf (log2:log-level "virtualhelm:log-stats") log2:+debug+)
 (setf (log2:log-level "virtualhelm:get-route") log2:+info+)
 (setf (log2:log-level "virtualhelm") log2:+info+)
-(setf (log2:log-level "cl-weather") log2:+error+)
-(setf (log2:log-level "mbedtls") log2:+error+)
-(setf (log2:log-level "polarcl") log2:+error+)
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -------
@@ -60,6 +58,10 @@
 ;;; -----------
 ;;; Redirection : Every request referring to a directory is mapped to index.html in that directory
 ;;; -----------
+
+(redirect
+ :from (:path "/")
+ :to (:path "/start"))
 
 (redirect
  :from (:regex ".*/")

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-06 02:01:52>
+;;; Last Modified <michael 2021-06-06 15:50:11>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -125,7 +125,10 @@
               (log-stats elapsed stepnum pointnum)
               (setf *best-route* best-route)
               (setf *isochrones* isochrones)
-              (make-routeinfo :best best-route
+              (make-routeinfo :status (if reached "reached"
+                                          (if error "no_route"
+                                              "max_duration"))
+                              :best best-route
                               :path best-path
                               :stats (get-statistics best-route elapsed stepnum pointnum)
                               :polars (cpolars-label polars)

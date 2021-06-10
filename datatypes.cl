@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-06 15:57:01>
+;;; Last Modified <michael 2021-06-10 20:51:49>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -99,7 +99,7 @@
                    :position (routepoint-position routepoint)
                    :heading (routepoint-heading successor)
                    :dtf (routepoint-destination-distance routepoint)
-                   :speed (routepoint-speed routepoint)
+                   :speed (routepoint-speed successor)
                    :sail (routepoint-sail successor)
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)

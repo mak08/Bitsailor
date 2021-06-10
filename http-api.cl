@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-06 12:54:13>
+;;; Last Modified <michael 2021-06-10 01:28:44>
 
 
 (in-package :virtualhelm)
@@ -222,7 +222,7 @@
                        user-id
                        race-id
                        (routeinfo-stats routeinfo)
-                       (routeinfo-runtime routeinfo))
+                       (routestats-calctime (routeinfo-stats routeinfo)))
             (values
              (with-output-to-string (s)
                (json s routeinfo))))

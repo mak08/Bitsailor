@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-06 15:50:11>
+;;; Last Modified <michael 2021-06-11 16:52:49>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -483,7 +483,7 @@
      :for point :across isochrone
      :do (progn
            (setf (routepoint-destination-distance point)
-                 (fast-course-distance (routepoint-position point) destination))
+                 (course-distance (routepoint-position point) destination))
            (when (or (null min-point)
                      (< (routepoint-destination-distance point) min-dtf))
              (setf min-dtf (routepoint-destination-distance point)

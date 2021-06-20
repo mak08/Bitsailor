@@ -1,31 +1,22 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-06-09 20:42:57>
+;;; Last Modified <michael 2021-06-20 20:52:21>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(setf (log2:log-level "mbedtls") log2:+info+)
-(setf (log2:log-level "mbedtls:accept") log2:+info+)
-;; (setf (log2:log-level "mbedtls:mbedtls-net-accept") log2:+debug+)
-(setf (log2:log-level "mbedtls:create-config") log2:+info+)
-(setf (log2:log-level "mbedtls:create-ssl-env") log2:+info+)
-(setf (log2:log-level "mbedtls:mbedtls-error-text") log2:+info+)
-(setf (log2:log-level "mbedtls:mbedtls-net-accept") log2:+info+)
-(setf (log2:log-level "mbedtls:mbedtls-ssl-read") log2:+info+) 
-(setf (log2:log-level "polarcl") log2:+info+)
-(setf (log2:log-level "polarcl:server-loop-ondemand") log2:+info+)
-(setf (log2:log-level "polarcl:handler-thread") log2:+info+)
-(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
-
-
-(setf (log2:log-level "polarcl:server-loop-ondemand") log2:+debug+)
-(setf (log2:log-level "virtualhelm:log-stats") log2:+debug+)
-(setf (log2:log-level "virtualhelm:get-route") log2:+info+)
 (setf (log2:log-level "virtualhelm") log2:+info+)
+(setf (log2:log-level "cl-weather") log2:+info+)
+(setf (log2:log-level "cl-map") log2:+info+)
+(setf (log2:log-level "polarcl") log2:+info+)
+(setf (log2:log-level "mbedtls") log2:+info+)
 
+(setf (log2:log-level "mbedtls:refresh-buffer") log2:+warning+)
+(setf (log2:log-level "polarcl:server-loop-ondemand") log2:+trace+)
+(setf (log2:log-level "polarcl:handler-thread") log2:+trace+)
+(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -------
@@ -42,7 +33,7 @@
         :mt-method :ondemand
         ;; :mt-method :pooled
         :port "8080"
-        :max-handlers 12)
+        :max-handlers 3)
           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----
@@ -78,7 +69,7 @@
 
 (handle
  :request (:prefix "/function")
- :handler (:query-function t :authentication nil))
+ :handler (:query-function t :authentication nil :realm "virtualhelm"))
 
 (register-function "vh.signUp" :authorizer (constantly t))
 (register-function "vh.getSession" :authorizer #'vh-function-authorizer)

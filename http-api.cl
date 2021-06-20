@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-10 01:28:44>
+;;; Last Modified <michael 2021-06-17 22:50:29>
 
 
 (in-package :virtualhelm)
@@ -184,6 +184,8 @@
   (sqlite-client:with-current-connection (c *db*)
     (handler-case
         (let* ((*read-default-float-format* 'double-float)
+               (user-id
+                 (http-authenticated-user handler request))
                (lat-start (coerce (read-arg |latStart|) 'double-float))
                (lon-start (coerce (read-arg |lonStart|) 'double-float))
                (lat-dest (coerce (read-arg  |latDest|) 'double-float))
@@ -197,6 +199,10 @@
                                :dest  (make-latlng :lat lat-dest :lng lon-dest)))
                (routeinfo
                  (get-route routing)))
+          (log2:info "User:~a Race:-- Status ~a ~a"
+                     user-id
+                     (routeinfo-status routeinfo)
+                     (routeinfo-stats routeinfo))
           (values
            (with-output-to-string (s)
              (json s routeinfo))))
@@ -218,11 +224,11 @@
                    (session-routing session race-id))
                  (routeinfo
                    (get-route routing)))
-            (log2:info "~a ~a ~a completed in: ~a"
-                       user-id
-                       race-id
-                       (routeinfo-stats routeinfo)
-                       (routestats-calctime (routeinfo-stats routeinfo)))
+          (log2:info "User:~a Race:~a Status ~a ~a"
+                     user-id
+                     race-id
+                     (routeinfo-status routeinfo)
+                     (routeinfo-stats routeinfo))
             (values
              (with-output-to-string (s)
                (json s routeinfo))))

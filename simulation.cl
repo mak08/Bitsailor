@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-11 16:52:49>
+;;; Last Modified <michael 2021-06-17 22:21:39>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -56,15 +56,15 @@
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
          (cycle (or (routing-cycle routing) (available-cycle (now))))
          (isochrones nil))
-    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a"
+    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
                 (format-latlng nil start-pos)
                 (format-latlng nil destination)
                 start-time
                 dest-heading
                 (routing-fan routing)
                 left
-                right)
-    (log2:info "Using cycle ~a" cycle)
+                right
+                cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (reached-distance (* (cond
@@ -72,9 +72,6 @@
                                  ((< (* (routing-stepmax routing)) (* 48 60 60))  150)
                                  (T 300))
                                (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
-          (dummy (log2:trace "Max speed: ~,1,,,f Reached distance: ~a"
-                            (cpolars-maxspeed polars)
-                            reached-distance))
           (error nil)
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
@@ -165,7 +162,7 @@
            (setf reached (reached candidate destination reached-distance))
            (setf isochrone candidate)
 
-           (log2:trace "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
+           (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
            ;; Collect hourly isochrones
            (when (zerop (timestamp-minute step-time))

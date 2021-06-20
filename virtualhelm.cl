@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-01 21:48:31>
+;;; Last Modified <michael 2021-06-19 21:28:37>
 
 (in-package :virtualhelm)
 
@@ -18,7 +18,7 @@
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
 
-(defun run-virtual-helm ()
+(defun run-virtual-helm (&optional (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((rcfile
          (merge-pathnames (make-pathname :name ".vhrc")
@@ -37,13 +37,21 @@
     
     (load-all-polars-rs)
 
+    ;; Start timers
+    (timers:start-timer-loop)
+
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Starting weather updates")
     (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")
 
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)
-    (polarcl:load-configuration *server-config*)))
+    (polarcl:load-configuration *server-config*)
+
+    ;; Keep function alive, this is our toplevel
+    (when start-sentinel
+      (loop (progn (sleep 600) 
+                   (log2:info "Sentinel takes a look around"))))))
 
 
 (defvar *races-ht* (make-hash-table :test #'equalp))

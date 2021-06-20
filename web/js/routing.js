@@ -61,7 +61,7 @@ import * as Util from './Util.js';
                        function (request) {
                            document.getElementById("div_routing").style.cursor = "default";
                            document.getElementById("bt_submit").style.cursor = "default";
-                           
+                           alert(request.responseText);
                            console.log('Error: #' + i); 
 
                        },

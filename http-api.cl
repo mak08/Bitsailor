@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-17 22:50:29>
+;;; Last Modified <michael 2021-06-24 22:12:07>
 
 
 (in-package :virtualhelm)
@@ -62,7 +62,7 @@
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
                 (path request))
-          (load-file path response))
+          (load-html-file path response :substitutions '(("GOOGLE_API_KEY" .  "AIzaSyBB-hZWEpgPFEC16DlvXxEWKA4rjDzaS0Y"))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
@@ -659,6 +659,26 @@
 
 (defun remove-session (session)
   (log2:info "Removing session ~a" session))
+
+(defun load-html-file (path response &key substitutions)
+  ;; The FILE-HANDLER response handler does a lot more - 
+  ;; Think about redesigning this
+  (with-open-file (f path :element-type 'character)
+    (let ((buffer (make-array (file-length f) :element-type 'character)))
+      (read-sequence buffer f)
+      (dolist (subst substitutions)
+        (destructuring-bind (marker . value)
+            subst
+          (let ((start (search marker buffer)))
+            (when (numberp start)
+              (setf buffer
+                    (concatenate 'string
+                                 (subseq buffer 0 start)
+                                 value
+                                 (subseq buffer (+ start (length marker)))))))))
+      (setf (http-body response) buffer)))
+  (setf (http-header response :|Content-Type|)
+        (get-mime-for-extension (pathname-type path))))
 
 (defun load-file (path response)
   ;; The FILE-HANDLER response handler does a lot more - 

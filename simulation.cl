@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-17 22:21:39>
+;;; Last Modified <michael 2021-07-04 00:58:18>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -54,7 +54,7 @@
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
-         (cycle (or (routing-cycle routing) (available-cycle (now))))
+         (cycle (routing-cycle routing))
          (isochrones nil))
     (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
                 (format-latlng nil start-pos)

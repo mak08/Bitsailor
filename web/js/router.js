@@ -261,8 +261,10 @@ import * as Util from './Util.js';
     
     function onManualCycle (event) {
 
-        // When manual cycle is switched on, initialize with available cycle.
-        // When it is switched off, reset to available cycle.
+        // Whenever manual cycle toggled, initialize with available cycle.
+        // When it was switched off, value rmeains set to available cycle.
+        // When it was switched on, user may modify the cycle using date and hour controls.
+        
         var cycle = availableForecastCycle();
         
         var dateInput =  $("#tb_cycledate")[0];
@@ -271,11 +273,16 @@ import * as Util from './Util.js';
         dateInput.value = cycle.substring(0,10);
         hourInput.value = Number.parseInt(cycle.substring(11,13));
 
+        var valueSpec = "";
         var cycleSpec = getManualCycle();
+        var manualCycle = document.getElementById("cb_manualcycle");
+        if (manualCycle.checked) {
+            valueSpec =  "&value=" + cycleSpec;
+        }
 
         $.ajax({
             // No paramValue == reset (value defaults to nil)
-            url: "/function/vh.setParameter" + "?name=" + 'cycle' +  "&value=" + cycleSpec,
+            url: "/function/vh.setParameter" + "?name=" + 'cycle' + valueSpec,
             dataType: 'json'
         }).done( function(data) {
             console.log(data);

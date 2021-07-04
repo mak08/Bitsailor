@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-03 15:33:49>
+;;; Last Modified <michael 2021-07-04 00:25:57>
 
 
 (in-package :virtualhelm)
@@ -58,7 +58,7 @@
                (path (merge-pathnames (make-pathname :name "router" :type "html")
                                       (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                                                         '("web")))))
-               (query (parameters-request)))
+               (query (parameters request)))
           (log2:info "race-id: ~a" race-id)
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)

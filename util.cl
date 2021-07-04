@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-05-10 22:52:58>
+;;; Last Modified <michael 2021-07-04 00:29:23>
 
 (in-package :virtualhelm)
 
@@ -23,6 +23,11 @@
     (unless session
       (error "~a: no such session" session-id)) 
     (get-route (session-routing session race-id))))
+
+(defun get-routing-for-race  (session-id race-id)
+   (gethash race-id
+            (session-routings
+             (gethash session-id *session-ht*))))
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))

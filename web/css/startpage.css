@@ -162,12 +162,16 @@ div {
 	background-color: #504040;
 }
 
+.disclaimer {
+	grid-column: 2 / 4;
+	grid-row: 14;
+}
 
 .contact {
 	display :flex;
 	flex-direction: row;
 	grid-column: 2 / 4;
-	grid-row: 14;
+	grid-row: 15;
 	font-size: 90%;
 	justify-content: space-between;
 	background-color:grey;

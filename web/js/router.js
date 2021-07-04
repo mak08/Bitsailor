@@ -183,6 +183,12 @@ import * as Util from './Util.js';
         return new Date(fc).toISOString();
     }
     
+    function currentCycle (d=new Date()) {
+        var availDate = d - 210 * 60 * 1000;
+        var fc = truncate(availDate, 6 * 3600 * 1000);
+        return new Date(fc).toISOString();
+    }
+    
     // Event handler for context menu mapMenu 
     function onContextMenu (point) {
         var mapMenu=$("#mapMenu")[0];
@@ -777,12 +783,13 @@ import * as Util from './Util.js';
     }
 
     function createIsochrones (isochrones) {
+        var c = new Date(currentCycle());
         for ( var i = 0; i < isochrones.length; i++ ) {
             var startSymbol = {
                 path: google.maps.SymbolPath.CIRCLE,
                 title: i.offset
             }
-            var style = getIsoStyle(isochrones[i], 1);
+            var style = getIsoStyle(isochrones[i], 1, c);
             var isochrone = new google.maps.Polyline({
                 geodesic: true,
                 strokeColor: style.color,
@@ -803,17 +810,19 @@ import * as Util from './Util.js';
         return new Date(basetime - 0 + offset * 3600 * 1000);
     }
     
-    function getIsoStyle (isochrone, selectedOffset) {
-        var d = getIsochroneTime(isochrone);
-        var h = d.getUTCHours();
+    function getIsoStyle (isochrone, selectedOffset, availableCycle) {
+        var c = availableCycle;
+        var d = new Date(isochrone.time);
+        var i = getIsochroneTime(isochrone);
+        var h = i.getUTCHours();
         var weight =  (h%6)?1:3;
         var color;
         if (isochrone.offset === selectedOffset) {
             color = '#ffffff';
             weight = 3;
         } else {
-            if (h%6 === 4) {
-                color = '#d00000';
+            if (d < c) {
+                color = (h%12)?'#D0a0b0':'#D080a0';
             } else {
                 color = (h%12)?'#8080a0':'#000000';
             }
@@ -822,8 +831,9 @@ import * as Util from './Util.js';
     }
 
     function updateIsochrones () {
+        var c = new Date(currentCycle());
         for (const isochrone of routeIsochrones ) {
-            var style = getIsoStyle(isochrone, ir_index.valueAsNumber);
+            var style = getIsoStyle(isochrone, ir_index.valueAsNumber, c);
             isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
         }
     }

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-04 00:58:18>
+;;; Last Modified <michael 2021-07-04 19:01:18>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -92,8 +92,8 @@
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (params (interpolation-parameters start-time cycle)
                   (interpolation-parameters step-time cycle))
-          (base-time (base-time params)
-                     (base-time params))
+          (base-time (iparams-effective-cycle params)
+                     (iparams-effective-cycle params))
           (step-size (funcall stepper)
                      (funcall stepper))
           (step-time (adjust-timestamp start-time (:offset :sec step-size))

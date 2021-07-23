@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-04 19:01:18>
+;;; Last Modified <michael 2021-07-23 22:13:34>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -313,8 +313,8 @@
   (cond
     ((null routepoint)
      (return-from expand-routepoint 0))
-    ((not (and
-           (<= -75d0 (latlng-lat (routepoint-position routepoint)) 85d0)))
+    ;; Exclude pole region where our distance computation breaks down due to numerical instability
+    ((> (latlng-lat (routepoint-position routepoint)) 89.9d0)
      (return-from expand-routepoint 0))
     (t
      (let* ((cur-twa (routepoint-twa routepoint))

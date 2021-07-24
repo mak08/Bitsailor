@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-19 21:28:37>
+;;; Last Modified <michael 2021-07-11 01:08:39>
 
 (in-package :virtualhelm)
 
@@ -35,7 +35,7 @@
     (ensure-map)
     (ensure-bitmap)
     
-    (load-all-polars-rs)
+    (load-polars-directory)
 
     ;; Start timers
     (timers:start-timer-loop)
@@ -53,12 +53,12 @@
       (loop (progn (sleep 600) 
                    (log2:info "Sentinel takes a look around"))))))
 
-
-(defvar *races-ht* (make-hash-table :test #'equalp))
 (defvar *races-dir*
   (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")
                    *source-root*)
-  "A string designating the directory containing polar files")
+  "A string designating the directory containing race definitions")
+
+(defvar *races-ht* (make-hash-table :test #'equalp))
 
 (defvar +races-ht-lock+
   (bordeaux-threads:make-lock "races-ht"))
@@ -77,50 +77,19 @@
   (bordeaux-threads:with-lock-held (+races-ht-lock+)
     (maphash function *races-ht*)))
 
-(defvar *races-dir-rs*
-  (merge-pathnames (make-pathname :directory '(:relative "races-rs") :type "json")
-                   *source-root*)
-  "A string designating the directory containing polar files")
-
-(defun load-race-definitions-rs (filename)
+(defun load-race-definitions (&key (directory *races-dir*))
   (bordeaux-threads:with-lock-held (+races-ht-lock+)
     (clrhash *races-ht*)
-    (let* ((races (parse-json-file filename)))
-      (loop
-        :for race :across (joref races "results")
-        :do (store-leg-data-rs race)))))
-
-;;; Used for testing
-(defun load-race-definition (name)
-  (let* ((path (merge-pathnames *races-dir* (make-pathname :name name :type "json")))
-         (race-def  (parse-json-file name)))
-    (get-leg-data race-def)))
-    
-;; caution - get-leg-info also exists
-(defun get-leg-data (json-object)
-  (cond
-    ((joref json-object "scriptData")
-     (let* ((leg (joref (joref json-object "scriptData") "leg"))
-            (race-id (joref (joref leg  "_id") "race_id"))
-            (leg-num (joref (joref leg "_id") "num"))
-            (leg-id (format nil "~a.~a" race-id leg-num)))
-       (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
-       (setf (race-info leg-id) leg)))
-    ((joref json-object "res")
-     (let* ((leg (joref (joref json-object "res") "leg"))
-            (race-id (joref (joref leg  "_id") "race_id"))
-            (leg-num (joref (joref leg "_id") "num"))
-            (leg-id (format nil "~a.~a" race-id leg-num)))
-       (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
-       (setf (race-info leg-id) leg)))
-    (T
-     (error "Unexpected JSON format"))))
-
-(defun store-leg-data-rs (race-def)
-  (let* ((race-id (joref race-def "objectId"))
-         (race-name (joref race-def "name")))
-    (log2:trace "Loading race ~a ~a" race-id race-name)
-    (setf (gethash race-id *races-ht*) race-def)))
+    (loop
+      :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
+      :do (let ((json-object (parse-json-file name)))
+             (cond
+               ((joref json-object "res")
+                (store-race-data-vr json-object))
+               ((joref json-object "results")
+                (store-race-data-rs json-object))
+               (T
+                (log2:warning "Skipping ~a" name)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

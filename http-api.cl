@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-04 00:25:57>
+;;; Last Modified <michael 2021-07-22 18:08:42>
 
 
 (in-package :virtualhelm)
@@ -195,6 +195,7 @@
                               (read-arg |duration|)))
                (routing
                  (make-routing :polars |polarsID|
+                               :options '("realsail")
                                :stepmax duration
                                :start (make-latlng :lat lat-start :lng lon-start)
                                :dest  (make-latlng :lat lat-dest :lng lon-dest)))
@@ -544,14 +545,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; RealSail specific commads
 
-(defstruct raceinfo name id class start-time closing-time start-pos finish-pos closed)
+(defstruct raceinfo type name id class start-time closing-time start-pos finish-pos closed)
 
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  (let ((filename  (merge-pathnames *races-dir-rs* (make-pathname :name "Races" :type "json"))))
+  (let ((filename  (merge-pathnames *races-dir* (make-pathname :name :wild :type "json"))))
     (log2:info "Loading races from ~a" filename)
-    (load-race-definitions-rs filename)
+    (load-race-definitions :directory filename)
     (let ((races (list)))
       (map-races 
        (lambda (k v)
@@ -561,14 +562,30 @@
         (json s races)))))
 
 (defun get-raceinfo (race)
-  (make-raceinfo
-   :name (joref race "name")
-   :id (joref race "objectId")
-   :class (joref (joref race "polar") "classBoat")
-   :start-time (joref (joref race "start") "iso")
-   :start-pos (make-latlng
-               :lat (joref (joref race "startLocation") "latitude")
-               :lng (joref (joref race "startLocation") "longitude"))))
+  (cond
+    ((joref race "objectId")
+     (make-raceinfo
+      :type "rs"
+      :name (joref race "name")
+      :id (joref race "objectId")
+      :class (joref (joref race "polar") "classBoat")
+      :start-time (joref (joref race "start") "iso")
+      :start-pos (make-latlng
+                  :lat (joref (joref race "startLocation") "latitude")
+                  :lng (joref (joref race "startLocation") "longitude"))))
+    ((joref race "_id")
+     (let* ((id  (joref race "_id"))
+            (boat (joref race "boat"))
+            (start (joref race "start")))
+       (make-raceinfo
+        :type "vr"
+        :name (joref race "name")
+        :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
+        :class (joref boat "name")
+        :start-time (joref start "date")
+        :start-pos  (make-latlng
+                     :lat (joref start "lat")
+                     :lng (joref start "lon")))))))
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
@@ -621,9 +638,11 @@
 (defvar *session-ht* (make-hash-table :test #'equalp))
 
 (defun create-session (&key (session-id (make-session-id)) (user-id) (race-id "default"))
-  (let ((session (make-session :session-id session-id :user-id user-id)))
+  (let ((session (make-session :session-id session-id :user-id user-id))
+        (options    '("realsail")))
     (setf (gethash race-id (session-routings session))
-          (make-routing :race-id race-id))
+          (make-routing :race-id race-id
+                        :options options))
     (values session)))
 
 (defun session-routing (session race-id)

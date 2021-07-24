@@ -1,12 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-05-22 01:26:29>
+;;; Last Modified <michael 2021-07-10 17:59:02>
 
 (in-package :virtualhelm)
 
 (defstruct cpolars id label name maxspeed twa vmg speed)
 (defstruct polars id label name maxspeed tws twa sails)
+(defstruct (polars-vr (:include polars)))
+(defstruct (polars-rs (:include polars)))
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
@@ -21,6 +23,7 @@
 
 (defvar +jib+ 0)
 (defvar +spi+ 1)
+(defvar +c0rs+ 2)
 (defvar +sty+ 2)
 (defvar +ljb+ 3)
 (defvar +cd0+ 4)
@@ -55,6 +58,8 @@
       (setf options (dpb 1 (byte 1 +hgn+) options)))
     (when (member "reach" option-list :test #'string=)
       (setf options (dpb 1 (byte 1 +cd0+) options)))
+    (when (member "realsail" option-list :test #'string=)
+      (setf options (dpb 1 (byte 1 +c0rs+) options)))
     options))
 
 (defun get-max-speed (cpolars-speed twa wind-speed)
@@ -65,14 +70,6 @@
           (round (* (abs twa) 10d0))
           (min (round (* wind-speed 10d0))
                (1- dim)))))
-
-(defun load-all-polars-rs ()
-  (loop
-     :for name :in (directory (merge-pathnames *polars-dir* (make-pathname :name :wild :type "json")))
-     :do (let ((polars
-                (load-polars-from-file name)))
-           (setf (gethash (polars-id polars) *polars-id-ht*) polars)
-           (setf (gethash (polars-name polars) *polars-name-ht*) polars))))
 
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
@@ -199,64 +196,28 @@
   (gethash name *polars-name-ht*))
 
 (defun get-polars-by-id (id)
-  (assert (numberp id))
+  ;; (assert (numberp id))
   (gethash id *polars-id-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
-;;;
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
+(defun load-polars-directory (&key (directory *polars-dir*))
+  (loop
+     :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
+     :do
+        ;; Side-effects are performed by the RS/VR functions 
+        (load-polars-file name)))
 
-(defun load-polars-from-file (polars-name)
-  ;;; Speed values are in knots. Convert to m/s.
-  ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
-  (let* ((polars
-          (joref (joref (parse-json-file polars-name) "scriptData") "polar"))
-         (id
-          (joref polars "_id"))
-         (label
-          (joref polars "label"))
-         (maxspeed
-          (joref polars "maxSpeed"))
-         (tws
-          (joref polars "tws"))
-         (twa
-          (joref polars "twa"))
-         (sail
-          (joref polars "sail"))
-         (saildefs
-          (make-array (length sail))))
-    (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" (joref polars "label") id (length sail) tws twa)
-    (loop
-       :for saildef :across sail
-       :for k :from 0
-       :do (let ((speeddata (make-array (list (length twa) (length tws)))))
-             (loop
-                :for angle-index :below (length twa)
-                :do (loop
-                       :for speed-index :below (length tws)
-                       :do (setf (aref speeddata angle-index speed-index)
-                                 (knots-to-m/s (aref (aref (joref saildef "speed") angle-index) speed-index)))))
-             (setf (aref saildefs k)
-                   (make-sail :name (joref saildef "name")
-                              :speed speeddata))))
-    ;; Convert TWS values to m/s
-    (loop
-       :for speed-index :below (length tws)
-       :do (setf (aref tws speed-index)
-                 (knots-to-m/s (aref tws speed-index))))
-    (loop
-       :for angle-index :below (length twa)
-       :do (setf (aref twa angle-index)
-                 (coerce (aref twa angle-index) 'double-float)))
-    (make-polars :name polars-name
-                 :id id
-                 :label label
-                 :maxspeed maxspeed
-                 :tws tws
-                 :twa twa
-                 :sails saildefs)))
+(defun load-polars-file (polars-name)
+  (let* ((json-object  (parse-json-file polars-name)))
+    (cond ((joref json-object "scriptData")
+           (translate-polars-vr polars-name json-object))
+          ((joref json-object "results")
+           (translate-polars-rs polars-name json-object))
+          (t
+           (error "Unknown polars fornat")))))
 
 (defun boat-performance (name)
   (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))

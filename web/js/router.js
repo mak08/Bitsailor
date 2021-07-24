@@ -580,59 +580,57 @@ import * as Util from './Util.js';
 
 
     function getSession () {
-        $.ajax({
-            url: "/function/vh.getSession",
-            dataType: 'json'
-        }).done( function(routing, status, xhr) {
+        Util.doGET("/function/vh.getSession",
+                   function(request) {
+                       var routing = JSON.parse(request.responseText);
+                       if (routing.start) {
+                           updateStartPosition(routing.start.lat, routing.start.lng);
+                           var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
+                           googleMap.setCenter(start);
+                       }
+                       
+                       if (routing.dest) {
+                           var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
+                           destinationMarker.setPosition(dest);
+                       }
+                       
+                       var selForecast = $("#sel_forecastbundle")[0];
+                       var irIndex = $("#ir_index")[0];
+                       var lbFCMax = $("#lb_fcmax")[0];
+                       
+                       var startTime = routing.starttime;
+                       var cbStartDelayed = $("#cb_startdelayed")[0];
+                       if ( startTime != false && startTime != 'NIL' ) {
+                           cbStartDelayed.checked = true;
+                           $("#tb_starttime")[0].value = startTime;
+                           
+                       } else {
+                           cbStartDelayed.checked = false;
+                       }
             
-            if (routing.start) {
-                updateStartPosition(routing.start.lat, routing.start.lng);
-                var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
-                googleMap.setCenter(start);
-            }
-
-            if (routing.dest) {
-                var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
-                destinationMarker.setPosition(dest);
-            }
-            
-            var selForecast = $("#sel_forecastbundle")[0];
-            var irIndex = $("#ir_index")[0];
-            var lbFCMax = $("#lb_fcmax")[0];
-            
-            var startTime = routing.starttime;
-            var cbStartDelayed = $("#cb_startdelayed")[0];
-            if ( startTime != false && startTime != 'NIL' ) {
-                cbStartDelayed.checked = true;
-                $("#tb_starttime")[0].value = startTime;
-                
-            } else {
-                cbStartDelayed.checked = false;
-            }
-            
-            var duration = routing.stepmax/3600;
-            var selDuration = $("#sel_duration")[0];
-            selDuration.value = duration;
-            
-            courseGCLine = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#ff0000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1
-            });
-            courseGCLine.setMap(googleMap);
-            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-
-            if (routing["nmea-connection"]) {
-                var nmeaInfo = routing["nmea-connection"];
-                if (nmeaInfo.port) {
-                    document.getElementById("tb_nmeaport").value = nmeaInfo.port;
-                }
-            }
-
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
+                       var duration = routing.stepmax/3600;
+                       var selDuration = $("#sel_duration")[0];
+                       selDuration.value = duration;
+                       
+                       courseGCLine = new google.maps.Polyline({
+                           geodesic: true,
+                           strokeColor: '#ff0000',
+                           strokeOpacity: 1.0,
+                           strokeWeight: 1
+                       });
+                       courseGCLine.setMap(googleMap);
+                       courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+                       
+                       if (routing["nmea-connection"]) {
+                           var nmeaInfo = routing["nmea-connection"];
+                           if (nmeaInfo.port) {
+                               document.getElementById("tb_nmeaport").value = nmeaInfo.port;
+                           }
+                       }
+                   },
+                   function (request) {
+                       alert(request.statusText + ' ' + request.responseText);
+                   });
     }
 
 
@@ -734,14 +732,24 @@ import * as Util from './Util.js';
     }
     
     function setupLegVR (leg) {
-        var checkpoints = leg.checkpoints;
+        document.title = leg.name;
+
         var markStbd = 'img/mark_green.png';
         var markPort = 'img/mark_red.png';
-        
+
+        setParameter("polars", leg.boat.polar_id);
+
         startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
-        destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
+        var startPos = new google.maps.LatLng(leg.start.lat, leg.start.lon);
+        setRoutePoint('start', startPos);
         
-        for (const c of checkpoints) {
+        destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
+        var destPos = new google.maps.LatLng(leg.end.lat, leg.end.lon);
+        setRoutePoint('dest', destPos);
+        
+        googleMap.panTo(startMarker.getPosition());
+
+        for (const c of leg.checkpoints) {
             var mark = new google.maps.Marker({
                 position: {"lat": c.start.lat, "lng": c.start.lon},
                 map: googleMap,

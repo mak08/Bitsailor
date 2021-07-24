@@ -1,56 +1,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-06-01 21:49:08>
+;;; Last Modified <michael 2021-07-10 17:54:30>
 
 (in-package :virtualhelm)
-
-(defvar *polars-dir-rs*
-  (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")
-                   *source-root*)
-  "A string designating the directory containing polar files")
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; ToDo: Overwriting original encode-options
-(defvar +rs-allsails+ 7)
-(defun encode-options (option-list)
-  (declare (ignore option-list))
-  +rs-allsails+)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Implementation
-
-(defun load-all-polars-rs ()
-  (loop
-     :for name :in (directory (merge-pathnames *polars-dir-rs* (make-pathname :name :wild :type "json")))
-     :do (let ((polars
-                (load-polars-from-file name)))
-           (setf (gethash (polars-id polars) *polars-id-ht*) polars)
-           (setf (gethash (polars-name polars) *polars-name-ht*) polars))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Reading polars from file
-
-(defun get-polars-by-name (name)
-  (gethash name *polars-name-ht*))
-
-(defun get-polars-by-id (id)
-  ;; (assert (numberp id))
-  (gethash id *polars-id-ht*))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
 ;;;
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
-(defun load-polars-from-file (polars-name)
+(defun translate-polars-rs (polars-name json-object)
+  (let ((polars (translate-polars-rs% polars-name json-object)))
+    (setf (gethash (polars-id polars) *polars-id-ht*) polars)
+    (setf (gethash (polars-name polars) *polars-name-ht*) polars)))
+
+(defun translate-polars-rs% (polars-name json-object)
   ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (let* ((*read-default-float-format* 'double-float)
          (polar
-           (joref (aref (joref (parse-json-file polars-name) "results") 0) "polar"))
+           (joref (aref (joref json-object "results") 0) "polar"))
          (id
            (joref polar "objectId"))
          (label
@@ -68,8 +38,7 @@
          (tws
            (check-tws jib gnk spi))
          (twa
-           (check-twa jib gnk spi)
-           )
+           (check-twa jib gnk spi))
          (sails
            (make-array 3 :initial-contents (list jib gnk spi)))
          (saildefs
@@ -92,13 +61,13 @@
       :for angle-index :below (length twa)
       :do (setf (aref twa angle-index)
                 (coerce (aref twa angle-index) 'double-float)))
-    (make-polars :name polars-name
-                 :id id
-                 :label label
-                 :maxspeed maxspeed
-                 :tws tws
-                 :twa twa
-                 :sails saildefs)))
+    (make-polars-rs :name polars-name
+                    :id id
+                    :label label
+                    :maxspeed maxspeed
+                    :tws tws
+                    :twa twa
+                    :sails saildefs)))
 
 (defun get-speeddata-rs (twa tws saildef)
   (let ((speeddata (make-array (list (length twa) (length tws))))

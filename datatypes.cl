@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-17 22:42:39>
+;;; Last Modified <michael 2021-07-24 00:08:16>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -20,7 +20,7 @@
   (limits "limits.json")
   (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (cycle nil)                           ; NIL = latest available
-  (options '("reach"))
+  (options '("realsail"))
   (minwind nil)                         ; m/s !!
   (start +LESSABLES+)                   ; set-paramater needs a valid initial values
   (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.

@@ -28,14 +28,24 @@ import * as Util from './Util.js';
                    function (request) {
                        console.log(request);
                        var races = JSON.parse(request.responseText);
-                       var table = document.getElementById("race_list");
+                       var tableRS = document.getElementById("race_list_rs");
+                       var tableVR = document.getElementById("race_list_vr");
                        for (const race of races) {
-                           var row = table.insertRow(-1);
-                           var date = race["start-time"];
-                           appendTextCell(row, race.name);
-                           appendTextCell(row, race.class);
-                           appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
-                           appendLinkCell(row, race.id, "/router?race=" + race.id);
+                           if (race.type == "rs") {
+                               var row = tableRS.insertRow(-1);
+                               var date = race["start-time"];
+                               appendTextCell(row, race.name);
+                               appendTextCell(row, race.class);
+                               appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
+                               appendLinkCell(row, race.id, "/router?race=" + race.id);
+                           } else if  (race.type == "vr") {
+                               var row = tableVR.insertRow(-1);
+                               var date = new Date(race["start-time"]).toISOString();
+                               appendTextCell(row, race.name);
+                               appendTextCell(row, race.class);
+                               appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
+                               appendLinkCell(row, race.id, "/router?race=" + race.id);
+                           }
                        }
                    },
                    function (xhr) {

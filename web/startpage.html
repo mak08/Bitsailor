@@ -17,7 +17,7 @@
 		<h2>Welcome</h2>
 		<br>
 		<p>
-		  This is the BitSailor router start page. If you don't have a user yet, please <a href="signup.html">sign up</a>.
+		  This is the BitSailor router start page. If you don't have a user yet, please <a href="signup.html">register</a>.
 		</p>
 		<p>
 		  Log in to the router page (see links in the table below) with you <b>boat name</b>.
@@ -27,13 +27,17 @@
 		</p>
 
 		<p><b>Please join us on <a href="https://discord.gg/UYGzPhWm">Discord</a></b></p>
-		  
+		
 	  </div>
 
 
 	  <div class="news">
 		<h4>News</h4>
 		<ul>
+		  <li><b>2021-07-23</b><br>
+			Fix 'reached' check<br>
+			Exclude region above 89°54"N due to numerical instability of distance arithmetic
+		  </li>
 		  <li><b>2021-07-04</b><br>
 			Display 'old' isochrones in red
 		  </li>
@@ -150,8 +154,8 @@
 			<pre><code> error File /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
 			<p>
 			  or
-			<pre><code> error Unexpected HTTP status 404 Not Found for URL
-https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
+			  <pre><code> error Unexpected HTTP status 404 Not Found for URL
+				  https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
 			<p>
 			  This is due to a bug in the forecast availability check. The router attempts to download the new forecast too early, when NOAA did not provide the file yet.<br>
 			  Occasionally, production of forecasts is delayed or broken at NOAA.
@@ -170,7 +174,7 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 	  <div class="disclaimer"><h3>Disclaimer</h3>
 		<p style="font-size:80%;">
 		  All content and services on this site are provided without warranty, implied or otherwise, of fitness for any particular purpose. Use entirely at your own risk.
-		  </p>	
+		</p>	
 		<p style="font-size:80%;">
 		  You shall be liable for any damages, losses or expenses of a third party caused by attempts to misuse the functions provided by this site.
 		</p>
@@ -187,9 +191,9 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 		</address>
 	  </div>	
 	  
-      <div class="table-header"><h3>Races from <a href="https://beta.realsail.net">realsail.net</a></h3></div>
-	  <div class="race-selection-table">
-		<table id="race_list">
+      <div class="table-header-rs"><h3><a href="https://realsail.net">RealSail</a> races</h3></div>
+	  <div class="table-rs">
+		<table id="race_list_rs">
 		  <thead>
 			<tr>
 			  <th>Race</th>
@@ -202,6 +206,23 @@ https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t0
 		  </tbody>
 		</table>	
       </div>
-    </div>
+	  
+      <div class="table-header-vr"><h3><a href="https://virtualregatta.com">VirtualRegatta</a> races</h3></div>
+	  <div class="table-vr">
+		<table id="race_list_vr">
+		  <thead>
+			<tr>
+			  <th>Race</th>
+			  <th>Class</th>
+			  <th>Start</th>
+			  <th>Router link</th>
+			</tr>
+		  </thead>
+		  <tbody>
+		  </tbody>
+		</table>	
+	  </div>
+
+	</div>
   </body>
 </html>

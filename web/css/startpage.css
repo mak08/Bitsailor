@@ -106,72 +106,84 @@ div {
 	overflow: auto;
 }
 
-.table-header {
+.table-header-rs {
 	grid-column: 2 / 4;
 	grid-row: 6;
 	color: #ededeb;
 	background-color: #308040;
-
 }
-.race-selection-table {
+.table-rs {
 	grid-column: 2 / 4;
 	grid-row: 7;
 	color: #ededeb;
 	background-color: #504040;
 }
 
-.instructions {
+.table-header-vr {
 	grid-column: 2 / 4;
 	grid-row: 8;
 	color: #ededeb;
 	background-color: #308040;
 }
-
-.instructions-content {
+.table-vr {
 	grid-column: 2 / 4;
 	grid-row: 9;
 	color: #ededeb;
 	background-color: #504040;
 }
 
-.faq {
+.instructions {
 	grid-column: 2 / 4;
 	grid-row: 10;
 	color: #ededeb;
 	background-color: #308040;
 }
 
-.faq-content {
+.instructions-content {
 	grid-column: 2 / 4;
 	grid-row: 11;
 	color: #ededeb;
 	background-color: #504040;
 }
 
-.issues {
+.faq {
 	grid-column: 2 / 4;
 	grid-row: 12;
 	color: #ededeb;
 	background-color: #308040;
 }
 
-.issues-content {
+.faq-content {
 	grid-column: 2 / 4;
 	grid-row: 13;
 	color: #ededeb;
 	background-color: #504040;
 }
 
-.disclaimer {
+.issues {
 	grid-column: 2 / 4;
 	grid-row: 14;
+	color: #ededeb;
+	background-color: #308040;
+}
+
+.issues-content {
+	grid-column: 2 / 4;
+	grid-row: 15;
+	color: #ededeb;
+	background-color: #504040;
+}
+
+.disclaimer {
+	grid-column: 2 / 4;
+	grid-row: 16;
 }
 
 .contact {
 	display :flex;
 	flex-direction: row;
 	grid-column: 2 / 4;
-	grid-row: 15;
+	grid-row: 17;
 	font-size: 90%;
 	justify-content: space-between;
 	background-color:grey;

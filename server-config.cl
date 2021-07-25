@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-07-12 22:16:38>
+;;; Last Modified <michael 2021-07-25 15:07:17>
 
 (in-package :virtualhelm)
 
@@ -115,7 +115,7 @@
 
 (handle
  :request (:prefix "/polars")
- :handler (:static (namestring  *source-root*)
+ :handler (:static (namestring *polars-dir*)
            :authentication nil))
 
 (handle

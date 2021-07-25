@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-10 17:54:30>
+;;; Last Modified <michael 2021-07-25 15:05:37>
 
 (in-package :virtualhelm)
 
@@ -19,16 +19,14 @@
   ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation
   (let* ((*read-default-float-format* 'double-float)
-         (polar
-           (joref (aref (joref json-object "results") 0) "polar"))
          (id
-           (joref polar "objectId"))
+           (joref json-object "objectId"))
          (label
-           (joref polar "classBoat"))
+           (joref json-object "classBoat"))
          (maxspeed
            nil)
          (polar-data
-           (joref polar "polarData"))
+           (joref json-object "polarData"))
          (jib
            (joref polar-data "jib"))
          (gnk

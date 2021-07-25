@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-10 17:59:02>
+;;; Last Modified <michael 2021-07-25 15:04:24>
 
 (in-package :virtualhelm)
 
@@ -214,10 +214,10 @@
   (let* ((json-object  (parse-json-file polars-name)))
     (cond ((joref json-object "scriptData")
            (translate-polars-vr polars-name json-object))
-          ((joref json-object "results")
+          ((joref json-object "objectId")
            (translate-polars-rs polars-name json-object))
           (t
-           (error "Unknown polars fornat")))))
+           (error "Unknown polars format")))))
 
 (defun boat-performance (name)
   (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-22 18:08:42>
+;;; Last Modified <michael 2021-08-02 20:01:29>
 
 
 (in-package :virtualhelm)
@@ -63,7 +63,7 @@
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
                 (path request))
-          (load-html-file path response :substitutions '(("GOOGLE_API_KEY" .  "AIzaSyBB-hZWEpgPFEC16DlvXxEWKA4rjDzaS0Y"))))
+          (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" . *api-key*))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
@@ -303,21 +303,6 @@
        (with-output-to-string (s)
          (json s t))))))
 
-(defun |getLegInfo| (handler request response)
-  (sqlite-client:with-current-connection (c *db*)
-
-    (let* ((user-id
-             (http-authenticated-user handler request))
-           (session
-             (find-or-create-session user-id request response))
-           (race-id
-             (get-routing-request-race-id request))
-           (leg-info
-             (race-info race-id)))
-      (values
-       (with-output-to-string (s)
-         (json s leg-info))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
 
@@ -354,10 +339,17 @@
                      (local-time:parse-rfc3339-timestring |time|)
                      (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|))))))
           (log2:info "Requested time: ~a" requested-time)
-          (let* ((cycle (make-cycle :timestamp base-time))
-                 (cycle-start-time base-time)
-                 (user-id (http-authenticated-user handler request))
+          (let* ((user-id (http-authenticated-user handler request))
                  (session (find-or-create-session user-id request response))
+                 (race-id (get-routing-request-race-id request))
+                 (routing (session-routing session race-id))
+                 (cycle (make-cycle :timestamp base-time))
+                 (cycle-start-time base-time)
+                 (iparams (interpolation-parameters requested-time
+                                                    :method (routing-interpolation routing)
+                                                    :merge-start (routing-merge-start routing)
+                                                    :merge-window (routing-merge-window routing)
+                                                    :cycle cycle))
                  (ddx (read-arg |ddx|))
                  (ddy (read-arg |ddy|))
                  (north (read-arg |north|))
@@ -380,7 +372,7 @@
                                  :collect (multiple-value-bind (dir speed)
                                               (let ((nlon
                                                       (if (> lon 0) (- lon 360) lon)))
-                                                (cl-weather:vr-prediction lat nlon :cycle cycle :timestamp requested-time))
+                                                (interpolated-prediction lat nlon iparams))
                                             (list (round-to-digits dir 2)
                                                   (round-to-digits speed 2)))))))
               (let ((encoding (http-header request :accept-encoding))
@@ -444,7 +436,16 @@
     (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
     (handler-case
         (let ((*read-default-float-format* 'double-float))
-          (let* ((forecast-time
+          (let* (
+                 (user-id
+                   (http-authenticated-user handler request))
+                 (session
+                   (find-or-create-session user-id request response))
+                 (race-id
+                   (get-routing-request-race-id request))
+                 (routing
+                   (session-routing session race-id))
+                 (forecast-time
                    (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
                  (lat
                    (read-arg |lat|))
@@ -459,7 +460,11 @@
               (multiple-value-bind (dir0 speed0)
                   (vr-prediction lat lng :timestamp forecast-time :cycle cycle0)
                 (multiple-value-bind (dir speed)
-                    (interpolated-prediction lat lng (interpolation-parameters forecast-time))
+                    (interpolated-prediction lat lng (interpolation-parameters forecast-time
+                                                                               :method (routing-interpolation routing)
+                                                                               :merge-start (routing-merge-start routing)
+                                                                               :merge-window (routing-merge-window routing)
+                                                                               ))
                   (values
                    (with-output-to-string (s)
                      (json s (make-forecast
@@ -543,7 +548,22 @@
       (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; RealSail specific commads
+;;; Race list  & race info
+
+(defun |getRaceInfo| (handler request response)
+  (sqlite-client:with-current-connection (c *db*)
+
+    (let* ((user-id
+             (http-authenticated-user handler request))
+           (session
+             (find-or-create-session user-id request response))
+           (race-id
+             (get-routing-request-race-id request))
+           (race-info
+             (race-info race-id)))
+      (values
+       (with-output-to-string (s)
+         (json s race-info))))))
 
 (defstruct raceinfo type name id class start-time closing-time start-pos finish-pos closed)
 
@@ -557,7 +577,7 @@
       (map-races 
        (lambda (k v)
          (declare (ignore k))
-         (push (get-raceinfo v) races)))
+         (push (get-raceinfo (race-info-data v)) races)))
       (with-output-to-string (s)
         (json s races)))))
 
@@ -573,16 +593,15 @@
       :start-pos (make-latlng
                   :lat (joref (joref race "startLocation") "latitude")
                   :lng (joref (joref race "startLocation") "longitude"))))
-    ((joref race "_id")
-     (let* ((id  (joref race "_id"))
-            (boat (joref race "boat"))
+    ((joref race "raceId")
+     (let* ((boat (joref race "boat"))
             (start (joref race "start")))
        (make-raceinfo
         :type "vr"
-        :name (joref race "name")
-        :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
-        :class (joref boat "name")
-        :start-time (joref start "date")
+        :name (joref race "legName")
+        :id (format nil "~a.~a" (joref race "raceId") (joref race "legNum"))
+        :class (joref boat "label")
+        :start-time (joref start "startDate")
         :start-pos  (make-latlng
                      :lat (joref start "lat")
                      :lng (joref start "lon")))))))
@@ -638,11 +657,9 @@
 (defvar *session-ht* (make-hash-table :test #'equalp))
 
 (defun create-session (&key (session-id (make-session-id)) (user-id) (race-id "default"))
-  (let ((session (make-session :session-id session-id :user-id user-id))
-        (options    '("realsail")))
+  (let ((session (make-session :session-id session-id :user-id user-id)))
     (setf (gethash race-id (session-routings session))
-          (make-routing :race-id race-id
-                        :options options))
+          (create-routing :race-id race-id))
     (values session)))
 
 (defun session-routing (session race-id)
@@ -650,7 +667,7 @@
    (gethash race-id (session-routings session))
    (log2:trace "Creating routing for session ~a race ~a" (session-session-id session) race-id)
    (setf (gethash race-id (session-routings session))
-         (make-routing :race-id race-id))))
+         (create-routing :race-id race-id))))
 
 (defun find-or-create-session (user-id request response)
   (let* ((session-cookie

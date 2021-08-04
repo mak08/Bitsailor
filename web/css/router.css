@@ -410,12 +410,12 @@ input[type=checkbox] {
 	align-self: flex-start;
 }
 
-.statistics-maxspeed-label {
+.statistics-options-label {
 	grid-row: 24;
 	grid-column: 1;
 	align-self: flex-start;
 }
-.statistics-maxspeed {
+.statistics-options {
 	grid-row: 24;
 	grid-column: 2;
 	align-self: flex-start;

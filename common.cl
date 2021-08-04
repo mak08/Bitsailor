@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2021-06-06 12:55:39>
+;;; Last Modified <michael 2021-08-02 20:02:03>
 
 
 (in-package "VIRTUALHELM")
@@ -25,6 +25,7 @@
 (defvar *isochrones* nil)
 (defvar *best-route*)
 
+(defvar *api-key*)
 (defvar *use-bitmap* t)
 (defvar *manoeuvering-penalty* nil)
 (defvar *tracks* nil)

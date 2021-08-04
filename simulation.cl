@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-23 22:13:34>
+;;; Last Modified <michael 2021-08-03 22:54:09>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -90,8 +90,16 @@
                    (get-penalty routing))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (params (interpolation-parameters start-time cycle)
-                  (interpolation-parameters step-time cycle))
+          (params (interpolation-parameters start-time
+                                            :method (routing-interpolation routing)
+                                            :merge-start (routing-merge-start routing)
+                                            :merge-window (routing-merge-window routing)
+                                            :cycle cycle)
+                  (interpolation-parameters step-time
+                                            :method (routing-interpolation routing)
+                                            :merge-start (routing-merge-start routing)
+                                            :merge-window (routing-merge-window routing)
+                                            :cycle cycle))
           (base-time (iparams-effective-cycle params)
                      (iparams-effective-cycle params))
           (step-size (funcall stepper)
@@ -129,6 +137,7 @@
                               :path best-path
                               :stats (get-statistics best-route elapsed stepnum pointnum)
                               :polars (cpolars-label polars)
+                              :options (routing-options routing)
                               :maxspeed (cpolars-maxspeed polars)
                               :tracks (when *tracks*
                                         (extract-tracks start-pos (course-angle start-pos destination) isochrone))
@@ -535,8 +544,7 @@
 (defun get-twa-path (routing &key base-time time lat-a lng-a lat lng
                                (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
-  (let* ((options (encode-options (routing-options routing)))
-         (polars (get-combined-polars (routing-polars routing) options))
+  (let* ((polars (get-routing-polars routing))
          (penalty (get-penalty routing))
          (hull (routing-hull routing))
          (foils  (routing-foils routing))
@@ -554,7 +562,11 @@
          (curpos-hdg (copy-latlng startpos))
          (wind-dir (interpolated-prediction (latlng-lat startpos)
                                             (latlng-lng startpos)
-                                            (interpolation-parameters time cycle)))
+                                            (interpolation-parameters time
+                                                                      :method (routing-interpolation routing)
+                                                                      :merge-start (routing-merge-start routing)
+                                                                      :merge-window (routing-merge-window routing)
+                                                                      :cycle cycle)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
          (twa-path nil)
          (hdg-path nil))
@@ -570,7 +582,13 @@
       ;; Create new timestamp, Increment time
       ;; Determine next position - TWA
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-twa) (latlng-lng curpos-twa) (interpolation-parameters time cycle))
+          (interpolated-prediction (latlng-lat curpos-twa)
+                                   (latlng-lng curpos-twa)
+                                   (interpolation-parameters time
+                                                             :method (routing-interpolation routing)
+                                                             :merge-start (routing-merge-start routing)
+                                                             :merge-window (routing-merge-window routing)
+                                                             :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
             (get-penalized-avg-speed nil nil wind-speed polars twa penalty hull foils)
@@ -580,7 +598,13 @@
                   (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
       ;; Determine next position - HDG
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-hdg) (latlng-lng curpos-hdg) (interpolation-parameters time cycle))
+          (interpolated-prediction (latlng-lat curpos-hdg)
+                                   (latlng-lng curpos-hdg)
+                                   (interpolation-parameters time
+                                                             :method (routing-interpolation routing)
+                                                             :merge-start (routing-merge-start routing)
+                                                             :merge-window (routing-merge-window routing)
+                                                             :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)

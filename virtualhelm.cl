@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-07-11 01:08:39>
+;;; Last Modified <michael 2021-07-31 11:33:00>
 
 (in-package :virtualhelm)
 
@@ -63,6 +63,22 @@
 (defvar +races-ht-lock+
   (bordeaux-threads:make-lock "races-ht"))
 
+(defun create-routing (&key race-id)
+  (let ((race-info (race-info race-id)))
+    (etypecase race-info
+      (race-info-rs
+       (make-routing :race-id race-id
+                     :interpolation :enorm
+                     :merge-start 6d0
+                     :merge-window 0d0
+                     :options '("realsail")))
+      (race-info-vr
+       (make-routing :race-id race-id
+                     :interpolation :vr
+                     :merge-start 4.0d0
+                     :merge-window 1d0
+                     :options '("hull" "foil" "winch" "heavy" "light" "reach"))))))
+
 (defun race-info (race-id)
   (bordeaux-threads:with-lock-held (+races-ht-lock+)
     (gethash race-id *races-ht*)))
@@ -84,7 +100,7 @@
       :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
       :do (let ((json-object (parse-json-file name)))
              (cond
-               ((joref json-object "res")
+               ((joref json-object "scriptData")
                 (store-race-data-vr json-object))
                ((joref json-object "results")
                 (store-race-data-rs json-object))

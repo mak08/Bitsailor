@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-06 12:56:11>
+;;; Last Modified <michael 2021-08-02 20:02:23>
 
 (defpackage "VIRTUALHELM"
   (:nicknames "VH")
@@ -26,6 +26,7 @@
    "*RACES-DIR-RS*"
    "*TRACKS*"
    "*RS-MAX-HOURS*"
+   "*API-KEY*"
    "*USE-BITMAP*"
    ;; HTTP API
    "GET-PAGE"
@@ -33,7 +34,7 @@
    "signUp"
    "getSession"
    "removeSession"
-   "getLegInfo"
+   "getRaceInfo"
    "getWind"
    "getWindForecast"
    "probeWind"

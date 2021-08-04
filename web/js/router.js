@@ -123,7 +123,7 @@ import * as Util from './Util.js';
             updateMap();
         });
         
-        getLegInfo()
+        getRaceInfo()
         getSession();
 
     }
@@ -575,6 +575,7 @@ import * as Util from './Util.js';
         $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed (1));
         $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
         $("#lb_polars").text(data.polars);
+        $("#lb_options").text(data.options);
         // $("#lb_maxspeed").text(data.maxspeed);
     }
 
@@ -646,16 +647,16 @@ import * as Util from './Util.js';
     }
 
     
-    function getLegInfo () {
+    function getRaceInfo () {
         $.ajax({
-            url: "/function/vh.getLegInfo",
+            url: "/function/vh.getRaceInfo",
             dataType: 'json'
-        }).done( function(leg, status, xhr) {
-            if (leg) {
-                if (leg.checkpoints) {
-                    setupLegVR(leg);
-                } else if (leg.objectId) {
-                    setupLegRS(leg);
+        }).done( function(raceinfo, status, xhr) {
+            if (raceinfo) {
+                if (raceinfo.data.checkpoints) {
+                    setupLegVR(raceinfo);
+                } else if (raceinfo.data.objectId) {
+                    setupLegRS(raceinfo);
                 }
             } else {
                 alert("No leg info for race");
@@ -665,24 +666,26 @@ import * as Util from './Util.js';
         });
     }
 
-    function setupLegRS (leg) {
-        document.title = leg.name;
+    function setupLegRS (raceinfo) {
+        var rsData = raceinfo.data;
+        
+        document.title = rsData.name;
         
         var markPort = 'img/mark_red.png';
 
-        setParameter("polars", leg.polar.objectId);
+        setParameter("polars", rsData.polar.objectId);
 
         // 
-        loadPolars(leg.polar.objectId);
+        loadPolars(rsData.polar.objectId);
         
-        startMarker.setPosition( {"lat": leg.startLocation.latitude,
-                                  "lng": leg.startLocation.longitude});
-        var startPos = new google.maps.LatLng(leg.startLocation.latitude, leg.startLocation.longitude);
+        startMarker.setPosition( {"lat": rsData.startLocation.latitude,
+                                  "lng": rsData.startLocation.longitude});
+        var startPos = new google.maps.LatLng(rsData.startLocation.latitude, rsData.startLocation.longitude);
         setRoutePoint('start', startPos);
 
         // Destination 
-        var lastP0 = leg.gates[leg.gates.length-1][0]
-        var lastP1 = leg.gates[leg.gates.length-1][1]
+        var lastP0 = rsData.gates[rsData.gates.length-1][0]
+        var lastP1 = rsData.gates[rsData.gates.length-1][1]
         // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
         var destLat = (lastP0.latitude + lastP1.latitude)/2;
         var destLon = (lastP0.longitude + lastP1.longitude)/2; 
@@ -692,7 +695,7 @@ import * as Util from './Util.js';
         googleMap.panTo(startMarker.getPosition());
 
         var gateCount = 1; 
-        for (const gate of leg.gates) {
+        for (const gate of rsData.gates) {
             var mark0 = new google.maps.Marker({
                 position: {"lat": gate[0].latitude,
                            "lng": gate[0].longitude},
@@ -731,25 +734,29 @@ import * as Util from './Util.js';
         });
     }
     
-    function setupLegVR (leg) {
-        document.title = leg.name;
+    function setupLegVR (raceinfo) {
+
+        var vrData = raceinfo.data;
+        
+        document.title = vrData.name;
 
         var markStbd = 'img/mark_green.png';
         var markPort = 'img/mark_red.png';
 
-        setParameter("polars", leg.boat.polar_id);
+        setParameter("polars", vrData.boat.polar_id);
+        loadPolars( vrData.boat.polar_id);
 
-        startMarker.setPosition( {"lat": leg.start.lat, "lng": leg.start.lon});
-        var startPos = new google.maps.LatLng(leg.start.lat, leg.start.lon);
+        startMarker.setPosition( {"lat": vrData.start.lat, "lng": vrData.start.lon});
+        var startPos = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
         setRoutePoint('start', startPos);
         
-        destinationMarker.setPosition( {"lat": leg.end.lat, "lng": leg.end.lon});
-        var destPos = new google.maps.LatLng(leg.end.lat, leg.end.lon);
+        destinationMarker.setPosition( {"lat": vrData.end.lat, "lng": vrData.end.lon});
+        var destPos = new google.maps.LatLng(vrData.end.lat, vrData.end.lon);
         setRoutePoint('dest', destPos);
         
         googleMap.panTo(startMarker.getPosition());
 
-        for (const c of leg.checkpoints) {
+        for (const c of vrData.checkpoints) {
             var mark = new google.maps.Marker({
                 position: {"lat": c.start.lat, "lng": c.start.lon},
                 map: googleMap,
@@ -759,9 +766,9 @@ import * as Util from './Util.js';
             });
             mark.addListener('click', function () { onMarkerClicked(mark) });
         }
-        if (leg.ice_limits) {
+        if (vrData.ice_limits) {
             var iceLimit = [];
-            for (const p of leg.ice_limits.south) {
+            for (const p of vrData.ice_limits.south) {
                 iceLimit.push({"lat": p.lat, "lng": p.lon});
             }
             var iceLine = new google.maps.Polyline({

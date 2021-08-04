@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-07-24 00:08:16>
+;;; Last Modified <michael 2021-07-30 20:22:03>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -13,6 +13,11 @@
   (user-id)
   (routings (make-hash-table :test #'equal)))
 
+(defstruct race-info data)
+(defstruct (race-info-vr (:include race-info)) (mode "vr"))
+(defstruct (race-info-rs (:include race-info)) (mode "rs"))
+  
+
 (defstruct routing
   (dataset 'noaa-dataset)
   (race-id "default")
@@ -21,6 +26,9 @@
   (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (cycle nil)                           ; NIL = latest available
   (options '("realsail"))
+  (merge-start)
+  (merge-window)
+  (interpolation)                       ; :enorm (realsail), :bilinear, :vr
   (minwind nil)                         ; m/s !!
   (start +LESSABLES+)                   ; set-paramater needs a valid initial values
   (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.
@@ -53,7 +61,7 @@
 (defun routing-winches (routing)
   (member "winch" (routing-options routing) :test #'string=))
 
-(defstruct routeinfo status best path polars maxspeed stats tracks isochrones)
+(defstruct routeinfo status best path polars options maxspeed stats tracks isochrones)
 
 (defmethod print-object ((thing routeinfo) stream)
   (let ((stats (or (routeinfo-stats thing)

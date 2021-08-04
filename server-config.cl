@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-07-25 15:07:17>
+;;; Last Modified <michael 2021-07-29 19:06:05>
 
 (in-package :virtualhelm)
 
@@ -74,7 +74,7 @@
 (register-function "vh.signUp" :authorizer (constantly t))
 (register-function "vh.getSession" :authorizer #'vh-function-authorizer)
 (register-function "vh.removeSession" :authorizer #'vh-function-authorizer)
-(register-function "vh.getLegInfo" :authorizer #'vh-function-authorizer)
+(register-function "vh.getRaceInfo" :authorizer #'vh-function-authorizer)
 (register-function "vh.getWind" :authorizer #'vh-function-authorizer)
 (register-function "vh.probeWind" :authorizer #'vh-function-authorizer)
 (register-function "vh.getWindForecast" :authorizer #'vh-function-authorizer)
@@ -96,20 +96,20 @@
 (handle
  :request (:prefix "/js")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "js"))
                                      *source-root*))
                    :authentication nil))
 (handle
  :request (:prefix "/css")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "css"))
                                      *source-root*))
                    :authentication nil))
 
 (handle
  :request (:prefix "/img")
  :handler (:static (namestring
-                    (merge-pathnames (make-pathname :directory '(:relative "web"))
+                    (merge-pathnames (make-pathname :directory '(:relative "web" "img"))
                                      *source-root*))
            :authentication nil))
 

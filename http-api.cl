@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-08-02 20:01:29>
+;;; Last Modified <michael 2021-08-02 20:36:35>
 
 
 (in-package :virtualhelm)
@@ -63,7 +63,7 @@
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
                 (path request))
-          (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" . *api-key*))))
+          (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" *api-key*))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)

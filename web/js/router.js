@@ -666,6 +666,25 @@ import * as Util from './Util.js';
         });
     }
 
+    function positionFromDocumentURL () {
+        var query = new URL(document.URL).search.split('&');
+        var lat;
+        var lon;
+        for (const e of query) {
+            var p = e.split('=');
+            if (p[0] == 'slat') {
+                lat = p[1].split('d')[0];
+            } else if (p[0] == 'slon') {
+                lon = p[1].split('d')[0];
+            }
+        }
+        if ( lat && lon ) {
+            return {"lat": lat, "lon": lon};
+        } else {
+            return null;
+        }
+    }
+
     function setupLegRS (raceinfo) {
         var rsData = raceinfo.data;
         
@@ -677,11 +696,15 @@ import * as Util from './Util.js';
 
         // 
         loadPolars(rsData.polar.objectId);
-        
-        startMarker.setPosition( {"lat": rsData.startLocation.latitude,
-                                  "lng": rsData.startLocation.longitude});
-        var startPos = new google.maps.LatLng(rsData.startLocation.latitude, rsData.startLocation.longitude);
-        setRoutePoint('start', startPos);
+
+        var start = positionFromDocumentURL();
+        if (start) {
+        } else {
+            startMarker.setPosition( {"lat": rsData.startLocation.latitude,
+                                      "lng": rsData.startLocation.longitude});
+            var startPos = new google.maps.LatLng(rsData.startLocation.latitude, rsData.startLocation.longitude);
+            setRoutePoint('start', startPos);
+        }
 
         // Destination 
         var lastP0 = rsData.gates[rsData.gates.length-1][0]

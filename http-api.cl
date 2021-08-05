@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-08-02 20:36:35>
+;;; Last Modified <michael 2021-08-05 23:16:48>
 
 
 (in-package :virtualhelm)
@@ -795,6 +795,18 @@
     ((string= name "searchangle")
      (let ((fan (read-arg value)))
        (setf (routing-fan routing) fan)))
+    ((string= name "slat")
+     (unless (routing-start routing)
+       (setf (routing-start routing)
+             (make-latlng)))
+     (setf (routing-start routing)
+           (make-latlng :lat (read-from-string value) :lng (latlng-lng (routing-start routing)))))
+    ((string= name "slon")
+     (unless (routing-start routing)
+       (setf (routing-start routing)
+             (make-latlng)))
+     (setf (routing-start routing)
+           (make-latlng :lat (latlng-lat (routing-start routing)) :lng (read-from-string value))))
     ((string= name "start")
      (setf (routing-start routing)
            (etypecase value

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-07-31 11:33:00>
+;;; Last Modified <michael 2021-09-30 23:40:15>
 
 (in-package :virtualhelm)
 
@@ -42,8 +42,11 @@
 
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Starting weather updates")
-    (bordeaux-threads:make-thread (lambda () (noaa-start-updates)) :name "INITIAL-WEATHER-UPDATE")
-
+    (bordeaux-threads:make-thread (lambda ()
+                                    (download-cycle (previous-cycle (available-cycle (now))))
+                                    (noaa-start-updates))
+                                  :name "INIT-WEATHER-DATA")
+    
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
@@ -65,7 +68,7 @@
 
 (defun create-routing (&key race-id)
   (let ((race-info (race-info race-id)))
-    (etypecase race-info
+    (typecase race-info
       (race-info-rs
        (make-routing :race-id race-id
                      :interpolation :enorm
@@ -77,7 +80,9 @@
                      :interpolation :vr
                      :merge-start 4.0d0
                      :merge-window 1d0
-                     :options '("hull" "foil" "winch" "heavy" "light" "reach"))))))
+                     :options '("hull" "foil" "winch" "heavy" "light" "reach")))
+      (null
+       (error "Unknown race-id ~a" race-id)))))
 
 (defun race-info (race-id)
   (bordeaux-threads:with-lock-held (+races-ht-lock+)
@@ -99,13 +104,13 @@
     (loop
       :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
       :do (let ((json-object (parse-json-file name)))
-             (cond
-               ((joref json-object "scriptData")
-                (store-race-data-vr json-object))
-               ((joref json-object "results")
-                (store-race-data-rs json-object))
-               (T
-                (log2:warning "Skipping ~a" name)))))))
+            (cond
+              ((typep json-object 'array)
+               (store-race-data-vr json-object))
+              ((joref json-object "results")
+               (store-race-data-rs json-object))
+              (T
+               (log2:warning "Skipping ~a" name)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

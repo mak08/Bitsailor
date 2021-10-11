@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-07-29 19:06:05>
+;;; Last Modified <michael 2021-09-04 10:51:07>
 
 (in-package :virtualhelm)
 
@@ -28,7 +28,7 @@
                          (make-pathname :directory (pathname-directory *load-pathname*))))
 
 ;;; Start one server on port 8080. 
-(server :hostname "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
+(server :hostname "localhost" ;; "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
         :protocol :http
         :mt-method :ondemand
         ;; :mt-method :pooled

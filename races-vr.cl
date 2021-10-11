@@ -1,19 +1,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-07-28 17:48:51>
+;;; Last Modified <michael 2021-09-30 23:45:25>
 
 (in-package :virtualhelm)
 
-(defun store-race-data-vr (json-object)
+(defun store-race-data-vr (json-array)
   (loop
-    :for race-def :across (joref (joref json-object "scriptData") "res")
-    :do (let* ((race-id (joref race-def "raceId"))
-               (leg-num (joref race-def "legNum"))
+    :for entry :across json-array
+    :do (let* ((body-string (joref entry "body"))
+               (body-json (parse-json (remove #\\ body-string)))
+               (leg (joref (joref body-json "res") "leg"))
+               (id (joref leg "_id"))
+               (race-id (joref id "race_id"))
+               (leg-num (joref id "num"))
                (leg-id (format nil "~a.~a" race-id leg-num)))
-          (log2:info "Loading race ~a ~a" leg-id (joref race-def "legName"))
+          (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
           (setf (gethash leg-id *races-ht*)
-                (make-race-info-vr :data race-def)))))
+                (make-race-info-vr :data leg)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

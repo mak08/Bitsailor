@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-08-05 23:16:48>
+;;; Last Modified <michael 2021-10-11 22:06:29>
 
 
 (in-package :virtualhelm)
@@ -593,15 +593,16 @@
       :start-pos (make-latlng
                   :lat (joref (joref race "startLocation") "latitude")
                   :lng (joref (joref race "startLocation") "longitude"))))
-    ((joref race "raceId")
-     (let* ((boat (joref race "boat"))
+    ((joref race "_id")
+     (let* ((id (joref race "_id"))
+            (boat (joref race "boat"))
             (start (joref race "start")))
        (make-raceinfo
         :type "vr"
-        :name (joref race "legName")
-        :id (format nil "~a.~a" (joref race "raceId") (joref race "legNum"))
+        :name (joref race "name")
+        :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
         :class (joref boat "label")
-        :start-time (joref start "startDate")
+        :start-time (joref start "date")
         :start-pos  (make-latlng
                      :lat (joref start "lat")
                      :lng (joref start "lon")))))))
@@ -656,6 +657,13 @@
 ;;; Keep session table when reloading system!
 (defvar *session-ht* (make-hash-table :test #'equalp))
 
+(defvar +session-ht-lock+
+  (bordeaux-threads:make-lock "session-ht"))
+
+(defun update-session-ht (key value)
+  (bordeaux-threads:with-lock-held (+session-ht-lock+)
+    (setf (gethash key *session-ht*) value))) 
+
 (defun create-session (&key (session-id (make-session-id)) (user-id) (race-id "default"))
   (let ((session (make-session :session-id session-id :user-id user-id)))
     (setf (gethash race-id (session-routings session))
@@ -681,16 +689,21 @@
              (cond
                ((null stored-session)
                 (log2:info "Session ~a unknown, creating." session-id)
-                (setf session (setf (gethash session-id *session-ht*)
-                                    (create-session :session-id session-id :user-id user-id :race-id race-id))))
+                (setf session
+                      (update-session-ht session-id 
+                                         (create-session :session-id session-id
+                                                         :user-id user-id
+                                                         :race-id race-id))))
                (t
                 (log2:trace "Session ~a found." session-id)
                 (setf session stored-session)))))
           (t
            (setf session-id (make-session-id))
            (set-cookie response "SessionID" session-id :options '())
-           (setf session (setf (gethash session-id *session-ht*)
-                               (create-session :session-id session-id :race-id race-id)))
+           (setf session
+                 (update-session-ht session-id
+                                    (create-session :session-id session-id
+                                                    :race-id race-id)))
            (log2:info "New session ~a created." session-id)))
     session))
 

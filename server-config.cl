@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-09-04 10:51:07>
+;;; Last Modified <michael 2021-10-13 23:32:15>
 
 (in-package :virtualhelm)
 
@@ -55,7 +55,7 @@
  :to (:path "/start"))
 
 (redirect
- :from (:regex ".*/")
+ :from (:regex ".*/^")
  :to (:path "index.html"))
 
 (redirect

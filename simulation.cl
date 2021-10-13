@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-08-03 22:54:09>
+;;; Last Modified <michael 2021-10-13 22:35:30>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -33,6 +33,7 @@
       (get-max-speed (cpolars-speed polars) angle wind-speed)
     (values speed
             sail)))
+;; (declaim (notinline twa-boatspeed))
 
 (declaim (inline get-penalty))
 (defun get-penalty (routing &key step-size type)
@@ -290,7 +291,7 @@
   "Compute HEADING resulting from TWA in WIND"
   (declare (double-float wind-dir angle) (inline normalize-heading))
   (normalize-heading (- wind-dir angle)))
-(declaim (notinline twa-heading))
+;; (declaim (notinline twa-heading))
 
 (declaim (inline get-penalized-avg-speed))
 (defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalty hull foils)
@@ -316,6 +317,7 @@
        (values (* speed penalty) sail "Tack/Gybe"))
       (t
        (values speed sail nil)))))
+;; (declaim (notinline get-penalized-avg-speed))
 
 (defun expand-routepoint (routing routepoint penalty hull foils start-pos left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))

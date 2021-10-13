@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-25 15:04:24>
+;;; Last Modified <michael 2021-10-13 22:26:06>
 
 (in-package :virtualhelm)
 
@@ -163,7 +163,7 @@
     (vmax 0)
     (i 0 (1+ i)))
    ((= i 7)
-       (values vmax
+       (values (max vmax 0.01d0)
                (sail-name (aref (polars-sails polars) imax))))
     (when (= (ldb (byte 1 i) options) 1)
       (let ((v (get-boat-speed (abs angle)

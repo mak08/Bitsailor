@@ -286,16 +286,16 @@ import * as Util from './Util.js';
             valueSpec =  "&value=" + cycleSpec;
         }
 
-        $.ajax({
+        Util.doGET(
             // No paramValue == reset (value defaults to nil)
-            url: "/function/vh.setParameter" + "?name=" + 'cycle' + valueSpec,
-            dataType: 'json'
-        }).done( function(data) {
-            console.log(data);
-            redrawWindByOffset(cycleSpec, 0);
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert('Could not set cycle: ' + textStatus + ' ' + errorThrown);
-        });
+            "/function/vh.setParameter" + "?name=" + 'cycle' + valueSpec,
+            function (request) {
+                console.log(request.responseText);
+                redrawWindByOffset(cycleSpec, 0);
+            },
+            function (request) {
+                alert('Could not set cycle: ' + request.textStatus + ' ' + request.errorThrown + ' ' + request.responseText);
+            });
     }
     
     function onSetClientParameter (event) {
@@ -693,8 +693,6 @@ import * as Util from './Util.js';
         var markPort = 'img/mark_red.png';
 
         setParameter("polars", rsData.polar.objectId);
-
-        // 
         loadPolars(rsData.polar.objectId);
 
         var start = positionFromDocumentURL();
@@ -742,19 +740,19 @@ import * as Util from './Util.js';
     }
 
     function loadPolars (id) {
-        $.ajax({
-            url: `/polars/${ id }.json`,
-            dataType: 'json'
-        }).done( function(data, status, xhr) {
-            if (data) {
-                console.log('Loaded ' + id);
-                polars = data;
-            } else {
-                alert("No leg info for race");
-            }
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
+        Util.doGET(`/polars/${ id }.json`,
+                   function (request) {
+                       var data = JSON.parse(request.responseText);
+                       if (data) {
+                           console.log('Loaded ' + id);
+                           polars = data;
+                       } else {
+                           alert("No leg info for race");
+                       }
+                   },
+                   function (request) {
+                       alert(request.responseText);
+                   });
     }
     
     function setupLegVR (raceinfo) {
@@ -769,9 +767,13 @@ import * as Util from './Util.js';
         setParameter("polars", vrData.boat.polar_id);
         loadPolars( vrData.boat.polar_id);
 
-        startMarker.setPosition( {"lat": vrData.start.lat, "lng": vrData.start.lon});
-        var startPos = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
-        setRoutePoint('start', startPos);
+        var start = positionFromDocumentURL();
+        if (start) {
+        } else {
+            startMarker.setPosition( {"lat": vrData.start.lat, "lng": vrData.start.lon});
+            var startPos = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
+            setRoutePoint('start', startPos);
+        }
         
         destinationMarker.setPosition( {"lat": vrData.end.lat, "lng": vrData.end.lon});
         var destPos = new google.maps.LatLng(vrData.end.lat, vrData.end.lon);

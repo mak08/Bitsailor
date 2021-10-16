@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2019-04-02 00:22:41>
+;;; Last Modified <michael 2021-10-15 22:27:17>
 
 (in-package :virtualhelm)
 
@@ -22,7 +22,7 @@
                        (start +marseille+)
                        (dest +carthago+)
                        (stepmax (* 60 60 24 6))
-                       (polars "maxi_trimaran_x10percent")
+                       (polars "11")
                        (options  '("winch" "reach" "foil" "heavy" "light" "hull")))
   (let*
       ((first (adjust-timestamp (now) (:offset :hour start-offset)))
@@ -43,6 +43,7 @@
                              :dest dest
                              :stepmax stepmax
                              :polars polars
+                             :interpolation :vr
                              :options options
                              :starttime starttime)))
           (multiple-value-bind (route error)
@@ -51,7 +52,7 @@
             (cond
               (route
                (push (routeinfo-stats route) result)
-               (format f "~a~%" (routeinfo-stats route)))
+               (format f "~a ~a~%" (routeinfo-stats route) (routeinfo-polars route)))
               (t
                (format f "Error: ~a, parameters were ~a ~%" error parameters)))))))))
 

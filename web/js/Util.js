@@ -19,7 +19,12 @@ function doGET (url, success, error, queryParams) {
     };
 
     xhr.open("GET", url + makeQuery(queryParams), true);
-    xhr.send(null);
+    try {
+        xhr.send(null);
+    } catch (e) {
+        alert("XHR Exception - check console");
+        console.error(e);
+    }
 }
 
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-11 22:06:29>
+;;; Last Modified <michael 2021-10-15 23:54:54>
 
 
 (in-package :virtualhelm)
@@ -770,7 +770,8 @@
                                       :lng (read-arg startlon)))
                    result-pairs)))
           ((string= name "startlon")
-           )
+           (unless startlon
+             (error "Missing startlat")))
           (t
            (push pair result-pairs)))))))
 
@@ -813,13 +814,17 @@
        (setf (routing-start routing)
              (make-latlng)))
      (setf (routing-start routing)
-           (make-latlng :lat (read-from-string value) :lng (latlng-lng (routing-start routing)))))
+           (make-latlng :lat (let ((*read-default-float-format* 'double-float))
+                               (read-from-string value))
+                        :lng (latlng-lng (routing-start routing)))))
     ((string= name "slon")
      (unless (routing-start routing)
        (setf (routing-start routing)
              (make-latlng)))
      (setf (routing-start routing)
-           (make-latlng :lat (latlng-lat (routing-start routing)) :lng (read-from-string value))))
+           (make-latlng :lat (latlng-lat (routing-start routing))
+                        :lng (let ((*read-default-float-format* 'double-float))
+                               (read-from-string value)))))
     ((string= name "start")
      (setf (routing-start routing)
            (etypecase value

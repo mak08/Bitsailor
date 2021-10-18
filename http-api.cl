@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-15 23:54:54>
+;;; Last Modified <michael 2021-10-18 20:16:20>
 
 
 (in-package :virtualhelm)
@@ -814,8 +814,7 @@
        (setf (routing-start routing)
              (make-latlng)))
      (setf (routing-start routing)
-           (make-latlng :lat (let ((*read-default-float-format* 'double-float))
-                               (read-from-string value))
+           (make-latlng :lat (parse-float value :type 'double-float)
                         :lng (latlng-lng (routing-start routing)))))
     ((string= name "slon")
      (unless (routing-start routing)
@@ -823,8 +822,7 @@
              (make-latlng)))
      (setf (routing-start routing)
            (make-latlng :lat (latlng-lat (routing-start routing))
-                        :lng (let ((*read-default-float-format* 'double-float))
-                               (read-from-string value)))))
+                        :lng (parse-float value :type 'double-float))))
     ((string= name "start")
      (setf (routing-start routing)
            (etypecase value

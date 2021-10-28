@@ -44,6 +44,7 @@ import * as Util from './Util.js';
         var threads = document.getElementById("threads").value;
         var duration = document.getElementById("duration").value;
         var delay = document.getElementById("delay").value;
+        var polars = document.getElementById("polars").value
 
         document.getElementById("div_routing").style.cursor = "progress";
         document.getElementById("bt_submit").style.cursor = "progress";
@@ -66,6 +67,7 @@ import * as Util from './Util.js';
 
                        },
                        {
+                           "polarsID": polars,
                            "duration": duration * 3600,
                            "latStart": startlat,
                            "lonStart": startlon,

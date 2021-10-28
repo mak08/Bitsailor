@@ -164,9 +164,15 @@ input {
 	grid-row: 9;
 }
 
+
+.polars-select {
+	grid-column: 3;
+	grid-row: 10
+}
+
 .bt-submit {
 	grid-column: 4;
-	grid-row: 10;
+	grid-row: 11;
 }
 
 

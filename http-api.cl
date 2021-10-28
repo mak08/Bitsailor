@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-28 20:05:38>
+;;; Last Modified <michael 2021-10-29 00:41:07>
 
 
 (in-package :virtualhelm)
@@ -198,6 +198,8 @@
                                :polars |polarsID|
                                :options '("realsail")
                                :stepmax duration
+                               :merge-start 6d0
+                               :merge-window 0d0
                                :start (make-latlng :lat lat-start :lng lon-start)
                                :dest  (make-latlng :lat lat-dest :lng lon-dest)))
                (routeinfo

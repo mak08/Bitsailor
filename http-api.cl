@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-18 20:16:20>
+;;; Last Modified <michael 2021-10-28 20:05:38>
 
 
 (in-package :virtualhelm)
@@ -194,7 +194,8 @@
                (duration (min (* *rs-max-hours* 60 60)  ;; 2d
                               (read-arg |duration|)))
                (routing
-                 (make-routing :polars |polarsID|
+                 (make-routing :interpolation :enorm
+                               :polars |polarsID|
                                :options '("realsail")
                                :stepmax duration
                                :start (make-latlng :lat lat-start :lng lon-start)

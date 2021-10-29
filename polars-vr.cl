@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-13 00:58:51>
+;;; Last Modified <michael 2021-10-29 21:58:32>
 
 (in-package :virtualhelm)
 
@@ -14,9 +14,18 @@
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
 (defun translate-polars-vr (polars-name json-object)
-  (let ((polars (translate-polars-vr% polars-name json-object)))
-    (setf (gethash (polars-id polars) *polars-id-ht*) polars)
-    (setf (gethash (polars-name polars) *polars-name-ht*) polars)))
+  (let* ((polars (translate-polars-vr% polars-name json-object))
+         (id (polars-id polars))
+         (name (polars-name polars)))
+    (setf (gethash name *polars-name-ht*) polars)
+    (setf (gethash id *polars-id-ht*) polars)))
+
+(defun normalize-vr-polar-id (id)
+  (multiple-value-bind (intpart digits)
+      (truncate  id)
+    (unless (zerop digits)
+      (error "Invalid ID ~a" id))
+    (format nil "~a" intpart)))
 
 (defun translate-polars-vr% (polars-name json-object)
   ;;; Speed values are in knots. Convert to m/s.
@@ -24,7 +33,7 @@
   (let* ((polars
            (joref (joref json-object "scriptData") "polar"))
          (id
-          (joref polars "_id"))
+           (normalize-vr-polar-id (joref polars "_id")))
          (label
           (joref polars "label"))
          (maxspeed
@@ -36,7 +45,7 @@
          (sail
           (joref polars "sail"))
          (saildefs
-          (make-array (length sail))))
+           (make-array (length sail))))
     (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" (joref polars "label") id (length sail) tws twa)
     (loop
        :for saildef :across sail

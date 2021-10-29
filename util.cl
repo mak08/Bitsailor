@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-07-04 00:29:23>
+;;; Last Modified <michael 2021-10-29 21:26:19>
 
 (in-package :virtualhelm)
 
@@ -13,10 +13,6 @@
    (/ (course-distance (make-latlng :lat lat0 :lng lon0)
                        (make-latlng :lat lat1 :lng lon1))
       seconds)))
-
-(defparameter *fc* nil)
-(defun get-fc ()
-  (setf *fc* (get-forecast (get-dataset 'noaa-dataset) (now))))
 
 (defun get-route-for-session (session-id race-id)
   (let ((session (gethash session-id *session-ht*)))
@@ -31,7 +27,7 @@
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))
-         (polars (get-polars polars-name))
+         (polars (get-polars-by-name polars-name))
          (polars-raw (get-polars-raw polars-name))
          (twa-index (position twa (joref polars-raw "twa") :test #'equalp))
          (tws-index (position tws (joref polars-raw "tws") :test #'equalp)))

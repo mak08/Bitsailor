@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-29 00:41:07>
+;;; Last Modified <michael 2021-10-29 21:25:03>
 
 
 (in-package :virtualhelm)
@@ -773,7 +773,7 @@
                                       :lng (read-arg startlon)))
                    result-pairs)))
           ((string= name "startlon")
-           (unless startlon
+           (unless (cadr (assoc "startlat" pairs :test #'string=))
              (error "Missing startlat")))
           (t
            (push pair result-pairs)))))))

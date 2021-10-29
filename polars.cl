@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-13 22:26:06>
+;;; Last Modified <michael 2021-10-29 21:28:53>
 
 (in-package :virtualhelm)
 
@@ -73,6 +73,7 @@
 
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
+  (log2:info "id=(~a)~a options=~a" (type-of id) id options)
   (let ((polars-ht
          (or (gethash id *combined-polars-ht*)
              (setf (gethash id *combined-polars-ht*)
@@ -193,11 +194,14 @@
 ;;; Reading polars from file
 
 (defun get-polars-by-name (name)
-  (gethash name *polars-name-ht*))
+  (let ((polars (gethash name *polars-name-ht*)))
+    (or polars
+        (error "No polars found with id=(~a)~a" (type-of name) name))))
 
 (defun get-polars-by-id (id)
-  ;; (assert (numberp id))
-  (gethash id *polars-id-ht*))
+  (let ((polars (gethash id *polars-id-ht*)))
+    (or polars
+        (error "No polars found with id=(~a)~a" (type-of id) id))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON

@@ -13,7 +13,7 @@
     <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key=GOOGLE_API_KEY"></script>
 
     <script src="js/colors.js"></script>
-    <script type="module" src="js/router.js"></script>
+    <script type="module" src="js/router-vr.js"></script>
     
   </head>
 
@@ -24,7 +24,7 @@
       <div class="header">
 		<div id="appname">
 			 <a href="start" style="color:white">BitSailor</a> Router
-			 <span style="font-size:70%"><em>/ realsail edition</em><span>
+			 <span style="font-size:70%"><em>/ VirtualRegatta</em><span>
 		</div>	 
 	  </div>
 
@@ -85,15 +85,14 @@
         </div>
 		
         <div class="nmea-label">
-          <label>NMEA port</label>
+          <label>Start position</label>
         </div>
         <div class="nmea-port">
-          <input id="tb_nmeaport" name="nmeaport" type="text"  maxlength="5" placeholder="10000"/>
+          <input id="tb_nmeaport" name="nmeaport" type="text"  maxlength="5" placeholder="dd°mm'ss&quot ddd°mm'ss&quot"/>
         </div>
 
 		<div class="nmea-reset">
-          <button id="bt_nmeaupdate"> Update </button>
-          <button id="bt_nmeareset"> Reconnect </button>
+          <button id="bt_nmeaupdate"> Set </button>
 		</div>
 		
         <div class="delayed-label">

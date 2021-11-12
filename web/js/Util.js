@@ -31,12 +31,14 @@ function doGET (url, success, error, queryParams) {
 function makeQuery (object) {
     var s = "";
     for (const m in object) {
-        if (s != "") {
+        if (s == "") {
+            s = "?";
+        } else {
             s += "&";
         }
         s += `${ m }=${ object[m]}`;
     }
-    return '?' + s;
+    return s;
 }
 
 

@@ -52,7 +52,7 @@ import * as Util from './Util.js';
             mapTypeId:google.maps.MapTypeId.ROADMAP,
             draggableCursor: "crosshair"
         };
-        var mapDiv = $("#map")[0];
+        var mapDiv = document.getElementById("map");
         googleMap = new google.maps.Map(mapDiv, mapProp);
 
         // Handle window resize
@@ -69,50 +69,39 @@ import * as Util from './Util.js';
         google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
         
         // Connect button events
-        $("#bt_getroute").click(getRoute);
+        document.getElementById("bt_getroute").addEventListener("click", getRoute);
 
-        $("#bt_nmeaupdate").click(getBoatPosition);
-        $("#bt_nmeareset").click(resetNMEAConnection);
-
-        $("#bt_inc").click(onAdjustIndex);
-        $("#bt_dec").click(onAdjustIndex);
-        $("#bt_inc6").click(onAdjustIndex);
-        $("#bt_dec6").click(onAdjustIndex);
-        $("#ir_index").change(onAdjustIndex);
+        document.getElementById("bt_inc").addEventListener("click", onAdjustIndex);
+        document.getElementById("bt_dec").addEventListener("click", onAdjustIndex);
+        document.getElementById("bt_inc6").addEventListener("click", onAdjustIndex);
+        document.getElementById("bt_dec6").addEventListener("click", onAdjustIndex);
+        document.getElementById("ir_index").addEventListener("change", onAdjustIndex);
         
-        $("#cb_startdelayed").click(onDelayedStart);
-        $("#tb_starttime").change(onSetParameter);
+        document.getElementById("cb_startdelayed").addEventListener("click", onDelayedStart);
+        document.getElementById("tb_starttime").addEventListener("change", onSetParameter);
         
-        $("#cb_manualcycle").click(onManualCycle);
-        $("#tb_cycledate").change(onSetParameter);
-        $("#sel_cyclehour").change(onSetParameter);
+        document.getElementById("cb_manualcycle").addEventListener("click", onManualCycle);
+        document.getElementById("tb_cycledate").addEventListener("change", onSetParameter);
+        document.getElementById("sel_cyclehour").addEventListener("change", onSetParameter);
         
         // Connect option selectors
-        $("#sel_polars").change(onSetParameter);
-        $("#sel_forecastbundle").change(onSetParameter);
-        $("#sel_duration").change(onSetParameter);
-        $("#cb_displaywind").change(onDisplaywind);
-        $("#cb_displaytracks").change(onDisplayTracks);
-        $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
-        $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
+        document.getElementById("sel_duration").addEventListener("change", onSetParameter);
+        document.getElementById("cb_displaywind").addEventListener("change", onDisplaywind);
+        document.getElementById("cb_displaytracks").addEventListener("change", onDisplayTracks);
+        document.getElementById("rb_crosshair").addEventListener("change", function (event) { onCursorSelect(event, 'crosshair'); });
+        document.getElementById("rb_default").addEventListener("change", function (event) { onCursorSelect(event, 'default'); });
         
-        // Tracks & Isochrones display is handled by the client directly
-        $("#cb_tracks").change(onSetClientParameter);
-        $("#cb_isochrones").change(onSetClientParameter);
-
         // Disable default contextmenu
         window.oncontextmenu = function (event) { event.preventDefault() }; 
         
         // Connect menu events
-        $("#bt_setstart" ).click(function () { onContextMenu('start') });
-        $("#bt_setdest"  ).click(function () { onContextMenu('dest') });
-        $("#bt_ltpmark"  ).click(function () { onContextMenu('ltp') });
-        $("#bt_ltsmark"  ).click(function () { onContextMenu('lts') });
+        document.getElementById("bt_setstart" ).addEventListener("click", function () { onContextMenu('start') });
+        document.getElementById("bt_setdest"  ).addEventListener("click", function () { onContextMenu('dest') });
         
-        var mapMenu = $("#mapMenu")[0];
+        var mapMenu = document.getElementById("mapMenu");
         mapMenu.onmouseleave = onMapMenuMouseLeave;
         
-        ir_index = $("#ir_index")[0];
+        ir_index = document.getElementById("ir_index");
 
         startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 1, 45);
         destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
@@ -165,9 +154,7 @@ import * as Util from './Util.js';
                 googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
             }
         }
-        var bounds = getMapBounds();
-        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
-        $("#lb_map_bounds").text("Kartenausschnitt: " + label);
+
         if (forecastData.basetime) {
             redrawWindByOffset(forecastData.basetime, ir_index.value);
         } else {
@@ -191,7 +178,7 @@ import * as Util from './Util.js';
     
     // Event handler for context menu mapMenu 
     function onContextMenu (point) {
-        var mapMenu=$("#mapMenu")[0];
+        var mapMenu=document.getElementById("mapMenu");
         mapMenu.style.display = "none";
         setRoutePoint(point, mapEvent.latLng);
     }
@@ -199,17 +186,17 @@ import * as Util from './Util.js';
     function onSelectIsochrone (isochrone) {
         var baseTime = isochrone.get('time');
         var offset = isochrone.get('offset');
-        $("#ir_index")[0].value = offset;
+        document.getElementById("ir_index").value = offset;
         updateIsochrones();
         redrawWindByOffset(baseTime, offset);
     }
 
     function onDisplaywind (event) {
-        var cbDisplaywind = $("#cb_displaywind")[0];
+        var cbDisplaywind = document.getElementById("cb_displaywind");
         if (cbDisplaywind.checked) {
-            $("#wind-canvas").show();
+            document.getElementById("wind-canvas").show();
         } else {
-            $("#wind-canvas").hide();
+            document.getElementById("wind-canvas").hide();
         }
     }
 
@@ -237,7 +224,7 @@ import * as Util from './Util.js';
     }
     
     function onDelayedStart (event) {
-        var dateInput =  $("#tb_starttime")[0];
+        var dateInput =  document.getElementById("tb_starttime");
         if (event.target.checked === true) {
             var d = new Date();
             var isoDate = d.toISOString().substring(0,16);
@@ -260,8 +247,8 @@ import * as Util from './Util.js';
 
 
     function getManualCycle () {
-        var dateInput =  $("#tb_cycledate")[0];
-        var hourInput =  $("#sel_cyclehour")[0];
+        var dateInput =  document.getElementById("tb_cycledate");
+        var hourInput =  document.getElementById("sel_cyclehour");
         return dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
     }
     
@@ -333,25 +320,30 @@ import * as Util from './Util.js';
     }
 
     function setParameter (paramName, paramValue) {
-        $.ajax({
-            url: "/function/vh.setParameter" + "?name=" + paramName + "&value=" + paramValue,
-            dataType: 'json'
-        }).done( function(data, status, xhr ) {
-            console.log(`Set ${paramName}=${paramValue}`);
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
-        });
+        Util.doGET(
+            "/function/vh.setParameter",
+            function(data, status, xhr ) {
+                console.log(`Set ${paramName}=${paramValue}`);
+            },
+            function (xhr) {
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+            },
+            {
+                "name": paramName,
+                "value": paramValue
+            }
+        );
     }
     
     function onMapMenuMouseLeave (event) {
-        var mapMenu=$("#mapMenu")[0];
+        var mapMenu=document.getElementById("mapMenu");
         mapMenu.style.display = "none";
     }
     
     function onMapRightClick (event) {
         mapEvent = event;
         var windowEvent = window.event;
-        var mapMenu=$("#mapMenu")[0];
+        var mapMenu=document.getElementById("mapMenu");
         var pageY;
         var pageX;
         if (windowEvent != undefined) {
@@ -390,122 +382,74 @@ import * as Util from './Util.js';
     /// XHR requests
     
     function getRoute () {
-        var bt_execute=$("#bt_getroute")[0];
+        var bt_execute=document.getElementById("bt_getroute");
         bt_execute.disabled = true;
         
-        var mapMenu=$("#mapMenu")[0];
+        var mapMenu=document.getElementById("mapMenu");
         var windowEvent = window.event;
         mapMenu.style.display = "none";
         var that = this;
-        var pgGetRoute = $("#pg_getroute")[0];
+        var pgGetRoute = document.getElementById("pg_getroute");
         pgGetRoute.value = 5;
-        var selDuration = $("#sel_duration")[0];
+        var selDuration = document.getElementById("sel_duration");
         var duration = selDuration.value;
         var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
 
         // $('div, button, input').css('cursor', 'wait');
 
-        $.ajax({
-            url: "/function/vh.getRoute",
-            dataType: 'json'
-        }).done( function (data) {
-            // $('div, button, input').css('cursor', 'auto');
+        Util.doGET(
+            "/function/vh.getRoute",
+            function (xhr) {
+                var data = JSON.parse(xhr.responseText);
 
-            // Remember routing data
-            currentRouting = data;
-
-            // Reset timer
-            window.clearInterval(timer);
-            pgGetRoute.value = pgGetRoute.max;
-
-            // Display new data
-            clearRoute();
-            displayRouting(data);
-            bt_execute.disabled = false;
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            // $('div, button, input').css('cursor', 'auto');
-
-            bt_execute.disabled = false;
-            window.clearInterval(timer);
-            pgGetRoute.value = pgGetRoute.max;
-            alert(textStatus + ' ' + errorThrown);
-        });
+                // Remember routing data
+                currentRouting = data;
+                
+                // Reset timer
+                window.clearInterval(timer);
+                pgGetRoute.value = pgGetRoute.max;
+                
+                // Display new data
+                clearRoute();
+                displayRouting(data);
+                bt_execute.disabled = false;
+            },
+            function (xhr) {
+                bt_execute.disabled = false;
+                window.clearInterval(timer);
+                pgGetRoute.value = pgGetRoute.max;
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+            });
     }
 
-    function getBoatPosition (event) {
-        var port= document.getElementById("tb_nmeaport").value
-        $.ajax({
-            url: "/function/vh.getBoatPosition?port=" + port,
-            dataType: 'json'
-        }).done( function (data) {
-            console.log(data);
-            if (data) {
-                var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
-                setRoutePoint('start', startPos);
-                alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
-                var curTime = new Date(data.time);
-                var isoDate = curTime.toISOString().substring(0,16);
-                var dateInput = document.getElementById("tb_starttime");
-                dateInput.value = isoDate;
-                setParameter('starttime', isoDate);
-
-            } else {
-                alert('No position update');
-            }
-
-        }).fail( function (request, textStatus, errorThrown) {
-            console.log(errorThrown);
-            alert('Could not get boat position: ' + request.responseText);
-        });
-    }
-    
-    function resetNMEAConnection (event) {
-        var port= document.getElementById("tb_nmeaport").value
-        $.ajax({
-            url: "/function/vh.resetNMEAConnection?port=" + port,
-            dataType: 'json'
-        }).done( function (data) {
-            console.log(data);
-            alert("Connected to " + data.peer);
-        }).fail( function (request, textStatus, errorThrown) {
-            console.log(errorThrown);
-            alert(request.responseText);
-        });
-    }
-    
     function setRoutePoint(point, latlng) {
         var lat =  latlng.lat();
         var lng =  latlng.lng();
         var that = this;
-        $.ajax({
-            url: "/function/vh.setRoute"
-                + "?pointType=" + point
-                + "&lat=" + lat
-                + "&lng=" + lng,
-            dataType: 'json'
-        }).done( function(data) {
-            // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-            if ( point === 'start' ) {
-                updateStartPosition(lat, lng);
-            } else if ( point === 'dest' ) {
-                destinationMarker.setPosition(latlng);
-            }
-            if (courseGCLine) {
-                courseGCLine.setMap(null);
-            };
-            courseGCLine = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#d00000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1
+        Util.doGET(
+            "/function/vh.setRoute" + "?pointType=" + point + "&lat=" + lat + "&lng=" + lng,
+            function(data) {
+                // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
+                if ( point === 'start' ) {
+                    updateStartPosition(lat, lng);
+                } else if ( point === 'dest' ) {
+                    destinationMarker.setPosition(latlng);
+                }
+                if (courseGCLine) {
+                    courseGCLine.setMap(null);
+                };
+                courseGCLine = new google.maps.Polyline({
+                    geodesic: true,
+                    strokeColor: '#d00000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 1
+                });
+                courseGCLine.setMap(googleMap);
+                courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+            },
+            function (xhr) {
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
             });
-            courseGCLine.setMap(googleMap);
-            courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-            
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
-        });
     }
 
 
@@ -559,15 +503,14 @@ import * as Util from './Util.js';
             trackMarkers[i] = trackMarker;
         }
 
-        
-        $("#lb_from").text(data.stats.start);
-        $("#lb_duration").text(data.stats.duration);
-        $("#lb_sails").text(formatSails(data));
-        $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed (1));
-        $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
-        $("#lb_polars").text(data.polars);
-        $("#lb_options").text(data.options);
-        // $("#lb_maxspeed").text(data.maxspeed);
+        document.getElementById("lb_from").innerText = data.stats.start;
+        document.getElementById("lb_duration").innerText = data.stats.duration;
+        document.getElementById("lb_sails").innerText = formatSails(data);
+        document.getElementById("lb_minwind").innerText = data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed (1);
+        document.getElementById("lb_mintwa").innerText = data.stats["min-twa"] + " - " +  data.stats["max-twa"];
+        document.getElementById("lb_polars").innerText = data.polars;
+        document.getElementById("lb_options").innerText = data.options;
+        // document.getElementById("lb_maxspeed").innerText = data.maxspeed;
     }
 
 
@@ -586,22 +529,20 @@ import * as Util from './Util.js';
                            destinationMarker.setPosition(dest);
                        }
                        
-                       var selForecast = $("#sel_forecastbundle")[0];
-                       var irIndex = $("#ir_index")[0];
-                       var lbFCMax = $("#lb_fcmax")[0];
+                       var irIndex = document.getElementById("ir_index");
                        
                        var startTime = routing.starttime;
-                       var cbStartDelayed = $("#cb_startdelayed")[0];
+                       var cbStartDelayed = document.getElementById("cb_startdelayed");
                        if ( startTime != false && startTime != 'NIL' ) {
                            cbStartDelayed.checked = true;
-                           $("#tb_starttime")[0].value = startTime;
+                           document.getElementById("tb_starttime").value = startTime;
                            
                        } else {
                            cbStartDelayed.checked = false;
                        }
             
                        var duration = routing.stepmax/3600;
-                       var selDuration = $("#sel_duration")[0];
+                       var selDuration = document.getElementById("sel_duration");
                        selDuration.value = duration;
                        
                        courseGCLine = new google.maps.Polyline({
@@ -613,12 +554,6 @@ import * as Util from './Util.js';
                        courseGCLine.setMap(googleMap);
                        courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
                        
-                       if (routing["nmea-connection"]) {
-                           var nmeaInfo = routing["nmea-connection"];
-                           if (nmeaInfo.port) {
-                               document.getElementById("tb_nmeaport").value = nmeaInfo.port;
-                           }
-                       }
                    },
                    function (request) {
                        alert(request.statusText + ' ' + request.responseText);
@@ -627,34 +562,35 @@ import * as Util from './Util.js';
 
 
     function removeSession () {
-        $.ajax({
-            url: "/function/vh.removeSession",
-            dataType: 'json'
-        }).done( function(result, status, xhr) {
-            console.log("Removed " + result); 
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
+        Util.doGET(
+            "/function/vh.removeSession",
+            function(result, status, xhr) {
+                console.log("Removed " + result); 
+            },
+            function (xhr) {
+                alert("No leg info for race");
+            });
     }
 
     
     function getRaceInfo () {
-        $.ajax({
-            url: "/function/vh.getRaceInfo",
-            dataType: 'json'
-        }).done( function(raceinfo, status, xhr) {
-            if (raceinfo) {
-                if (raceinfo.data.checkpoints) {
-                    setupLegVR(raceinfo);
-                } else if (raceinfo.data.objectId) {
-                    setupLegRS(raceinfo);
+        Util.doGET(
+            "/function/vh.getRaceInfo",
+            function(xhr) {
+                if (xhr.responseText) {
+                    var raceinfo = JSON.parse(xhr.responseText);
+                    if (raceinfo.data.checkpoints) {
+                        setupLegVR(raceinfo);
+                    } else if (raceinfo.data.objectId) {
+                        alert("Wrong race type");
+                    }
+                } else {
+                    alert("No leg info for race");
                 }
-            } else {
-                alert("No leg info for race");
-            }
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
+            },
+            function (xhr) {
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+            });
     }
 
     function positionFromDocumentURL () {
@@ -676,64 +612,10 @@ import * as Util from './Util.js';
         }
     }
 
-    function setupLegRS (raceinfo) {
-        var rsData = raceinfo.data;
-        
-        document.title = rsData.name;
-        
-        var markPort = 'img/mark_red.png';
-
-        setParameter("polars", rsData.polar.objectId);
-        loadPolars(rsData.polar.objectId);
-
-        var start = positionFromDocumentURL();
-        if (start) {
-        } else {
-            startMarker.setPosition( {"lat": rsData.startLocation.latitude,
-                                      "lng": rsData.startLocation.longitude});
-            var startPos = new google.maps.LatLng(rsData.startLocation.latitude, rsData.startLocation.longitude);
-            setRoutePoint('start', startPos);
-        }
-
-        // Destination 
-        var lastP0 = rsData.gates[rsData.gates.length-1][0]
-        var lastP1 = rsData.gates[rsData.gates.length-1][1]
-        // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
-        var destLat = (lastP0.latitude + lastP1.latitude)/2;
-        var destLon = (lastP0.longitude + lastP1.longitude)/2; 
-        var destPos = new google.maps.LatLng(destLat, destLon);
-        setRoutePoint('dest', destPos);
-        
-        googleMap.panTo(startMarker.getPosition());
-
-        var gateCount = 1; 
-        for (const gate of rsData.gates) {
-            var mark0 = new google.maps.Marker({
-                position: {"lat": gate[0].latitude,
-                           "lng": gate[0].longitude},
-                map: googleMap,
-                // icon: markPort,
-                label: `${ gateCount }`,
-                title: `Gate ${ gateCount }`,
-                draggable: false
-            });
-            var mark1 = new google.maps.Marker({
-                position: {"lat": gate[1].latitude,
-                           "lng": gate[1].longitude},
-                map: googleMap,
-                // icon: markPort,
-                label: `${ gateCount }`,
-                title: `Gate ${ gateCount }`,
-                draggable: false
-            });
-            gateCount++;
-        }
-    }
-
     function loadPolars (id) {
         Util.doGET(`/polars/${ id }.json`,
-                   function (request) {
-                       var data = JSON.parse(request.responseText);
+                   function (xhr) {
+                       var data = JSON.parse(xhr.responseText);
                        if (data) {
                            console.log('Loaded ' + id);
                            polars = data.scriptData.polar;
@@ -741,8 +623,8 @@ import * as Util from './Util.js';
                            alert("No leg info for race");
                        }
                    },
-                   function (request) {
-                       alert(request.responseText);
+                   function (xhr) {
+                       alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
                    });
     }
     
@@ -888,7 +770,7 @@ import * as Util from './Util.js';
     }
     
     function updateGetRouteProgress () {
-        var pgGetRoute = $("#pg_getroute")[0];
+        var pgGetRoute = document.getElementById("pg_getroute");
         if ( pgGetRoute.value < pgGetRoute.max ) {
             pgGetRoute.value = pgGetRoute.value + 10;
         }
@@ -944,7 +826,7 @@ import * as Util from './Util.js';
         return result;
     }
     
-    function addMarkerListener(marker) {
+    function addMarkerListener (marker) {
         marker.addListener('click', function () { onMarkerClicked(marker) });
     }
     
@@ -956,7 +838,7 @@ import * as Util from './Util.js';
     }
 
     var ortho;
-    function drawOrthodromic(data) {
+    function drawOrthodromic (data) {
         if (ortho) {
             ortho.setMap(null);
         }
@@ -1057,17 +939,18 @@ import * as Util from './Util.js';
             } else {
                 baseTime = availableForecastCycle();
             }
-            $.ajax({
-                url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
-                dataType: 'json'
-            }).done( function(data) {
-                drawTWAPath(data.twapath);
-                drawHDGPath(data.hdgpath);
-                $("#lb_twa").text(data.twa);
-                $("#lb_twa_heading").text(data.heading);
-            }).fail( function (jqXHR, textStatus, errorThrown) {
-                alert(textStatus + ' ' + errorThrown);
-            });
+            Util.doGET(
+                "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+                function (xhr) {
+                    var data = JSON.parse(xhr.responseText);
+                    drawTWAPath(data.twapath);
+                    drawHDGPath(data.hdgpath);
+                    document.getElementById("lb_twa").innerText = data.twa;
+                    document.getElementById("lb_twa_heading").innerText = data.heading;
+                },
+                function (xhr) {
+                    alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+                });
         } else {
             console.log('No TWA anchor');
         }
@@ -1090,8 +973,8 @@ import * as Util from './Util.js';
         var ddx = (Util.arcLength(bounds.west, bounds.east)/xSteps).toFixed(8);
         var ddy = ((bounds.north-bounds.south)/ySteps).toFixed(8);
         // $('div, button, input').css('cursor', 'wait');
-        $.ajax({
-            url: "/function/vh.getWind"
+        Util.doGET(
+            "/function/vh.getWind"
                 + "?" + timeSpec
                 + "&north=" + lat0.toFixed(6)
                 + "&south=" + bounds.south.toFixed(6)
@@ -1101,25 +984,24 @@ import * as Util from './Util.js';
                 + "&ddy=" + ddy
                 + "&xSteps=" + xSteps
                 + "&ySteps=" + ySteps,
-            dataType: 'json'
-        }).done( function(data) {
-            // $('div, button, input').css('cursor', 'auto');
-            forecastData = data;
-            drawWind(data)
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            // $('div, button, input').css('cursor', 'auto');
-            alert("Could not get wind data:" + textStatus + ' ' + errorThrown);
-            console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
-        });
+            function (xhr) {
+                // $('div, button, input').css('cursor', 'auto');
+                var data = JSON.parse(xhr.responseText);
+                forecastData = data;
+                drawWind(data)
+            },
+            function (xhr) {
+                // $('div, button, input').css('cursor', 'auto');
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+            });
     }
 
     function drawWind (data) {
 
         // Update time
         forecastCycle = data.basetime;
-        $("#lb_modelrun").text(data.cycle);
-        $("#lb_index").text(data.time);
-        $("#lb_fcmax").text(' ' + data.maxoffset + 'hrs');
+        document.getElementById("lb_modelrun").innerText = data.cycle;
+        document.getElementById("lb_index").innerText = data.time;
 
         var offset = (new Date(data.time) - new Date(data.basetime)) / 3600000;
         ir_index.value = offset;
@@ -1165,7 +1047,7 @@ import * as Util from './Util.js';
         if (windData) {
             var zoom = googleMap.getZoom();
             
-            $("#lb_position").text(formatLatLngPosition(event.latLng));
+            document.getElementById("lb_position").innerText = formatLatLngPosition(event.latLng);
             
             var bounds = getMapBounds();
 
@@ -1198,7 +1080,7 @@ import * as Util from './Util.js';
             if (wind) {
                 var windDir = wind[0].toFixed(0);
                 var windSpeed = Util.ms2knots(windData[iLat][iLng][1]).toFixed(1);
-                $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
+                document.getElementById("lb_windatposition").innerText = pad0(windDir,3) + "° | " + windSpeed + "kn";
 
                 var lbVMGUp = document.getElementById("lb_vmg_up");
                 var lbVMGDown = document.getElementById("lb_vmg_down");

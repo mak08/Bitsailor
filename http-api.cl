@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-29 21:25:03>
+;;; Last Modified <michael 2021-11-02 22:18:35>
 
 
 (in-package :virtualhelm)
@@ -54,12 +54,18 @@
                (session (find-or-create-session user-id request response))
                (app (get-request-app request))
                (race-id (get-routing-request-race-id request))
-               (routing (session-routing session race-id))
-               (path (merge-pathnames (make-pathname :name "router" :type "html")
+               (race-info (race-info race-id))
+               (page-base-name
+                 (etypecase race-info
+                   (race-info-rs "router-rs")
+                   (race-info-vr "router-vr")))
+               (path (merge-pathnames (make-pathname :name page-base-name :type "html")
                                       (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                                                         '("web")))))
-               (query (parameters request)))
+               (query (parameters request))
+               (routing (session-routing session race-id)))
           (log2:info "race-id: ~a" race-id)
+          (log2:info "type: ~a" (type-of (race-info race-id)))
           (set-routing-parameters session routing (parameters request))
           (setf (http-header response :|Content-Location|)
                 (path request))
@@ -204,7 +210,7 @@
                                :dest  (make-latlng :lat lat-dest :lng lon-dest)))
                (routeinfo
                  (get-route routing)))
-          (log2:info "User:~a Race:-- Status ~a ~a"
+          (log2:info "User:~a Race:(RS) Status ~a ~a"
                      user-id
                      (routeinfo-status routeinfo)
                      (routeinfo-stats routeinfo))
@@ -229,9 +235,13 @@
                    (session-routing session race-id))
                  (routeinfo
                    (get-route routing)))
-          (log2:info "User:~a Race:~a Status ~a ~a"
+          (log2:info "User:~a Race:~a PAR mgs:~a mgw:~a interp:~a opts:~a STAT ~a ~a"
                      user-id
                      race-id
+                     (routing-merge-start routing)
+                     (routing-merge-window routing)
+                     (routing-interpolation routing)
+                     (routing-options routing)
                      (routeinfo-status routeinfo)
                      (routeinfo-stats routeinfo))
             (values
@@ -419,114 +429,6 @@
           (values
            (with-output-to-string (s)
              (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; getWindForecast
-;;;
-;;; Return current and old forecast
-
-(defstruct forecast current previous interpolated)
-(defstruct windinfo date cycle dir speed) 
-
-(defun |getWindForecast| (handler request response &key |time| |lat| |lng|)
-  (declare (ignore handler))
-  (sqlite-client:with-current-connection (c *db*)
-    (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
-    (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
-    (handler-case
-        (let ((*read-default-float-format* 'double-float))
-          (let* (
-                 (user-id
-                   (http-authenticated-user handler request))
-                 (session
-                   (find-or-create-session user-id request response))
-                 (race-id
-                   (get-routing-request-race-id request))
-                 (routing
-                   (session-routing session race-id))
-                 (forecast-time
-                   (timestamp-truncate (parse-rfc3339-timestring |time|) 300))
-                 (lat
-                   (read-arg |lat|))
-                 (lng
-                   (read-arg |lng|))
-                 (cycle1
-                   (available-cycle forecast-time))
-                 (cycle0
-                   (previous-cycle cycle1))) 
-            (multiple-value-bind (dir1 speed1)
-                (vr-prediction lat lng :timestamp forecast-time :cycle cycle1)
-              (multiple-value-bind (dir0 speed0)
-                  (vr-prediction lat lng :timestamp forecast-time :cycle cycle0)
-                (multiple-value-bind (dir speed)
-                    (interpolated-prediction lat lng (interpolation-parameters forecast-time
-                                                                               :method (routing-interpolation routing)
-                                                                               :merge-start (routing-merge-start routing)
-                                                                               :merge-window (routing-merge-window routing)
-                                                                               ))
-                  (values
-                   (with-output-to-string (s)
-                     (json s (make-forecast
-                              :previous (make-windinfo :cycle cycle0
-                                                       :dir (round-to-digits dir0 2)
-                                                       :speed (round-to-digits (m/s-to-knots speed0) 2))
-                              :current (make-windinfo :cycle cycle1
-                                                      :dir (round-to-digits dir1 2)
-                                                      :speed (round-to-digits (m/s-to-knots speed1) 2))
-                              :interpolated (make-windinfo :cycle cycle1
-                                                           :dir (round-to-digits dir 2)
-                                                           :speed (round-to-digits (m/s-to-knots speed) 2)))))))))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e)))
-      #+ccl(ccl::invalid-memory-access (e)
-             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-             (setf (status-code response) 500)
-             (setf (status-text response) (format nil "~a" e))))))
-
-(defun timestamp-truncate (timestamp seconds)
-  (universal-to-timestamp (* seconds (truncate (timestamp-to-universal timestamp) seconds))))
-
-                           
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Probe Wind
-
-(defun |probeWind| (handler request response &key |time| |lat| |lng| |cycle|)
-  (sqlite-client:with-current-connection (c *db*)
-    (setf (http-header response :|Access-Control-Allow-Origin|) (http-header request :|origin|))
-    (setf (http-header response :|Access-Control-Allow-Credentials|) "true")
-    (handler-case
-        (let ((*read-default-float-format* 'double-float)
-              (race-id (get-routing-request-race-id request)))
-          (let* ((user-id
-                   (http-authenticated-user handler request))
-                 (session
-                   (find-or-create-session user-id request response))
-                 (routing
-                   (session-routing session race-id))
-                 (forecast-time
-                   (parse-rfc3339-timestring |time|))
-                 (lat (read-arg |lat|))
-                 (lng (read-arg |lng|))
-                 (default-cycle
-                   (available-cycle (now)))
-                 (cycle
-                   (or (and |cycle|
-                            (make-cycle :timestamp (parse-timestring |cycle|)))
-                       default-cycle)))
-            (multiple-value-bind (dir speed)
-                (interpolated-prediction lat lng (make-iparams :previous (prediction-parameters forecast-time :cycle cycle)
-                                                               :current (prediction-parameters forecast-time :cycle cycle)))
-              (values
-               (with-output-to-string (s)
-                 (json s
-                       (list (round-to-digits dir 2)
-                             (round-to-digits (m/s-to-knots speed) 2))))))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)

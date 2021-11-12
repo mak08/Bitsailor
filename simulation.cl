@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-13 22:35:30>
+;;; Last Modified <michael 2021-10-30 21:33:26>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -549,7 +549,7 @@
   (let* ((polars (get-routing-polars routing))
          (penalty (get-penalty routing))
          (hull (routing-hull routing))
-         (foils  (routing-foils routing))
+         (foils (routing-foils routing))
          (time (or time (now)))
          (cycle (make-cycle :timestamp (parse-timestring base-time)))
          (time-increment +10min+)

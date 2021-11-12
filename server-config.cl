@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-10-13 23:32:15>
+;;; Last Modified <michael 2021-11-10 22:25:01>
 
 (in-package :virtualhelm)
 
@@ -76,8 +76,6 @@
 (register-function "vh.removeSession" :authorizer #'vh-function-authorizer)
 (register-function "vh.getRaceInfo" :authorizer #'vh-function-authorizer)
 (register-function "vh.getWind" :authorizer #'vh-function-authorizer)
-(register-function "vh.probeWind" :authorizer #'vh-function-authorizer)
-(register-function "vh.getWindForecast" :authorizer #'vh-function-authorizer)
 (register-function "vh.getTWAPath" :authorizer #'vh-function-authorizer)
 (register-function "vh.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "vh.getRaceList" :authorizer (constantly t))
@@ -92,6 +90,11 @@
 ;;; ----------------
 ;;; Static content
 ;;; ----------------
+
+(handle
+ :request (:prefix "/weather")
+ :handler (:static "/home/michael/Wetter/"
+           :authentication nil))
 
 (handle
  :request (:prefix "/js")

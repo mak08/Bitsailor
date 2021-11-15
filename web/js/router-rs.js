@@ -72,6 +72,70 @@ import * as Router from './router.js';
             });
     }
 
+    function getVMG (windSpeed) {
+        var polars = Router.polars;
+        if (polars && polars.polarData) {
+            var vJ = getMaxSpeed(polars.polarData.jib, windSpeed);
+            var vG = getMaxSpeed(polars.polarData.gennaker, windSpeed);
+            var vS = getMaxSpeed(polars.polarData.spi, windSpeed);
+            
+            return {
+                "up": vJ.up.vmg.toFixed(2) + '@' + vJ.up.twa.split('.')[0],
+                "down": Math.abs(vS.down.vmg).toFixed(2) + '@' + vS.down.twa.split('.')[0]
+            }
+        } else {
+            return {
+                "up": "-",
+                "down": "-"
+            }
+        }           
+    }
+    
+    function getMaxSpeed(sail, windSpeed) {
+        
+        var vmgUp = sail.reduce ((acc, next) => {
+            let vmgNext =  twaVMG(next, windSpeed);
+            if (acc.vmg > vmgNext.vmg) {
+                return acc;
+            } else {
+                return vmgNext;
+            }
+        }, 0);
+        var vmgDown = sail.reduce ((acc, next) => {
+            let vmgNext =  twaVMG(next, windSpeed);
+            if (acc.vmg < vmgNext.vmg) {
+                return acc;
+            } else {
+                return vmgNext;
+            }
+        }, 0);
+        
+        return {"up": vmgUp, "down": vmgDown };
+    }
+    
+    function twaVMG (twaSpeeds, windSpeed) {
+        var s0 = 0;
+        var v0 = 0;
+        var s1 = 0;
+        var v1 = 0;
+        var twa = twaSpeeds.twa;
+        for (const m in twaSpeeds) {
+            if ( m != "twa" ) {
+                v0 = v1;
+                s0 = s1;
+                v1 = Number.parseFloat(twaSpeeds[m]);
+                s1 = Number.parseFloat(m);
+                if (s1 >= windSpeed) {
+                    break;
+                }
+            }
+        }
+        return {
+            "twa": twa,
+            "vmg": Math.cos(Util.toRad(twa)) * Util.linear(windSpeed, s0, s1, v0, v1)
+        };
+    }
+
     function setupLegRS (raceinfo) {
         var rsData = raceinfo.data;
         
@@ -166,7 +230,7 @@ import * as Router from './router.js';
     }
 
     function setUpRS () {
-        Router.setUp();
+        Router.setUp(getVMG);
 
         document.getElementById("bt_nmeaupdate").addEventListener("click",getBoatPosition);
         document.getElementById("bt_nmeareset").addEventListener("click",resetNMEAConnection);

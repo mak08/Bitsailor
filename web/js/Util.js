@@ -65,6 +65,11 @@ function toRad(angle) {
     return angle / 180 * Math.PI;
 }
 
+function linear (x, x0, x1, y0, y1) {
+    var  y = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+    return y;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Helper functions
 
@@ -363,4 +368,21 @@ function MD5 (string) {
 }
 
 
-export { MD5, doGET, toRad, gcAngle, gcDistance, arcLength, m2nm, ms2knots, toDeg, toDMS, toDHM, toHHMMSS, roundTo, formatPosition, formatDHM };
+export {
+    MD5,
+    doGET,
+    toRad,
+    linear,
+    gcAngle,
+    gcDistance,
+    arcLength,
+    m2nm,
+    ms2knots,
+    toDeg,
+    toDMS,
+    toDHM,
+    toHHMMSS,
+    roundTo,
+    formatPosition,
+    formatDHM
+};

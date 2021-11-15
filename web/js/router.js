@@ -42,7 +42,7 @@ var currentRouting = {};
 var twaPath = [];
 var hdgPath = [];
 
-function setUp () {
+function setUp (getVMG) {
     
     setupColors();
     
@@ -67,7 +67,9 @@ function setUp () {
     google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
     
     // Track cursor position
-    google.maps.event.addListener(googleMap, 'mousemove', updateWindInfo);
+    google.maps.event.addListener(googleMap, 'mousemove', function (event) {
+        return updateWindInfo(event, getVMG);
+    });
     google.maps.event.addListener(googleMap, 'click', getTWAPath);
     google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
     
@@ -935,7 +937,7 @@ function drawWind (data) {
     }
 }
 
-function updateWindInfo (event) {
+function updateWindInfo (event, getVMG) {
     if (windData) {
         var zoom = googleMap.getZoom();
         
@@ -988,74 +990,6 @@ function updateWindInfo (event) {
         console.log(`No wind data loaded`);
     }
 
-}
-
-function getVMG (windSpeed) {
-    if (polars && polars.polarData) {
-        var vJ = getMaxSpeed(polars.polarData.jib, windSpeed);
-        var vG = getMaxSpeed(polars.polarData.gennaker, windSpeed);
-        var vS = getMaxSpeed(polars.polarData.spi, windSpeed);
-        
-        return {
-            "up": vJ.up.vmg.toFixed(2) + '@' + vJ.up.twa.split('.')[0],
-            "down": Math.abs(vS.down.vmg).toFixed(2) + '@' + vS.down.twa.split('.')[0]
-        }
-    } else {
-        return {
-            "up": "-",
-            "down": "-"
-        }
-    }           
-}
-
-function getMaxSpeed(sail, windSpeed) {
-    
-    var vmgUp = sail.reduce ((acc, next) => {
-        let vmgNext =  twaVMG(next, windSpeed);
-        if (acc.vmg > vmgNext.vmg) {
-            return acc;
-        } else {
-            return vmgNext;
-        }
-    }, 0);
-    var vmgDown = sail.reduce ((acc, next) => {
-        let vmgNext =  twaVMG(next, windSpeed);
-        if (acc.vmg < vmgNext.vmg) {
-            return acc;
-        } else {
-            return vmgNext;
-        }
-    }, 0);
-
-    return {"up": vmgUp, "down": vmgDown };
-}
-
-function twaVMG (twaSpeeds, windSpeed) {
-    var s0 = 0;
-    var v0 = 0;
-    var s1 = 0;
-    var v1 = 0;
-    var twa = twaSpeeds.twa;
-    for (const m in twaSpeeds) {
-        if ( m != "twa" ) {
-            v0 = v1;
-            s0 = s1;
-            v1 = Number.parseFloat(twaSpeeds[m]);
-            s1 = Number.parseFloat(m);
-            if (s1 >= windSpeed) {
-                break;
-            }
-        }
-    }
-    return {
-        "twa": twa,
-        "vmg": Math.cos(Util.toRad(twa)) * linear(windSpeed, s0, s1, v0, v1)
-    };
-}
-
-function linear (x, x0, x1, y0, y1) {
-    var  y = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
-    return y;
 }
 
 function getMapBounds () {
@@ -1164,6 +1098,7 @@ export {
     googleMap,
     loadPolars,
     onMarkerClicked,
+    polars,
     positionFromDocumentURL,
     setParameter,
     setRoutePoint,

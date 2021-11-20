@@ -1097,6 +1097,7 @@ export {
     destinationMarker,
     googleMap,
     loadPolars,
+    mapEvent,
     onMarkerClicked,
     polars,
     positionFromDocumentURL,

@@ -242,6 +242,17 @@ import * as Router from './router.js';
         }
     }
 
+    function  onContextMenuSetStart (event) {
+        var textBox = document.getElementById("tb_position");
+        var position = Router.mapEvent.latLng;
+        textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+    }
+    
+    function  onUpdateStartMarker (marker) {
+        var textBox = document.getElementById("tb_position");
+        var position = marker.getPosition();
+        textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+    }
     
     function onSetPosition (event) {
         var position = document.getElementById("tb_position").value;
@@ -315,24 +326,28 @@ import * as Router from './router.js';
         } else {
             return sign * degrees;
         }
-           }
+    }
+    
+    
+    function setUpVR () {
+        Router.setUp(getVMG);
         
-        
-        function setUpVR () {
-            Router.setUp(getVMG);
-
-            document.getElementById("bt_position").addEventListener("click", onSetPosition);
-
-            getRaceInfo()
-            getSession();
-            
-        }
-
-        window.addEventListener("load", function (event) {
-            setUpVR();
+        document.getElementById("bt_position").addEventListener("click", onSetPosition);
+        document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
+        google.maps.event.addListener(Router.startMarker,'dragend', function () {
+            onUpdateStartMarker(Router.startMarker);
         });
+      
+        getRaceInfo()
+        getSession();
+        
+    }
+    
+    window.addEventListener("load", function (event) {
+        setUpVR();
+    });
+    
+}) ()
 
-    }) ()
-
-  /// EOF
-  ////////////////////////////////////////////////////////////////////////////////
+/// EOF
+////////////////////////////////////////////////////////////////////////////////

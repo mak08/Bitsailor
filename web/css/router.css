@@ -213,6 +213,21 @@ input[type=checkbox] {
 	grid-column: 2;
 }
 
+/* Position entry */
+.position-label {
+	grid-row: 1;
+	grid-column: 1;
+}
+.position-input {
+	grid-row: 1;
+	grid-column: 2;
+}
+
+.position-set {
+	grid-row: 2;
+	grid-column: 2;
+}
+
 /* Start deleyed */
 .delayed-label {
 	grid-row: 3;
@@ -224,7 +239,7 @@ input[type=checkbox] {
 
 }
 
-/* Override cycle */
+/* Override cycle
 .cycle-label {
 	grid-row: 4;
 	grid-column: 1;
@@ -233,15 +248,16 @@ input[type=checkbox] {
 	grid-row: 4;
 	grid-column: 2;
 }
+*/
 
 /* Routing duration */
 .duration-label {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 1;
 
 }
 .duration-selector {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 2;
 }
 

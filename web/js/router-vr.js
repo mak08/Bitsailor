@@ -32,7 +32,7 @@ import * as Router from './router.js';
                        } else {
                            cbStartDelayed.checked = false;
                        }
-            
+                       
                        var duration = routing.stepmax/3600;
                        var selDuration = document.getElementById("sel_duration");
                        selDuration.value = duration;
@@ -95,13 +95,10 @@ import * as Router from './router.js';
         return  best;
     }
 
-    const sailNames = [0, "Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG", 8, 9,
-                       // VR sends sailNo + 10 to indicate autoSail. We use sailNo mod 10 to find the sail name sans Auto indication.
-                       "Auto", "Jib (Auto)", "Spi (Auto)", "Stay (Auto)", "LJ (Auto)", "C0 (Auto)", "HG (Auto)", "LG (Auto)"];
 
     function theoreticalSpeed (tws, twa, options, boatPolars) {
+        const sailNames = [0, "Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
         var foil = foilingFactor(options, tws, twa, boatPolars.foil);
-        var foiling = (foil - 1.0) * 100 / (boatPolars.foil.speedRatio - 1.0);
         var hull = options.includes("hull") ? 1.003 : 1.0;
         var ratio = boatPolars.globalSpeedRatio;
         var twsLookup = fractionStep(tws, boatPolars.tws);
@@ -109,8 +106,7 @@ import * as Router from './router.js';
         var speed = maxSpeed(options, twsLookup, twaLookup, boatPolars.sail);
         return {
             "speed": Util.roundTo(speed.speed * foil * hull * ratio, 2),
-            "sail": sailNames[speed.sail],
-            "foiling": foiling
+            "sail": sailNames[speed.sail]
         };
     }
     
@@ -245,18 +241,98 @@ import * as Router from './router.js';
             iceLine.setPath(iceLimit);
         }
     }
+
     
-    function setUpVR () {
-        Router.setUp(getVMG);
-        getRaceInfo()
-        getSession();
+    function onSetPosition (event) {
+        var position = document.getElementById("tb_position").value;
+        var latlon = parsePosition(position);
+        if (latlon) {
+            var latLon = new google.maps.LatLng(latlon.lat, latlon.lon);
+            Router.setRoutePoint('start', latLon);
+        }
     }
 
-    window.addEventListener("load", function (event) {
-        setUpVR();
-    });
 
-}) ()
+    const patterns = {
+        lat: {
+            isDMS: /^(([1-8]?[0-9])\D+([1-5]?[0-9]|60)\D+([1-5]?[0-9]|60)(\.[0-9]+)?|90\D+0\D+0)\D+[NSns]$/,
+            isDDM: /^(([1-8]?[0-9])\D+[1-6]?[0-9](\.\d{1,3})?|90(\D+0)?)\D+([NSns])$/,
+            isDD:  /^[\+-]?(([1-8]?[0-9])(\.\d{1,6})?|90)\D*[NSns]?$/
+        },
+        lng: {
+            isDMS: /^((1[0-7][0-9]|[1-9]?[0-9])\D+([1-5]?[0-9]|60)\D+([1-5]?[0-9]|60)(\.[0-9]+)?|180\D+0\D+0)\D+[EWew]$/,
+            isDDM: /^((1[0-7][0-9]|[1-9]?[0-9])\D+[1-6]?[0-9](\.\d{1,3})?|180(\D+0)?)\D+([EWew])$/,
+            isDD:  /^[\+-]?((1[0-7][0-9]|[1-9]?[0-9])(\.\d{1,6})?|180)\D*[EWew]?$/
+        }
+    };
 
-/// EOF
-////////////////////////////////////////////////////////////////////////////////
+    function parsePosition (string) {
+        try {
+            // Assume two comma separated DMS values
+            var parts = string.split(',');
+            if (parts.length != 2) {
+                // Alternatively try blank separated numbers.
+                // In this cas we don't support blanks inside the DMS values
+                parts = string.split(' ');
+            }
+            if (parts.length != 2) {
+                throw new Error(`Invalid LatLng ${string}`)
+            }
+
+            // We assume the first value to designate Lat, second Lon.
+            var lat, lon;
+            if (parts[0].match(/E|W/)) {
+                lon = parts[0].trim();
+                lat = parts[1].trim();
+            } else {
+                lat = parts[0].trim();
+                lon = parts[1].trim();
+            }
+            return {
+                "lat": parseDMS(lat),
+                "lon": parseDMS(lon)
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
+    function parseDMS (string) {
+        // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
+        var sign = string.match(/W|S/)?-1:1;
+        string = string.split(/[NESW]/)[0];
+        var parts = string.split('°');
+        var degrees = parseFloat(parts[0]);
+        if (parts[1]) {
+            parts = parts[1].split('\'');
+            degrees += parseFloat(parts[0])/60;
+            if (parts[1]) {
+                degrees += parseFloat(parts[1].split('"')[0])/3600;
+            }
+        }
+        if (isNaN(degrees)) {
+            throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+        } else {
+            return sign * degrees;
+        }
+           }
+        
+        
+        function setUpVR () {
+            Router.setUp(getVMG);
+
+            document.getElementById("bt_position").addEventListener("click", onSetPosition);
+
+            getRaceInfo()
+            getSession();
+            
+        }
+
+        window.addEventListener("load", function (event) {
+            setUpVR();
+        });
+
+    }) ()
+
+  /// EOF
+  ////////////////////////////////////////////////////////////////////////////////

@@ -199,13 +199,13 @@ import * as Router from './router.js';
                 if (xhr.responseText) {
                     var data = JSON.parse(xhr.responseText);
                     var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
-                    setRoutePoint('start', startPos);
+                    Router.setRoutePoint('start', startPos);
                     alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
                     var curTime = new Date(data.time);
                     var isoDate = curTime.toISOString().substring(0,16);
                     var dateInput = document.getElementById("tb_starttime");
                     dateInput.value = isoDate;
-                    setParameter('starttime', isoDate);
+                    Router.setParameter('starttime', isoDate);
                 } else {
                     alert('No position update');
                 }
@@ -232,8 +232,8 @@ import * as Router from './router.js';
     function setUpRS () {
         Router.setUp(getVMG);
 
-        document.getElementById("bt_nmeaupdate").addEventListener("click",getBoatPosition);
-        document.getElementById("bt_nmeareset").addEventListener("click",resetNMEAConnection);
+        document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
+        document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
 
         getRaceInfo()
         getSession();

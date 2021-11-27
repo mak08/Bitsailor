@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-09-30 23:40:15>
+;;; Last Modified <michael 2021-11-27 16:13:15>
 
 (in-package :virtualhelm)
 
@@ -71,7 +71,7 @@
     (typecase race-info
       (race-info-rs
        (make-routing :race-id race-id
-                     :interpolation :enorm
+                     :interpolation :bilinear
                      :merge-start 6d0
                      :merge-window 0d0
                      :options '("realsail")))

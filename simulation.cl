@@ -1,25 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-30 21:33:26>
+;;; Last Modified <michael 2021-11-27 14:15:52>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Todo: User settings
-;;; Wind & Boat
-;;; - sail change penalty 
-;;; - tack/gybe penalty 
-;;; Search parameters
-;;; - land check [on]|off
-;;; - long-step-threshold 12h|24h (?)
-;;; - long-step-value 30min|[60min]
-;;; Display
-;;; - display isochrones [on]|off
-;;; - display tracks on|[off]
-
 
 (in-package :virtualhelm)
 
@@ -57,7 +43,7 @@
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
          (cycle (routing-cycle routing))
          (isochrones nil))
-    (log2:trace "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
+    (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
                 (format-latlng nil start-pos)
                 (format-latlng nil destination)
                 start-time
@@ -68,11 +54,6 @@
                 cycle)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
-          (reached-distance (* (cond
-                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  50)
-                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  150)
-                                 (T 300))
-                               (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
           (error nil)
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
@@ -108,6 +89,11 @@
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
                      (adjust-timestamp step-time (:offset :sec step-size)))
           (stepsum 0 (+ stepsum step-size))
+          (reached-distance (* (cond
+                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  300)
+                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  500)
+                                 (T 500))
+                               (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -187,7 +173,7 @@
 (defun reached (candidate destination reached-distance)
   (some (lambda (p)
           (and p
-               (< (fast-course-distance (routepoint-position p) destination) reached-distance)))
+               (< (course-distance (routepoint-position p) destination) reached-distance)))
         candidate))
 
 (defun get-race-limits (leg-info)

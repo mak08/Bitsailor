@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2021-10-11 23:07:04>
+;;; Last Modified <michael 2021-11-27 14:17:30>
 
 
 (in-package "VIRTUALHELM")
@@ -20,7 +20,7 @@
 (defconstant +12h+ (* 12 60 60))
 (defconstant +24h+ (* 24 60 60))
 
-(defconstant  +max-iso-points+ 1000)
+(defconstant  +max-iso-points+ 1250)
 
 (defvar *isochrones* nil)
 (defvar *best-route*)

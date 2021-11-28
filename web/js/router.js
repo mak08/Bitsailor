@@ -1095,6 +1095,7 @@ export {
     // alphabetical
     courseGCLine,
     destinationMarker,
+    formatLatLngPosition,
     googleMap,
     loadPolars,
     mapEvent,

@@ -196,11 +196,11 @@ import * as Router from './router.js';
             "/function/vh.getBoatPosition?port=" + port,
             function (xhr) {
                 console.log(xhr);
-                if (xhr.responseText) {
-                    var data = JSON.parse(xhr.responseText);
+                var data = xhr.responseText && JSON.parse(xhr.responseText);
+                if (data) {
                     var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
                     Router.setRoutePoint('start', startPos);
-                    alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
+                    alert(`Time ${data.time}\nPos ${Router.formatLatLngPosition(startPos)}\nSpeed ${parseFloat(data.speed).toFixed(1)}\nCourse ${data.course}`);
                     var curTime = new Date(data.time);
                     var isoDate = curTime.toISOString().substring(0,16);
                     var dateInput = document.getElementById("tb_starttime");

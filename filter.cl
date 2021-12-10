@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-06-06 02:05:28>
+;;; Last Modified <michael 2021-12-09 21:41:37>
 
 (in-package :virtualhelm)
 
@@ -9,7 +9,6 @@
   (truncate origin-angle delta-angle))
 
 (defun-t add-routepoint null ((predecessor routepoint)
-                              (start-pos latlng)
                               (position latlng)
                               (origin-distance double-float)
                               (origin-angle double-float)

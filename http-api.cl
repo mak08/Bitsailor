@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-11-27 12:40:51>
+;;; Last Modified <michael 2021-12-10 22:18:30>
 
 
 (in-package :virtualhelm)
@@ -336,17 +336,18 @@
 ;;;        Optional. The requested time.
 ;;; Returns an error if the requested time is in the past or in the future of the requested cycle, or if $|offset| is too large.
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
-(defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
+(defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore |ySteps| |xSteps|))
   (sqlite-client:with-current-connection (c *db*)
 
-    (log2:info "Basetime:~a Offset:~a Time:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |north| |south| |west| |east|)
+    (log2:info "Basetime:~a Offset:~a Time:~a Resolution:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |resolution| |north| |south| |west| |east|)
     (assert (and |basetime| (or |time| |offset|)))
     (handler-case
         (let* ((*read-default-float-format*
                  'double-float)
                (base-time
                  (local-time:parse-rfc3339-timestring |basetime|))
+               (resolution |resolution|)
                (requested-time
                  (if |time|
                      (local-time:parse-rfc3339-timestring |time|)
@@ -362,7 +363,8 @@
                                                     :method (routing-interpolation routing)
                                                     :merge-start (routing-merge-start routing)
                                                     :merge-window (routing-merge-window routing)
-                                                    :cycle cycle))
+                                                    :cycle cycle
+                                                    :resolution resolution))
                  (ddx (read-arg |ddx|))
                  (ddy (read-arg |ddy|))
                  (north (read-arg |north|))
@@ -388,8 +390,7 @@
                                                 (interpolated-prediction lat nlon iparams))
                                             (list (round-to-digits dir 2)
                                                   (round-to-digits speed 2)))))))
-              (let ((encoding (http-header request :accept-encoding))
-                    (body
+              (let ((body
                       (with-output-to-string (s)
                         (json s
                               (let ((time cycle-start-time))
@@ -738,6 +739,9 @@
            (etypecase value
              (latlng value)
              (string (find-place value)))))
+    ((string= name "resolution")
+     (setf (routing-resolution routing)
+           value))
     (t
      (log2:warning "Unhandled parameter ~a=~a" name value)))
     (values))

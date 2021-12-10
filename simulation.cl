@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-11-27 14:15:52>
+;;; Last Modified <michael 2021-12-10 20:51:21>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -23,6 +23,7 @@
 
 (declaim (inline get-penalty))
 (defun get-penalty (routing &key step-size type)
+  (declare (ignore routing step-size type))
   ;; (if (routing-winches routing) 0.9375d0 0.75d0)
   0.975d0)
 
@@ -32,16 +33,18 @@
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
+         (distance (course-distance start-pos destination))
          (polars (get-routing-polars routing))
          (race-info (get-routing-race-info routing))
          (limits (when race-info
                    (get-race-limits-rs race-info)))
-         (dest-heading (round (course-angle start-pos destination)))
+         (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
          (cycle (routing-cycle routing))
+         (resolution (routing-resolution routing)) 
          (isochrones nil))
     (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
                 (format-latlng nil start-pos)
@@ -76,12 +79,14 @@
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
-                                            :cycle cycle)
+                                            :cycle cycle
+                                            :resolution resolution)
                   (interpolation-parameters step-time
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
-                                            :cycle cycle))
+                                            :cycle cycle
+                                            :resolution resolution))
           (base-time (iparams-effective-cycle params)
                      (iparams-effective-cycle params))
           (step-size (funcall stepper)
@@ -89,11 +94,6 @@
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
                      (adjust-timestamp step-time (:offset :sec step-size)))
           (stepsum 0 (+ stepsum step-size))
-          (reached-distance (* (cond
-                                 ((< (* (routing-stepmax routing)) (* 18 60 60))  300)
-                                 ((< (* (routing-stepmax routing)) (* 48 60 60))  500)
-                                 (T 500))
-                               (knots-to-m/s (or (cpolars-maxspeed polars) 35d0))))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
@@ -155,7 +155,7 @@
                          (notany #'routepoint-p candidate))
            (setf error t))
           (t
-           (setf reached (reached candidate destination reached-distance))
+           (setf reached (reached candidate start-pos dest-heading distance))
            (setf isochrone candidate)
 
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
@@ -170,10 +170,13 @@
         (when reached
           (log2:trace "Reached destination at ~a" step-time))))))
 
-(defun reached (candidate destination reached-distance)
+(defun reached (candidate start angle distance)
   (some (lambda (p)
-          (and p
-               (< (course-distance (routepoint-position p) destination) reached-distance)))
+          (let ((a  (routepoint-origin-angle p))
+                (d  (course-distance (routepoint-position p) start)))
+            (and p
+                 (<= (abs (- angle a)) 1.5d0)
+                 (>= d distance))))
         candidate))
 
 (defun get-race-limits (leg-info)
@@ -362,7 +365,7 @@
                                       (origin-distance (course-distance start-pos new-pos))
                                       (origin-angle (normalize-heading (course-angle-d start-pos new-pos origin-distance))))
                                    (when (heading-between right origin-angle left)
-                                     (add-routepoint routepoint start-pos new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
+                                     (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
                       (add-point heading-stbd twa)
                       (add-point heading-port (- twa)))
               :finally (return added))))))))

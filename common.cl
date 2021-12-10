@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2021-11-27 14:17:30>
+;;; Last Modified <michael 2021-12-10 21:30:08>
 
 
 (in-package "VIRTUALHELM")
@@ -30,6 +30,7 @@
 (defvar *manoeuvering-penalty* nil)
 (defvar *tracks* nil)
 (defvar *rs-max-hours* 96)
+(defvar *rs-gfs-resolution* "1p00")
 
 (defun read-arg (s)
   (let ((*read-eval* nil))

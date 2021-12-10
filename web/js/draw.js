@@ -16,7 +16,7 @@ function drawWind (windCanvas, xSteps, ySteps, data) {
     }
 }
 
-function drawWindArrow(ctx, x, y, direction, speed) {
+function drawWindArrow (ctx, x, y, direction, speed) {
     direction = direction + 90;
     if (direction > 360) {
         direction = direction - 360;

@@ -261,49 +261,60 @@ input[type=checkbox] {
 	grid-column: 2;
 }
 
+/* Resolution */
+.resolution-label {
+	grid-row: 5;
+	grid-column: 1;
+
+}
+.resolution-selector {
+	grid-row: 5;
+	grid-column: 2;
+}
+
 
 /* Hide wind */
 .displaywind-label {
-	grid-row: 7;
+	grid-row: 9;
 	grid-column: 1;
 
 }
 .displaywind-checkbox {
-	grid-row: 7;
+	grid-row: 9;
 	grid-column: 2;
 
 }
 
 /* Display tracks */
 .displaytracks-label {
-	grid-row: 8;
+	grid-row: 10;
 	grid-column: 1;
 }
 .displaytracks-checkbox {
-	grid-row: 8;
+	grid-row: 10;
 	grid-column: 2;
 }
 
 /* Display tracks */
 .cursor-label {
-	grid-row: 9;
+	grid-row: 11;
 	grid-column: 1;
 }
 .cursor-select {
-	grid-row: 9;
+	grid-row: 11;
 	grid-column: 2;
 }
 
 /* Execute */
 .execute-button {
-	grid-row: 10;
+	grid-row: 6;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 11;
+	grid-row: 7;
 	grid-column: 1;
 
 }

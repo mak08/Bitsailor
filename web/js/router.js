@@ -36,6 +36,7 @@ var trackMarkers = [];
 
 var polars = null;
 var forecastData = {};
+var fcResolution = "1p00";
 var forecastCycle;
 var windData = null;
 var currentRouting = {};
@@ -83,11 +84,11 @@ function setUp (getVMG) {
     $("#ir_index").change(onAdjustIndex);
     
     $("#cb_startdelayed").click(onDelayedStart);
-    $("#tb_starttime").change(onSetParameter);
+    $("#tb_starttime").change(onSetParameterStarttime);
     
     $("#cb_manualcycle").click(onManualCycle);
-    $("#tb_cycledate").change(onSetParameter);
-    $("#sel_cyclehour").change(onSetParameter);
+    $("#tb_cycledate").change(onSetParameterCycleDateTime);
+    $("#sel_cyclehour").change(onSetParameterCycleDateTime);
     
     // Connect option selectors
     $("#sel_polars").change(onSetParameter);
@@ -221,6 +222,8 @@ function onCursorSelect (event, type) {
     googleMap.setOptions({draggableCursor:type});
 }
 
+
+
 function onAdjustIndex (event) {
     var source = event.target.id;
     if (source == "bt_dec6")
@@ -329,6 +332,32 @@ function onSetParameter (event) {
         setParameter(paramName, paramValue);
     }
 
+}
+
+function onSetParameterStarttime (event) {
+    var paramName = event.currentTarget.name;
+    var paramValue = event.currentTarget.value;
+    setParameter(paramName, paramValue);
+}
+
+function onSetParameterCycleDateTime (event) {
+    var manualCycle = document.getElementById("cb_manualcycle");
+    if ( manualCycle.checked ) {
+        var dateInput =  document.getElementById("tb_cycledate");
+        var hourInput =  document.getElementById("sel_cyclehour");
+        var paramName = 'cycle';
+        var paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+        setParameter(paramName, paramValue);
+        redrawWindByOffset(paramValue, "0");
+    }
+}
+
+function onSetResolution (event) {
+    var paramName = event.currentTarget.name;
+    var paramValue = event.currentTarget.value;
+    setParameter(paramName, paramValue);
+    fcResolution = paramValue;
+    redrawWindByOffset(forecastData.basetime, ir_index.value);
 }
 
 function setParameter (paramName, paramValue) {
@@ -869,6 +898,7 @@ function getWind (timeSpec) {
     $.ajax({
         url: "/function/vh.getWind"
             + "?" + timeSpec
+            + "&resolution=" + fcResolution
             + "&north=" + lat0.toFixed(6)
             + "&south=" + bounds.south.toFixed(6)
             + "&west=" + bounds.west.toFixed(6)
@@ -1100,6 +1130,8 @@ export {
     loadPolars,
     mapEvent,
     onMarkerClicked,
+    onSetParameter,
+    onSetResolution,
     polars,
     positionFromDocumentURL,
     setParameter,

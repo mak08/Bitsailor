@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-11-27 16:13:15>
+;;; Last Modified <michael 2021-12-10 21:31:11>
 
 (in-package :virtualhelm)
 
@@ -43,9 +43,15 @@
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
-                                    (download-cycle (previous-cycle (available-cycle (now))))
-                                    (noaa-start-updates))
-                                  :name "INIT-WEATHER-DATA")
+                                    (download-cycle (previous-cycle (available-cycle (now)))
+                                                    :resolution "0p25")
+                                    (noaa-start-updates :resolution "0p25"))
+                                  :name "GFS-DOWNLOAD-025")
+    (bordeaux-threads:make-thread (lambda ()
+                                    (download-cycle (previous-cycle (available-cycle (now)))
+                                                    :resolution "1p00")
+                                    (noaa-start-updates :resolution "1p00"))
+                                  :name "GFS-DOWNLOAD-100")
     
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)
@@ -72,12 +78,14 @@
       (race-info-rs
        (make-routing :race-id race-id
                      :interpolation :bilinear
+                     :resolution *rs-gfs-resolution*
                      :merge-start 6d0
                      :merge-window 0d0
                      :options '("realsail")))
       (race-info-vr
        (make-routing :race-id race-id
                      :interpolation :vr
+                     :resolution "1p00"
                      :merge-start 4.0d0
                      :merge-window 1d0
                      :options '("hull" "foil" "winch" "heavy" "light" "reach")))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-07-30 20:22:03>
+;;; Last Modified <michael 2021-12-09 23:13:25>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,12 +19,12 @@
   
 
 (defstruct routing
-  (dataset 'noaa-dataset)
   (race-id "default")
   (polars 4)
   (limits "limits.json")
   (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
   (cycle nil)                           ; NIL = latest available
+  (resolution "0p25")
   (options '("realsail"))
   (merge-start)
   (merge-window)

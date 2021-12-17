@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-10 21:31:11>
+;;; Last Modified <michael 2021-12-17 16:28:09>
 
 (in-package :virtualhelm)
 
@@ -44,14 +44,9 @@
     (log2:info "Starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
                                     (download-cycle (previous-cycle (available-cycle (now)))
-                                                    :resolution "0p25")
-                                    (noaa-start-updates :resolution "0p25"))
-                                  :name "GFS-DOWNLOAD-025")
-    (bordeaux-threads:make-thread (lambda ()
-                                    (download-cycle (previous-cycle (available-cycle (now)))
-                                                    :resolution "1p00")
-                                    (noaa-start-updates :resolution "1p00"))
-                                  :name "GFS-DOWNLOAD-100")
+                                                    :resolution '("1p00" "0p25"))
+                                    (noaa-start-updates :resolution '("1p00" "0p25")))
+                                  :name "GFS-DOWNLOAD")
     
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-10 22:18:30>
+;;; Last Modified <michael 2021-12-11 20:10:44>
 
 
 (in-package :virtualhelm)
@@ -187,7 +187,8 @@
                                                 |lonStart|
                                                 |latDest|
                                                 |lonDest|
-                                                (|duration| "86400"))
+                                                (|duration| "86400")
+                                                (|resolution| "1p00"))
   (sqlite-client:with-current-connection (c *db*)
     (handler-case
         (let* ((*read-default-float-format* 'double-float)
@@ -201,6 +202,7 @@
                               (read-arg |duration|)))
                (routing
                  (make-routing :interpolation :bilinear
+                               :resolution |resolution|
                                :polars |polarsID|
                                :options '("realsail")
                                :stepmax duration

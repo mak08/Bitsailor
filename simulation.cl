@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-10 20:51:21>
+;;; Last Modified <michael 2021-12-13 20:25:34>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -33,6 +33,10 @@
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
+         (lat-min (min (latlng-lat start-pos) (latlng-lat destination)))
+         (lng-min (min (latlng-lng start-pos) (latlng-lng destination)))
+         (lat-max (max (latlng-lat start-pos) (latlng-lat destination)))
+         (lng-max (max (latlng-lng start-pos) (latlng-lng destination)))
          (distance (course-distance start-pos destination))
          (polars (get-routing-polars routing))
          (race-info (get-routing-race-info routing))
@@ -55,6 +59,7 @@
                 left
                 right
                 cycle)
+    (log2:info "Routing box: ~a ~a / ~a ~a" lat-max lng-max lat-min lng-min)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -308,6 +313,7 @@
        (values speed sail nil)))))
 ;; (declaim (notinline get-penalized-avg-speed))
 
+(declaim (inline expand-routepoint))
 (defun expand-routepoint (routing routepoint penalty hull foils start-pos left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
   (cond

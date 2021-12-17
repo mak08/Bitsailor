@@ -146,6 +146,10 @@ import * as Router from './router.js';
         Router.setParameter("polars", rsData.polar.objectId);
         Router.loadPolars(rsData.polar.objectId);
 
+        if (rsData.gfs025 == "TRUE") {
+            document.getElementById("sel_resolution").value = "0p25";
+        }
+
         var start = Router.positionFromDocumentURL();
         if (start) {
         } else {

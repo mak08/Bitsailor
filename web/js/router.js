@@ -838,10 +838,10 @@ function isochroneTime (isochrone) {
 
 function getIsochroneByTime (time) {
     var refTime = new Date(time);
-    var isochrones = currentRouting.isochrones;
+    var isochrones = currentRouting.isochrones.reverse();
     for (const iso of isochrones) {
         var isoT = isochroneTime(iso);
-        if ( isoT <= refTime) {
+        if ( isoT >= refTime) {
             return iso;
         }
     }

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-17 16:28:09>
+;;; Last Modified <michael 2021-12-19 13:21:15>
 
 (in-package :virtualhelm)
 
@@ -67,16 +67,23 @@
 (defvar +races-ht-lock+
   (bordeaux-threads:make-lock "races-ht"))
 
+(defun race-info-is-gfs025 (race-info)
+  (string= (joref (race-info-data race-info) "gfs025") "TRUE"))
+
 (defun create-routing (&key race-id)
   (let ((race-info (race-info race-id)))
     (typecase race-info
       (race-info-rs
+       (let ((resolution
+               (if (race-info-is-gfs025 race-info)
+                   "0p25"
+                   "1p00")))
        (make-routing :race-id race-id
                      :interpolation :bilinear
-                     :resolution *rs-gfs-resolution*
+                     :resolution resolution
                      :merge-start 6d0
                      :merge-window 0d0
-                     :options '("realsail")))
+                     :options '("realsail"))))
       (race-info-vr
        (make-routing :race-id race-id
                      :interpolation :vr

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-13 20:25:34>
+;;; Last Modified <michael 2021-12-19 13:25:08>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -563,6 +563,7 @@
                                                                       :method (routing-interpolation routing)
                                                                       :merge-start (routing-merge-start routing)
                                                                       :merge-window (routing-merge-window routing)
+                                                                      :resolution (routing-resolution routing)
                                                                       :cycle cycle)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
          (twa-path nil)
@@ -585,6 +586,7 @@
                                                              :method (routing-interpolation routing)
                                                              :merge-start (routing-merge-start routing)
                                                              :merge-window (routing-merge-window routing)
+                                                             :resolution (routing-resolution routing)
                                                              :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
@@ -601,6 +603,7 @@
                                                              :method (routing-interpolation routing)
                                                              :merge-start (routing-merge-start routing)
                                                              :merge-window (routing-merge-window routing)
+                                                             :resolution (routing-resolution routing)
                                                              :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))

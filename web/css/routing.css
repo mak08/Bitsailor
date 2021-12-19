@@ -146,33 +146,42 @@ input {
 	grid-row: 7;
 }
 
-.threads-label {
+.resolution-label {
 	grid-column: 2;
 	grid-row: 8;
 }
-.threads-input {
+.resolution-input {
 	grid-column: 3;
 	grid-row: 8;
 }
 
-.delay-label {
+.threads-label {
 	grid-column: 2;
 	grid-row: 9;
 }
-.delay-input {
+.threads-input {
 	grid-column: 3;
 	grid-row: 9;
+}
+
+.delay-label {
+	grid-column: 2;
+	grid-row: 10;
+}
+.delay-input {
+	grid-column: 3;
+	grid-row: 10;
 }
 
 
 .polars-select {
 	grid-column: 3;
-	grid-row: 10
+	grid-row: 11
 }
 
 .bt-submit {
 	grid-column: 4;
-	grid-row: 11;
+	grid-row: 12;
 }
 
 

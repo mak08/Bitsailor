@@ -43,6 +43,7 @@ import * as Util from './Util.js';
         var destlon = document.getElementById("destlon").value;
         var threads = document.getElementById("threads").value;
         var duration = document.getElementById("duration").value;
+        var resolution = document.getElementById("resolution").value;
         var delay = document.getElementById("delay").value;
         var polars = document.getElementById("polars").value
 
@@ -69,6 +70,7 @@ import * as Util from './Util.js';
                        {
                            "polarsID": polars,
                            "duration": duration * 3600,
+                           "resolution": resolution,
                            "latStart": startlat,
                            "lonStart": startlon,
                            "latDest": destlat,

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-11 20:10:44>
+;;; Last Modified <michael 2021-12-23 01:01:13>
 
 
 (in-package :virtualhelm)
@@ -13,7 +13,7 @@
 ;;; Dynamic handlers
 
 (defun get-page (server handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     (handler-case 
         (let* ((user-id (http-authenticated-user handler request))
                (session (find-or-create-session user-id request response))
@@ -31,7 +31,9 @@
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+        (setf (status-text response) (format nil "~a" e))))
+  ;;)
+  )
 
 ;;; This function is called from a dynamic handler
 (defun start-page (server handler request response)
@@ -48,7 +50,7 @@
 
 ;;; This function is called from a dynamic handler
 (defun router (server handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     (handler-case 
         (let* ((user-id (http-authenticated-user handler request))
                (session (find-or-create-session user-id request response))
@@ -73,7 +75,9 @@
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+        (setf (status-text response) (format nil "~a" e))))
+  ;;)
+  )
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
@@ -141,7 +145,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setRoute
 (defun |setRoute| (handler request response &key |pointType| |lat| |lng|)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     (handler-case
         (let* ((user-id (http-authenticated-user handler request))
                (session (find-or-create-session user-id request response))
@@ -161,13 +165,15 @@
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+        (setf (status-text response) (format nil "~a" e))))
+  ;;)
+  )
   
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; setParameter
 
 (defun |setParameter| (handler request response &key |name| (|value| nil))
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     
     (let* ((user-id (http-authenticated-user handler request))
            (session (find-or-create-session user-id request response))
@@ -176,7 +182,9 @@
       (set-routing-parameter session routing |name| |value|) 
       (setf (http-header response :|Content-Location|)
             (path request))
-      (values "true"))))
+      (values "true"))
+  ;;)
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
@@ -225,7 +233,7 @@
         (setf (status-text response) (format nil "~a" e))))))
 
 (defun |getRoute| (handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
 
     (let ((race-id (get-routing-request-race-id request)))
       (handler-case
@@ -252,7 +260,9 @@
         (error (e)
           (log2:error "~a" e)
           (setf (status-code response) 500)
-          (setf (status-text response) (format nil "~a" e)))))))
+          (setf (status-text response) (format nil "~a" e)))))
+  ;;)
+  )
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))
@@ -290,7 +300,7 @@
 ;;; JSON cannot print hashtables but SESSION now contains one.
 ;;; For now we just return the requested routing.
 (defun |getSession| (handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
 
     (let* ((user-id
              (http-authenticated-user handler request))
@@ -304,11 +314,13 @@
              (race-info race-id)))
       (values
        (with-output-to-string (s)
-         (json s routing))))))
+         (json s routing))))
+  ;;)
+  )
 
 
 (defun |removeSession| (handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     (let* ((user-id
              (http-authenticated-user handler request))
            (session
@@ -316,7 +328,9 @@
       (remove-session session)
       (values
        (with-output-to-string (s)
-         (json s t))))))
+         (json s t))))
+  ;;)
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -340,7 +354,7 @@
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore |ySteps| |xSteps|))
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
 
     (log2:info "Basetime:~a Offset:~a Time:~a Resolution:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |resolution| |north| |south| |west| |east|)
     (assert (and |basetime| (or |time| |offset|)))
@@ -412,11 +426,13 @@
       #+ccl(ccl::invalid-memory-access (e)
              (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
              (setf (status-code response) 500)
-             (setf (status-text response) (format nil "~a" e))))))
+             (setf (status-text response) (format nil "~a" e))))
+  ;;)
+  )
 
 (defun |getTWAPath| (handler request response &key |basetime| |time| |latA| |lngA| |lat| |lng|)
-  (sqlite-client:with-current-connection (c *db*)
-    (handler-case
+  ;; (sqlite-client:with-current-connection (c *db*)
+  (handler-case
         (let* ((*read-default-float-format* 'double-float)
                (user-id
                  (http-authenticated-user handler request))
@@ -435,7 +451,9 @@
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+        (setf (status-text response) (format nil "~a" e))))
+  ;;)
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Batch routing
@@ -459,7 +477,7 @@
 ;;; Race list  & race info
 
 (defun |getRaceInfo| (handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
 
     (let* ((user-id
              (http-authenticated-user handler request))
@@ -471,7 +489,9 @@
              (race-info race-id)))
       (values
        (with-output-to-string (s)
-         (json s race-info))))))
+         (json s race-info))))
+  ;;)
+  )
 
 (defstruct raceinfo type name id class start-time closing-time start-pos finish-pos closed)
 
@@ -517,7 +537,7 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
 
     (let* ((user-id (http-authenticated-user handler request))
            (race-id (get-routing-request-race-id request))
@@ -535,10 +555,12 @@
         (reset-nmea-listener user-id routing host port))
       (with-output-to-string (s)
         (json s
-              (get-nmea-position (routing-nmea-connection routing) host port))))))
+              (get-nmea-position (routing-nmea-connection routing) host port))))
+  ;;)
+  )
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (sqlite-client:with-current-connection (c *db*)
+  ;; (sqlite-client:with-current-connection (c *db*)
     (let* ((user-id (http-authenticated-user handler request))
            (race-id (get-routing-request-race-id request))
            (session (find-or-create-session user-id request response))
@@ -557,7 +579,9 @@
                       (numberp (parse-integer port)))
                (error "Invalid NMEA port ~a" port))
              (reset-nmea-listener user-id routing host port)
-             (format nil "Connected to ~a:~a" host port))))))
+             (format nil "Connected to ~a:~a" host port))))
+  ;;)
+  )
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-25 00:41:55>
+;;; Last Modified <michael 2021-12-25 19:21:54>
 
 (in-package :virtualhelm)
 
@@ -56,7 +56,6 @@
     (flet ((sentinel ()
              (loop (progn 
                      (log2:info "Keeping toplevel alive")
-                     (room)
                      (sleep 600)))))
       (if start-sentinel
           (sentinel)

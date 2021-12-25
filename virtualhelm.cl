@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-19 13:21:15>
+;;; Last Modified <michael 2021-12-25 00:41:55>
 
 (in-package :virtualhelm)
 
@@ -53,9 +53,14 @@
     (polarcl:load-configuration *server-config*)
 
     ;; Keep function alive, this is our toplevel
-    (when start-sentinel
-      (loop (progn (sleep 600) 
-                   (log2:info "Sentinel takes a look around"))))))
+    (flet ((sentinel ()
+             (loop (progn 
+                     (log2:info "Keeping toplevel alive")
+                     (room)
+                     (sleep 600)))))
+      (if start-sentinel
+          (sentinel)
+          (bordeaux-threads:make-thread #'sentinel)))))
 
 (defvar *races-dir*
   (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")

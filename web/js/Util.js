@@ -18,7 +18,7 @@ function doGET (url, success, error, queryParams) {
         alert(xhr.statusText);
     };
 
-    xhr.open("GET", url + makeQuery(queryParams), true);
+    xhr.open("GET", url + makeQuery(queryParams), false);
     try {
         xhr.send(null);
     } catch (e) {

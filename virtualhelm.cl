@@ -1,18 +1,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-25 19:21:54>
+;;; Last Modified <michael 2021-12-28 16:50:47>
 
 (in-package :virtualhelm)
 
 ;;; Avoid line-breaks when printing log messages
 (setf *print-pretty* nil)
 
-;;; Log levels are also set in server configuration file!
-(setf (log2:log-level "virtualhelm") log2:+info+)
-(setf (log2:log-level "cl-weather") log2:+info+)
-
 (log2:info "Heap space: ~a" (sb-ext:dynamic-space-size))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Main function
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")

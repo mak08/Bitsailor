@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-05-23 15:32:25>
+;;; Last Modified <michael 2021-12-28 22:39:03>
 
 (in-package :virtualhelm)
 
@@ -13,6 +13,9 @@
 
 (defparameter *db*
   (namestring (merge-pathnames "local/main.sdb" *root-directory*)))
+
+(defvar *dbcon*
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; SQL datatype mapping
@@ -151,7 +154,7 @@
    (function-authorizer handler request function)))
 
 (defun authorize-user (request)
-  (sqlite-client:with-current-connection (c *db*)
+  (sql:with-connection (*dbcon*)
     (multiple-value-bind (username password)
         (http-credentials request)
       (let ((user (get-user-by-boatname username)))

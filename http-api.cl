@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-23 01:01:13>
+;;; Last Modified <michael 2021-12-28 22:11:37>
 
 
 (in-package :virtualhelm)
@@ -81,7 +81,7 @@
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
-  (sqlite-client:with-current-connection (c *db*)
+  (sql:with-connection (*dbcon*)
     (let* ((secret (cadr (path request)))
            (provisional (get-user-prov-by-secret secret)))
       (cond
@@ -107,7 +107,7 @@
 
 (defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
   (declare (ignore handler request))
-  (sqlite-client:with-current-connection (c *db*)
+  (sql:with-connection (*dbcon*)
     (let* ((email (decode-uri-component |emailAddress|))
            (boat (decode-uri-component |boatName|))
            (password |password|)
@@ -197,7 +197,7 @@
                                                 |lonDest|
                                                 (|duration| "86400")
                                                 (|resolution| "1p00"))
-  (sqlite-client:with-current-connection (c *db*)
+  (sql:with-connection (*dbcon*)
     (handler-case
         (let* ((*read-default-float-format* 'double-float)
                (user-id

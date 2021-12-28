@@ -330,17 +330,21 @@ import * as Router from './router.js';
     
     
     function setUpVR () {
+
         Router.setUp(getVMG);
         
         document.getElementById("bt_position").addEventListener("click", onSetPosition);
         document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
         google.maps.event.addListener(Router.startMarker,'dragend', function () {
+            // Update position entry/display
             onUpdateStartMarker(Router.startMarker);
         });
       
         getRaceInfo()
         getSession();
-        
+
+        Router.updateMap();
+      
     }
     
     window.addEventListener("load", function (event) {

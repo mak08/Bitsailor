@@ -147,7 +147,7 @@ import * as Router from './router.js';
         Router.loadPolars(rsData.polar.objectId);
 
         if (rsData.gfs025 == "TRUE") {
-            document.getElementById("sel_resolution").value = "0p25";
+            Router.setResolution("0p25");
         }
 
         var start = Router.positionFromDocumentURL();
@@ -232,8 +232,9 @@ import * as Router from './router.js';
             alert(request.responseText);
         });
     }
-
+    
     function setUpRS () {
+ 
         Router.setUp(getVMG);
 
         document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
@@ -242,6 +243,9 @@ import * as Router from './router.js';
 
         getRaceInfo()
         getSession();
+
+        Router.updateMap();
+        
     }
 
     window.addEventListener("load", function (event) {

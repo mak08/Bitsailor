@@ -3,7 +3,6 @@
 
 import * as Util from './Util.js';
 
-
 var googleMap = null;
 var mapEvent;
 
@@ -121,11 +120,7 @@ function setUp (getVMG) {
     destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
     
     setupCanvas();
-    
-    google.maps.event.addListenerOnce(googleMap, 'idle', function(){
-        updateMap();
-    });
-    
+        
 }
 
 function initMarker (type, title, url, x, y) {
@@ -157,23 +152,28 @@ function onWindowResize (event) {
 }
 
 function updateMap () {
-    if ((googleMap.getMapTypeId() == google.maps.MapTypeId.ROADMAP)
-        || (googleMap.getMapTypeId() == google.maps.MapTypeId.TERRAIN)) {
-        if ( googleMap.zoom < 6 ) {
-            googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-        } else {
-            googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+    // Delegate to callback -
+    // This causes the update to be executed only when the map bounds are valid.
+    // Probably only matters on the first update after page load.
+    google.maps.event.addListenerOnce(googleMap, 'idle', function(){
+        if ((googleMap.getMapTypeId() == google.maps.MapTypeId.ROADMAP)
+            || (googleMap.getMapTypeId() == google.maps.MapTypeId.TERRAIN)) {
+            if ( googleMap.zoom < 6 ) {
+                googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+            } else {
+                googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
+            }
         }
-    }
-    var bounds = getMapBounds();
-    var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
-    $("#lb_map_bounds").text("Kartenausschnitt: " + label);
-    if (forecastData.basetime) {
-        redrawWindByOffset(forecastData.basetime, ir_index.value);
-    } else {
-        var baseTime = availableForecastCycle();
-        redrawWindByOffset(baseTime, ir_index.value);
-    }
+        var bounds = getMapBounds();
+        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
+        $("#lb_map_bounds").text("Kartenausschnitt: " + label);
+        if (forecastData.basetime) {
+            redrawWindByOffset(forecastData.basetime, ir_index.value);
+        } else {
+            var baseTime = availableForecastCycle();
+            redrawWindByOffset(baseTime, ir_index.value);
+        }
+    });
 }
 
 function availableForecastCycle (d=new Date()) {
@@ -413,6 +413,13 @@ function onMarkerClicked (marker) {
     redrawWindByTime(time, baseTime);
 }
 
+//////////////////////////////////////////////////////////////////////
+/// Accessors
+
+function setResolution (resolution) {
+    fcResolution = resolution;
+    document.getElementById("sel_resolution").value = "0p25";
+}
 
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
@@ -838,7 +845,7 @@ function isochroneTime (isochrone) {
 
 function getIsochroneByTime (time) {
     var refTime = new Date(time);
-    var isochrones = currentRouting.isochrones.reverse();
+    var isochrones = currentRouting.isochrones.slice().reverse();
     for (const iso of isochrones) {
         var isoT = isochroneTime(iso);
         if ( isoT >= refTime) {
@@ -1135,9 +1142,11 @@ export {
     polars,
     positionFromDocumentURL,
     setParameter,
+    setResolution,
     setRoutePoint,
     setUp,
     startMarker,
+    updateMap,
     updateStartPosition
 }
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-28 16:50:47>
+;;; Last Modified <michael 2021-12-29 00:25:08>
 
 (in-package :virtualhelm)
 
@@ -17,11 +17,13 @@
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
 
-(defun run-virtual-helm (&optional (start-sentinel t))
+(defun run-virtual-helm (&key (rcfile ".vhrc") (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((rcfile
-         (merge-pathnames (make-pathname :name ".vhrc")
-                          (user-homedir-pathname))))
+          (merge-pathnames (make-pathname :name rcfile)
+                           (user-homedir-pathname))))
+    (log2:info "Opening database ~a" *db*)
+    (setf *dbcon* (sqlite-client:%connect% *db* sqlite-client::+sqlite_open_fullmutex+))
     (cond
       ((probe-file rcfile)
        (log2:info "Loading ~a " rcfile)        

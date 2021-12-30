@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-29 00:25:08>
+;;; Last Modified <michael 2021-12-30 20:36:32>
 
 (in-package :virtualhelm)
 
@@ -55,9 +55,11 @@
 
     ;; Keep function alive, this is our toplevel
     (flet ((sentinel ()
-             (loop (progn 
-                     (log2:info "Keeping toplevel alive")
-                     (sleep 600)))))
+             (loop
+               (progn
+                 (log2:info "Keeping toplevel alive")
+                 (log2:info "Threads:~%~{~34T~a~%~}" (bordeaux-threads:all-threads))
+                 (sleep 600)))))
       (if start-sentinel
           (sentinel)
           (bordeaux-threads:make-thread #'sentinel)))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-19 13:25:08>
+;;; Last Modified <michael 2022-01-03 02:14:15>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -229,10 +229,12 @@
                           120)
                          ((< delta-t (+ hour-fill-2 (* 36 600)))
                           600)
-                         ((< delta-t (+ hour-fill-2 (* 288 600)))
+                         ((< delta-t (+ hour-fill-2 (* 144 600)))
                           900)
+                         ((< delta-t (+ hour-fill-2 (* 288 600)))
+                          1800)
                          (t
-                          1800)))))))
+                          3600)))))))
         (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
         (values step-size
                 step-time)))))

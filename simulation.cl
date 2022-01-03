@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-01-03 02:14:15>
+;;; Last Modified <michael 2022-01-03 22:01:32>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -367,9 +367,9 @@
                                           (integer step-size))
                                  (let*
                                      ((distance (* speed step-size))
-                                      (new-pos (add-distance-estimate (routepoint-position routepoint)
-                                                                      distance
-                                                                      heading))
+                                      (new-pos (add-distance-exact (routepoint-position routepoint)
+                                                                   distance
+                                                                   heading))
                                       (origin-distance (course-distance start-pos new-pos))
                                       (origin-angle (normalize-heading (course-angle-d start-pos new-pos origin-distance))))
                                    (when (heading-between right origin-angle left)

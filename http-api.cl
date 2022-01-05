@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-12-28 22:11:37>
+;;; Last Modified <michael 2022-01-04 19:52:55>
 
 
 (in-package :virtualhelm)
@@ -367,58 +367,57 @@
                (requested-time
                  (if |time|
                      (local-time:parse-rfc3339-timestring |time|)
-                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|))))))
-          (log2:info "Requested time: ~a" requested-time)
-          (let* ((user-id (http-authenticated-user handler request))
-                 (session (find-or-create-session user-id request response))
-                 (race-id (get-routing-request-race-id request))
-                 (routing (session-routing session race-id))
-                 (cycle (make-cycle :timestamp base-time))
-                 (cycle-start-time base-time)
-                 (iparams (interpolation-parameters requested-time
-                                                    :method (routing-interpolation routing)
-                                                    :merge-start (routing-merge-start routing)
-                                                    :merge-window (routing-merge-window routing)
-                                                    :cycle cycle
-                                                    :resolution resolution))
-                 (ddx (read-arg |ddx|))
-                 (ddy (read-arg |ddy|))
-                 (north (read-arg |north|))
-                 (south (read-arg |south|))
-                 (east (read-arg |east|))
-                 (west (read-arg |west|)))
-            (log2:info "Using cycle: ~a" cycle)
-            (when (< west 0d0) (incf west 360d0))
-            (when (< east 0d0) (incf east 360d0))
-            (when (< east west) (incf east 360d0))
+                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|)))))
+               (user-id (http-authenticated-user handler request))
+               (session (find-or-create-session user-id request response))
+               (race-id (get-routing-request-race-id request))
+               (routing (session-routing session race-id))
+               (cycle (make-cycle :timestamp base-time))
+               (cycle-start-time base-time)
+               (iparams (interpolation-parameters requested-time
+                                                  :method (routing-interpolation routing)
+                                                  :merge-start (routing-merge-start routing)
+                                                  :merge-window (routing-merge-window routing)
+                                                  :cycle cycle
+                                                  :resolution resolution))
+               (ddx (read-arg |ddx|))
+               (ddy (read-arg |ddy|))
+               (north (read-arg |north|))
+               (south (read-arg |south|))
+               (east (read-arg |east|))
+               (west (read-arg |west|)))
+          (log2:info "Requested time: ~a Using cycle: ~a" requested-time cycle)
+          (when (< west 0d0) (incf west 360d0))
+          (when (< east 0d0) (incf east 360d0))
+          (when (< east west) (incf east 360d0))
             
-            (assert (and (plusp ddx)
-                         (plusp ddy)
-                         (< south north)))
-            (let ((wind-data
-                    (loop
-                      :for lat :from north :downto south :by ddy
-                      :collect (loop
-                                 :for lon :from west :to east :by ddx
-                                 :collect (multiple-value-bind (dir speed)
-                                              (let ((nlon
-                                                      (if (> lon 0) (- lon 360) lon)))
-                                                (interpolated-prediction lat nlon iparams))
-                                            (list (round-to-digits dir 2)
-                                                  (round-to-digits speed 2)))))))
-              (let ((body
-                      (with-output-to-string (s)
-                        (json s
-                              (let ((time cycle-start-time))
-                                (make-forecast-data
-                                 :basetime (format-datetime nil cycle-start-time)
-                                 :time (format-datetime nil requested-time)
-                                 :maxoffset 384 ;; (dataset-max-offset dataset)
-                                 :cycle (format-timestring nil
-                                                           time
-                                                           :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                                 :data wind-data))))))
-                (values body)))))
+          (assert (and (plusp ddx)
+                       (plusp ddy)
+                       (< south north)))
+          (let ((wind-data
+                  (loop
+                    :for lat :from north :downto south :by ddy
+                    :collect (loop
+                               :for lon :from west :to east :by ddx
+                               :collect (multiple-value-bind (dir speed)
+                                            (let ((nlon
+                                                    (if (> lon 0) (- lon 360) lon)))
+                                              (interpolated-prediction lat nlon iparams))
+                                          (list (round-to-digits dir 2)
+                                                (round-to-digits speed 2)))))))
+            (let ((body
+                    (with-output-to-string (s)
+                      (json s
+                            (let ((time cycle-start-time))
+                              (make-forecast-data
+                               :basetime (format-datetime nil cycle-start-time)
+                               :time (format-datetime nil requested-time)
+                               :maxoffset 384 ;; (dataset-max-offset dataset)
+                               :cycle (format-timestring nil
+                                                         time
+                                                         :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
+                               :data wind-data))))))
+              (values body))))
       (error (e)
         (log2:error "~a" e)
         (setf (status-code response) 500)

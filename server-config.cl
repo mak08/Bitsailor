@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2021-11-10 22:25:01>
+;;; Last Modified <michael 2022-01-08 17:14:16>
 
 (in-package :virtualhelm)
 
@@ -91,23 +91,44 @@
 ;;; Static content
 ;;; ----------------
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Polars -
+
+(handle
+ :request ( :method :get
+            :path "/polars")
+ :handler ( :directory  "/home/michael/Polars"
+            :authentication nil))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; GRIBs
+
+(handle
+ :request (:method :get
+           :path "/weather")
+ :handler (:directory "/home/michael/Wetter"
+           :authentication nil))
+
 (handle
  :request (:prefix "/weather")
  :handler (:static "/home/michael/Wetter/"
            :authentication nil))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Web page
 
 (handle
  :request (:prefix "/js")
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web" "js"))
                                      *source-root*))
-                   :authentication nil))
+           :authentication nil))
 (handle
  :request (:prefix "/css")
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web" "css"))
                                      *source-root*))
-                   :authentication nil))
+           :authentication nil))
 
 (handle
  :request (:prefix "/img")

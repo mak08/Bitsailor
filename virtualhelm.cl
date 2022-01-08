@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-30 20:36:32>
+;;; Last Modified <michael 2022-01-08 01:13:57>
 
 (in-package :virtualhelm)
 
@@ -17,7 +17,10 @@
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
 
-(defun run-virtual-helm (&key (rcfile ".vhrc") (start-sentinel t))
+(defun run-virtual-helm (&key
+                           (rcfile ".vhrc")
+                           (resolution  '("1p00" "0p25"))
+                           (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((rcfile
           (merge-pathnames (make-pathname :name rcfile)
@@ -45,8 +48,8 @@
     (log2:info "Starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
                                     (download-cycle (previous-cycle (available-cycle (now)))
-                                                    :resolution '("1p00" "0p25"))
-                                    (noaa-start-updates :resolution '("1p00" "0p25")))
+                                                    :resolution resolution)
+                                    (noaa-start-updates :resolution resolution))
                                   :name "GFS-DOWNLOAD")
     
     ;; Start web server

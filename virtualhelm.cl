@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-08 01:13:57>
+;;; Last Modified <michael 2022-01-09 23:49:34>
 
 (in-package :virtualhelm)
 
@@ -44,11 +44,12 @@
     ;; Start timers
     (timers:start-timer-loop)
 
+    ;; Cleanup old forecasts once (also called periodically from cleanup timer)
+    (cleanup-cycles)
+
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
-    (log2:info "Starting weather updates")
+    (log2:info "Backfilling weather data and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
-                                    (download-cycle (previous-cycle (available-cycle (now)))
-                                                    :resolution resolution)
                                     (noaa-start-updates :resolution resolution))
                                   :name "GFS-DOWNLOAD")
     

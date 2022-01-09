@@ -169,17 +169,13 @@
 		  </li>
 
 		  <li><b>Routing fails with an error message</b> similar to
-			<pre><code> error File /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
+			<pre><code> error Missing forecast /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
 			<p>
-			  or
-			  <pre><code> error Unexpected HTTP status 404 Not Found for URL
-				  https://ftpprd.ncep.noaa.gov/data/nccf/com/gfs/prod/gfs.20210509/06/atmos/gfs.t06z.pgrb2.1p00.f072.idx</code></pre>
-			<p>
-			  This is due to a bug in the forecast availability check. The router attempts to download the new forecast too early, when NOAA did not provide the file yet.<br>
-			  Occasionally, production of forecasts is delayed or broken at NOAA.
+			  This is usually due to missing and/or delayed forecasts at NOAA.
+			  The router first tries to fall back to the previous cycle and issues an error message if required forecast is missing in the previous cycle as well.
 			</p>
 			<p>
-			  In both cases, retry later or force the old forecast using manual cycle selection.
+			  Retry later or select a shorter duration.
 			</p>
 		  </li>
 		  <li><b>UI wind differs from wind displayed in waypoint info.</b>

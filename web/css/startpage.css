@@ -39,6 +39,11 @@ html {
 	background-color: #222222;
 }
 
+table {
+	table-layout: auto;
+	width: 100%;
+}
+
 code {
 	background-color:  #a0a0a0;
 }

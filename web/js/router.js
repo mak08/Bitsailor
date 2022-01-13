@@ -120,7 +120,13 @@ function setUp (getVMG) {
     destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
     
     setupCanvas();
-        
+
+    document.getElementById("bt_position").addEventListener("click", onSetPosition);
+    document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
+    google.maps.event.addListener(startMarker,'dragend', function () {
+        // Update position entry/display
+        onUpdateStartMarker(startMarker);
+    });
 }
 
 function initMarker (type, title, url, x, y) {
@@ -250,6 +256,79 @@ function onDelayedStart (event) {
     setParameter('starttime', dateInput.value);
 }
 
+
+function  onContextMenuSetStart (event) {
+    var textBox = document.getElementById("tb_position");
+    var position = mapEvent.latLng;
+    textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+}
+
+function  onUpdateStartMarker (marker) {
+    var textBox = document.getElementById("tb_position");
+    var position = marker.getPosition();
+    textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+}
+
+function onSetPosition (event) {
+    var position = document.getElementById("tb_position").value;
+    var latlon = parsePosition(position);
+    if (latlon) {
+        var latLon = new google.maps.LatLng(latlon.lat, latlon.lon);
+        setRoutePoint('start', latLon);
+    }
+}
+
+    function parsePosition (string) {
+        try {
+            // Assume two comma separated DMS values
+            var parts = string.split(',');
+            if (parts.length != 2) {
+                // Alternatively try blank separated numbers.
+                // In this cas we don't support blanks inside the DMS values
+                parts = string.split(' ');
+            }
+            if (parts.length != 2) {
+                throw new Error(`Invalid LatLng ${string}`)
+            }
+
+            // We assume the first value to designate Lat, second Lon.
+            var lat, lon;
+            if (parts[0].match(/E|W/)) {
+                lon = parts[0].trim();
+                lat = parts[1].trim();
+            } else {
+                lat = parts[0].trim();
+                lon = parts[1].trim();
+            }
+            return {
+                "lat": parseDMS(lat),
+                "lon": parseDMS(lon)
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
+    function parseDMS (string) {
+        // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
+        var sign = string.match(/W|S/)?-1:1;
+        string = string.split(/[NESW]/)[0];
+        var parts = string.split('°');
+        var degrees = parseFloat(parts[0]);
+        if (parts[1]) {
+            parts = parts[1].split('\'');
+            degrees += parseFloat(parts[0])/60;
+            if (parts[1]) {
+                degrees += parseFloat(parts[1].split('"')[0])/3600;
+            }
+        }
+        if (isNaN(degrees)) {
+            throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+        } else {
+            return sign * degrees;
+        }
+    }
+    
 function truncate (n, q) {
     return n - (n % q);
 }

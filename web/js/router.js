@@ -121,6 +121,11 @@ function setUp (getVMG) {
     
     setupCanvas();
 
+    document.getElementById("tb_position").addEventListener("keyup", function (event) {
+        if (event.keyCode === 13) {
+            onSetPosition(event);
+        }
+    });
     document.getElementById("bt_position").addEventListener("click", onSetPosition);
     document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
     google.maps.event.addListener(startMarker,'dragend', function () {

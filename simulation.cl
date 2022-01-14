@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-01-03 22:01:32>
+;;; Last Modified <michael 2022-01-14 00:04:14>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -70,7 +70,7 @@
           (foils  (routing-foils routing))
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 360 (min +max-iso-points+ (+ max-points 12)))
+          (max-points 600 (min +max-iso-points+ (+ max-points 12)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
           (max-dist (make-array +max-iso-points+ :initial-element 0d0))
           (min-angle (/ 360d0 +max-iso-points+))
@@ -405,14 +405,15 @@
 
 (defun construct-isochrones (isochrones)
   (loop
-     :for isochrone :in isochrones
-     :append (separate-isochrones isochrone)))
+    :for isochrone :in isochrones
+    :for i = (separate-isochrones isochrone)
+    :append i))
 
 (defun separate-isochrones (isochrone)
   (do* ((path (isochrone-path isochrone))
         (index 0 (1+ index))
-        (point (aref path index) (aref path index))
         (previous nil point)
+        (point (aref path index) (aref path index))
         (current-path nil)
         (isochrones nil))
        ((>= index (1- (length path)))
@@ -421,21 +422,18 @@
                               :offset (isochrone-offset isochrone)
                               :path current-path)
               isochrones))
-    (cond
-      ((or (null previous)
-           (and (< (abs (- (latlng-lat (routepoint-position point))
-                           (latlng-lat (routepoint-position previous))))
-                   0.5)
-                (< (abs (- (latlng-lng (routepoint-position point))
-                           (latlng-lng (routepoint-position previous))))
-                   0.5)))
-       (push point current-path))
-      (t
-       (push (make-isochrone :time (isochrone-time isochrone)
-                             :offset (isochrone-offset isochrone)
-                             :path current-path)
-             isochrones)
-       (setf current-path (list point))))))
+      (cond
+        ((or (null previous)
+             (let ((angle (abs (- (routepoint-origin-angle point)
+                                  (routepoint-origin-angle previous)))))
+               (or (< angle 1d0) (> angle 355d0))))
+         (push point current-path))
+        (t
+         (push (make-isochrone :time (isochrone-time isochrone)
+                               :offset (isochrone-offset isochrone)
+                               :path current-path)
+               isochrones)
+         (setf current-path (list point))))))
 
 
 (defun extract-points (isochrone)
@@ -477,7 +475,7 @@
       (push (routepoint-position cur-point) path)
       (when (or (null successor)
                 (routepoint-penalty cur-point)
-                (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
+                ;; (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
                 (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))
                 (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
         (push (create-trackpoint cur-point (or successor cur-point)) route)))))

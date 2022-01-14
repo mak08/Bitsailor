@@ -1,13 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-09 21:41:37>
+;;; Last Modified <michael 2022-01-14 20:40:37>
 
 (in-package :virtualhelm)
 
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate origin-angle delta-angle))
 
+(declaim (inline add-routepoint))
 (defun-t add-routepoint null ((predecessor routepoint)
                               (position latlng)
                               (origin-distance double-float)

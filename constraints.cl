@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2021-04-17 21:30:10>
+;;; Last Modified <michael 2022-01-14 20:30:48>
 
 (in-package :virtualhelm)
 
@@ -58,6 +58,7 @@
                         :lng (coerce (joref p "lon") 'double-float)))
          south)))
 
+(declaim (inline check-limits))
 (defun check-limits (p0 p1 limits)
   (loop
      :for k :from 1 :below (length limits)

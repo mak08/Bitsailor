@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-01-08 21:00:25>
+;;; Last Modified <michael 2022-01-23 23:22:44>
 
 (in-package :virtualhelm)
 
@@ -112,7 +112,8 @@
 (handle
  :request (:prefix "/weather")
  :handler (:static "/home/michael/Wetter/"
-           :authentication nil))
+           :realm "virtualhelm"
+           :authorizer #'vh-authorizer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Web page

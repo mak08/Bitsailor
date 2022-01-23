@@ -37,6 +37,13 @@ button, select, option {
 	border: 2px solid #e0e0ff;
 }
 
+button:hover {
+	background-color: #2A2A2A;
+}
+
+button:active {
+	background-color: #ffffff;
+}
 
 /*******************************************************************************
  * Page layout

@@ -52,6 +52,16 @@ function gcAngle(rlat0, rlon0, rlat1, rlon1) {
     return Math.acos(Math.sin(rlat0) * Math.sin(rlat1) + Math.cos(rlat0) * Math.cos(rlat1) * Math.cos(rlon1 - rlon0));
 }
 
+function courseAngle(lat0, lon0, lat1, lon1) {
+    var rlat0 = toRad(lat0);
+    var rlat1 = toRad(lat1);
+    var rlon0 = toRad(lon0);
+    var rlon1 = toRad(lon1);
+    var xi = gcAngle(rlat0, rlon0, rlat1, rlon1);
+    var a = Math.acos((Math.sin(rlat1) - Math.sin(rlat0) * Math.cos(xi)) / (Math.cos(rlat0) * Math.sin(xi)));
+    return (Math.sin(rlon1 - rlon0) > 0) ? a : (2 * Math.PI - a);
+}
+
 // Greate circle distance
 function gcDistance(pos0, pos1) {
     // e = r · arccos(sin(φA) · sin(φB) + cos(φA) · cos(φB) · cos(λB – λA))
@@ -374,6 +384,7 @@ export {
     toRad,
     linear,
     gcAngle,
+    courseAngle,
     gcDistance,
     arcLength,
     m2nm,

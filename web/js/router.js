@@ -1075,8 +1075,10 @@ function updateWindInfo (event, getVMG) {
         var dtf = Util.gcDistance({"lat": curLat, "lon": curLng},
                                   {"lat": destLat, "lon": destLng});
 
+        var destBearing = Util.toDeg(Util.courseAngle(curLat, curLng, destLat, destLng));
+
         var lbDTF = document.getElementById("lb_dtf");
-        lbDTF.innerText = dtf.toFixed(2);
+        lbDTF.innerText = `${dtf.toFixed(1)} | ${destBearing.toFixed(1)}°`;
 
         var startLat = startMarker.getPosition().lat();
         var startLng = startMarker.getPosition().lng();
@@ -1084,8 +1086,10 @@ function updateWindInfo (event, getVMG) {
         var dfs = Util.gcDistance({"lat": curLat, "lon": curLng},
                                   {"lat": startLat, "lon": startLng});
 
+        var startBearing = Util.toDeg(Util.courseAngle(curLat, curLng, startLat, startLng));
+
         var lbDFS = document.getElementById("lb_dfs");
-        lbDFS.innerText = dfs.toFixed(2);
+        lbDFS.innerText = `${dfs.toFixed(1)} | ${startBearing.toFixed(1)}°`;
         
         
         var iLat = Math.round((curLat - bounds.north) / (bounds.south - bounds.north) * ySteps);

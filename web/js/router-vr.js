@@ -218,9 +218,11 @@ import * as Router from './router.js';
 
         for (const c of vrData.checkpoints) {
             var mark = new google.maps.Marker({
-                position: {"lat": c.start.lat, "lng": c.start.lon},
+                position: {"lat": c.start.lat,
+                           "lng": c.start.lon},
                 map: Router.googleMap,
                 icon: (c.side=='port')?markPort:markStbd,
+                label: `${ c.group }`,
                 title: c.group + "-" + c.id + " " + c.name,
                 draggable: false
             });

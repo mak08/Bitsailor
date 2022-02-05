@@ -1,24 +1,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-04-17 21:30:01>
+;;; Last Modified <michael 2022-01-30 11:55:35>
 
 (in-package :virtualhelm)
-
-(eval-when (:load-toplevel :execute)
-  (defmacro check-delta-equal (form result)
-    `(progn
-       (assert (equal (ftruncate ,form 0.00001) (ftruncate ,result 0.00001)))
-       t)
-    )
-
-  (defmacro check-equal (form result)
-    `(progn
-       (assert (equal ,form ,result))
-       t)
-    )
-  )
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Eastbound North Gate

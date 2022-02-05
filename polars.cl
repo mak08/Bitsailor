@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-29 21:28:53>
+;;; Last Modified <michael 2022-01-30 12:41:50>
 
 (in-package :virtualhelm)
 
@@ -211,15 +211,18 @@
   (loop
      :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
      :do
-        ;; Side-effects are performed by the RS/VR functions 
-        (load-polars-file name)))
+        ;; Side-effects are performed by the RS/VR functions
+        (let ((filename (merge-pathnames name
+                                         (merge-pathnames (make-pathname :type "json")
+                                                          (pathname *polars-dir*)))))
+          (load-polars-file filename))))
 
-(defun load-polars-file (polars-name)
-  (let* ((json-object  (parse-json-file polars-name)))
+(defun load-polars-file (filename)
+  (let* ((json-object  (parse-json-file filename)))
     (cond ((joref json-object "scriptData")
-           (translate-polars-vr polars-name json-object))
+           (translate-polars-vr filename json-object))
           ((joref json-object "objectId")
-           (translate-polars-rs polars-name json-object))
+           (translate-polars-rs filename json-object))
           (t
            (error "Unknown polars format")))))
 

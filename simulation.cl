@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-01-14 00:04:14>
+;;; Last Modified <michael 2022-02-23 23:12:53>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -20,12 +20,6 @@
     (values speed
             sail)))
 ;; (declaim (notinline twa-boatspeed))
-
-(declaim (inline get-penalty))
-(defun get-penalty (routing &key step-size type)
-  (declare (ignore routing step-size type))
-  ;; (if (routing-winches routing) 0.9375d0 0.75d0)
-  0.975d0)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
@@ -76,8 +70,6 @@
           (min-angle (/ 360d0 +max-iso-points+))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (stepper (make-stepper start-time  (routing-stepmax routing)))
-          (penalty (get-penalty routing)
-                   (get-penalty routing))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (params (interpolation-parameters start-time
@@ -143,7 +135,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (let ((new-point-num
-                         (expand-routepoint routing rp penalty hull foils start-pos left right step-size step-time params polars delta-angle)))
+                         (expand-routepoint routing rp hull foils start-pos left right step-size step-time params polars delta-angle)))
                    (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)
@@ -290,7 +282,7 @@
 ;; (declaim (notinline twa-heading))
 
 (declaim (inline get-penalized-avg-speed))
-(defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalty hull foils)
+(defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalties hull foils)
   (declare (double-float wind-speed twa))
   (multiple-value-bind (speed sail)
       (twa-boatspeed polars wind-speed (normalize-angle twa))
@@ -305,18 +297,17 @@
       ((and
         cur-sail
         (not (equal sail cur-sail)))
-       (values (* speed penalty) sail "Sail Change"))
-      ((and *manoeuvering-penalty*
-            cur-twa
+       (values (* speed (penalty-sail penalties)) sail "Sail Change"))
+      ((and cur-twa
             (or (< twa 0 cur-twa)
                 (< cur-twa 0 twa)))
-       (values (* speed penalty) sail "Tack/Gybe"))
+       (values (* speed (penalty-tack penalties)) sail "Tack/Gybe"))
       (t
        (values speed sail nil)))))
 ;; (declaim (notinline get-penalized-avg-speed))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint penalty hull foils start-pos left right step-size step-time params polars delta-angle)
+(defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -333,7 +324,8 @@
                                         :adjustable t
                                         :fill-pointer t))
             (lat (latlng-lat (routepoint-position routepoint)))
-            (lng (latlng-lng (routepoint-position routepoint))))
+            (lng (latlng-lng (routepoint-position routepoint)))
+            (penalties (routing-penalties routing)))
        (multiple-value-bind
              (wind-dir wind-speed)
            (interpolated-prediction lat lng params)
@@ -362,7 +354,7 @@
                              (progn
                                (incf added)
                                (multiple-value-bind (speed sail reason)
-                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalty hull foils)
+                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalties hull foils)
                                  (declare (double-float speed)
                                           (integer step-size))
                                  (let*

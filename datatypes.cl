@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-12-09 23:13:25>
+;;; Last Modified <michael 2022-02-23 23:23:31>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -16,7 +16,8 @@
 (defstruct race-info data)
 (defstruct (race-info-vr (:include race-info)) (mode "vr"))
 (defstruct (race-info-rs (:include race-info)) (mode "rs"))
-  
+
+(defstruct penalty (sail 0.95d0) (tack 0.95d0) (gybe 0.95d0))
 
 (defstruct routing
   (race-id "default")
@@ -26,6 +27,7 @@
   (cycle nil)                           ; NIL = latest available
   (resolution "0p25")
   (options '("realsail"))
+  (penalties (make-penalty))
   (merge-start)
   (merge-window)
   (interpolation)                       ; :enorm (realsail), :bilinear, :vr

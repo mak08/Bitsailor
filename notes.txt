@@ -1,14 +1,89 @@
 ================================================================================
+ToDo Server
+--------------------------------------------------------------------------------
+
+*   Persist race settings /session
+    -   destination, NMEA port, what else?
+
+*   provide speed of first routepoint
+
+*   Create hires bitmap
+    OR
+    Try one map instance per request
+
+*   Kill NMEA listeners after inactivity period
+
+*   (done) nginx reverse proxy
+
+================================================================================
+ToDo Web UI
+--------------------------------------------------------------------------------
+
+*   NMEA dialog
+    -   Display COG/TWA, SOG/Boat speed
+    -   Display wind speed & direction
+    -   Auto NMEA update?
+
+*   (done) Use “previous isochrone” basetime to sync wind on routepoint     
+
+*   Display  local times
+
+================================================================================
+Documentation
+--------------------------------------------------------------------------------
+
+*   Manual
+    -   NMEA
+    -   Start time
+    -   Cycle selection
+    -   Track tool
+    -   Wind sync on isochrones & track points; used cycle?!
+
+================================================================================
+Setup
+--------------------------------------------------------------------------------
+
+*   Install make, gcc, sbcl
+
+*   Install sqlite3 with column metadata enabled (required for gdal, cl-rdbms)
+
+*   Install gdal, mbedtls, eccodes, zlib
+
+*   Copy land_polygons, or download & create index
+
+*   Require ASDF
+
+*   Add library path to login script (depends on shell)
+    Bash: .bash_profile takes precedence over .profile!
+
+*   Install quicklisp
+
+*   Install Letsencrypt certificates
+
+*   Clone repositories
+
+*   Adapt/verify library paths in
+    cl-mbedtls (mbedtls)
+    cl-eccodes (eccodes)
+    zlib (zlib)
+    cl-map (gdal)
+
+*   Call make in cl-mbedtls
+
+================================================================================
 Notes
 --------------------------------------------------------------------------------
+
+*   All times are UTC
+
+*   Known Issues / Limitations
+
+    -   Route stop in narrow passages / does not find passage
+        Limitation of the time resolution and the map. 
 
 ========================================
 Things to try
 ----------------------------------------
-
-*  'convex hull based isochrones'
-    -   Problem with current approach: search cannot turn 'backwards' around an obstacle
-    
 
 ========================================
 Lessons
@@ -17,7 +92,7 @@ Lessons
 *   Replacing double-float with short-float does not make a big difference
 
 ========================================
-Timings
+Timings (outdated, 10x faster now)
 ----------------------------------------
 
 p/s

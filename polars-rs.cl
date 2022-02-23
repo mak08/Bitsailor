@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-07-25 15:05:37>
+;;; Last Modified <michael 2022-02-20 22:41:16>
 
 (in-package :virtualhelm)
 
@@ -77,9 +77,14 @@
             :for tws-index :below (length tws)
             :for tws-value :across tws
             :do (setf (aref speeddata twa-index tws-index)
-                      (knots-to-m/s (read-from-string (joref (aref saildef twa-index) tws-value))))))
+                      (knots-to-m/s (get-speed-value saildef twa-index tws-value)))))
     speeddata))
-  
+
+(defun get-speed-value (saildef twa-index tws-value)
+  ;; Return speed 0 for the artificial 80kn entry
+  (read-from-string
+   (or (joref (aref saildef twa-index) tws-value)
+       "0.0")))
 
 (defun twa-steps (saildef)
   (let ((*read-default-float-format* 'double-float))
@@ -95,14 +100,18 @@
     (make-array (length jib-steps) :initial-contents jib-steps)))
 
 (defun check-tws (jib gnk spi)
-  (let ((all-tws
-          (append
-           (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) jib)
-           (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) gnk)
-           (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) spi))))
-    (map 'vector
-         (lambda (e) e)
-         (cdr (first all-tws)))))
+  (let* ((all-tws
+           (append
+            (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) jib)
+            (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) gnk)
+            (map 'list (lambda (e) (map 'list #'json-field-name (json-object-fields e))) spi)))
+         (tws-values
+           ;; No actual checking, assume all TWS steps are the same, use the first one.
+           (map 'vector
+                (lambda (e) e)
+                (cdr (first all-tws)))))
+    ;; Add an artificial 80kn entry
+    (concatenate 'vector tws-values #("80.00"))))
 
 (defun max-speed (jib gnk spi)
   (format t "~{~{~a~^;~}~%~}~%"

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-01-09 01:51:50>
+;;; Last Modified <michael 2022-02-23 22:49:36>
 
 
 (in-package :virtualhelm)
@@ -213,6 +213,7 @@
                                :resolution |resolution|
                                :polars |polarsID|
                                :options '("realsail")
+                               :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
                                :stepmax duration
                                :merge-start 6d0
                                :merge-window 0d0

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-09 23:49:34>
+;;; Last Modified <michael 2022-02-23 23:23:01>
 
 (in-package :virtualhelm)
 
@@ -82,28 +82,35 @@
   (string= (joref (race-info-data race-info) "gfs025") "TRUE"))
 
 (defun create-routing (&key race-id)
+  ;; Penalty factors:
+  ;; 75s @ 50% -> 0.9375 (600s * 0.0625 = 37.5s)
+  ;; 300s@ 50% -> 0.75   (600s * 0.25   = 150s)
+  ;; 300s@ 95% -> 0.975  (600s * 0.025  = 15s)
   (let ((race-info (race-info race-id)))
     (typecase race-info
       (race-info-rs
-       (let ((resolution
-               (if (race-info-is-gfs025 race-info)
-                   "0p25"
-                   "1p00")))
        (make-routing :race-id race-id
                      :interpolation :bilinear
-                     :resolution resolution
+                     :resolution (race-info-resolution race-info)
                      :merge-start 6d0
                      :merge-window 0d0
-                     :options '("realsail"))))
+                     :options '("realsail")
+                     :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)))
       (race-info-vr
        (make-routing :race-id race-id
                      :interpolation :vr
                      :resolution "1p00"
                      :merge-start 4.0d0
                      :merge-window 1d0
-                     :options '("hull" "foil" "winch" "heavy" "light" "reach")))
+                     :options '("hull" "foil" "winch" "heavy" "light" "reach")
+                     :penalties (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)))
       (null
        (error "Unknown race-id ~a" race-id)))))
+
+(defun race-info-resolution (race-info)
+  (if (race-info-is-gfs025 race-info)
+                   "0p25"
+                   "1p00"))
 
 (defun race-info (race-id)
   (bordeaux-threads:with-lock-held (+races-ht-lock+)

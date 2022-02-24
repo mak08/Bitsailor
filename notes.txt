@@ -141,5 +141,15 @@ lessables->lacoruna
         Elapsed 32.65, Positions 5777713, Isochrones 133 | p/s=176955.20 | s/i=0.2455 | tpi=43441.45 |
 
         Elapsed 37.20, Positions 6542631, Isochrones 133 | p/s=175864.09 | s/i=0.2797 | tpi=49192.71 |
+
+    # 2022-02-24 21:58:00 mka
+        Elapsed 3.11, Positions 5429714, Isochrones 186 | p/s=1747751.14 | s/i=0.0167 | p/i=29192.01
+        Elapsed 4.03, Positions 6960296, Isochrones 258 | p/s=1728765.71 | s/i=0.0156 | p/i=26977.89
+
+        Elapsed 1.85, Positions 3258984, Isochrones 186 | p/s=1758119.54 | s/i=0.0100 | p/i=17521.42
+        Elapsed 1.92, Positions 3268850, Isochrones 186 | p/s=1706458.90 | s/i=0.0103 | p/i=17574.46
+        Elapsed 1.97, Positions 3505246, Isochrones 250 | p/s=1777381.93 | s/i=0.0079 | p/i=14020.98
+        Elapsed 1.97, Positions 3506790, Isochrones 250 | p/s=1775820.95 | s/i=0.0079 | p/i=14027.16
+        
 --------------------------------------------------------------------------------
 ================================================================================

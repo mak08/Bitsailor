@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-02-23 23:12:53>
+;;; Last Modified <michael 2022-02-24 21:34:28>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -287,21 +287,20 @@
   (multiple-value-bind (speed sail)
       (twa-boatspeed polars wind-speed (normalize-angle twa))
     (declare (double-float speed))
-    (when
-        ;; Foiling speed if twa and tws (in m/s) falls in the specified range
-        foils
+    (when foils
+      ;; Foiling speed if twa and tws (in m/s) falls in the specified range
       (setf speed (* speed (the double-float (foiling-factor wind-speed twa)))))
     (when hull
       (setf speed (* speed 1.003d0)))
     (cond
-      ((and
-        cur-sail
-        (not (equal sail cur-sail)))
-       (values (* speed (penalty-sail penalties)) sail "Sail Change"))
+      ((and cur-sail
+            (not (eql (penalty-sail penalties) 1d0))
+            (not (equal sail cur-sail)))
+       (values (* speed (the double-float (penalty-sail penalties))) sail "Sail Change"))
       ((and cur-twa
-            (or (< twa 0 cur-twa)
-                (< cur-twa 0 twa)))
-       (values (* speed (penalty-tack penalties)) sail "Tack/Gybe"))
+            (not (eql (penalty-tack penalties) 1d0))
+            (or (< twa 0 cur-twa) (< cur-twa 0 twa)))
+       (values (* speed (the double-float (penalty-tack penalties))) sail "Tack/Gybe"))
       (t
        (values speed sail nil)))))
 ;; (declaim (notinline get-penalized-avg-speed))
@@ -534,7 +533,7 @@
                                (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
   (let* ((polars (get-routing-polars routing))
-         (penalty (get-penalty routing))
+         (penalties (routing-penalties routing))
          (hull (routing-hull routing))
          (foils (routing-foils routing))
          (time (or time (now)))
@@ -582,7 +581,7 @@
                                                              :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
-            (get-penalized-avg-speed nil nil wind-speed polars twa penalty hull foils)
+            (get-penalized-avg-speed nil nil wind-speed polars twa penalties hull foils)
           (declare (double-float speed))
           (let ((twa-heading (twa-heading wind-dir twa)))
             (setf curpos-twa
@@ -600,7 +599,7 @@
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)
-              (get-penalized-avg-speed nil nil wind-speed polars heading-twa penalty hull foils)
+              (get-penalized-avg-speed nil nil wind-speed polars heading-twa penalties hull foils)
             (setf curpos-hdg
                   (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading)))))
       (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment)))))))

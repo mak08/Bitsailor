@@ -2,7 +2,7 @@
 ;;; Description
 ;;;   A naïve function to convert Lisp data to JSON format.
 ;;; Author        Michael Kappert 2014
-;;; Last Modified  <michael 2022-01-30 13:58:01>
+;;; Last Modified  <michael 2022-02-25 23:48:34>
  
 (in-package :virtualhelm)
 
@@ -13,8 +13,6 @@
 (defmethod json% (stream (thing duration))
   (format stream "\"~s\"" thing))
 
-(defmethod json% (stream (thing cl-weather::uv))
-  (format stream "~a" thing))
 
 (defmethod json% (stream (thing vector))
   (typecase thing

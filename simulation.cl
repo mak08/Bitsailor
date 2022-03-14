@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-02-24 21:34:28>
+;;; Last Modified <michael 2022-03-14 21:17:31>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -23,6 +23,70 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
+
+
+(declaim (inline expand-routepoint))
+(defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
+  (declare (special next-isochrone))
+  (cond
+    ((null routepoint)
+     (return-from expand-routepoint 0))
+    ;; Exclude pole region where our distance computation breaks down due to numerical instability
+    ((> (latlng-lat (routepoint-position routepoint)) 89.9d0)
+     (return-from expand-routepoint 0))
+    (t
+     (let* ((cur-twa (routepoint-twa routepoint))
+            (cur-sail (routepoint-sail routepoint))
+            (twa-points (cpolars-twa polars))
+            (all-twa-points (make-array (length twa-points)
+                                        :initial-contents twa-points
+                                        :adjustable t
+                                        :fill-pointer t))
+            (lat (latlng-lat (routepoint-position routepoint)))
+            (lng (latlng-lng (routepoint-position routepoint)))
+            (penalties (routing-penalties routing)))
+       (multiple-value-bind
+             (wind-dir wind-speed)
+           (interpolated-prediction lat lng params)
+         (when (null wind-dir)
+           ;; No wind forecast
+           (return-from expand-routepoint 0))
+         (when (routing-minwind routing)
+           (setf wind-speed (max 1.0289d0 wind-speed)))
+         (multiple-value-bind (up-vmg down-vmg)
+             (best-vmg polars wind-speed)
+           (vector-push-extend (vmg-twa up-vmg) all-twa-points)
+           (vector-push-extend (vmg-twa down-vmg) all-twa-points)
+           (loop
+              :with up-vmg-angle = (vmg-twa up-vmg)
+              :with down-vmg-angle = (vmg-twa down-vmg)
+              :with added = 0
+              :for twa :across all-twa-points
+              :for heading-stbd = (twa-heading wind-dir twa)
+              :for heading-port = (twa-heading wind-dir (- twa))
+              :when (and (> twa 0)
+                         (<= (the double-float up-vmg-angle)
+                             (the double-float twa)
+                             (the double-float down-vmg-angle)))
+                :do (flet ((add-point (heading twa)
+                             (progn
+                               (incf added)
+                               (multiple-value-bind (speed sail reason)
+                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalties hull foils)
+                                 (declare (double-float speed)
+                                          (integer step-size))
+                                 (let*
+                                     ((distance (* speed step-size))
+                                      (new-pos (add-distance-exact (routepoint-position routepoint)
+                                                                   distance
+                                                                   heading))
+                                      (origin-distance (course-distance start-pos new-pos))
+                                      (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
+                                   (when (heading-between left right origin-angle)
+                                     (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
+                      (add-point heading-stbd twa)
+                      (add-point heading-port (- twa)))
+              :finally (return added))))))))
 
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
@@ -305,69 +369,12 @@
        (values speed sail nil)))))
 ;; (declaim (notinline get-penalized-avg-speed))
 
-(declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
-  (declare (special next-isochrone))
-  (cond
-    ((null routepoint)
-     (return-from expand-routepoint 0))
-    ;; Exclude pole region where our distance computation breaks down due to numerical instability
-    ((> (latlng-lat (routepoint-position routepoint)) 89.9d0)
-     (return-from expand-routepoint 0))
-    (t
-     (let* ((cur-twa (routepoint-twa routepoint))
-            (cur-sail (routepoint-sail routepoint))
-            (twa-points (cpolars-twa polars))
-            (all-twa-points (make-array (length twa-points)
-                                        :initial-contents twa-points
-                                        :adjustable t
-                                        :fill-pointer t))
-            (lat (latlng-lat (routepoint-position routepoint)))
-            (lng (latlng-lng (routepoint-position routepoint)))
-            (penalties (routing-penalties routing)))
-       (multiple-value-bind
-             (wind-dir wind-speed)
-           (interpolated-prediction lat lng params)
-         (when (null wind-dir)
-           ;; No wind forecast
-           (return-from expand-routepoint 0))
-         (when (routing-minwind routing)
-           (setf wind-speed (max 1.0289d0 wind-speed)))
-         (multiple-value-bind (up-vmg down-vmg)
-             (best-vmg polars wind-speed)
-           (vector-push-extend (third up-vmg) all-twa-points)
-           (vector-push-extend (third down-vmg) all-twa-points)
-           (loop
-              :with up-vmg-angle = (third up-vmg)
-              :with down-vmg-angle = (third down-vmg)
-              :with added = 0
-              :for twa :across all-twa-points
-              :for heading-stbd = (twa-heading wind-dir twa)
-              :for heading-port = (twa-heading wind-dir (- twa))
-              ;;:do (log2:info "~a < ~a <~a | ~a < ~a ~a > ~a" up-vmg-angle twa down-vmg-angle left heading-stbd heading-port right)  
-              :when (and (> twa 0)
-                         (<= (the double-float up-vmg-angle)
-                             (the double-float twa)
-                             (the double-float down-vmg-angle)))
-                :do (flet ((add-point (heading twa)
-                             (progn
-                               (incf added)
-                               (multiple-value-bind (speed sail reason)
-                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalties hull foils)
-                                 (declare (double-float speed)
-                                          (integer step-size))
-                                 (let*
-                                     ((distance (* speed step-size))
-                                      (new-pos (add-distance-exact (routepoint-position routepoint)
-                                                                   distance
-                                                                   heading))
-                                      (origin-distance (course-distance start-pos new-pos))
-                                      (origin-angle (normalize-heading (course-angle-d start-pos new-pos origin-distance))))
-                                   (when (heading-between right origin-angle left)
-                                     (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
-                      (add-point heading-stbd twa)
-                      (add-point heading-port (- twa)))
-              :finally (return added))))))))
+(declaim (inline get-origin-angle))
+(defun get-origin-angle (start-pos new-pos origin-distance)
+  (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
+         (angle  (normalize-heading course-angle)))
+    
+    angle))
 
 (defun get-routing-polars (routing)
   (let ((sails (encode-options (routing-options routing))))

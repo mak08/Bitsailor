@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-01-30 12:41:50>
+;;; Last Modified <michael 2022-03-12 20:24:14>
 
 (in-package :virtualhelm)
 
@@ -130,6 +130,11 @@
     (make-array (length precomputed)
                 :initial-contents precomputed)))
 
+(defstruct vmg
+  (vmg 0d0 :type double-float)
+  (twa 0d0 :type double-float)
+  (sail nil :type t))
+
 (defun best-vmg% (windspeed cpolars-speed)
   (loop
      :with best-vmg-up = 0.0d0
@@ -151,10 +156,10 @@
                  best-sail-up sail)
      :finally (return
                 (if (= best-vmg-up best-vmg-down)
-                    (values (list best-vmg-up best-sail-up 00d0)
-                            (list (abs best-vmg-down) best-sail-down 180d0))
-                    (values (list best-vmg-up best-sail-up best-twa-up)
-                            (list (abs best-vmg-down) best-sail-down best-twa-down))))))
+                    (values (make-vmg :vmg best-vmg-up :sail best-sail-up :twa 00d0)
+                            (make-vmg :vmg (abs best-vmg-down) :sail best-sail-down :twa 180d0))
+                    (values (make-vmg :vmg best-vmg-up :sail best-sail-up :twa best-twa-up)
+                            (make-vmg :vmg (abs best-vmg-down) :sail best-sail-down :twa best-twa-down))))))
 
 (defun get-max-speed% (angle wind-speed polars options)
   (do

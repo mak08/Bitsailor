@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-14 21:17:31>
+;;; Last Modified <michael 2022-03-14 23:51:26>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -21,9 +21,51 @@
             sail)))
 ;; (declaim (notinline twa-boatspeed))
 
+
+(declaim (inline twa-heading))
+(defun twa-heading (wind-dir angle)
+  "Compute HEADING resulting from TWA in WIND"
+  (declare (double-float wind-dir angle) (inline normalize-heading))
+  (normalize-heading (- wind-dir angle)))
+;; (declaim (notinline twa-heading))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Boat speed
+
+(declaim (inline get-penalized-avg-speed))
+(defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalties hull foils)
+  (declare (double-float wind-speed twa))
+  (multiple-value-bind (speed sail)
+      (twa-boatspeed polars wind-speed (normalize-angle twa))
+    (declare (double-float speed))
+    (when foils
+      ;; Foiling speed if twa and tws (in m/s) falls in the specified range
+      (setf speed (* speed (the double-float (foiling-factor wind-speed twa)))))
+    (when hull
+      (setf speed (* speed 1.003d0)))
+    (cond
+      ((and cur-sail
+            (not (eql (penalty-sail penalties) 1d0))
+            (not (equal sail cur-sail)))
+       (values (* speed (the double-float (penalty-sail penalties))) sail "Sail Change"))
+      ((and cur-twa
+            (not (eql (penalty-tack penalties) 1d0))
+            (or (< twa 0 cur-twa) (< cur-twa 0 twa)))
+       (values (* speed (the double-float (penalty-tack penalties))) sail "Tack/Gybe"))
+      (t
+       (values speed sail nil)))))
+
+
+(declaim (inline get-origin-angle))
+(defun get-origin-angle (start-pos new-pos origin-distance)
+  (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
+         (angle  (normalize-heading course-angle)))
+    
+    angle))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
-
 
 (declaim (inline expand-routepoint))
 (defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
@@ -337,44 +379,6 @@
               (/ pointnum elapsed)
               (/ elapsed stepnum)
               (coerce (/ pointnum stepnum) 'float)))
-
-(declaim (inline twa-heading))
-(defun twa-heading (wind-dir angle)
-  "Compute HEADING resulting from TWA in WIND"
-  (declare (double-float wind-dir angle) (inline normalize-heading))
-  (normalize-heading (- wind-dir angle)))
-;; (declaim (notinline twa-heading))
-
-(declaim (inline get-penalized-avg-speed))
-(defun get-penalized-avg-speed (cur-twa cur-sail wind-speed polars twa penalties hull foils)
-  (declare (double-float wind-speed twa))
-  (multiple-value-bind (speed sail)
-      (twa-boatspeed polars wind-speed (normalize-angle twa))
-    (declare (double-float speed))
-    (when foils
-      ;; Foiling speed if twa and tws (in m/s) falls in the specified range
-      (setf speed (* speed (the double-float (foiling-factor wind-speed twa)))))
-    (when hull
-      (setf speed (* speed 1.003d0)))
-    (cond
-      ((and cur-sail
-            (not (eql (penalty-sail penalties) 1d0))
-            (not (equal sail cur-sail)))
-       (values (* speed (the double-float (penalty-sail penalties))) sail "Sail Change"))
-      ((and cur-twa
-            (not (eql (penalty-tack penalties) 1d0))
-            (or (< twa 0 cur-twa) (< cur-twa 0 twa)))
-       (values (* speed (the double-float (penalty-tack penalties))) sail "Tack/Gybe"))
-      (t
-       (values speed sail nil)))))
-;; (declaim (notinline get-penalized-avg-speed))
-
-(declaim (inline get-origin-angle))
-(defun get-origin-angle (start-pos new-pos origin-distance)
-  (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
-         (angle  (normalize-heading course-angle)))
-    
-    angle))
 
 (defun get-routing-polars (routing)
   (let ((sails (encode-options (routing-options routing))))

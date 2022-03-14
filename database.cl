@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-12-28 22:39:03>
+;;; Last Modified <michael 2022-03-14 20:27:37>
 
 (in-package :virtualhelm)
 
@@ -149,6 +149,7 @@
    (default-authorizer handler request)))
 
 (defun vh-function-authorizer (handler request function)
+  (log2:trace "Authorizing ~a" function)
   (or
    (authorize-user request)
    (function-authorizer handler request function)))

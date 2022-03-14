@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2021-10-29 21:26:19>
+;;; Last Modified <michael 2022-03-06 21:00:45>
 
 (in-package :virtualhelm)
 
@@ -90,6 +90,46 @@
 (defun get-polars-raw (polars-name)
   (or (gethash polars-name *polars-raw-ht*)
       (setf (gethash polars-name *polars-raw-ht*)
-            (joref (joref (parse-json-file polars-name) "scriptData") "polar")))) 
+            (joref (joref (parse-json-file polars-name) "scriptData") "polar"))))
+
+(defun export-routing-isochrone-csv (filename routing number)
+  (let ((isochrones (joref routing "isochrones")))
+    (assert (< number (length isochrones)))
+    (with-open-file (f filename :direction :output :if-does-not-exist :create :if-exists :overwrite)
+      (write-isochrone-csv f (aref isochrones number)))))
+
+(defun write-isochrone-csv (stream isochrone)
+  (format stream "~a;~a~%" "lat" "lon")
+  (loop
+    :for p :across (joref isochrone "path")
+    :do  (format stream "~,4F;~,4F~%" (joref p "lat") (joref p "lng"))))
+
+
+(defun export-routing-gpx (filename routing)
+  (let ((isochrones (joref routing "isochrones")))
+    (with-open-file (f filename :direction :output :if-does-not-exist :create :if-exists :overwrite)
+      (format f "~a~%" "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\" ?>")
+      (format f "~a~%" "<gpx>")
+      (loop
+        :for iso :across isochrones
+        :do (write-isochrone-gpx f iso))
+      (format f "~a~%" "</gpx>"))))
+
+(defun write-isochrone-gpx (stream isochrone)
+  (format stream "~a~%" "<trk>")
+  (format stream "~a~%" "<trkseg>")
+  (loop
+    :for p :across (joref isochrone "path")
+    :do  (format stream "<trkpt lat=\"~,4F\" lon=\"~,4F\"></trkpt>~%"
+                 (joref p "lat")
+                 (tweak-long (joref p "lng"))))
+  (format stream "~a~%" "</trkseg>")
+  (format stream "~a~%" "</trk>"))
+
+(defun tweak-long (x)
+  (if (> x 180d0) (- x 360d0)
+      (if (< x -180d0) (+ x 360d0)
+          x)))
+
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2022-03-14 20:27:37>
+;;; Last Modified <michael 2022-03-24 01:44:13>
 
 (in-package :virtualhelm)
 
@@ -192,7 +192,8 @@
 ;;; Helpers - creating and resetting the database
 
 (defun deploy (&key (force nil))
-   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
+  (log2:info "Deploying to ~a" *db*)
+  (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
      (sql:create-schema (sql:get-schema-by-name "virtualhelm")))
    (values t))
 

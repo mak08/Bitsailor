@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-14 23:51:26>
+;;; Last Modified <michael 2022-03-25 22:59:34>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -94,7 +94,7 @@
            ;; No wind forecast
            (return-from expand-routepoint 0))
          (when (routing-minwind routing)
-           (setf wind-speed (max 1.0289d0 wind-speed)))
+           (setf wind-speed (max 1.0290d0 wind-speed)))
          (multiple-value-bind (up-vmg down-vmg)
              (best-vmg polars wind-speed)
            (vector-push-extend (vmg-twa up-vmg) all-twa-points)

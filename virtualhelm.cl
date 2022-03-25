@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-02-23 23:23:01>
+;;; Last Modified <michael 2022-03-25 22:49:51>
 
 (in-package :virtualhelm)
 
@@ -25,8 +25,6 @@
   (let ((rcfile
           (merge-pathnames (make-pathname :name rcfile)
                            (user-homedir-pathname))))
-    (log2:info "Opening database ~a" *db*)
-    (setf *dbcon* (sqlite-client:%connect% *db* sqlite-client::+sqlite_open_fullmutex+))
     (cond
       ((probe-file rcfile)
        (log2:info "Loading ~a " rcfile)        
@@ -34,12 +32,23 @@
       (t
        (log2:warning "~a does not exist" rcfile)))
 
+    (multiple-value-bind
+          (success error)
+        (ignore-errors
+         (deploy))
+      (unless success
+        (log2:warning "~a" error)))
+    (log2:info "Opening database ~a" *db*)
+    (setf *dbcon* (sqlite-client:%connect% *db* sqlite-client::+sqlite_open_fullmutex+))
+
+
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
     (ensure-map)
     (ensure-bitmap)
     
     (load-polars-directory)
+    (load-race-definitions :directory *races-dir*)
 
     ;; Start timers
     (timers:start-timer-loop)
@@ -102,6 +111,7 @@
                      :resolution "1p00"
                      :merge-start 4.0d0
                      :merge-window 1d0
+                     :min-wind t
                      :options '("hull" "foil" "winch" "heavy" "light" "reach")
                      :penalties (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)))
       (null
@@ -127,18 +137,20 @@
     (maphash function *races-ht*)))
 
 (defun load-race-definitions (&key (directory *races-dir*))
-  (bordeaux-threads:with-lock-held (+races-ht-lock+)
-    (clrhash *races-ht*)
-    (loop
-      :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
-      :do (let ((json-object (parse-json-file name)))
-            (cond
-              ((typep json-object 'array)
-               (store-race-data-vr json-object))
-              ((joref json-object "results")
-               (store-race-data-rs json-object))
-              (T
-               (log2:warning "Skipping ~a" name)))))))
+  (let ((path (merge-pathnames *races-dir* (make-pathname :name :wild :type "json"))))
+    (log2:info "Loading races from ~a" path)
+    (bordeaux-threads:with-lock-held (+races-ht-lock+)
+      (clrhash *races-ht*)
+      (loop
+        :for name :in (directory path)
+        :do (let ((json-object (parse-json-file name)))
+              (cond
+                ((typep json-object 'array)
+                 (store-race-data-vr json-object))
+                ((joref json-object "results")
+                 (store-race-data-rs json-object))
+                (T
+                 (log2:warning "Skipping ~a" name))))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

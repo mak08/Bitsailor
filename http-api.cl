@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-02-23 22:49:36>
+;;; Last Modified <michael 2022-03-24 21:30:15>
 
 
 (in-package :virtualhelm)
@@ -498,16 +498,14 @@
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  (let ((filename  (merge-pathnames *races-dir* (make-pathname :name :wild :type "json"))))
-    (log2:info "Loading races from ~a" filename)
-    (load-race-definitions :directory filename)
-    (let ((races (list)))
-      (map-races 
-       (lambda (k v)
-         (declare (ignore k))
-         (push (get-raceinfo (race-info-data v)) races)))
-      (with-output-to-string (s)
-        (json s races)))))
+  (load-race-definitions :directory *races-dir*)
+  (let ((races (list)))
+    (map-races 
+     (lambda (k v)
+       (declare (ignore k))
+       (push (get-raceinfo (race-info-data v)) races)))
+    (with-output-to-string (s)
+      (json s races))))
 
 (defun get-raceinfo (race)
   (cond

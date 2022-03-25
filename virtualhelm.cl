@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-03-25 22:49:51>
+;;; Last Modified <michael 2022-03-25 23:06:43>
 
 (in-package :virtualhelm)
 
@@ -111,7 +111,7 @@
                      :resolution "1p00"
                      :merge-start 4.0d0
                      :merge-window 1d0
-                     :min-wind t
+                     :minwind t
                      :options '("hull" "foil" "winch" "heavy" "light" "reach")
                      :penalties (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)))
       (null
@@ -137,7 +137,7 @@
     (maphash function *races-ht*)))
 
 (defun load-race-definitions (&key (directory *races-dir*))
-  (let ((path (merge-pathnames *races-dir* (make-pathname :name :wild :type "json"))))
+  (let ((path (merge-pathnames directory (make-pathname :name :wild :type "json"))))
     (log2:info "Loading races from ~a" path)
     (bordeaux-threads:with-lock-held (+races-ht-lock+)
       (clrhash *races-ht*)

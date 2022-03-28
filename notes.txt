@@ -2,16 +2,30 @@
 ToDo Server
 --------------------------------------------------------------------------------
 
-*   Persist race settings /session
-    -   destination, NMEA port, what else?
+*   Auto restart via systemctl service 
 
-*   provide speed of first routepoint
+*   Docker deployment
 
-*   Create hires bitmap
-    OR
-    Try one map instance per request
+*   Routing performance
+    - restrict search to bounding box
 
-*   Kill NMEA listeners after inactivity period
+*   Frontend wind interpolation
+    - Backend serves "wind tiles" corresponding to sections of the raw forecasts
+    - Frontend performs temporal & spacial interpolation
+
+*   Session handling
+    -   Persist settings: destination, NMEA port, what else?
+
+*   Bitmap:
+    - Fix index error at antimeridian
+    - Higher resolution?
+    - No performance improvement over vector map?!  
+
+*   NMEA:
+    - Use single thread to query NMEA ports
+    - Kill NMEA listeners after inactivity period
+
+*   Provide speed of first routepoint
 
 *   (done) nginx reverse proxy
 
@@ -27,6 +41,17 @@ ToDo Web UI
 *   (done) Use “previous isochrone” basetime to sync wind on routepoint     
 
 *   Display  local times
+
+================================================================================
+Docker
+--------------------------------------------------------------------------------
+
+$   sudo dnf install docker
+$   sudo systemctl start docker
+$   sudo docker pull fedora:35
+$   sudo docker run --rm -ti fedora:35 bash
+ 
+
 
 ================================================================================
 Documentation

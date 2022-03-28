@@ -1,12 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-03-25 23:06:43>
+;;; Last Modified <michael 2022-03-27 16:10:58>
 
 (in-package :virtualhelm)
 
 ;;; Avoid line-breaks when printing log messages
-(setf *print-pretty* nil)
 
 (log2:info "Heap space: ~a" (sb-ext:dynamic-space-size))
 
@@ -44,8 +43,9 @@
 
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
-    (ensure-map)
-    (ensure-bitmap)
+    (if *use-bitmap*
+        (ensure-bitmap)
+        (ensure-map))
     
     (load-polars-directory)
     (load-race-definitions :directory *races-dir*)

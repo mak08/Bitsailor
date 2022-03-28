@@ -47,7 +47,7 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 *	Download the Land polygons shapefile, WGS84 projection, split polygons from [osmdata.openstreetmap.de](https://osmdata.openstreetmap.de/data/land-polygons.html)
 
 	```bash
-	$ wget https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip
+	$ wget https://osmdata.openstreetmap.de/download/land-polygons-split-4326.zip
 	```
 
 *	Install package mapserver-bin

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-24 21:30:15>
+;;; Last Modified <michael 2022-03-31 23:34:52>
 
 
 (in-package :virtualhelm)
@@ -647,7 +647,7 @@
 (defun load-html-file (path response &key substitutions)
   ;; The FILE-HANDLER response handler does a lot more - 
   ;; Think about redesigning this
-  (with-open-file (f path :element-type 'character)
+  (with-open-file (f path :element-type 'character :external-format :utf-8)
     (let ((buffer (make-array (file-length f) :element-type 'character)))
       (read-sequence buffer f)
       (dolist (subst substitutions)
@@ -667,7 +667,7 @@
 (defun load-file (path response)
   ;; The FILE-HANDLER response handler does a lot more - 
   ;; Think about redesigning this
-  (with-open-file (f path :element-type '(unsigned-byte 8))
+  (with-open-file (f path :element-type '(unsigned-byte 8) :external-format :utf-8)
     (let ((buffer (make-array (file-length f) :element-type '(unsigned-byte 8))))
       (read-sequence buffer f)
       (setf (http-body response) buffer)))

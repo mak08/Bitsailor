@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-04-02 18:58:20>
+;;; Last Modified <michael 2022-04-02 23:58:56>
 
 (in-package :virtualhelm)
 
@@ -79,7 +79,10 @@
                (log2:warning "Server terminated, destroying all threads")
                (sleep 1)
                (map nil
-                    #'bordeaux-threads:destroy-thread
+                    (lambda (thread)
+                      (let ((current (bordeaux-threads:current-thread)))
+                        (unless (eq thread current)
+                          (bordeaux-threads:destroy-thread))))
                     (bordeaux-threads:all-threads))))
         (setf *run* t)
         (sentinel)))))

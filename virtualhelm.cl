@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-04-03 00:01:43>
+;;; Last Modified <michael 2022-04-03 00:09:46>
 
 (in-package :virtualhelm)
 
@@ -83,7 +83,8 @@
                       (let ((current (bordeaux-threads:current-thread)))
                         (unless (eq thread current)
                           (bordeaux-threads:destroy-thread thread))))
-                    (bordeaux-threads:all-threads))))
+                    (bordeaux-threads:all-threads))
+               (log2:warning "Exiting.")))
         (setf *run* t)
         (sentinel)))))
 

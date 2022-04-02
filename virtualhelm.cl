@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-03-27 16:10:58>
+;;; Last Modified <michael 2022-04-02 18:58:20>
 
 (in-package :virtualhelm)
 
@@ -15,6 +15,7 @@
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
+(defvar *run* nil)
 
 (defun run-virtual-helm (&key
                            (rcfile ".vhrc")
@@ -66,16 +67,22 @@
     (log2:info "Starting web server ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
 
-    ;; Keep function alive, this is our toplevel
-    (flet ((sentinel ()
-             (loop
-               (progn
-                 (log2:info "Keeping toplevel alive")
-                 (log2:info "Threads:~%~{~34T~a~%~}" (bordeaux-threads:all-threads))
-                 (sleep 600)))))
-      (if start-sentinel
-          (sentinel)
-          (bordeaux-threads:make-thread #'sentinel)))))
+    ;; Prevent function from exiting, this is our toplevel
+    (when start-sentinel
+      (flet ((sentinel ()
+               (loop
+                 :while *run*
+                 :do (progn
+                       (log2:info "Keeping toplevel alive")
+                       (log2:trace "Threads:~%~{~34T~a~%~}" (bordeaux-threads:all-threads))
+                       (sleep 30)))
+               (log2:warning "Server terminated, destroying all threads")
+               (sleep 1)
+               (map nil
+                    #'bordeaux-threads:destroy-thread
+                    (bordeaux-threads:all-threads))))
+        (setf *run* t)
+        (sentinel)))))
 
 (defvar *races-dir*
   (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")

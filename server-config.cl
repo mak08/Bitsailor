@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-01-25 20:44:09>
+;;; Last Modified <michael 2022-04-02 17:10:15>
 
 (in-package :virtualhelm)
 
@@ -191,13 +191,18 @@
 (handle
  :request (:method :get
            :path "/quit")
- :handler (:dynamic (lambda (server handler request response)
-                      (declare (ignore server response))
-                      (if (string= (http-authenticated-user handler request)
+ :handler (:dynamic  (lambda (server handler request response)
+                       (declare (ignore response))
+                       (cond
+                         ((string= (http-authenticated-user handler request)
                                    "admin")
-                          (progn (stop-all-servers)
-                                 "<!DOCTYPE html><html><body><b><em>Goodby</em></b></body><html>")
-                          "<!DOCTYPE html><html><body><b><em>Not authorized.</em></b></body><html>"))
+                          (stop-all-servers)
+                          (setf *run* nil)
+                          (values
+                           "<!DOCTYPE html><html><body><b><em>Goodby</em></b></body><html>"))
+                         (t
+                          (values
+                           "<!DOCTYPE html><html><body><b><em>Not authorized.</em></b></body><html>"))))
                     :realm "admin"))
 
 ;;; EOF

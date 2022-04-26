@@ -929,7 +929,10 @@ function isochroneTime (isochrone) {
 
 function getIsochroneByTime (time) {
     var refTime = new Date(time);
-    var isochrones = currentRouting.isochrones.slice().reverse();
+    var isochrones = currentRouting.isochrones;
+    if (isochrones) {
+        isochrones = isochrones.slice().reverse();
+    }
     for (const iso of isochrones) {
         var isoT = isochroneTime(iso);
         if ( isoT >= refTime) {

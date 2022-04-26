@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-25 22:59:34>
+;;; Last Modified <michael 2022-04-26 22:02:59>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -13,22 +13,22 @@
 ;;;
 
 (declaim (inline twa-boatspeed))
-(defun twa-boatspeed (polars wind-speed angle)
-  (check-type angle angle)
+(defun twa-boatspeed (polars wind-speed twa)
+  (check-type twa angle)
   (destructuring-bind (speed sail)
-      (get-max-speed (cpolars-speed polars) angle wind-speed)
+      (get-max-speed (cpolars-speed polars) twa wind-speed)
     (values speed
             sail)))
 ;; (declaim (notinline twa-boatspeed))
 
 
 (declaim (inline twa-heading))
-(defun twa-heading (wind-dir angle)
+(defun twa-heading (wind-dir twa)
   "Compute HEADING resulting from TWA in WIND"
-  (declare (double-float wind-dir angle) (inline normalize-heading))
-  (normalize-heading (- wind-dir angle)))
+  (declare (double-float wind-dir twa)
+           (inline normalize-heading))
+  (normalize-heading (+ twa wind-dir)))
 ;; (declaim (notinline twa-heading))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Boat speed
@@ -67,6 +67,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
 
+(declaim (notinline valid-twa))
+(defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
+  (and (> twa 0)
+       (<= up twa down)))
+
 (declaim (inline expand-routepoint))
 (defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
@@ -104,12 +109,9 @@
               :with down-vmg-angle = (vmg-twa down-vmg)
               :with added = 0
               :for twa :across all-twa-points
-              :for heading-stbd = (twa-heading wind-dir twa)
-              :for heading-port = (twa-heading wind-dir (- twa))
-              :when (and (> twa 0)
-                         (<= (the double-float up-vmg-angle)
-                             (the double-float twa)
-                             (the double-float down-vmg-angle)))
+              :for heading-port = (twa-heading wind-dir twa)
+              :for heading-stbd = (twa-heading wind-dir (- twa))
+              :when (valid-twa up-vmg-angle down-vmg-angle twa)
                 :do (flet ((add-point (heading twa)
                              (progn
                                (incf added)
@@ -126,8 +128,8 @@
                                       (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                    (when (heading-between left right origin-angle)
                                      (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
-                      (add-point heading-stbd twa)
-                      (add-point heading-port (- twa)))
+                      (add-point heading-port twa)
+                      (add-point heading-stbd (- twa)))
               :finally (return added))))))))
 
 (defun get-route (routing)
@@ -620,15 +622,15 @@
 
 (defun heading-twa (wind-dir heading)
   "Compute TWA resulting from HEADING in WIND"
-  (normalize-angle (- wind-dir heading)))
+  (normalize-angle (- heading wind-dir)))
 
 
 (defun heading-boatspeed (polars wind-dir wind-speed heading)
   (check-type heading heading)
-  (let ((angle (heading-twa wind-dir heading)))
+  (let ((twa (heading-twa wind-dir heading)))
     (destructuring-bind (speed sail)
-        (get-max-speed (cpolars-speed polars) angle wind-speed)
-      (values speed angle sail))))
+        (get-max-speed (cpolars-speed polars) twa wind-speed)
+      (values speed twa sail))))
 
 (defun parse-datetime-local (time &key (timezone "+00:00"))
   (etypecase time

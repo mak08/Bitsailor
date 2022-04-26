@@ -1,9 +1,53 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-30 11:55:35>
+;;; Last Modified <michael 2022-04-24 22:47:32>
 
 (in-package :virtualhelm)
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TWA - heading
+
+(loop :for twd :from 0d0 to 360d0 :by 10d0 :do
+  (check-equal (heading-twa twd (twa-heading twd 20d0))
+               20d0))
+
+(loop :for twd :from 0d0 to 360d0 :by 10d0 :do
+  (check-equal (heading-twa twd (twa-heading twd 90d0))
+               90d0))
+
+(loop :for twd :from 0d0 to 360d0 :by 10d0 :do
+  (check-equal (heading-twa twd (twa-heading twd 120d0))
+               120d0))
+
+(loop :for twd :from 0d0 to 360d0 :by 10d0 :do
+  (check-equal (heading-twa twd (twa-heading twd 180d0))
+               180d0))
+
+(loop :for twd :from 0d0 to 360d0 :by 10d0 :do
+  (check-equal (heading-twa twd (twa-heading twd -90d0))
+               -90d0))
+
+(loop :for twa :from 0d0 to 180d0 :by 10d0 :do
+  (check-equal (heading-twa 10d0 (twa-heading 10d0 twa))
+               twa))
+
+(loop :for twa :from 0d0 to 180d0 :by 10d0 :do
+  (check-equal (heading-twa 120d0 (twa-heading 120d0 twa))
+               twa))
+
+(loop :for twa :from 0d0 to 180d0 :by 10d0 :do
+  (check-equal (heading-twa 245d0 (twa-heading 245d0 twa))
+               twa))
+
+(loop :for twa :from 0d0 to 180d0 :by 10d0 :do
+  (check-equal (heading-twa 270d0 (twa-heading 270d0 twa))
+               twa))
+
+(loop :for twa :from 0d0 to 180d0 :by 10d0 :do
+  (check-equal (heading-twa 345d0 (twa-heading 345d0 twa))
+               twa))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Eastbound North Gate

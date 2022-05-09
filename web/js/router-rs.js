@@ -138,12 +138,8 @@ import * as Router from './router.js';
 
     function setupLegRS (raceinfo) {
         var rsData = raceinfo.data;
-        
         document.title = rsData.name;
         
-        var markPort = 'img/mark_red.png';
-        
-        Router.setParameter("polars", rsData.polar.objectId);
         Router.loadPolars(rsData.polar.objectId);
 
         if (rsData.gfs025 == "TRUE") {
@@ -176,7 +172,6 @@ import * as Router from './router.js';
                 position: {"lat": gate[0].latitude,
                            "lng": gate[0].longitude},
                 map: Router.googleMap,
-                // icon: markPort,
                 label: `${ gateCount }`,
                 title: `Gate ${ gateCount }`,
                 draggable: false
@@ -185,7 +180,6 @@ import * as Router from './router.js';
                 position: {"lat": gate[1].latitude,
                            "lng": gate[1].longitude},
                 map: Router.googleMap,
-                // icon: markPort,
                 label: `${ gateCount }`,
                 title: `Gate ${ gateCount }`,
                 draggable: false
@@ -209,7 +203,6 @@ import * as Router from './router.js';
                     var isoDate = curTime.toISOString().substring(0,16);
                     var dateInput = document.getElementById("tb_starttime");
                     dateInput.value = isoDate;
-                    Router.setParameter('starttime', isoDate);
                 } else {
                     alert('No position update');
                 }

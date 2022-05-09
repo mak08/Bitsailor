@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-31 23:34:52>
+;;; Last Modified <michael 2022-05-07 00:55:50>
 
 
 (in-package :virtualhelm)
@@ -13,27 +13,21 @@
 ;;; Dynamic handlers
 
 (defun get-page (server handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-    (handler-case 
-        (let* ((user-id (http-authenticated-user handler request))
-               (session (find-or-create-session user-id request response))
-               (app (get-request-app request))
-               (race-id (get-routing-request-race-id request))
-               (routing (session-routing session race-id))
-               (path (merge-pathnames (make-pathname :name app :type "html")
-                                      (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                        '("web"))))))
-          (log2:info "race-id: ~a" race-id)
-          (set-routing-parameters session routing (parameters request))
-          (setf (http-header response :|Content-Location|)
-                (path request))
-          (load-file path response))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))
-  ;;)
-  )
+  (handler-case 
+      (let* ((user-id (http-authenticated-user handler request))
+             (app (get-request-app request))
+             (race-id (get-routing-request-race-id request))
+             (path (merge-pathnames (make-pathname :name app :type "html")
+                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                      '("web"))))))
+        (log2:info "race-id: ~a" race-id)
+        (setf (http-header response :|Content-Location|)
+              (path request))
+        (load-file path response))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 ;;; This function is called from a dynamic handler
 (defun start-page (server handler request response)
@@ -50,34 +44,28 @@
 
 ;;; This function is called from a dynamic handler
 (defun router (server handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-    (handler-case 
-        (let* ((user-id (http-authenticated-user handler request))
-               (session (find-or-create-session user-id request response))
-               (app (get-request-app request))
-               (race-id (get-routing-request-race-id request))
-               (race-info (race-info race-id))
-               (page-base-name
-                 (etypecase race-info
-                   (race-info-rs "router-rs")
-                   (race-info-vr "router-vr")))
-               (path (merge-pathnames (make-pathname :name page-base-name :type "html")
-                                      (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                        '("web")))))
-               (query (parameters request))
-               (routing (session-routing session race-id)))
-          (log2:info "race-id: ~a" race-id)
-          (log2:info "type: ~a" (type-of (race-info race-id)))
-          (set-routing-parameters session routing (parameters request))
-          (setf (http-header response :|Content-Location|)
-                (path request))
-          (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" *api-key*))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))
-  ;;)
-  )
+  (handler-case 
+      (let* ((user-id (http-authenticated-user handler request))
+             (app (get-request-app request))
+             (race-id (get-routing-request-race-id request))
+             (race-info (race-info race-id))
+             (page-base-name
+               (etypecase race-info
+                 (race-info-rs "router-rs")
+                 (race-info-vr "router-vr")))
+             (path (merge-pathnames (make-pathname :name page-base-name :type "html")
+                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                                                      '("web")))))
+             (query (parameters request)))
+        (log2:info "race-id: ~a" race-id)
+        (log2:info "type: ~a" (type-of (race-info race-id)))
+        (setf (http-header response :|Content-Location|)
+              (path request))
+        (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" *api-key*))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
@@ -141,50 +129,6 @@
         (t
          (vector-push-extend (aref s k) result)
          (incf k))))))
-  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; setRoute
-(defun |setRoute| (handler request response &key |pointType| |lat| |lng|)
-  ;; (sqlite-client:with-current-connection (c *db*)
-    (handler-case
-        (let* ((user-id (http-authenticated-user handler request))
-               (session (find-or-create-session user-id request response))
-               (race-id (get-routing-request-race-id request))
-               (routing (session-routing session race-id))
-               (lat (coerce (read-arg |lat|) 'double-float))
-               (lng (coerce (read-arg |lng|) 'double-float))
-               (position (make-latlng :latr% (rad lat) :lngr% (rad lng))))
-          (log2:info "~a: Position=~a" |pointType| position)
-          (log2:trace "Session: ~a, Request: ~a" session request)
-          (when (point-on-land-p (cl-geomath:make-latlng :lat lat :lng lng))
-            (log2:warning "~a ~a: ~a is on land" user-id race-id position))
-          (set-routing-parameter session routing |pointType| position)
-          (values
-           (with-output-to-string (s)
-             (json s routing))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))
-  ;;)
-  )
-  
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; setParameter
-
-(defun |setParameter| (handler request response &key |name| (|value| nil))
-  ;; (sqlite-client:with-current-connection (c *db*)
-    
-    (let* ((user-id (http-authenticated-user handler request))
-           (session (find-or-create-session user-id request response))
-           (race-id (get-routing-request-race-id request))
-           (routing (session-routing session race-id)))
-      (set-routing-parameter session routing |name| |value|) 
-      (setf (http-header response :|Content-Location|)
-            (path request))
-      (values "true"))
-  ;;)
-  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
@@ -195,75 +139,90 @@
                                                 |lonStart|
                                                 |latDest|
                                                 |lonDest|
-                                                (|duration| "86400")
+                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                                (|duration| (* *rs-max-hours* 60 60))
                                                 (|resolution| "1p00"))
-  (sql:with-connection (*dbcon*)
-    (handler-case
-        (let* ((*read-default-float-format* 'double-float)
-               (user-id
-                 (http-authenticated-user handler request))
-               (lat-start (coerce (read-arg |latStart|) 'double-float))
-               (lon-start (coerce (read-arg |lonStart|) 'double-float))
-               (lat-dest (coerce (read-arg  |latDest|) 'double-float))
-               (lon-dest (coerce (read-arg |lonDest|) 'double-float))
-               (duration (min (* *rs-max-hours* 60 60)  ;; 2d
-                              (read-arg |duration|)))
-               (routing
-                 (make-routing :interpolation :bilinear
-                               :resolution |resolution|
-                               :polars |polarsID|
-                               :options '("realsail")
-                               :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                               :stepmax duration
-                               :merge-start 6d0
-                               :merge-window 0d0
-                               :start (make-latlng :lat lat-start :lng lon-start)
-                               :dest  (make-latlng :lat lat-dest :lng lon-dest)))
-               (routeinfo
-                 (get-route routing)))
-          (log2:info "User:~a Race:(RS) Status ~a ~a"
-                     user-id
-                     (routeinfo-status routeinfo)
-                     (routeinfo-stats routeinfo))
-          (values
-           (with-output-to-string (s)
-             (json s routeinfo))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))))
+  (handler-case
+      (let* ((*read-default-float-format* 'double-float)
+             (user-id
+               (http-authenticated-user handler request))
+             (cycle (if cycle-supplied-p
+                        (make-cycle :timestamp (parse-datetime |cycleTS|))
+                        |cycleTS|))
+             (routing
+               (make-routing :interpolation :bilinear
+                             :resolution |resolution|
+                             :polars |polarsID|
+                             :options '("realsail")
+                             :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
+                             :stepmax (min (* *rs-max-hours* 60 60) ;; 2d
+                                           (read-arg |duration|))
+                             :cycle cycle
+                             :merge-start 6d0
+                             :merge-window 0d0
+                             :start (make-latlng :lat (coerce (read-arg |latStart|) 'double-float)
+                                                 :lng (coerce (read-arg |lonStart|) 'double-float))
+                             :dest  (make-latlng :lat (coerce (read-arg |latDest|) 'double-float)
+                                                 :lng (coerce (read-arg |lonDest|) 'double-float))))
+             (routeinfo
+               (get-route routing)))
+        (log2:info "User:~a Race:(RS) Status ~a ~a"
+                   user-id
+                   (routeinfo-status routeinfo)
+                   (routeinfo-stats routeinfo))
+        (values
+         (with-output-to-string (s)
+           (json s routeinfo))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
-(defun |getRoute| (handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-
-    (let ((race-id (get-routing-request-race-id request)))
-      (handler-case
-          (let* ((user-id
-                   (http-authenticated-user handler request))
-                 (session
-                   (find-or-create-session user-id request response))
-                 (routing
-                   (session-routing session race-id))
-                 (routeinfo
-                   (get-route routing)))
-          (log2:info "User:~a Race:~a PAR mgs:~a mgw:~a interp:~a opts:~a STAT ~a ~a"
-                     user-id
-                     race-id
-                     (routing-merge-start routing)
-                     (routing-merge-window routing)
-                     (routing-interpolation routing)
-                     (routing-options routing)
-                     (routeinfo-status routeinfo)
-                     (routeinfo-stats routeinfo))
-            (values
-             (with-output-to-string (s)
-               (json s routeinfo))))
-        (error (e)
-          (log2:error "~a" e)
-          (setf (status-code response) 500)
-          (setf (status-text response) (format nil "~a" e)))))
-  ;;)
-  )
+(defun |getRouteVR| (handler request response &key
+                                                (|polarsID| "1")
+                                                |latStart|
+                                                |lonStart|
+                                                |latDest|
+                                                |lonDest|
+                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                                (|options|  '("hull" "foil" "winch" "heavy" "light" "reach"))
+                                                (|duration| "86400"))
+  (handler-case
+      (let* ((*read-default-float-format* 'double-float)
+             (user-id
+               (http-authenticated-user handler request))
+             (cycle (if cycle-supplied-p
+                        (make-cycle :timestamp (parse-datetime |cycleTS|))
+                        |cycleTS|))
+             (routing
+               (make-routing :interpolation :vr
+                             :resolution "1p00"
+                             :polars |polarsID|
+                             :options |options|
+                             :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)
+                             :stepmax (min (* *vr-max-hours* 60 60)
+                                           (read-arg |duration|))
+                             :cycle cycle
+                             :merge-start 4d0
+                             :merge-window 1d0
+                             :minwind t
+                             :start (make-latlng :lat (coerce (read-arg |latStart|) 'double-float)
+                                                 :lng (coerce (read-arg |lonStart|) 'double-float))
+                             :dest  (make-latlng :lat (coerce (read-arg  |latDest|) 'double-float)
+                                                 :lng (coerce (read-arg |lonDest|) 'double-float))))
+             (routeinfo
+               (get-route routing)))
+        (log2:info "User:~a Race:(RS) Status ~a ~a"
+                   user-id
+                   (routeinfo-status routeinfo)
+                   (routeinfo-stats routeinfo))
+        (values
+         (with-output-to-string (s)
+           (json s routeinfo))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))
@@ -277,61 +236,6 @@
              (query-pairs (parse-url-query query-string)))
         (or (cadr (assoc "race" query-pairs :test #'string=))
             "default"))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; getSession
-
-;;; Call router with
-;;; - user id (via authentication)
-;;; - race id (query param)
-;;; - boat name (query param)
-;;; - start pos
-;;; - boat options
-
-;;; Session Data
-;;; * The following data is stored and returned to the client:
-;;; - forecast duration (or hard-code 384h?)
-;;; - manual gates
-;;; - race definition
-;;;   - race id
-;;;   - dest pos
-;;;   - gates
-;;;   - polars id
-
-;;; JSON cannot print hashtables but SESSION now contains one.
-;;; For now we just return the requested routing.
-(defun |getSession| (handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-
-    (let* ((user-id
-             (http-authenticated-user handler request))
-           (session
-             (find-or-create-session user-id request response))
-           (race-id
-             (get-routing-request-race-id request))
-           (routing
-             (session-routing session race-id))
-           (leg-data
-             (race-info race-id)))
-      (values
-       (with-output-to-string (s)
-         (json s routing))))
-  ;;)
-  )
-
-
-(defun |removeSession| (handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-    (let* ((user-id
-             (http-authenticated-user handler request))
-           (session
-             (find-or-create-session user-id request response)))
-      (remove-session session)
-      (values
-       (with-output-to-string (s)
-         (json s t))))
-  ;;)
-  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getWind
@@ -370,9 +274,7 @@
                      (local-time:parse-rfc3339-timestring |time|)
                      (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|)))))
                (user-id (http-authenticated-user handler request))
-               (session (find-or-create-session user-id request response))
                (race-id (get-routing-request-race-id request))
-               (routing (session-routing session race-id))
                (cycle (make-cycle :timestamp base-time))
                (cycle-start-time base-time)
                (iparams (interpolation-parameters requested-time
@@ -436,9 +338,7 @@
         (let* ((*read-default-float-format* 'double-float)
                (user-id
                  (http-authenticated-user handler request))
-               (session (find-or-create-session user-id request response))
                (race-id (get-routing-request-race-id request))
-               (routing (session-routing session race-id))
                (base-time |basetime|)
                (time (parse-datetime |time|))
                (lat-a (read-arg |latA|))
@@ -481,8 +381,6 @@
 
     (let* ((user-id
              (http-authenticated-user handler request))
-           (session
-             (find-or-create-session user-id request response))
            (race-id
              (get-routing-request-race-id request))
            (race-info
@@ -539,42 +437,32 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  ;; (sqlite-client:with-current-connection (c *db*)
-
-    (let* ((user-id (http-authenticated-user handler request))
-           (race-id (get-routing-request-race-id request))
-           (session (find-or-create-session user-id request response))
-           (routing (session-routing session race-id))
-           (host |host|)
-           (port |port|))
-      (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
-      (unless (ignore-errors
-               (numberp (parse-integer port)))
-        (error "Invalid NMEA port ~a" port))
-      (unless (routing-nmea-connection routing)
-        (setf (routing-nmea-connection routing)
-              (make-nmea-connection))
-        (reset-nmea-listener user-id routing host port))
-      (with-output-to-string (s)
-        (json s
-              (get-nmea-position (routing-nmea-connection routing) host port))))
-  ;;)
-  )
+  (let* ((user-id (http-authenticated-user handler request))
+         (race-id (get-routing-request-race-id request))
+         (host |host|)
+         (port |port|))
+    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
+    (unless (ignore-errors
+             (numberp (parse-integer port)))
+      (error "Invalid NMEA port ~a" port))
+    (unless (nmea-connection user-id race-id)
+      (add-nmea-listener user-id race-id host port))
+    (with-output-to-string (s)
+      (json s
+            (get-nmea-position user-id race-id host port)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
   ;; (sqlite-client:with-current-connection (c *db*)
     (let* ((user-id (http-authenticated-user handler request))
            (race-id (get-routing-request-race-id request))
-           (session (find-or-create-session user-id request response))
-           (routing (session-routing session race-id))
            (host |host|)
            (port |port|))
       (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
-      (unless (routing-nmea-connection routing)
-        (setf (routing-nmea-connection routing)
+      (unless (nmea-connection user-id race-id)
+        (setf (nmea-connection user-id race-id)
               (make-nmea-connection))) 
       (cond ((equal port "")
-             (stop-nmea-listener routing host port)
+             (stop-nmea-listener user-id race-id host port)
              (format nil "Disconnected from ~a:~a" host port))
             (t
              (unless (ignore-errors
@@ -587,62 +475,6 @@
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
-
-;;; Keep session table when reloading system!
-(defvar *session-ht* (make-hash-table :test #'equalp))
-
-(defvar +session-ht-lock+
-  (bordeaux-threads:make-lock "session-ht"))
-
-(defun update-session-ht (key value)
-  (bordeaux-threads:with-lock-held (+session-ht-lock+)
-    (setf (gethash key *session-ht*) value))) 
-
-(defun create-session (&key (session-id (make-session-id)) (user-id) (race-id "default"))
-  (let ((session (make-session :session-id session-id :user-id user-id)))
-    (setf (gethash race-id (session-routings session))
-          (create-routing :race-id race-id))
-    (values session)))
-
-(defun session-routing (session race-id)
-  (or
-   (gethash race-id (session-routings session))
-   (log2:trace "Creating routing for session ~a race ~a" (session-session-id session) race-id)
-   (setf (gethash race-id (session-routings session))
-         (create-routing :race-id race-id))))
-
-(defun find-or-create-session (user-id request response)
-  (let* ((session-cookie
-          (get-cookie request "SessionID"))
-         (race-id (get-routing-request-race-id request))
-         (session-id)
-         (session))
-    (cond (session-cookie
-           (setf session-id (cookie-value session-cookie))
-           (let ((stored-session (gethash session-id *session-ht*)))
-             (cond
-               ((null stored-session)
-                (log2:info "Session ~a unknown, creating." session-id)
-                (setf session
-                      (update-session-ht session-id 
-                                         (create-session :session-id session-id
-                                                         :user-id user-id
-                                                         :race-id race-id))))
-               (t
-                (log2:trace "Session ~a found." session-id)
-                (setf session stored-session)))))
-          (t
-           (setf session-id (make-session-id))
-           (set-cookie response "SessionID" session-id :options '())
-           (setf session
-                 (update-session-ht session-id
-                                    (create-session :session-id session-id
-                                                    :race-id race-id)))
-           (log2:info "New session ~a created." session-id)))
-    session))
-
-(defun remove-session (session)
-  (log2:info "Removing session ~a" session))
 
 (defun load-html-file (path response &key substitutions)
   ;; The FILE-HANDLER response handler does a lot more - 
@@ -676,106 +508,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races
-
-
-(defun set-routing-parameters (session routing pairs)
-  (map nil
-       (lambda (pair)
-         (destructuring-bind (name value)
-             pair
-           (set-routing-parameter session routing name value)))
-       (map-routing-parameters pairs)))
-
-(defun map-routing-parameters (pairs)
-  (let ((result-pairs (list))
-        (*read-default-float-format* 'double-float))
-    (dolist (pair pairs (nreverse result-pairs))
-      (destructuring-bind (name value)
-          pair
-        (cond
-          ((string= name "app")
-           )
-          ((string= name "startlat")
-           (let ((startlon (cadr (assoc "startlon" pairs :test #'string=))))
-             (unless startlon
-               (error "Missing startlon"))
-             (push (list "start"
-                         (make-latlng :lat (read-arg value)
-                                      :lng (read-arg startlon)))
-                   result-pairs)))
-          ((string= name "startlon")
-           (unless (cadr (assoc "startlat" pairs :test #'string=))
-             (error "Missing startlat")))
-          (t
-           (push pair result-pairs)))))))
-
-(defun set-routing-parameter (session routing name value)
-  (log2:info "Session ~a: ~a=~a" (session-session-id session) name value)
-  (cond
-    ((string= name "race")
-     )
-    ((or (string= name "starttime")
-         (string= name "ts"))
-     (setf (routing-starttime routing)
-           (when (and value
-                      (> (length value) 0))
-             value)))
-    ((or (string= name "cycle"))
-     (cond
-       ((null value)
-        (setf (routing-cycle routing)
-              nil))
-       (t
-        (assert (eql (length value)
-                     (length "2020-10-24T00:00:00Z")))
-        (setf (routing-cycle routing) (make-cycle :timestamp (parse-timestring value))))))
-    ((string= name "polars")
-     (setf (routing-polars routing)  value))
-    ((string= name "options")
-     (setf (routing-options routing) (cl-utilities:split-sequence #\, value)))
-    ((string= name "minwind")
-     (setf (routing-minwind routing) (string= value "true")))
-    ((string= name "duration")
-     (let ((duration-hrs
-            (read-arg value)))
-       (setf (routing-stepmax routing)
-             (* duration-hrs 3600))))
-    ((string= name "searchangle")
-     (let ((fan (read-arg value)))
-       (setf (routing-fan routing) fan)))
-    ((string= name "slat")
-     (unless (routing-start routing)
-       (setf (routing-start routing)
-             (make-latlng)))
-     (setf (routing-start routing)
-           (make-latlng :lat (parse-float value :type 'double-float)
-                        :lng (latlng-lng (routing-start routing)))))
-    ((string= name "slon")
-     (unless (routing-start routing)
-       (setf (routing-start routing)
-             (make-latlng)))
-     (setf (routing-start routing)
-           (make-latlng :lat (latlng-lat (routing-start routing))
-                        :lng (parse-float value :type 'double-float))))
-    ((string= name "start")
-     (setf (routing-start routing)
-           (etypecase value
-             (latlng value)
-             (string (find-place value)))))
-    ((string= name "dest")
-     (setf (routing-dest routing)
-           (etypecase value
-             (latlng value)
-             (string (find-place value)))))
-    ((string= name "resolution")
-     (setf (routing-resolution routing)
-           value))
-    (t
-     (log2:warning "Unhandled parameter ~a=~a" name value)))
-    (values))
-
-(defun make-session-id ()
-  (create-uuid))
 
 (defun create-uuid ()
   (with-open-file (f "/proc/sys/kernel/random/uuid")

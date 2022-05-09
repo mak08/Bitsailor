@@ -83,16 +83,14 @@ function setUp (getVMG) {
     $("#ir_index").change(onAdjustIndex);
     
     $("#cb_startdelayed").click(onDelayedStart);
-    $("#tb_starttime").change(onSetParameterStarttime);
+    $("#tb_starttime").change(onSetStarttime);
     
     $("#cb_manualcycle").click(onManualCycle);
-    $("#tb_cycledate").change(onSetParameterCycleDateTime);
-    $("#sel_cyclehour").change(onSetParameterCycleDateTime);
+    $("#tb_cycledate").change(onSetCycleTS);
+    $("#sel_cyclehour").change(onSetCycleTS);
     
     // Connect option selectors
-    $("#sel_polars").change(onSetParameter);
-    $("#sel_forecastbundle").change(onSetParameter);
-    $("#sel_duration").change(onSetParameter);
+    $("#sel_duration").change(onSetDuration);
     $("#cb_displaywind").change(onDisplaywind);
     $("#cb_displaytracks").change(onDisplayTracks);
     $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
@@ -258,17 +256,16 @@ function onDelayedStart (event) {
     } else {
         dateInput.value = null;
     }
-    setParameter('starttime', dateInput.value);
 }
 
 
-function  onContextMenuSetStart (event) {
+function onContextMenuSetStart (event) {
     var textBox = document.getElementById("tb_position");
     var position = mapEvent.latLng;
     textBox.value = Util.formatPosition(position.lat(), position.lng()); 
 }
 
-function  onUpdateStartMarker (marker) {
+function onUpdateStartMarker (marker) {
     var textBox = document.getElementById("tb_position");
     var position = marker.getPosition();
     textBox.value = Util.formatPosition(position.lat(), position.lng()); 
@@ -283,57 +280,57 @@ function onSetPosition (event) {
     }
 }
 
-    function parsePosition (string) {
-        try {
-            // Assume two comma separated DMS values
-            var parts = string.split(',');
-            if (parts.length != 2) {
-                // Alternatively try blank separated numbers.
-                // In this cas we don't support blanks inside the DMS values
-                parts = string.split(' ');
-            }
-            if (parts.length != 2) {
-                throw new Error(`Invalid LatLng ${string}`)
-            }
-
-            // We assume the first value to designate Lat, second Lon.
-            var lat, lon;
-            if (parts[0].match(/E|W/)) {
-                lon = parts[0].trim();
-                lat = parts[1].trim();
-            } else {
-                lat = parts[0].trim();
-                lon = parts[1].trim();
-            }
-            return {
-                "lat": parseDMS(lat),
-                "lon": parseDMS(lon)
-            }
-        } catch (e) {
-            alert(e);
+function parsePosition (string) {
+    try {
+        // Assume two comma separated DMS values
+        var parts = string.split(',');
+        if (parts.length != 2) {
+            // Alternatively try blank separated numbers.
+            // In this cas we don't support blanks inside the DMS values
+            parts = string.split(' ');
         }
-    }
-
-    function parseDMS (string) {
-        // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
-        var sign = string.match(/W|S/)?-1:1;
-        string = string.split(/[NESW]/)[0];
-        var parts = string.split('°');
-        var degrees = parseFloat(parts[0]);
-        if (parts[1]) {
-            parts = parts[1].split('\'');
-            degrees += parseFloat(parts[0])/60;
-            if (parts[1]) {
-                degrees += parseFloat(parts[1].split('"')[0])/3600;
-            }
+        if (parts.length != 2) {
+            throw new Error(`Invalid LatLng ${string}`)
         }
-        if (isNaN(degrees)) {
-            throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+
+        // We assume the first value to designate Lat, second Lon.
+        var lat, lon;
+        if (parts[0].match(/E|W/)) {
+            lon = parts[0].trim();
+            lat = parts[1].trim();
         } else {
-            return sign * degrees;
+            lat = parts[0].trim();
+            lon = parts[1].trim();
+        }
+        return {
+            "lat": parseDMS(lat),
+            "lon": parseDMS(lon)
+        }
+    } catch (e) {
+        alert(e);
+    }
+}
+
+function parseDMS (string) {
+    // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
+    var sign = string.match(/W|S/)?-1:1;
+    string = string.split(/[NESW]/)[0];
+    var parts = string.split('°');
+    var degrees = parseFloat(parts[0]);
+    if (parts[1]) {
+        parts = parts[1].split('\'');
+        degrees += parseFloat(parts[0])/60;
+        if (parts[1]) {
+            degrees += parseFloat(parts[1].split('"')[0])/3600;
         }
     }
-    
+    if (isNaN(degrees)) {
+        throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+    } else {
+        return sign * degrees;
+    }
+}
+
 function truncate (n, q) {
     return n - (n % q);
 }
@@ -383,77 +380,25 @@ function onManualCycle (event) {
     );
 }
 
-function onSetClientParameter (event) {
-    if ( event.currentTarget === 'foo' ) {
-    } else {
-        alert('later.');
-    }
-}
-
-function onSetParameter (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue;
-    // tb starttime has a 'checked' field but we don't want to use it.
-    if ( paramName === 'starttime' ) {
-        paramValue = event.currentTarget.value;
-        setParameter(paramName, paramValue);
-    } else if ( paramName === 'cycledate' || paramName === 'cyclehour' ) {
-        var manualCycle = document.getElementById("cb_manualcycle");
-        if ( manualCycle.checked ) {
-            var dateInput =  document.getElementById("tb_cycledate");
-            var hourInput =  document.getElementById("sel_cyclehour");
-            paramName = 'cycle';
-            paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-            setParameter(paramName, paramValue);
-            redrawWindByOffset(paramValue, "0");
-        }
-    } else {
-        // default: if there is a 'checked' field use it, otherwise use the value field.
-        paramValue = event.currentTarget.checked;
-        if ( paramValue === undefined ) {
-            paramValue = event.currentTarget.value;
-        }
-        setParameter(paramName, paramValue);
-    }
-
-}
-
-function onSetParameterStarttime (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue = event.currentTarget.value;
-    setParameter(paramName, paramValue);
-}
-
-function onSetParameterCycleDateTime (event) {
+function onSetCycleTS (event) {
     var manualCycle = document.getElementById("cb_manualcycle");
     if ( manualCycle.checked ) {
         var dateInput =  document.getElementById("tb_cycledate");
         var hourInput =  document.getElementById("sel_cyclehour");
-        var paramName = 'cycle';
-        var paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-        setParameter(paramName, paramValue);
-        redrawWindByOffset(paramValue, "0");
+        setttings.cycleTS = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+        redrawWindByOffset(settings.cycleTS, "0");
     }
 }
 
+function onSetStarttime (event) {
+    settings.startTime = event.currentTarget.value;
+}
+
 function onSetResolution (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue = event.currentTarget.value;
-    setParameter(paramName, paramValue);
-    fcResolution = paramValue;
+    fcResolution = event.currentTarget.value;
     redrawWindByOffset(forecastData.basetime, ir_index.value);
 }
 
-function setParameter (paramName, paramValue) {
-    $.ajax({
-        url: "/function/vh.setParameter" + "?name=" + paramName + "&value=" + paramValue,
-        dataType: 'json'
-    }).done( function(data, status, xhr ) {
-        console.log(`Set ${paramName}=${paramValue}`);
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
-    });
-}
 
 function onMapMenuMouseLeave (event) {
     var mapMenu=$("#mapMenu")[0];
@@ -554,37 +499,22 @@ function getRoute () {
 
 
 function setRoutePoint(point, latlng) {
-    var lat =  latlng.lat();
-    var lng =  latlng.lng();
-    var that = this;
-    $.ajax({
-        url: "/function/vh.setRoute"
-            + "?pointType=" + point
-            + "&lat=" + lat
-            + "&lng=" + lng,
-        dataType: 'json'
-    }).done( function(data) {
-        // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-        if ( point === 'start' ) {
-            updateStartPosition(lat, lng);
-        } else if ( point === 'dest' ) {
-            destinationMarker.setPosition(latlng);
-        }
-        if (courseGCLine) {
-            courseGCLine.setMap(null);
-        };
-        courseGCLine = new google.maps.Polyline({
-            geodesic: true,
-            strokeColor: '#d00000',
-            strokeOpacity: 1.0,
-            strokeWeight: 1
-        });
-        courseGCLine.setMap(googleMap);
-        courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-        
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
+    if ( point === 'start' ) {
+        updateStartPosition(latlng);
+    } else if ( point === 'dest' ) {
+        destinationMarker.setPosition(latlng);
+    }
+    if (courseGCLine) {
+        courseGCLine.setMap(null);
+    };
+    courseGCLine = new google.maps.Polyline({
+        geodesic: true,
+        strokeColor: '#d00000',
+        strokeOpacity: 1.0,
+        strokeWeight: 1
     });
+    courseGCLine.setMap(googleMap);
+    courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
 }
 
 
@@ -649,17 +579,6 @@ function displayRouting (data) {
     // $("#lb_maxspeed").text(data.maxspeed);
 }
 
-function removeSession () {
-    $.ajax({
-        url: "/function/vh.removeSession",
-        dataType: 'json'
-    }).done( function(result, status, xhr) {
-        console.log("Removed " + result); 
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert(textStatus + ' ' + errorThrown);
-    });
-}
-
 function positionFromDocumentURL () {
     var query = new URL(document.URL).search.split('&');
     var lat;
@@ -704,8 +623,7 @@ function setupCanvas () {
     mapCanvas.height = geometry.height;
 }
 
-function updateStartPosition (lat, lng) {
-    var latLng = new google.maps.LatLng(lat, lng);
+function updateStartPosition (latLng) {
     startMarker.setPosition(latLng);
 }
 
@@ -1209,16 +1127,6 @@ function formatSails (data) {
     return result;
 }
 
-function pickleSession () {
-    // Attempt to tell tell the server that the client is gone.
-    removeSession();
-    console.log('Goodbye');
-}
-
-window.addEventListener("beforeunload", function (event) {
-    pickleSession();
-});
-
 export {
     // alphabetical
     courseGCLine,
@@ -1228,11 +1136,10 @@ export {
     loadPolars,
     mapEvent,
     onMarkerClicked,
-    onSetParameter,
     onSetResolution,
     polars,
     positionFromDocumentURL,
-    setParameter,
+    settings,
     setResolution,
     setRoutePoint,
     setUp,

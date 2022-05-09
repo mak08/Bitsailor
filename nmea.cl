@@ -1,34 +1,55 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-06-09 23:02:16>
+;;; Last Modified <michael 2022-05-02 21:30:02>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
 
-(defun stop-nmea-listener (routing host port)
+(defun nmea-connection (user-id race-id)
+  (gethash (cons user-id race-id) *nmea-connection-ht*))
+
+(defun add-nmea-listener  (user-id race-id host port)
+  )
+
+(defun stop-nmea-listener (user-id race-id host port)
   (declare (ignore host port))
-  (let ((nc (routing-nmea-connection routing)))
+  (let ((nc (nmea-connection user-id race-id)))
     (kill-nmea-listener (nmea-connection-listener% nc))
     (setf (nmea-connection-listener% nc) nil)
     (close-nmea-socket nc)))
 
-(defun reset-nmea-listener (user-id routing host port)
+(defun reset-nmea-listener (user-id race-id host port)
   ;; Reconnect socket, start listener thread if not running
-  (let ((nc (routing-nmea-connection routing)))
+  (let ((nc (nmea-connection user-id race-id)))
     (kill-nmea-listener (nmea-connection-listener% nc))
     (reset-nmea-socket nc host port)
     (setf (nmea-connection-listener% nc)
           (start-nmea-listener user-id nc))))
 
-(defun get-nmea-position (nc host port)
+(defun get-nmea-position (user-id race-id host port)
   (declare (ignore host port))
-  (nmea-connection-cache nc))
+  (nmea-connection-cache user-id race-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
+
+(defun nmea-connection-cache (user-id race-id)
+  (nmea-connection-cache% (nmea-connection user-id race-id)))
+
+(defvar +nmea-connection-lock+
+  (bordeaux-threads:make-lock "nmea-connection-ht"))
+
+(defvar *nmea-connection-ht* (make-hash-table :test 'equalp))
+
+(defsetf nmea-connection set-nmea-connection)
+(defun set-nmea-connection (race-id user-id nmea-connection)
+  (bordeaux-threads:with-lock-held (+nmea-connection-lock+)
+    (setf (gethash (cons user-id race-id) *nmea-connection-ht*)
+          nmea-connection)))
+
 
 (defun kill-nmea-listener (thread)
   (when thread

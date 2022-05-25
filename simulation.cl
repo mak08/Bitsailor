@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-04-26 22:02:59>
+;;; Last Modified <michael 2022-05-22 22:24:53>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -542,7 +542,7 @@
                        :minutes minutes
                        :seconds rest-seconds)))))
 
-(defun get-twa-path (routing &key base-time time lat-a lng-a lat lng
+(defun get-twa-path (routing &key cycle time lat-a lng-a lat lng
                                (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
   (let* ((polars (get-routing-polars routing))
@@ -550,7 +550,6 @@
          (hull (routing-hull routing))
          (foils (routing-foils routing))
          (time (or time (now)))
-         (cycle (make-cycle :timestamp (parse-timestring base-time)))
          (time-increment +10min+)
          (first-increment
           (let* ((utime (timestamp-to-unix time)))

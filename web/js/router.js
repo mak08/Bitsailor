@@ -1,7 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// Bitsailor Router UI
+/// Bitsailor Router UI Stateless
 
 import * as Util from './Util.js';
+
+var settings = {
+    "resolution": "1p00",
+    "presets": "VR",
+    "polars": "1"
+};
 
 var googleMap = null;
 var mapEvent;
@@ -35,7 +41,6 @@ var trackMarkers = [];
 
 var polars = null;
 var forecastData = {};
-var fcResolution = "1p00";
 var forecastCycle;
 var windData = null;
 var currentRouting = {};
@@ -83,7 +88,6 @@ function setUp (getVMG) {
     $("#ir_index").change(onAdjustIndex);
     
     $("#cb_startdelayed").click(onDelayedStart);
-    $("#tb_starttime").change(onSetStarttime);
     
     $("#cb_manualcycle").click(onManualCycle);
     $("#tb_cycledate").change(onSetCycleTS);
@@ -95,10 +99,6 @@ function setUp (getVMG) {
     $("#cb_displaytracks").change(onDisplayTracks);
     $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
     $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
-    
-    // Tracks & Isochrones display is handled by the client directly
-    $("#cb_tracks").change(onSetClientParameter);
-    $("#cb_isochrones").change(onSetClientParameter);
     
     // Disable default contextmenu
     window.oncontextmenu = function (event) { event.preventDefault() }; 
@@ -258,6 +258,16 @@ function onDelayedStart (event) {
     }
 }
 
+function getStartTime () {
+    var cbDelayed =  $("#cb_startdelayed")[0];
+    if (cbDelayed.checked === true) {
+        var dateInput =  $("#tb_starttime")[0];
+        return dateInput.value;
+    } else {
+        var d = new Date();
+        return d.toISOString().substring(0,16);
+    }
+}
 
 function onContextMenuSetStart (event) {
     var textBox = document.getElementById("tb_position");
@@ -278,6 +288,11 @@ function onSetPosition (event) {
         var latLon = new google.maps.LatLng(latlon.lat, latlon.lon);
         setRoutePoint('start', latLon);
     }
+}
+
+function onSetDuration (event) {
+    var selDuration = $("#sel_duration")[0];
+    settings.duration = selDuration.value;
 }
 
 function parsePosition (string) {
@@ -390,12 +405,8 @@ function onSetCycleTS (event) {
     }
 }
 
-function onSetStarttime (event) {
-    settings.startTime = event.currentTarget.value;
-}
-
 function onSetResolution (event) {
-    fcResolution = event.currentTarget.value;
+    settings.resolution = event.currentTarget.value;
     redrawWindByOffset(forecastData.basetime, ir_index.value);
 }
 
@@ -439,15 +450,15 @@ function onMarkerClicked (marker) {
         baseTime = availableForecastCycle();
     }
     
-    redrawWindByTime(time, baseTime);
+    redrawWindByTime(baseTime, time);
 }
 
 //////////////////////////////////////////////////////////////////////
 /// Accessors
 
 function setResolution (resolution) {
-    fcResolution = resolution;
-    document.getElementById("sel_resolution").value = "0p25";
+    settings.resolution = resolution;
+    document.getElementById("sel_resolution").value = resolution;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -460,17 +471,26 @@ function getRoute () {
     var mapMenu=$("#mapMenu")[0];
     var windowEvent = window.event;
     mapMenu.style.display = "none";
-    var that = this;
+
     var pgGetRoute = $("#pg_getroute")[0];
     pgGetRoute.value = 5;
-    var selDuration = $("#sel_duration")[0];
-    var duration = selDuration.value;
+
+    var duration = settings.duration || 48;
     var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
 
-    // $('div, button, input').css('cursor', 'wait');
+    var startTime = getStartTime();
+    var startPos = startMarker.getPosition();
+    var destPos = destinationMarker.getPosition();
+    
+    var query = `?presets=${settings.presets}`;
+    query += `&polarsId=${settings.polars}`;
+    query += `&resolution=${settings.resolution}`;
+    query += `&duration=${duration * 3600}`;
+    query += `&startTime=${startTime}`;
+    query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 
     $.ajax({
-        url: "/function/vh.getRoute",
+        url: "/function/vh.getRoute" + query,
         dataType: 'json'
     }).done( function (data) {
         // $('div, button, input').css('cursor', 'auto');
@@ -604,6 +624,7 @@ function loadPolars (id) {
                    var data = JSON.parse(request.responseText);
                    if (data) {
                        console.log('Loaded ' + id);
+                       settings.polars = id;
                        polars = data;
                    } else {
                        alert("No leg info for race");
@@ -868,14 +889,10 @@ function getTWAPath (event) {
         var lat = event.latLng.lat();
         var lng = event.latLng.lng();
         var isochrone = getIsochroneByTime(time);
-        var baseTime;
-        if (isochrone) {
-            baseTime = isochrone.time;
-        } else {
-            baseTime = availableForecastCycle();
-        }
+        var cycle = isochrone?isochrone.time:availableForecastCycle();
+
         $.ajax({
-            url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+            url: `/function/vh.getTWAPath?presets=${settings.presets}&polars=${settings.polars}&resolution=${settings.resolution}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);
@@ -890,16 +907,18 @@ function getTWAPath (event) {
     }
 }
 
-function redrawWindByTime (time, baseTime) {
-    getWind("basetime=" + baseTime + "&" + "time=" + time);
+function redrawWindByTime (cycle, time) {
+    getWind(cycle, time);
 }
 
-function redrawWindByOffset (basetime, offset) {
-    var timeSpec = "basetime=" + basetime + "&" + "offset=" + offset;
-    getWind(timeSpec);
+function redrawWindByOffset (cycle, offset) {
+    var time = new Date(cycle).getTime();
+    time = time + parseInt(offset) * 3600000;
+    time = new Date(time);
+    redrawWindByTime(cycle, time.toISOString());
 }
 
-function getWind (timeSpec) {
+function getWind (cycle, time) {
     var bounds = getMapBounds();
     
     var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
@@ -909,8 +928,9 @@ function getWind (timeSpec) {
     // $('div, button, input').css('cursor', 'wait');
     $.ajax({
         url: "/function/vh.getWind"
-            + "?" + timeSpec
-            + "&resolution=" + fcResolution
+            + `?cycle=${cycle}&time=${time}`
+            + `&presets=${settings.presets}`
+            + `&resolution=${settings.resolution}`
             + "&north=" + lat0.toFixed(6)
             + "&south=" + bounds.south.toFixed(6)
             + "&west=" + bounds.west.toFixed(6)
@@ -1132,6 +1152,7 @@ export {
     courseGCLine,
     destinationMarker,
     formatLatLngPosition,
+    getRoute,
     googleMap,
     loadPolars,
     mapEvent,

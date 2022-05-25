@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-04-03 00:09:46>
+;;; Last Modified <michael 2022-05-22 14:10:32>
 
 (in-package :virtualhelm)
 
@@ -58,7 +58,7 @@
     (cleanup-cycles)
 
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
-    (log2:info "Backfilling weather data and starting weather updates")
+    (log2:info "Downloading forecasts and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
                                     (noaa-start-updates :resolution resolution))
                                   :name "GFS-DOWNLOAD")

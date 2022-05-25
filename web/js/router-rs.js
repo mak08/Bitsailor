@@ -6,52 +6,8 @@ import * as Router from './router.js';
 
 ( function () {
 
-    function getSession () {
-        Util.doGET("/function/vh.getSession",
-                   function(request) {
-                       var routing = JSON.parse(request.responseText);
-                       if (routing.start) {
-                           Router.updateStartPosition(routing.start.lat, routing.start.lng);
-                           var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
-                           Router.googleMap.setCenter(start);
-                       }
-                       
-                       if (routing.dest) {
-                           var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
-                           Router.destinationMarker.setPosition(dest);
-                       }
-                       
-                       var irIndex = document.getElementById("ir_index");
-                       
-                       var startTime = routing.starttime;
-                       var cbStartDelayed = document.getElementById("cb_startdelayed");
-                       if ( startTime != false && startTime != 'NIL' ) {
-                           cbStartDelayed.checked = true;
-                           document.getElementById("tb_starttime").value = startTime;
-                           
-                       } else {
-                           cbStartDelayed.checked = false;
-                       }
-            
-                       var duration = routing.stepmax/3600;
-                       var selDuration = document.getElementById("sel_duration");
-                       selDuration.value = duration;
-                       
-                       Router.courseGCLine.setMap(Router.googleMap);
-                       Router.courseGCLine.setPath([Router.startMarker.getPosition(), Router.destinationMarker.getPosition()]);
-                       
-                       if (routing["nmea-connection"]) {
-                           var nmeaInfo = routing["nmea-connection"];
-                           if (nmeaInfo.port) {
-                               document.getElementById("tb_nmeaport").value = nmeaInfo.port;
-                           }
-                       }
-                   },
-                   function (request) {
-                       alert(request.statusText + ' ' + request.responseText);
-                   });
-    }
-
+    var rsData = {};
+    
     function getRaceInfo () {
         Util.doGET(
             "/function/vh.getRaceInfo",
@@ -137,15 +93,17 @@ import * as Router from './router.js';
     }
 
     function setupLegRS (raceinfo) {
-        var rsData = raceinfo.data;
+        rsData = raceinfo.data;
         document.title = rsData.name;
-        
+
         Router.loadPolars(rsData.polar.objectId);
 
         if (rsData.gfs025 == "TRUE") {
             Router.setResolution("0p25");
+        } else {
+            Router.setResolution("1p00");
         }
-
+        
         var start = Router.positionFromDocumentURL();
         if (start) {
         } else {
@@ -229,13 +187,13 @@ import * as Router from './router.js';
     function setUpRS () {
  
         Router.setUp(getVMG);
-
+        Router.settings.presets = "RS";
+        
         document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
         document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
         document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);
 
         getRaceInfo()
-        getSession();
 
         Router.updateMap();
         

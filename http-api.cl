@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-07 00:55:50>
+;;; Last Modified <michael 2022-05-25 00:40:03>
 
 
 (in-package :virtualhelm)
@@ -133,6 +133,83 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
+(defun get-routing-presets (presets
+                            &key
+                              (starttime nil)
+                              (resolution "1p00")
+                              (polars)
+                              (options)
+                              (stepmax (* 24 60 60))
+                              (cycle)
+                              (slat)
+                              (slon)
+                              (dlat)
+                              (dlon))
+  (make-routing
+   :start (when (and slat slon) (make-latlng :lat slat :lng slon))
+   :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
+   :starttime starttime
+   :stepmax (min (if (string= presets "RS")
+                     (* *rs-max-hours* 3600)
+                     (* *vr-max-hours* 3600))
+                 stepmax)
+   :options (or options
+                (if (string= presets "RS")
+                    '("realsail")
+                    '("hull" "foil" "winch" "heavy" "light" "reach")))
+   :resolution resolution
+   :interpolation  (if (string= presets "RS") :bilinear :vr)
+   :polars polars
+   :cycle cycle
+   :merge-start  (if (string= presets "RS") 6d0 4d0)
+   :merge-window (if (string= presets "RS") 0d0 1d0)
+   :penalties  (if (string= presets "RS")
+                   (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
+                   (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))))
+
+(defun |getRoute| (handler request response &key
+                                              (|presets| "VR") |polarsId| |slat| |slon| |dlat| |dlon|
+                                              (|startTime| nil)
+                                              (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                              (|duration| (if (string= |presets| "RS")
+                                                              (* *rs-max-hours* 3600)
+                                                              (* *vr-max-hours* 3600))
+                                                          duration-supplied-p)
+                                              (|resolution| "1p00"))
+  (handler-case
+      (let* ((*read-default-float-format* 'double-float)
+             (user-id
+               (http-authenticated-user handler request))
+             (cycle (if cycle-supplied-p
+                        (make-cycle :timestamp (parse-datetime |cycleTS|))
+                        |cycleTS|))
+             (routing
+               (get-routing-presets |presets|
+                                    :resolution |resolution|
+                                    :polars |polarsId|
+                                    :stepmax (if duration-supplied-p
+                                                 (read-arg |duration|)
+                                                 |duration|)
+                                    :starttime |startTime|
+                                    :cycle cycle
+                                    :slat (read-arg |slat| 'double-float)
+                                    :slon (read-arg |slon| 'double-float)
+                                    :dlat (read-arg |dlat| 'double-float)
+                                    :dlon (read-arg |dlon| 'double-float)))
+             (routeinfo
+               (get-route routing)))
+        (log2:info "User:~a Race:(RS) Status ~a ~a"
+                   user-id
+                   (routeinfo-status routeinfo)
+                   (routeinfo-stats routeinfo))
+        (values
+         (with-output-to-string (s)
+           (json s routeinfo))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
+
 (defun |getRouteRS| (handler request response &key
                                                 (|polarsID| "aA32bToWbF")
                                                 |latStart|
@@ -140,7 +217,7 @@
                                                 |latDest|
                                                 |lonDest|
                                                 (|cycleTS| (available-cycle (now)) cycle-supplied-p)
-                                                (|duration| (* *rs-max-hours* 60 60))
+                                                (|duration| (* 4 3600))
                                                 (|resolution| "1p00"))
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
@@ -163,52 +240,6 @@
                              :start (make-latlng :lat (coerce (read-arg |latStart|) 'double-float)
                                                  :lng (coerce (read-arg |lonStart|) 'double-float))
                              :dest  (make-latlng :lat (coerce (read-arg |latDest|) 'double-float)
-                                                 :lng (coerce (read-arg |lonDest|) 'double-float))))
-             (routeinfo
-               (get-route routing)))
-        (log2:info "User:~a Race:(RS) Status ~a ~a"
-                   user-id
-                   (routeinfo-status routeinfo)
-                   (routeinfo-stats routeinfo))
-        (values
-         (with-output-to-string (s)
-           (json s routeinfo))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
-
-(defun |getRouteVR| (handler request response &key
-                                                (|polarsID| "1")
-                                                |latStart|
-                                                |lonStart|
-                                                |latDest|
-                                                |lonDest|
-                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
-                                                (|options|  '("hull" "foil" "winch" "heavy" "light" "reach"))
-                                                (|duration| "86400"))
-  (handler-case
-      (let* ((*read-default-float-format* 'double-float)
-             (user-id
-               (http-authenticated-user handler request))
-             (cycle (if cycle-supplied-p
-                        (make-cycle :timestamp (parse-datetime |cycleTS|))
-                        |cycleTS|))
-             (routing
-               (make-routing :interpolation :vr
-                             :resolution "1p00"
-                             :polars |polarsID|
-                             :options |options|
-                             :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)
-                             :stepmax (min (* *vr-max-hours* 60 60)
-                                           (read-arg |duration|))
-                             :cycle cycle
-                             :merge-start 4d0
-                             :merge-window 1d0
-                             :minwind t
-                             :start (make-latlng :lat (coerce (read-arg |latStart|) 'double-float)
-                                                 :lng (coerce (read-arg |lonStart|) 'double-float))
-                             :dest  (make-latlng :lat (coerce (read-arg  |latDest|) 'double-float)
                                                  :lng (coerce (read-arg |lonDest|) 'double-float))))
              (routeinfo
                (get-route routing)))
@@ -257,103 +288,102 @@
 ;;;        Optional. The requested time.
 ;;; Returns an error if the requested time is in the past or in the future of the requested cycle, or if $|offset| is too large.
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
-(defun |getWind| (handler request response &key (|time|) (|basetime|) (|offset|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
+(defun |getWind| (handler request response &key (|presets|) (|cycle|) (|time|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore |ySteps| |xSteps|))
   ;; (sqlite-client:with-current-connection (c *db*)
-
-    (log2:info "Basetime:~a Offset:~a Time:~a Resolution:~a N:~a S:~a W:~a E:~a" |basetime| |offset| |time| |resolution| |north| |south| |west| |east|)
-    (assert (and |basetime| (or |time| |offset|)))
-    (handler-case
-        (let* ((*read-default-float-format*
-                 'double-float)
-               (base-time
-                 (local-time:parse-rfc3339-timestring |basetime|))
-               (resolution |resolution|)
-               (requested-time
-                 (if |time|
-                     (local-time:parse-rfc3339-timestring |time|)
-                     (local-time:adjust-timestamp  (local-time:parse-rfc3339-timestring |basetime|) (:offset :hour (read-arg |offset|)))))
-               (user-id (http-authenticated-user handler request))
-               (race-id (get-routing-request-race-id request))
-               (cycle (make-cycle :timestamp base-time))
-               (cycle-start-time base-time)
-               (iparams (interpolation-parameters requested-time
-                                                  :method (routing-interpolation routing)
-                                                  :merge-start (routing-merge-start routing)
-                                                  :merge-window (routing-merge-window routing)
-                                                  :cycle cycle
-                                                  :resolution resolution))
-               (ddx (read-arg |ddx|))
-               (ddy (read-arg |ddy|))
-               (north (read-arg |north|))
-               (south (read-arg |south|))
-               (east (read-arg |east|))
-               (west (read-arg |west|)))
-          (log2:info "Requested time: ~a Using cycle: ~a" requested-time cycle)
-          (when (< west 0d0) (incf west 360d0))
-          (when (< east 0d0) (incf east 360d0))
-          (when (< east west) (incf east 360d0))
-            
-          (assert (and (plusp ddx)
-                       (plusp ddy)
-                       (< south north)))
-          (let ((wind-data
-                  (loop
-                    :for lat :from north :downto south :by ddy
-                    :collect (loop
-                               :for lon :from west :to east :by ddx
-                               :collect (multiple-value-bind (dir speed)
-                                            (let ((nlon
-                                                    (if (> lon 0) (- lon 360) lon)))
-                                              (interpolated-prediction lat nlon iparams))
-                                          (list (round-to-digits dir 2)
-                                                (round-to-digits speed 2)))))))
-            (let ((body
-                    (with-output-to-string (s)
-                      (json s
-                            (let ((time cycle-start-time))
-                              (make-forecast-data
-                               :basetime (format-datetime nil cycle-start-time)
-                               :time (format-datetime nil requested-time)
-                               :maxoffset 384 ;; (dataset-max-offset dataset)
-                               :cycle (format-timestring nil
-                                                         time
-                                                         :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                               :data wind-data))))))
-              (values body))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e)))
-      #+ccl(ccl::invalid-memory-access (e)
-             (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-             (setf (status-code response) 500)
-             (setf (status-text response) (format nil "~a" e))))
-  ;;)
-  )
-
-(defun |getTWAPath| (handler request response &key |basetime| |time| |latA| |lngA| |lat| |lng|)
-  ;; (sqlite-client:with-current-connection (c *db*)
+  
+  (log2:info "Cycle:~a Time:~a Res:~a N:~a S:~a W:~a E:~a" |cycle| |time| |resolution| |north| |south| |west| |east|)
+  (assert (and |cycle| |time|))
   (handler-case
-        (let* ((*read-default-float-format* 'double-float)
-               (user-id
-                 (http-authenticated-user handler request))
-               (race-id (get-routing-request-race-id request))
-               (base-time |basetime|)
-               (time (parse-datetime |time|))
-               (lat-a (read-arg |latA|))
-               (lng-a (read-arg |lngA|))
-               (lat (read-arg |lat|))
-               (lng (read-arg |lng|)))
-          (values
-           (with-output-to-string (s)
-             (json s (get-twa-path routing :base-time base-time :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
-      (error (e)
-        (log2:error "~a" e)
-        (setf (status-code response) 500)
-        (setf (status-text response) (format nil "~a" e))))
-  ;;)
-  )
+      (let* ((*read-default-float-format*
+               'double-float)
+             (cycle
+               (make-cycle :timestamp (local-time:parse-rfc3339-timestring |cycle|)))
+             (resolution
+               |resolution|)
+             (requested-time
+               (local-time:parse-rfc3339-timestring |time|))
+             (user-id
+               (http-authenticated-user handler request))
+             (race-id
+               (get-routing-request-race-id request))
+             (cycle-start-time (cycle-timestamp cycle))
+             (routing
+               (get-routing-presets |presets|))
+             (iparams (interpolation-parameters requested-time
+                                                :method (routing-interpolation routing)
+                                                :merge-start (routing-merge-start routing)
+                                                :merge-window (routing-merge-window routing)
+                                                :cycle cycle
+                                                :resolution resolution))
+             (ddx (read-arg |ddx|))
+             (ddy (read-arg |ddy|))
+             (north (read-arg |north|))
+             (south (read-arg |south|))
+             (east (read-arg |east|))
+             (west (read-arg |west|)))
+        (log2:info "Requested time: ~a Using cycle: ~a" requested-time cycle)
+        (when (< west 0d0) (incf west 360d0))
+        (when (< east 0d0) (incf east 360d0))
+        (when (< east west) (incf east 360d0))
+            
+        (assert (and (plusp ddx)
+                     (plusp ddy)
+                     (< south north)))
+        (let ((wind-data
+                (loop
+                  :for lat :from north :downto south :by ddy
+                  :collect (loop
+                             :for lon :from west :to east :by ddx
+                             :collect (multiple-value-bind (dir speed)
+                                          (let ((nlon
+                                                  (if (> lon 0) (- lon 360) lon)))
+                                            (interpolated-prediction lat nlon iparams))
+                                        (list (round-to-digits dir 2)
+                                              (round-to-digits speed 2)))))))
+          (let ((body
+                  (with-output-to-string (s)
+                    (json s
+                          (let ((time cycle-start-time))
+                            (make-forecast-data
+                             :basetime (format-datetime nil cycle-start-time)
+                             :time (format-datetime nil requested-time)
+                             :maxoffset 384 ;; (dataset-max-offset dataset)
+                             :cycle (format-timestring nil
+                                                       time
+                                                       :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
+                             :data wind-data))))))
+            (values body))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))
+    #+ccl(ccl::invalid-memory-access (e)
+           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
+           (setf (status-code response) 500)
+           (setf (status-text response) (format nil "~a" e)))))
+
+(defun |getTWAPath| (handler request response &key |presets| |polars| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
+  (handler-case
+      (let* ((*read-default-float-format* 'double-float)
+             (user-id
+               (http-authenticated-user handler request))
+             (race-id (get-routing-request-race-id request))
+             (routing
+               (get-routing-presets |presets| :cycle |cycle| :polars |polars| :starttime |time| :resolution |resolution|))
+             (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
+             (time (parse-datetime |time|))
+             (lat-a (read-arg |latA|))
+             (lng-a (read-arg |lngA|))
+             (lat (read-arg |lat|))
+             (lng (read-arg |lng|)))
+        (values
+         (with-output-to-string (s)
+           (json s (get-twa-path routing :cycle cycle :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Batch routing
@@ -452,8 +482,7 @@
             (get-nmea-position user-id race-id host port)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  ;; (sqlite-client:with-current-connection (c *db*)
-    (let* ((user-id (http-authenticated-user handler request))
+  (let* ((user-id (http-authenticated-user handler request))
            (race-id (get-routing-request-race-id request))
            (host |host|)
            (port |port|))
@@ -469,9 +498,7 @@
                       (numberp (parse-integer port)))
                (error "Invalid NMEA port ~a" port))
              (reset-nmea-listener user-id routing host port)
-             (format nil "Connected to ~a:~a" host port))))
-  ;;)
-  )
+             (format nil "Connected to ~a:~a" host port)))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

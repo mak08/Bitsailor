@@ -6,6 +6,8 @@ import * as Router from './router.js';
 
 ( function () {
 
+    var vrData = {};
+    
     function getRaceInfo () {
         Util.doGET(
             "/function/vh.getRaceInfo",
@@ -152,8 +154,7 @@ import * as Router from './router.js';
     }
 
     function setupLegVR (raceinfo) {
-        var vrData = raceinfo.data;
-        
+        vrData = raceinfo.data;
         document.title = vrData.name;
 
         var markStbd = 'img/mark_green.png';
@@ -218,7 +219,10 @@ import * as Router from './router.js';
 
     function setUpVR () {
         Router.setUp(getVMG);
+        Router.settings.presets = "VR";
+
         getRaceInfo()
+
         Router.updateMap();
     }
     

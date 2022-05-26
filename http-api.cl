@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-25 00:40:03>
+;;; Last Modified <michael 2022-05-26 16:28:35>
 
 
 (in-package :virtualhelm)
@@ -476,30 +476,26 @@
              (numberp (parse-integer port)))
       (error "Invalid NMEA port ~a" port))
     (unless (nmea-connection user-id race-id)
-      (add-nmea-listener user-id race-id host port))
+      (reset-nmea-listener user-id race-id host port))
     (with-output-to-string (s)
       (json s
-            (get-nmea-position user-id race-id host port)))))
+            (get-nmea-position user-id race-id)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
   (let* ((user-id (http-authenticated-user handler request))
-           (race-id (get-routing-request-race-id request))
-           (host |host|)
-           (port |port|))
-      (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
-      (unless (nmea-connection user-id race-id)
-        (setf (nmea-connection user-id race-id)
-              (make-nmea-connection))) 
-      (cond ((equal port "")
-             (stop-nmea-listener user-id race-id host port)
-             (format nil "Disconnected from ~a:~a" host port))
-            (t
-             (unless (ignore-errors
-                      (numberp (parse-integer port)))
-               (error "Invalid NMEA port ~a" port))
-             (reset-nmea-listener user-id routing host port)
-             (format nil "Connected to ~a:~a" host port)))))
-           
+         (race-id (get-routing-request-race-id request))
+         (host |host|)
+         (port |port|))
+    (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
+    (cond ((equal port "")
+           (remove-nmea-listener user-id race-id)
+           (format nil "Disconnected from ~a:~a" host port))
+          (t
+           (unless (ignore-errors
+                    (numberp (parse-integer port)))
+             (error "Invalid NMEA port ~a" port))
+           (reset-nmea-listener user-id race-id host port)
+           (format nil "Connected to ~a:~a" host port))))) 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 

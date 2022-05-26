@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-04 21:08:21>
+;;; Last Modified <michael 2022-05-25 23:15:46>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -14,7 +14,7 @@
 
 (defstruct penalty (sail 0.95d0) (tack 0.95d0) (gybe 0.95d0))
 
-(defstruct nmea-connection host port socket% listener% cache%)
+(defstruct nmea-connection host port socket% cache%)
 
 (defstruct posinfo time position speed course)
 

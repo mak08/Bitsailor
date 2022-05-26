@@ -144,6 +144,13 @@ import * as Router from './router.js';
             });
             gateCount++;
         }
+
+        // NMEA port
+        var storage = window.localStorage;
+        var nmeaPort = storage.getItem(`${rsData.objectId}.nmea_port`);
+        var portTB = document.getElementById("tb_nmeaport");
+        portTB.value = nmeaPort;
+        
     }
     
     function getBoatPosition (event) {
@@ -156,9 +163,14 @@ import * as Router from './router.js';
                 if (data) {
                     var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
                     Router.setRoutePoint('start', startPos);
-                    alert(`Time ${data.time}\nPos ${Router.formatLatLngPosition(startPos)}\nSpeed ${parseFloat(data.speed).toFixed(1)}\nCourse ${data.course}`);
-                    var curTime = new Date(data.time);
-                    var isoDate = curTime.toISOString().substring(0,16);
+                    var currTime = new Date();
+                    var nmeaTime = new Date(data.time);
+                    if ((currTime - nmeaTime) < 300000) {
+                        alert(`Time ${data.time}\nPos ${Router.formatLatLngPosition(startPos)}\nSpeed ${parseFloat(data.speed).toFixed(1)}\nCourse ${data.course}`);
+                    } else {
+                        alert(`Outdated position, please update again in a few seconds`);
+                    }
+                    var isoDate = currTime.toISOString().substring(0,16);
                     var dateInput = document.getElementById("tb_starttime");
                     dateInput.value = isoDate;
                 } else {
@@ -172,6 +184,9 @@ import * as Router from './router.js';
     
     function resetNMEAConnection (event) {
         var port= document.getElementById("tb_nmeaport").value
+        var storage = window.localStorage;
+        storage.setItem(`${rsData.objectId}.nmea_port`, port);
+        
         $.ajax({
             url: "/function/vh.resetNMEAConnection?port=" + port,
             dataType: 'json'

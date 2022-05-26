@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2022-05-22 21:39:44>
+;;; Last Modified <michael 2022-05-26 17:24:39>
 
 
 (in-package "VIRTUALHELM")
@@ -29,7 +29,7 @@
 (defvar *use-bitmap* t)
 (defvar *manoeuvering-penalty* nil)
 (defvar *tracks* nil)
-(defvar *rs-max-hours* (* 24 15))
+(defvar *rs-max-hours* (* 24 10))
 (defvar *vr-max-hours* (* 24 15))
 (defvar *rs-gfs-resolution* "1p00")
 

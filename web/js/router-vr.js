@@ -6,46 +6,8 @@ import * as Router from './router.js';
 
 ( function () {
 
-    function getSession () {
-        Util.doGET("/function/vh.getSession",
-                   function(request) {
-                       var routing = JSON.parse(request.responseText);
-                       if (routing.start) {
-                           Router.updateStartPosition(routing.start.lat, routing.start.lng);
-                           var start  = new google.maps.LatLng(routing.start.lat, routing.start.lng);
-                           Router.googleMap.setCenter(start);
-                       }
-                       
-                       if (routing.dest) {
-                           var dest  = new google.maps.LatLng(routing.dest.lat, routing.dest.lng);
-                           Router.destinationMarker.setPosition(dest);
-                       }
-                       
-                       var irIndex = document.getElementById("ir_index");
-                       
-                       var startTime = routing.starttime;
-                       var cbStartDelayed = document.getElementById("cb_startdelayed");
-                       if ( startTime != false && startTime != 'NIL' ) {
-                           cbStartDelayed.checked = true;
-                           document.getElementById("tb_starttime").value = startTime;
-                           
-                       } else {
-                           cbStartDelayed.checked = false;
-                       }
-                       
-                       var duration = routing.stepmax/3600;
-                       var selDuration = document.getElementById("sel_duration");
-                       selDuration.value = duration;
-                       
-                       Router.courseGCLine.setMap(Router.googleMap);
-                       Router.courseGCLine.setPath([Router.startMarker.getPosition(), Router.destinationMarker.getPosition()]);
-                       
-                   },
-                   function (request) {
-                       alert(request.statusText + ' ' + request.responseText);
-                   });
-    }
-
+    var vrData = {};
+    
     function getRaceInfo () {
         Util.doGET(
             "/function/vh.getRaceInfo",
@@ -192,14 +154,12 @@ import * as Router from './router.js';
     }
 
     function setupLegVR (raceinfo) {
-        var vrData = raceinfo.data;
-        
+        vrData = raceinfo.data;
         document.title = vrData.name;
 
         var markStbd = 'img/mark_green.png';
         var markPort = 'img/mark_red.png';
 
-        Router.setParameter("polars", vrData.boat.polar_id);
         Router.loadPolars( vrData.boat.polar_id);
 
         var start = Router.positionFromDocumentURL();
@@ -258,14 +218,12 @@ import * as Router from './router.js';
     };
 
     function setUpVR () {
-
         Router.setUp(getVMG);
-        
+        Router.settings.presets = "VR";
+
         getRaceInfo()
-        getSession();
 
         Router.updateMap();
-      
     }
     
     window.addEventListener("load", function (event) {

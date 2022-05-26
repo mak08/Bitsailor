@@ -1,7 +1,13 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// Bitsailor Router UI
+/// Bitsailor Router UI Stateless
 
 import * as Util from './Util.js';
+
+var settings = {
+    "resolution": "1p00",
+    "presets": "VR",
+    "polars": "1"
+};
 
 var googleMap = null;
 var mapEvent;
@@ -35,7 +41,6 @@ var trackMarkers = [];
 
 var polars = null;
 var forecastData = {};
-var fcResolution = "1p00";
 var forecastCycle;
 var windData = null;
 var currentRouting = {};
@@ -83,24 +88,17 @@ function setUp (getVMG) {
     $("#ir_index").change(onAdjustIndex);
     
     $("#cb_startdelayed").click(onDelayedStart);
-    $("#tb_starttime").change(onSetParameterStarttime);
     
     $("#cb_manualcycle").click(onManualCycle);
-    $("#tb_cycledate").change(onSetParameterCycleDateTime);
-    $("#sel_cyclehour").change(onSetParameterCycleDateTime);
+    $("#tb_cycledate").change(onSetCycleTS);
+    $("#sel_cyclehour").change(onSetCycleTS);
     
     // Connect option selectors
-    $("#sel_polars").change(onSetParameter);
-    $("#sel_forecastbundle").change(onSetParameter);
-    $("#sel_duration").change(onSetParameter);
+    $("#sel_duration").change(onSetDuration);
     $("#cb_displaywind").change(onDisplaywind);
     $("#cb_displaytracks").change(onDisplayTracks);
     $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
     $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
-    
-    // Tracks & Isochrones display is handled by the client directly
-    $("#cb_tracks").change(onSetClientParameter);
-    $("#cb_isochrones").change(onSetClientParameter);
     
     // Disable default contextmenu
     window.oncontextmenu = function (event) { event.preventDefault() }; 
@@ -258,17 +256,26 @@ function onDelayedStart (event) {
     } else {
         dateInput.value = null;
     }
-    setParameter('starttime', dateInput.value);
 }
 
+function getStartTime () {
+    var cbDelayed =  $("#cb_startdelayed")[0];
+    if (cbDelayed.checked === true) {
+        var dateInput =  $("#tb_starttime")[0];
+        return dateInput.value;
+    } else {
+        var d = new Date();
+        return d.toISOString().substring(0,16);
+    }
+}
 
-function  onContextMenuSetStart (event) {
+function onContextMenuSetStart (event) {
     var textBox = document.getElementById("tb_position");
     var position = mapEvent.latLng;
     textBox.value = Util.formatPosition(position.lat(), position.lng()); 
 }
 
-function  onUpdateStartMarker (marker) {
+function onUpdateStartMarker (marker) {
     var textBox = document.getElementById("tb_position");
     var position = marker.getPosition();
     textBox.value = Util.formatPosition(position.lat(), position.lng()); 
@@ -283,57 +290,62 @@ function onSetPosition (event) {
     }
 }
 
-    function parsePosition (string) {
-        try {
-            // Assume two comma separated DMS values
-            var parts = string.split(',');
-            if (parts.length != 2) {
-                // Alternatively try blank separated numbers.
-                // In this cas we don't support blanks inside the DMS values
-                parts = string.split(' ');
-            }
-            if (parts.length != 2) {
-                throw new Error(`Invalid LatLng ${string}`)
-            }
+function onSetDuration (event) {
+    var selDuration = $("#sel_duration")[0];
+    settings.duration = selDuration.value;
+}
 
-            // We assume the first value to designate Lat, second Lon.
-            var lat, lon;
-            if (parts[0].match(/E|W/)) {
-                lon = parts[0].trim();
-                lat = parts[1].trim();
-            } else {
-                lat = parts[0].trim();
-                lon = parts[1].trim();
-            }
-            return {
-                "lat": parseDMS(lat),
-                "lon": parseDMS(lon)
-            }
-        } catch (e) {
-            alert(e);
+function parsePosition (string) {
+    try {
+        // Assume two comma separated DMS values
+        var parts = string.split(',');
+        if (parts.length != 2) {
+            // Alternatively try blank separated numbers.
+            // In this cas we don't support blanks inside the DMS values
+            parts = string.split(' ');
         }
-    }
+        if (parts.length != 2) {
+            throw new Error(`Invalid LatLng ${string}`)
+        }
 
-    function parseDMS (string) {
-        // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
-        var sign = string.match(/W|S/)?-1:1;
-        string = string.split(/[NESW]/)[0];
-        var parts = string.split('°');
-        var degrees = parseFloat(parts[0]);
-        if (parts[1]) {
-            parts = parts[1].split('\'');
-            degrees += parseFloat(parts[0])/60;
-            if (parts[1]) {
-                degrees += parseFloat(parts[1].split('"')[0])/3600;
-            }
-        }
-        if (isNaN(degrees)) {
-            throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+        // We assume the first value to designate Lat, second Lon.
+        var lat, lon;
+        if (parts[0].match(/E|W/)) {
+            lon = parts[0].trim();
+            lat = parts[1].trim();
         } else {
-            return sign * degrees;
+            lat = parts[0].trim();
+            lon = parts[1].trim();
+        }
+        return {
+            "lat": parseDMS(lat),
+            "lon": parseDMS(lon)
+        }
+    } catch (e) {
+        alert(e);
+    }
+}
+
+function parseDMS (string) {
+    // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
+    var sign = string.match(/W|S/)?-1:1;
+    string = string.split(/[NESW]/)[0];
+    var parts = string.split('°');
+    var degrees = parseFloat(parts[0]);
+    if (parts[1]) {
+        parts = parts[1].split('\'');
+        degrees += parseFloat(parts[0])/60;
+        if (parts[1]) {
+            degrees += parseFloat(parts[1].split('"')[0])/3600;
         }
     }
-    
+    if (isNaN(degrees)) {
+        throw new Error(`Invalid DMS ${string}, valid formats are nnn.nnnnn, nnn°nn.nnnnn', nnn°nn'nn.nnnnn`);
+    } else {
+        return sign * degrees;
+    }
+}
+
 function truncate (n, q) {
     return n - (n % q);
 }
@@ -383,77 +395,21 @@ function onManualCycle (event) {
     );
 }
 
-function onSetClientParameter (event) {
-    if ( event.currentTarget === 'foo' ) {
-    } else {
-        alert('later.');
-    }
-}
-
-function onSetParameter (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue;
-    // tb starttime has a 'checked' field but we don't want to use it.
-    if ( paramName === 'starttime' ) {
-        paramValue = event.currentTarget.value;
-        setParameter(paramName, paramValue);
-    } else if ( paramName === 'cycledate' || paramName === 'cyclehour' ) {
-        var manualCycle = document.getElementById("cb_manualcycle");
-        if ( manualCycle.checked ) {
-            var dateInput =  document.getElementById("tb_cycledate");
-            var hourInput =  document.getElementById("sel_cyclehour");
-            paramName = 'cycle';
-            paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-            setParameter(paramName, paramValue);
-            redrawWindByOffset(paramValue, "0");
-        }
-    } else {
-        // default: if there is a 'checked' field use it, otherwise use the value field.
-        paramValue = event.currentTarget.checked;
-        if ( paramValue === undefined ) {
-            paramValue = event.currentTarget.value;
-        }
-        setParameter(paramName, paramValue);
-    }
-
-}
-
-function onSetParameterStarttime (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue = event.currentTarget.value;
-    setParameter(paramName, paramValue);
-}
-
-function onSetParameterCycleDateTime (event) {
+function onSetCycleTS (event) {
     var manualCycle = document.getElementById("cb_manualcycle");
     if ( manualCycle.checked ) {
         var dateInput =  document.getElementById("tb_cycledate");
         var hourInput =  document.getElementById("sel_cyclehour");
-        var paramName = 'cycle';
-        var paramValue = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-        setParameter(paramName, paramValue);
-        redrawWindByOffset(paramValue, "0");
+        setttings.cycleTS = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+        redrawWindByOffset(settings.cycleTS, "0");
     }
 }
 
 function onSetResolution (event) {
-    var paramName = event.currentTarget.name;
-    var paramValue = event.currentTarget.value;
-    setParameter(paramName, paramValue);
-    fcResolution = paramValue;
+    settings.resolution = event.currentTarget.value;
     redrawWindByOffset(forecastData.basetime, ir_index.value);
 }
 
-function setParameter (paramName, paramValue) {
-    $.ajax({
-        url: "/function/vh.setParameter" + "?name=" + paramName + "&value=" + paramValue,
-        dataType: 'json'
-    }).done( function(data, status, xhr ) {
-        console.log(`Set ${paramName}=${paramValue}`);
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert('Could not set ' + paramName + ': ' + textStatus + ' ' + errorThrown);
-    });
-}
 
 function onMapMenuMouseLeave (event) {
     var mapMenu=$("#mapMenu")[0];
@@ -494,15 +450,15 @@ function onMarkerClicked (marker) {
         baseTime = availableForecastCycle();
     }
     
-    redrawWindByTime(time, baseTime);
+    redrawWindByTime(baseTime, time);
 }
 
 //////////////////////////////////////////////////////////////////////
 /// Accessors
 
 function setResolution (resolution) {
-    fcResolution = resolution;
-    document.getElementById("sel_resolution").value = "0p25";
+    settings.resolution = resolution;
+    document.getElementById("sel_resolution").value = resolution;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -515,17 +471,26 @@ function getRoute () {
     var mapMenu=$("#mapMenu")[0];
     var windowEvent = window.event;
     mapMenu.style.display = "none";
-    var that = this;
+
     var pgGetRoute = $("#pg_getroute")[0];
     pgGetRoute.value = 5;
-    var selDuration = $("#sel_duration")[0];
-    var duration = selDuration.value;
+
+    var duration = settings.duration || 48;
     var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
 
-    // $('div, button, input').css('cursor', 'wait');
+    var startTime = getStartTime();
+    var startPos = startMarker.getPosition();
+    var destPos = destinationMarker.getPosition();
+    
+    var query = `?presets=${settings.presets}`;
+    query += `&polarsId=${settings.polars}`;
+    query += `&resolution=${settings.resolution}`;
+    query += `&duration=${duration * 3600}`;
+    query += `&startTime=${startTime}`;
+    query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 
     $.ajax({
-        url: "/function/vh.getRoute",
+        url: "/function/vh.getRoute" + query,
         dataType: 'json'
     }).done( function (data) {
         // $('div, button, input').css('cursor', 'auto');
@@ -554,37 +519,22 @@ function getRoute () {
 
 
 function setRoutePoint(point, latlng) {
-    var lat =  latlng.lat();
-    var lng =  latlng.lng();
-    var that = this;
-    $.ajax({
-        url: "/function/vh.setRoute"
-            + "?pointType=" + point
-            + "&lat=" + lat
-            + "&lng=" + lng,
-        dataType: 'json'
-    }).done( function(data) {
-        // alert(point + " at " + lat + ", " + lng + " " + JSON.stringify(data));
-        if ( point === 'start' ) {
-            updateStartPosition(lat, lng);
-        } else if ( point === 'dest' ) {
-            destinationMarker.setPosition(latlng);
-        }
-        if (courseGCLine) {
-            courseGCLine.setMap(null);
-        };
-        courseGCLine = new google.maps.Polyline({
-            geodesic: true,
-            strokeColor: '#d00000',
-            strokeOpacity: 1.0,
-            strokeWeight: 1
-        });
-        courseGCLine.setMap(googleMap);
-        courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
-        
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert("Could not set " + point + ': ' + textStatus + ' ' + errorThrown);
+    if ( point === 'start' ) {
+        updateStartPosition(latlng);
+    } else if ( point === 'dest' ) {
+        destinationMarker.setPosition(latlng);
+    }
+    if (courseGCLine) {
+        courseGCLine.setMap(null);
+    };
+    courseGCLine = new google.maps.Polyline({
+        geodesic: true,
+        strokeColor: '#d00000',
+        strokeOpacity: 1.0,
+        strokeWeight: 1
     });
+    courseGCLine.setMap(googleMap);
+    courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
 }
 
 
@@ -649,17 +599,6 @@ function displayRouting (data) {
     // $("#lb_maxspeed").text(data.maxspeed);
 }
 
-function removeSession () {
-    $.ajax({
-        url: "/function/vh.removeSession",
-        dataType: 'json'
-    }).done( function(result, status, xhr) {
-        console.log("Removed " + result); 
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        alert(textStatus + ' ' + errorThrown);
-    });
-}
-
 function positionFromDocumentURL () {
     var query = new URL(document.URL).search.split('&');
     var lat;
@@ -685,6 +624,7 @@ function loadPolars (id) {
                    var data = JSON.parse(request.responseText);
                    if (data) {
                        console.log('Loaded ' + id);
+                       settings.polars = id;
                        polars = data;
                    } else {
                        alert("No leg info for race");
@@ -704,8 +644,7 @@ function setupCanvas () {
     mapCanvas.height = geometry.height;
 }
 
-function updateStartPosition (lat, lng) {
-    var latLng = new google.maps.LatLng(lat, lng);
+function updateStartPosition (latLng) {
     startMarker.setPosition(latLng);
 }
 
@@ -950,14 +889,10 @@ function getTWAPath (event) {
         var lat = event.latLng.lat();
         var lng = event.latLng.lng();
         var isochrone = getIsochroneByTime(time);
-        var baseTime;
-        if (isochrone) {
-            baseTime = isochrone.time;
-        } else {
-            baseTime = availableForecastCycle();
-        }
+        var cycle = isochrone?isochrone.time:availableForecastCycle();
+
         $.ajax({
-            url: "/function/vh.getTWAPath?basetime=" + baseTime + "&time=" + time + "&latA=" + latA + "&lngA=" + lngA + "&lat=" + lat + "&lng=" + lng,
+            url: `/function/vh.getTWAPath?presets=${settings.presets}&polars=${settings.polars}&resolution=${settings.resolution}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);
@@ -972,16 +907,18 @@ function getTWAPath (event) {
     }
 }
 
-function redrawWindByTime (time, baseTime) {
-    getWind("basetime=" + baseTime + "&" + "time=" + time);
+function redrawWindByTime (cycle, time) {
+    getWind(cycle, time);
 }
 
-function redrawWindByOffset (basetime, offset) {
-    var timeSpec = "basetime=" + basetime + "&" + "offset=" + offset;
-    getWind(timeSpec);
+function redrawWindByOffset (cycle, offset) {
+    var time = new Date(cycle).getTime();
+    time = time + parseInt(offset) * 3600000;
+    time = new Date(time);
+    redrawWindByTime(cycle, time.toISOString());
 }
 
-function getWind (timeSpec) {
+function getWind (cycle, time) {
     var bounds = getMapBounds();
     
     var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
@@ -991,8 +928,9 @@ function getWind (timeSpec) {
     // $('div, button, input').css('cursor', 'wait');
     $.ajax({
         url: "/function/vh.getWind"
-            + "?" + timeSpec
-            + "&resolution=" + fcResolution
+            + `?cycle=${cycle}&time=${time}`
+            + `&presets=${settings.presets}`
+            + `&resolution=${settings.resolution}`
             + "&north=" + lat0.toFixed(6)
             + "&south=" + bounds.south.toFixed(6)
             + "&west=" + bounds.west.toFixed(6)
@@ -1209,30 +1147,20 @@ function formatSails (data) {
     return result;
 }
 
-function pickleSession () {
-    // Attempt to tell tell the server that the client is gone.
-    removeSession();
-    console.log('Goodbye');
-}
-
-window.addEventListener("beforeunload", function (event) {
-    pickleSession();
-});
-
 export {
     // alphabetical
     courseGCLine,
     destinationMarker,
     formatLatLngPosition,
+    getRoute,
     googleMap,
     loadPolars,
     mapEvent,
     onMarkerClicked,
-    onSetParameter,
     onSetResolution,
     polars,
     positionFromDocumentURL,
-    setParameter,
+    settings,
     setResolution,
     setRoutePoint,
     setUp,

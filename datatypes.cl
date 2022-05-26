@@ -1,17 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-02-23 23:23:31>
+;;; Last Modified <michael 2022-05-26 22:11:16>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route
 ;;; and other routing parameters.
-
-(defstruct session
-  (session-id (make-session-id))
-  (user-id)
-  (routings (make-hash-table :test #'equal)))
 
 (defstruct race-info data)
 (defstruct (race-info-vr (:include race-info)) (mode "vr"))
@@ -19,31 +14,30 @@
 
 (defstruct penalty (sail 0.95d0) (tack 0.95d0) (gybe 0.95d0))
 
-(defstruct routing
-  (race-id "default")
-  (polars 4)
-  (limits "limits.json")
-  (starttime nil)                       ; NIL or "yyyy-MM-ddThh:mm" (datetime-local format)
-  (cycle nil)                           ; NIL = latest available
-  (resolution "0p25")
-  (options '("realsail"))
-  (penalties (make-penalty))
-  (merge-start)
-  (merge-window)
-  (interpolation)                       ; :enorm (realsail), :bilinear, :vr
-  (minwind nil)                         ; m/s !!
-  (start +LESSABLES+)                   ; set-paramater needs a valid initial values
-  (dest +NEW-YORK+)                     ; because start/dest lat and lon are set separately.
-  (fan 110)                             ; FIXME: Larger value yields narrower search, increases time.
-  (stepmax +12h+ :type fixnum)
-  (nmea-connection))
-
-(defstruct nmea-connection host port socket% listener% cache)
+(defstruct nmea-connection host port socket% cache%)
 
 (defstruct posinfo time position speed course)
 
+(defstruct routing
+  race-id
+  interpolation
+  resolution
+  cycle
+  polars
+  penalties
+  minwind
+  stepmax
+  (fan 110)
+  merge-start
+  merge-window
+  options
+  starttime
+  start
+  dest)
+
 (defmethod print-object ((thing routing) stream)
-  (format stream "{T=~a C=~a O=~a}"
+  (format stream "{D=~a T=~a C=~a O=~a}"
+          (routing-stepmax thing)
           (routing-starttime thing)
           (routing-cycle thing)
           (routing-options thing)))

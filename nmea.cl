@@ -1,41 +1,52 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-06-09 23:02:16>
+;;; Last Modified <michael 2022-05-26 16:33:34>
 
 (in-package :virtualhelm)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Internal functions
+
+(defun nmea-connection (user-id race-id)
+  (gethash (cons user-id race-id) *nmea-connection-ht*))
+(defun set-nmea-connection (user-id race-id nmea-connection)
+  (bordeaux-threads:with-lock-held (+nmea-connection-lock+)
+    (setf (gethash (cons user-id race-id) *nmea-connection-ht*)
+          nmea-connection)))
+(defsetf nmea-connection set-nmea-connection)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
 
-(defun stop-nmea-listener (routing host port)
-  (declare (ignore host port))
-  (let ((nc (routing-nmea-connection routing)))
-    (kill-nmea-listener (nmea-connection-listener% nc))
-    (setf (nmea-connection-listener% nc) nil)
-    (close-nmea-socket nc)))
-
-(defun reset-nmea-listener (user-id routing host port)
-  ;; Reconnect socket, start listener thread if not running
-  (let ((nc (routing-nmea-connection routing)))
-    (kill-nmea-listener (nmea-connection-listener% nc))
+(defun reset-nmea-listener (user-id race-id host port)
+  (let ((nc
+          (or (nmea-connection user-id race-id)
+              (make-nmea-connection :host host :port port))))
     (reset-nmea-socket nc host port)
-    (setf (nmea-connection-listener% nc)
-          (start-nmea-listener user-id nc))))
+    (setf (nmea-connection user-id race-id) nc)))
 
-(defun get-nmea-position (nc host port)
-  (declare (ignore host port))
-  (nmea-connection-cache nc))
+(defun remove-nmea-listener (user-id race-id)
+  (let ((nc (nmea-connection user-id race-id)))
+    (when nc
+      (bordeaux-threads:with-lock-held (+nmea-connection-lock+)
+        (close-nmea-socket nc)
+        (remhash (cons user-id race-id) *nmea-connection-ht*)))))
+
+(defun get-nmea-position (user-id race-id)
+  (nmea-connection-cache user-id race-id))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
 
-(defun kill-nmea-listener (thread)
-  (when thread
-    (ignore-errors
-     (log2:info "Destroying thread ~a" thread)
-     (bordeaux-threads:destroy-thread thread)
-     (log2:info "Destroyed thread ~a" thread))))
+(defun nmea-connection-cache (user-id race-id)
+  (nmea-connection-cache% (nmea-connection user-id race-id)))
+
+(defvar +nmea-connection-lock+
+  (bordeaux-threads:make-lock "nmea-connection-ht"))
+
+(defvar *nmea-connection-ht* (make-hash-table :test 'equalp))
+(defvar *nmea-listener-thread* nil)
 
 (defun parse-gprmc (m)
   ;; $GPRMC,185951.00,A,4103.4804,N,02426.2568,W,10.795927221436223,256,120421,,,A*66
@@ -88,40 +99,39 @@
   (setf (nmea-connection-socket% nc)
         (mbedtls:connect host :port port)))
 
-
-(defun start-nmea-listener (user-id nc)
-  ;; Start a message fetching thread with current settings
-  (let ((listener
-          (bordeaux-threads:make-thread
-           (lambda ()
-             (nmea-listener nc))
-           :name (format nil "~a-:~a"
-                         user-id
-                         (nmea-connection-port nc)))))
-    (log2:info "Created thread ~a" listener)
-    (setf (nmea-connection-listener% nc) listener)))
-
-(defun nmea-listener (nc)
-  (handler-case
-      (loop :do
-        (let* ((host (nmea-connection-host nc))
-               (port (nmea-connection-port nc))
-               (messages (reverse
-                          (get-nmea-messages nc host port)))
-               (gprmc (loop
-                        :for m :in messages 
-                        :when (search "$GPRMC" m)
-                          :do (progn
-                                (log2:info "~a" m)
-                                (return (parse-gprmc m))))))
-          (cond
-            ((null gprmc)
-             (sleep 10))
-            (t
-             (setf (nmea-connection-cache nc) gprmc)
-             (sleep 60)))))
-    (error (e)
-      (log2:info "Terminated: ~a" e))))
+(defun restart-nmea-listener-loop ()
+  (flet ((check-connection (nc)
+             (let* ((host (nmea-connection-host nc))
+                    (port (nmea-connection-port nc))
+                    (messages (reverse
+                               (get-nmea-messages nc host port)))
+                    (gprmc (loop
+                             :for m :in messages 
+                             :when (search "$GPRMC" m)
+                               :do (progn
+                                     (log2:info "~a" m)
+                                     (return (parse-gprmc m))))))
+               (when gprmc
+                 (setf (nmea-connection-cache% nc) gprmc)))))
+    (flet ((check-connections ()
+             (handler-case
+                 (loop
+                   (progn
+                     (maphash (lambda (key val)
+                                (multiple-value-bind (res err)
+                                    (ignore-errors (check-connection val))
+                                  (declare (ignore res))
+                                  (when err
+                                    (log2:info "Removing ~a because ~a" key err)
+                                    (remhash key *nmea-connection-ht*))))
+                              *nmea-connection-ht*)
+                     (sleep 10)))
+               (error (e)
+                 (log2:info "Terminated: ~a" e)))))
+      (when (not (null *nmea-listener-thread*))
+        (bordeaux-threads:destroy-thread *nmea-listener-thread*))
+      (setf *nmea-listener-thread*
+            (bordeaux-threads:make-thread (function check-connections) :name "NMEA-LISTENER-THREAD")))))
 
 (defun get-nmea-messages (nc host port &key (timeout 250))
   (when (and (nmea-connection-socket% nc)
@@ -148,7 +158,6 @@
                      nil)))
     :while line
     :collect line))
-
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

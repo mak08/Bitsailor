@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-03-06 21:00:45>
+;;; Last Modified <michael 2022-05-02 20:08:48>
 
 (in-package :virtualhelm)
 
@@ -13,17 +13,6 @@
    (/ (course-distance (make-latlng :lat lat0 :lng lon0)
                        (make-latlng :lat lat1 :lng lon1))
       seconds)))
-
-(defun get-route-for-session (session-id race-id)
-  (let ((session (gethash session-id *session-ht*)))
-    (unless session
-      (error "~a: no such session" session-id)) 
-    (get-route (session-routing session race-id))))
-
-(defun get-routing-for-race  (session-id race-id)
-   (gethash race-id
-            (session-routings
-             (gethash session-id *session-ht*))))
 
 (defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let* ((cpolars (get-combined-polars polars-name (encode-options options)))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-26 16:28:35>
+;;; Last Modified <michael 2022-05-26 17:23:43>
 
 
 (in-package :virtualhelm)
@@ -232,7 +232,7 @@
                              :polars |polarsID|
                              :options '("realsail")
                              :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                             :stepmax (min (* *rs-max-hours* 60 60) ;; 2d
+                             :stepmax (min (* *rs-max-hours* 3600) ;; 2d
                                            (read-arg |duration|))
                              :cycle cycle
                              :merge-start 6d0

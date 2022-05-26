@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-25 23:15:46>
+;;; Last Modified <michael 2022-05-26 22:11:16>
 
 (in-package :virtualhelm)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -36,7 +36,8 @@
   dest)
 
 (defmethod print-object ((thing routing) stream)
-  (format stream "{T=~a C=~a O=~a}"
+  (format stream "{D=~a T=~a C=~a O=~a}"
+          (routing-stepmax thing)
           (routing-starttime thing)
           (routing-cycle thing)
           (routing-options thing)))

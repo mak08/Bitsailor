@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-26 21:53:44>
+;;; Last Modified <michael 2022-05-26 22:12:02>
 
 
 (in-package :virtualhelm)
@@ -150,8 +150,8 @@
    :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
    :starttime starttime
    :stepmax (min (if (string= presets "RS")
-                     (* 16 3600)
-                     (* 16 3600))
+                     (* 16 24 3600)
+                     (* 16 24 3600))
                  stepmax)
    :options (or options
                 (if (string= presets "RS")

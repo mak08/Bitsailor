@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-22 14:10:32>
+;;; Last Modified <michael 2022-05-27 20:07:26>
 
 (in-package :virtualhelm)
 
@@ -54,6 +54,9 @@
     ;; Start timers
     (timers:start-timer-loop)
 
+    ;; NMEA
+    (restart-nmea-listener-loop)
+    
     ;; Cleanup old forecasts once (also called periodically from cleanup timer)
     (cleanup-cycles)
 

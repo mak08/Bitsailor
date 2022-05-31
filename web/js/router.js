@@ -988,8 +988,8 @@ function drawWind (data) {
     var dlat = (height/ySteps);
 
     // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
-    for ( var lat = bounds.north+dlat/4, y=0; y < ySteps; lat += dlat, y++ ) {
-        for ( var lng = bounds.west+dlng/4, x=0; x < xSteps; lng += dlng, x++ ) {
+    for ( var lat = bounds.north+dlat/2, y=0; y < ySteps; lat += dlat, y++ ) {
+        for ( var lng = bounds.west+dlng/2, x=0; x < xSteps; lng += dlng, x++ ) {
             var latLng = new google.maps.LatLng(lat, lng);
             var mapPoint = mapProjection.fromLatLngToPoint(latLng);
             var pointX = (mapPoint.x - nwPoint.x) / mapWidth * ctx.canvas.width;

@@ -164,6 +164,9 @@ import * as Router from './router.js';
 
         var start = Router.positionFromDocumentURL();
         if (start) {
+            Router.startMarker.setPosition(start);
+            var startPos = new google.maps.LatLng(start.lat, start.lon);
+            Router.setRoutePoint('start', startPos);
         } else {
             Router.startMarker.setPosition( {"lat": vrData.start.lat, "lng": vrData.start.lon});
             var startPos = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);

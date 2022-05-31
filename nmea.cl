@@ -1,9 +1,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2022-05-26 16:33:34>
+;;; Last Modified <michael 2022-05-31 10:12:21>
 
 (in-package :virtualhelm)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; API --- below ---
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
@@ -15,29 +18,6 @@
     (setf (gethash (cons user-id race-id) *nmea-connection-ht*)
           nmea-connection)))
 (defsetf nmea-connection set-nmea-connection)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; API
-
-(defun reset-nmea-listener (user-id race-id host port)
-  (let ((nc
-          (or (nmea-connection user-id race-id)
-              (make-nmea-connection :host host :port port))))
-    (reset-nmea-socket nc host port)
-    (setf (nmea-connection user-id race-id) nc)))
-
-(defun remove-nmea-listener (user-id race-id)
-  (let ((nc (nmea-connection user-id race-id)))
-    (when nc
-      (bordeaux-threads:with-lock-held (+nmea-connection-lock+)
-        (close-nmea-socket nc)
-        (remhash (cons user-id race-id) *nmea-connection-ht*)))))
-
-(defun get-nmea-position (user-id race-id)
-  (nmea-connection-cache user-id race-id))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Internal functions
 
 (defun nmea-connection-cache (user-id race-id)
   (nmea-connection-cache% (nmea-connection user-id race-id)))
@@ -99,6 +79,35 @@
   (setf (nmea-connection-socket% nc)
         (mbedtls:connect host :port port)))
 
+(defun get-nmea-messages (nc host port &key (timeout 250))
+  (when (and (nmea-connection-socket% nc)
+             (or (not (equal host (nmea-connection-host nc)))
+                 (not (equal port (nmea-connection-port nc)))))
+    (log2:info "Closing NMEA socket")
+    (close-nmea-socket nc))
+  (unless (nmea-connection-socket% nc)
+    (log2:info "Connecting to NMEA socket at ~a:~a" host port)
+    (setf (nmea-connection-host nc)
+          host)
+    (setf (nmea-connection-port nc)
+          port)
+    (setf (nmea-connection-socket% nc)
+          (mbedtls:connect host :port port)))
+  (loop
+    :for line = (ignore-errors
+                 (handler-case
+                     (mbedtls:get-line (nmea-connection-socket% nc)
+                                       :timeout timeout)
+                   (mbedtls:stream-timeout (e)
+                     (declare (ignore e))
+                     (log2:trace "Timeout on ~a"  (nmea-connection-socket% nc))
+                     nil)))
+    :while line
+    :collect line))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; API
+
 (defun restart-nmea-listener-loop ()
   (flet ((check-connection (nc)
              (let* ((host (nmea-connection-host nc))
@@ -133,31 +142,23 @@
       (setf *nmea-listener-thread*
             (bordeaux-threads:make-thread (function check-connections) :name "NMEA-LISTENER-THREAD")))))
 
-(defun get-nmea-messages (nc host port &key (timeout 250))
-  (when (and (nmea-connection-socket% nc)
-             (or (not (equal host (nmea-connection-host nc)))
-                 (not (equal port (nmea-connection-port nc)))))
-    (log2:info "Closing NMEA socket")
-    (close-nmea-socket nc))
-  (unless (nmea-connection-socket% nc)
-    (log2:info "Connecting to NMEA socket at ~a:~a" host port)
-    (setf (nmea-connection-host nc)
-          host)
-    (setf (nmea-connection-port nc)
-          port)
-    (setf (nmea-connection-socket% nc)
-          (mbedtls:connect host :port port)))
-  (loop
-    :for line = (ignore-errors
-                 (handler-case
-                     (mbedtls:get-line (nmea-connection-socket% nc)
-                                       :timeout timeout)
-                   (mbedtls:stream-timeout (e)
-                     (declare (ignore e))
-                     (log2:trace "Timeout on ~a"  (nmea-connection-socket% nc))
-                     nil)))
-    :while line
-    :collect line))
+(defun reset-nmea-listener (user-id race-id host port)
+  (let ((nc
+          (or (nmea-connection user-id race-id)
+              (make-nmea-connection :host host :port port))))
+    (reset-nmea-socket nc host port)
+    (setf (nmea-connection user-id race-id) nc)))
+
+(defun remove-nmea-listener (user-id race-id)
+  (let ((nc (nmea-connection user-id race-id)))
+    (when nc
+      (bordeaux-threads:with-lock-held (+nmea-connection-lock+)
+        (close-nmea-socket nc)
+        (remhash (cons user-id race-id) *nmea-connection-ht*)))))
+
+(defun get-nmea-position (user-id race-id)
+  (nmea-connection-cache user-id race-id))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

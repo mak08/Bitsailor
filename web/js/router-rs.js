@@ -104,7 +104,8 @@ import * as Router from './router.js';
             Router.setResolution("1p00");
         }
         
-        var start = Router.positionFromDocumentURL();
+        var queryParams = Router.getURLParams()
+        var start = queryParams.startPos;
         if (start) {
         } else {
             Router.startMarker.setPosition( {"lat": rsData.startLocation.latitude,

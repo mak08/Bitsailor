@@ -291,8 +291,6 @@ function onSetPosition (event) {
 }
 
 function onSetDuration (event) {
-    var selDuration = $("#sel_duration")[0];
-    settings.duration = selDuration.value;
 }
 
 function parsePosition (string) {
@@ -475,7 +473,8 @@ function getRoute () {
     var pgGetRoute = $("#pg_getroute")[0];
     pgGetRoute.value = 5;
 
-    var duration = settings.duration || 48;
+    var selDuration = document.getElementById('sel_duration');
+    var duration = selDuration.value || 48;
     var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
 
     var startTime = getStartTime();
@@ -599,26 +598,22 @@ function displayRouting (data) {
     // $("#lb_maxspeed").text(data.maxspeed);
 }
 
-function positionFromDocumentURL () {
-    var query = new URL(document.URL).search.split('&');
-    var lat;
-    var lon;
-    for (const e of query) {
-        var p = e.split('=');
-        if (p[0] == 'slat') {
-            lat = p[1].split('d')[0];
-        } else if (p[0] == 'slon') {
-            lon = p[1].split('d')[0];
-        }
-    }
-    if ( lat && lon ) {
-        return {
-            "lat": Number(lat),
-            "lon": Number(lon)
+function getURLParams () {
+    var query = new URL(document.URL).searchParams;
+    var slat = query.get('slat');
+    var slon = query.get('slon');
+    var starttime = query.get('starttime');
+    var  res = {};
+    if (slat) {
+        res.startPos = {
+            "lat": Number(slat),
+            "lon": Number(slon)
         };
-    } else {
-        return null;
     }
+    if (starttime) {
+        res.startTime = new Date(starttime + 'Z');
+    }
+    return res;
 }
 
 function loadPolars (id) {
@@ -1156,13 +1151,13 @@ export {
     destinationMarker,
     formatLatLngPosition,
     getRoute,
+    getURLParams,
     googleMap,
     loadPolars,
     mapEvent,
     onMarkerClicked,
     onSetResolution,
     polars,
-    positionFromDocumentURL,
     settings,
     setResolution,
     setRoutePoint,

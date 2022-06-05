@@ -162,15 +162,23 @@ import * as Router from './router.js';
 
         Router.loadPolars( vrData.boat.polar_id);
 
-        var start = Router.positionFromDocumentURL();
+        var queryParams = Router.getURLParams()
+        var start = queryParams.startPos;
         if (start) {
-            Router.startMarker.setPosition(start);
-            var startPos = new google.maps.LatLng(start.lat, start.lon);
-            Router.setRoutePoint('start', startPos);
+            start = new google.maps.LatLng(start.lat, start.lon);
         } else {
-            Router.startMarker.setPosition( {"lat": vrData.start.lat, "lng": vrData.start.lon});
-            var startPos = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
-            Router.setRoutePoint('start', startPos);
+            start = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
+        }
+        Router.startMarker.setPosition( start);
+        Router.setRoutePoint('start', start);
+        var textBox = document.getElementById("tb_position");
+        textBox.value = Util.formatPosition(start.lat(), start.lng()); 
+
+        if (queryParams.startTime) {
+            var cbDelayed = document.getElementById('cb_startdelayed');
+            var tbStartTime = document.getElementById('tb_starttime');
+            cbDelayed.checked = true;
+            tbStartTime.value = queryParams.startTime.toISOString().substring(0,16);
         }
         
         Router.destinationMarker.setPosition( {"lat": vrData.end.lat, "lng": vrData.end.lon});

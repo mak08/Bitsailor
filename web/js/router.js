@@ -612,7 +612,10 @@ function positionFromDocumentURL () {
         }
     }
     if ( lat && lon ) {
-        return {"lat": lat, "lon": lon};
+        return {
+            "lat": Number(lat),
+            "lon": Number(lon)
+        };
     } else {
         return null;
     }

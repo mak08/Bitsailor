@@ -296,6 +296,7 @@ function onSetDuration (event) {
 function parsePosition (string) {
     try {
         // Assume two comma separated DMS values
+        string = string.replace(`/`,`,`);
         var parts = string.split(',');
         if (parts.length != 2) {
             // Alternatively try blank separated numbers.

@@ -326,6 +326,8 @@ function parsePosition (string) {
 
 function parseDMS (string) {
     // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
+    string = string.replace(`''`,`'`);
+    string = string.replace(`º`,`°`);
     var sign = string.match(/W|S/)?-1:1;
     string = string.split(/[NESW]/)[0];
     var parts = string.split('°');

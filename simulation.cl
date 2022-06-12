@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-22 22:24:53>
+;;; Last Modified <michael 2022-06-12 12:03:06>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -73,7 +73,7 @@
        (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
+(defun expand-routepoint (routing box routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -123,22 +123,44 @@
                                      ((distance (* speed step-size))
                                       (new-pos (add-distance-exact (routepoint-position routepoint)
                                                                    distance
-                                                                   heading))
-                                      (origin-distance (course-distance start-pos new-pos))
-                                      (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
-                                   (when (heading-between left right origin-angle)
-                                     (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))
+                                                                   heading)))
+                                   (when t ;; (in-latlng-box box new-pos)
+                                     (let* ((origin-distance (course-distance start-pos new-pos))
+                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
+                                       (when (heading-between left right origin-angle)
+                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))))
                       (add-point heading-port twa)
                       (add-point heading-stbd (- twa)))
               :finally (return added))))))))
 
+(defstruct box north south west east antimed-p)
+
+(defun make-routing-box (start dest)
+  (let* ((lat-min (min (latlng-lat start) (latlng-lat dest)))
+         (lat-max (max (latlng-lat start) (latlng-lat dest)))
+         (lng-min (min (latlng-lng start) (latlng-lng dest)))
+         (lng-max (max (latlng-lng start) (latlng-lng dest)))
+         (antimed-p (antimed-p lng-max lng-min)))
+    (make-box :north (min 90 (+ lat-max 5d0))
+              :south (max -90 (- lat-min 5d0))
+              :west (if antimed-p (+ lng-min 5d0) (- lng-min 5d0))
+              :east (if antimed-p (- lng-max 5d0) (+ lng-max 5d0))
+              :antimed-p antimed-p)))
+
+(defun antimed-p (lon0 lon1)
+  (> (abs (- lon0 lon1)) 180d0))
+
+(defun in-latlng-box (box pos)
+  (and (<= (box-south box) (latlng-lat pos) (box-north box))
+       (if (box-antimed-p box)
+           (or
+            (longitude-between (box-west box) (latlng-lng pos) (box-east box)))
+           (longitude-between (box-east box) (latlng-lng pos) (box-west box)))))
+
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
-         (lat-min (min (latlng-lat start-pos) (latlng-lat destination)))
-         (lng-min (min (latlng-lng start-pos) (latlng-lng destination)))
-         (lat-max (max (latlng-lat start-pos) (latlng-lat destination)))
-         (lng-max (max (latlng-lng start-pos) (latlng-lng destination)))
+         (box (make-routing-box start-pos (routing-dest routing)))
          (distance (course-distance start-pos destination))
          (polars (get-routing-polars routing))
          (race-info (get-routing-race-info routing))
@@ -161,7 +183,6 @@
                 left
                 right
                 cycle)
-    (log2:info "Routing box: ~a ~a / ~a ~a" lat-max lng-max lat-min lng-min)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -243,7 +264,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (let ((new-point-num
-                         (expand-routepoint routing rp hull foils start-pos left right step-size step-time params polars delta-angle)))
+                         (expand-routepoint routing box rp hull foils start-pos left right step-size step-time params polars delta-angle)))
                    (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)

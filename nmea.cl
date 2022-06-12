@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2022-05-31 10:12:21>
+;;; Last Modified <michael 2022-06-11 22:39:43>
 
 (in-package :virtualhelm)
 
@@ -10,6 +10,9 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
+
+(defvar +nmea-connection-lock+
+  (bordeaux-threads:make-lock "nmea-connection-ht"))
 
 (defun nmea-connection (user-id race-id)
   (gethash (cons user-id race-id) *nmea-connection-ht*))
@@ -21,9 +24,6 @@
 
 (defun nmea-connection-cache (user-id race-id)
   (nmea-connection-cache% (nmea-connection user-id race-id)))
-
-(defvar +nmea-connection-lock+
-  (bordeaux-threads:make-lock "nmea-connection-ht"))
 
 (defvar *nmea-connection-ht* (make-hash-table :test 'equalp))
 (defvar *nmea-listener-thread* nil)
@@ -158,7 +158,6 @@
 
 (defun get-nmea-position (user-id race-id)
   (nmea-connection-cache user-id race-id))
-
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

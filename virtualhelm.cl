@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-27 20:07:26>
+;;; Last Modified <michael 2022-06-12 11:42:25>
 
 (in-package :virtualhelm)
 
@@ -58,7 +58,7 @@
     (restart-nmea-listener-loop)
     
     ;; Cleanup old forecasts once (also called periodically from cleanup timer)
-    (cleanup-cycles)
+    (cleanup-cycles :dry-run nil)
 
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Downloading forecasts and starting weather updates")

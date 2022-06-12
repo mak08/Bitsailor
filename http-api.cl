@@ -1,8 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-26 22:12:02>
-
+;;; Last Modified <michael 2022-05-30 09:56:39>
 
 (in-package :virtualhelm)
 
@@ -308,14 +307,6 @@
              (race-id
                (get-routing-request-race-id request))
              (cycle-start-time (cycle-timestamp cycle))
-             (routing
-               (get-routing-presets |presets|))
-             (iparams (interpolation-parameters requested-time
-                                                :method (routing-interpolation routing)
-                                                :merge-start (routing-merge-start routing)
-                                                :merge-window (routing-merge-window routing)
-                                                :cycle cycle
-                                                :resolution resolution))
              (ddx (read-arg |ddx|))
              (ddy (read-arg |ddy|))
              (north (read-arg |north|))
@@ -330,30 +321,21 @@
         (assert (and (plusp ddx)
                      (plusp ddy)
                      (< south north)))
-        (let ((wind-data
-                (loop
-                  :for lat :from north :downto south :by ddy
-                  :collect (loop
-                             :for lon :from west :to east :by ddx
-                             :collect (multiple-value-bind (dir speed)
-                                          (let ((nlon
-                                                  (if (> lon 0) (- lon 360) lon)))
-                                            (interpolated-prediction lat nlon iparams))
-                                        (list (round-to-digits dir 2)
-                                              (round-to-digits speed 2)))))))
-          (let ((body
-                  (with-output-to-string (s)
-                    (json s
-                          (let ((time cycle-start-time))
-                            (make-forecast-data
-                             :basetime (format-datetime nil cycle-start-time)
-                             :time (format-datetime nil requested-time)
-                             :maxoffset 384 ;; (dataset-max-offset dataset)
-                             :cycle (format-timestring nil
-                                                       time
-                                                       :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                             :data wind-data))))))
-            (values body))))
+        (let* ((wind-data
+                 (get-wind-data |presets| cycle resolution requested-time north south west east ddx ddy))
+               (body
+                 (with-output-to-string (s)
+                   (json s
+                         (let ((time cycle-start-time))
+                           (make-forecast-data
+                            :basetime (format-datetime nil cycle-start-time)
+                            :time (format-datetime nil requested-time)
+                            :maxoffset 384 ;; (dataset-max-offset dataset)
+                            :cycle (format-timestring nil
+                                                      time
+                                                      :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
+                            :data wind-data))))))
+          (values body)))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
@@ -362,6 +344,34 @@
            (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
+
+
+(defun get-wind-data (presets cycle resolution time north south west east ddx ddy)
+  (let* ((routing
+           (get-routing-presets presets))
+         (iparams
+           (interpolation-parameters time
+                                     :method (routing-interpolation routing)
+                                     :merge-start (routing-merge-start routing)
+                                     :merge-window (routing-merge-window routing)
+                                     :cycle cycle
+                                     :resolution resolution))
+         (result (make-array (list (1+ (truncate (- north south) ddy))
+                                   (1+ (truncate (- east west) ddx))
+                                   2))))
+    (loop
+      :for lat :from north :downto south :by ddy
+      :for ilat :from 0
+      :do (loop
+            :for lon :from west :to east :by ddx
+            :for ilon :from 0
+            :do (multiple-value-bind (dir speed)
+                    (let ((nlon
+                            (if (> lon 0) (- lon 360) lon)))
+                      (interpolated-prediction lat nlon iparams))
+                  (setf (aref result ilat ilon 0) (round-to-digits dir 2))
+                  (setf (aref result ilat ilon 1) (round-to-digits speed 2)))))
+    result))
 
 (defun |getTWAPath| (handler request response &key |presets| |polars| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
   (handler-case
@@ -538,4 +548,3 @@
 
 ;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-

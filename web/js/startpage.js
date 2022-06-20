@@ -36,6 +36,7 @@ import * as Util from './Util.js';
                                var date = race["start-time"];
                                appendTextCell(row, race.name);
                                appendTextCell(row, race.class);
+                               appendTextCell(row, race.record || 'no');
                                appendTextCell(row, race.gfs025);
                                appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
                                appendLinkCell(row, race.id, "/router?race=" + race.id);
@@ -44,6 +45,7 @@ import * as Util from './Util.js';
                                var date = new Date(race["start-time"]).toISOString();
                                appendTextCell(row, race.name);
                                appendTextCell(row, race.class);
+                               appendTextCell(row, race.record || 'no');
                                appendTextCell(row, date.substring(0, 10) + ' ' + date.substring(11, 16));
                                appendLinkCell(row, race.id, "/router?race=" + race.id);
                            }

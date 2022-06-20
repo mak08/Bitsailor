@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-05-30 09:56:39>
+;;; Last Modified <michael 2022-06-20 23:19:28>
 
 (in-package :virtualhelm)
 
@@ -431,7 +431,7 @@
   ;;)
   )
 
-(defstruct raceinfo type name id gfs025 class start-time closing-time start-pos finish-pos closed)
+(defstruct raceinfo type name id gfs025 record class start-time closing-time start-pos finish-pos closed)
 
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
@@ -456,6 +456,10 @@
                 (false "no")
                 (true "yes")
                 ((nil) "(no)"))
+      :record  (ecase (joref race "record")
+                 (false "no")
+                 (true "yes")
+                 ((nil) "no"))
       :class (joref (joref race "polar") "classBoat")
       :start-time (joref (joref race "start") "iso")
       :start-pos (make-latlng
@@ -469,6 +473,7 @@
         :type "vr"
         :name (joref race "name")
         :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
+        :record (when (string= (joref (joref race "race") "type") "record") "yes")
         :class (joref boat "label")
         :start-time (joref start "date")
         :start-pos  (make-latlng

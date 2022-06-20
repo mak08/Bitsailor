@@ -291,6 +291,13 @@ function onSetPosition (event) {
 }
 
 function onSetDuration (event) {
+    try {
+        var storage = window.localStorage;
+        var query = new URL(document.URL).searchParams;
+        var raceId = query.get('race');
+        storage.setItem(`${raceId}.duration`, event.target.value);
+    } catch (e) {
+    }
 }
 
 function parsePosition (string) {

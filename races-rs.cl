@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2021-07-28 17:48:17>
+;;; Last Modified <michael 2022-06-24 21:52:56>
 
 (in-package :virtualhelm)
 
@@ -10,10 +10,15 @@
     :for race-def :across (joref json-object "results")
     :do
        (let* ((race-id (joref race-def "objectId"))
-              (race-name (joref race-def "name")))
-         (log2:info "Loading race ~a ~a" race-id race-name)
-         (setf (gethash race-id *races-ht*)
-               (make-race-info-rs :data race-def)))))
+              (race-name (joref race-def "name"))
+              (norouter-p (eq (joref race-def "norouter") 'true)))
+         (cond
+           (norouter-p
+            (log2:info "Skipping norouter race ~a ~a" race-id race-name))
+           (t
+            (log2:info "Loading race ~a ~a" race-id race-name)
+            (setf (gethash race-id *races-ht*)
+                  (make-race-info-rs :data race-def)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

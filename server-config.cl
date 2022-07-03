@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-06-12 13:04:20>
+;;; Last Modified <michael 2022-07-03 21:15:01>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(setf (log2:log-level "virtualhelm") log2:+info+)
+(setf (log2:log-level "bitsailor") log2:+info+)
 (setf (log2:log-level "cl-weather") log2:+info+)
 (setf (log2:log-level "cl-map") log2:+info+)
 (setf (log2:log-level "polarcl") log2:+info+)
@@ -16,7 +16,7 @@
 (setf (log2:log-level "mbedtls:refresh-buffer") log2:+warning+)
 (setf (log2:log-level "polarcl:server-loop-ondemand") log2:+trace+)
 (setf (log2:log-level "polarcl:handler-thread") log2:+trace+)
-(setf (log2:log-level "virtualhelm:log-stats") log2:+trace+)
+(setf (log2:log-level "bitsailor:log-stats") log2:+trace+)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -------
@@ -40,10 +40,10 @@
 ;;; Users
 ;;; -----
 
-(user :username "admin" :realm "virtualhelm" :password "_admin_01")
+(user :username "admin" :realm "bitsailor" :password "_admin_01")
 (user :username "admin" :realm "admin" :password "_admin_01")
-(user :username "user01" :realm "virtualhelm" :password "_user_01")
-(user :username "guest" :realm "virtualhelm" :password "_guest_01")
+(user :username "user01" :realm "bitsailor" :password "_user_01")
+(user :username "guest" :realm "bitsailor" :password "_guest_01")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----------
@@ -69,22 +69,22 @@
 
 (handle
  :request (:prefix "/function")
- :handler (:query-function t :authentication nil :realm "virtualhelm"))
+ :handler (:query-function t :authentication nil :realm "bitsailor"))
 
-(register-function "vh.signUp" :authorizer (constantly t))
-(register-function "vh.getSession" :authorizer #'vh-function-authorizer)
-(register-function "vh.removeSession" :authorizer #'vh-function-authorizer)
-(register-function "vh.getRaceInfo" :authorizer #'vh-function-authorizer)
-(register-function "vh.getWind" :authorizer #'vh-function-authorizer)
-(register-function "vh.getTWAPath" :authorizer #'vh-function-authorizer)
-(register-function "vh.setParameter" :authorizer #'vh-function-authorizer)
-(register-function "vh.getRaceList" :authorizer (constantly t))
-(register-function "vh.resetNMEAConnection" :authorizer #'vh-function-authorizer)
-(register-function "vh.getBoatPosition" :authorizer #'vh-function-authorizer)
-(register-function "vh.setRoute" :authorizer #'vh-function-authorizer)
-(register-function "vh.getRoute" :authorizer #'vh-function-authorizer)
-(register-function "vh.getRouteRS" :authorizer #'vh-function-authorizer)
-(register-function "vh.checkWindow" :authorizer #'vh-function-authorizer)
+(register-function "router.signUp" :authorizer (constantly t))
+(register-function "router.getSession" :authorizer #'vh-function-authorizer)
+(register-function "router.removeSession" :authorizer #'vh-function-authorizer)
+(register-function "router.getRaceInfo" :authorizer #'vh-function-authorizer)
+(register-function "router.getWind" :authorizer #'vh-function-authorizer)
+(register-function "router.getTWAPath" :authorizer #'vh-function-authorizer)
+(register-function "router.setParameter" :authorizer #'vh-function-authorizer)
+(register-function "router.getRaceList" :authorizer (constantly t))
+(register-function "router.resetNMEAConnection" :authorizer #'vh-function-authorizer)
+(register-function "router.getBoatPosition" :authorizer #'vh-function-authorizer)
+(register-function "router.setRoute" :authorizer #'vh-function-authorizer)
+(register-function "router.getRoute" :authorizer #'vh-function-authorizer)
+(register-function "router.getRouteRS" :authorizer #'vh-function-authorizer)
+(register-function "router.checkWindow" :authorizer #'vh-function-authorizer)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
@@ -107,7 +107,7 @@
  :request (:method :get
            :prefix "/weather")
  :handler (:directory "/home/michael/Wetter"
-           :realm "virtualhelm"
+           :realm "bitsailor"
            :authorizer #'vh-authorizer))
 #|
 (handle
@@ -119,7 +119,7 @@
 (handle
  :request (:prefix "/archive")
  :handler (:static "/home/michael/Wetter/archive/"
-           :realm "virtualhelm"
+           :realm "bitsailor"
            :authorizer #'vh-authorizer))
 |#
 
@@ -161,7 +161,7 @@
  :request (:method :get
            :path "/router")
  :handler (:dynamic 'router
-           :realm "virtualhelm"
+           :realm "bitsailor"
            :authorizer #'vh-authorizer))
 (handle 
  :request (:method :get

@@ -391,7 +391,7 @@ function onManualCycle (event) {
     }
 
     Util.doGET(
-        "/function/vh.setParameter",
+        "/function/router.setParameter",
         function (request) {
             console.log(request.responseText);
             redrawWindByOffset(cycle, 0);
@@ -499,7 +499,7 @@ function getRoute () {
     query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 
     $.ajax({
-        url: "/function/vh.getRoute" + query,
+        url: "/function/router.getRoute" + query,
         dataType: 'json'
     }).done( function (data) {
         // $('div, button, input').css('cursor', 'auto');
@@ -900,7 +900,7 @@ function getTWAPath (event) {
         var cycle = isochrone?isochrone.time:availableForecastCycle();
 
         $.ajax({
-            url: `/function/vh.getTWAPath?presets=${settings.presets}&polars=${settings.polars}&resolution=${settings.resolution}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
+            url: `/function/router.getTWAPath?presets=${settings.presets}&polars=${settings.polars}&resolution=${settings.resolution}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);
@@ -935,7 +935,7 @@ function getWind (cycle, time) {
     var ddy = ((bounds.north-bounds.south)/ySteps).toFixed(8);
     // $('div, button, input').css('cursor', 'wait');
     $.ajax({
-        url: "/function/vh.getWind"
+        url: "/function/router.getWind"
             + `?cycle=${cycle}&time=${time}`
             + `&presets=${settings.presets}`
             + `&resolution=${settings.resolution}`

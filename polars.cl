@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2015
 ;;; Last Modified <michael 2022-03-12 20:24:14>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 (defstruct cpolars id label name maxspeed twa vmg speed)
 (defstruct polars id label name maxspeed tws twa sails)

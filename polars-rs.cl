@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2015
 ;;; Last Modified <michael 2022-02-20 22:41:16>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON

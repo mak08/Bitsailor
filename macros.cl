@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2017
 ;;; Last Modified <michael 2017-09-13 00:47:56>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 (defmacro with-bindings (bindings &body forms)
   (let* ((bindings (reverse bindings))

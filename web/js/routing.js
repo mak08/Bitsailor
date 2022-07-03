@@ -52,7 +52,7 @@ import * as Util from './Util.js';
 
         for (var i = 0; i<threads; i++ ) {
             console.log('Started #' + i); 
-            Util.doGET("/function/vh.getRouteRS",
+            Util.doGET("/function/router.getRouteRS",
                        function (request) {
                            document.getElementById("div_routing").style.cursor = "default";
                            document.getElementById("bt_submit").style.cursor = "default";

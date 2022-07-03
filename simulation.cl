@@ -7,7 +7,7 @@
 ;; -- atan/acos may return #C() => see CLTL
 ;; -- use CIS ?
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2021
 ;;; Last Modified <michael 2021-09-30 23:45:25>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 (defun store-race-data-vr (json-array)
   (loop

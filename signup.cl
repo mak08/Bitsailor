@@ -4,7 +4,7 @@
 ;;; Last Modified <michael 2021-05-29 13:43:19>
 
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 (defvar *mailhost* "bitsailor.net")
 (defvar *mailuser* "harbormaster")

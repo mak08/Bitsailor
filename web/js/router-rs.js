@@ -10,7 +10,7 @@ import * as Router from './router.js';
     
     function getRaceInfo () {
         Util.doGET(
-            "/function/vh.getRaceInfo",
+            "/function/router.getRaceInfo",
             function(xhr) {
                 if (xhr.responseText) {
                     var raceinfo = JSON.parse(xhr.responseText);
@@ -157,7 +157,7 @@ import * as Router from './router.js';
     function getBoatPosition (event) {
         var port= document.getElementById("tb_nmeaport").value
         Util.doGET(
-            "/function/vh.getBoatPosition?port=" + port,
+            "/function/router.getBoatPosition?port=" + port,
             function (xhr) {
                 console.log(xhr);
                 var data = xhr.responseText && JSON.parse(xhr.responseText);
@@ -189,7 +189,7 @@ import * as Router from './router.js';
         storage.setItem(`${rsData.objectId}.nmea_port`, port);
         
         $.ajax({
-            url: "/function/vh.resetNMEAConnection?port=" + port,
+            url: "/function/router.resetNMEAConnection?port=" + port,
             dataType: 'json'
         }).done( function (data) {
             console.log(data);

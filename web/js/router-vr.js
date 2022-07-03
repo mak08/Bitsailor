@@ -10,7 +10,7 @@ import * as Router from './router.js';
     
     function getRaceInfo () {
         Util.doGET(
-            "/function/vh.getRaceInfo",
+            "/function/router.getRaceInfo",
             function(xhr) {
                 if (xhr.responseText) {
                     var raceinfo = JSON.parse(xhr.responseText);

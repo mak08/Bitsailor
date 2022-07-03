@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2015
 ;;; Last Modified <michael 2022-06-20 23:19:28>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; HTTP API
@@ -76,7 +76,7 @@
          (setf (http-body response)
                (format nil "This link is invalid or has expired. Please re-register your e-mail address.")))
         (t
-         (sql:?delete 'virtualhelm.user_prov
+         (sql:?delete 'bitsailor.user_prov
                       :where (sql:?= (sql:?upper 'email)
                                      (string-upcase (email provisional))))
          (add-user (email provisional)

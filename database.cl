@@ -3,7 +3,7 @@
 ;;; Author         Michael Kappert 2018
 ;;; Last Modified <michael 2022-03-24 01:44:13>
 
-(in-package :virtualhelm)
+(in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Database
@@ -47,7 +47,7 @@
 ;;; Data model
 ;;;
 
-(sql:defschema "virtualhelm"
+(sql:defschema "bitsailor"
   (:table "user"
    :columns (("email" :datatype +mediumstring+)
              ("boatname" :datatype +mediumstring+)
@@ -81,19 +81,19 @@
 ;;; Create datatypes from schema
 
 (eval-when (:load-toplevel)
-  (edm:use-schema "virtualhelm"))
+  (edm:use-schema "bitsailor"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Functions
 (defun get-user-by-column (column value &key (case-sensitive t))
-  (get-by-column 'virtualhelm.user column value :case-sensitive case-sensitive))
+  (get-by-column 'bitsailor.user column value :case-sensitive case-sensitive))
 
 (defun get-user-prov-by-column (column value &key (case-sensitive t))
-  (get-by-column 'virtualhelm.user_prov column value :case-sensitive case-sensitive))
+  (get-by-column 'bitsailor.user_prov column value :case-sensitive case-sensitive))
 
 (defun get-users ()
   (sql:tuples
-     (sql:?select '* :from 'virtualhelm.user :into 'virtualhelm.user)))
+     (sql:?select '* :from 'bitsailor.user :into 'bitsailor.user)))
 
 (defun get-user-by-secret (secret)
   (get-user-by-column 'secret secret))
@@ -129,7 +129,7 @@
 
 
 (defun add-user-provisional (email pwhash boatname status activation-secret)
-  (sql:?upsert (make-instance 'virtualhelm.user_prov
+  (sql:?upsert (make-instance 'bitsailor.user_prov
                               :email email
                               :pwhash (string-upcase pwhash)
                               :boatname boatname
@@ -137,7 +137,7 @@
                               :secret activation-secret)))
 
 (defun add-user (email pwhash boatname status)
-  (sql:?upsert (make-instance 'virtualhelm.user
+  (sql:?upsert (make-instance 'bitsailor.user
                               :email email
                               :pwhash (string-upcase pwhash)
                               :boatname boatname
@@ -194,17 +194,17 @@
 (defun deploy (&key (force nil))
   (log2:info "Deploying to ~a" *db*)
   (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
-     (sql:create-schema (sql:get-schema-by-name "virtualhelm")))
+     (sql:create-schema (sql:get-schema-by-name "bitsailor")))
    (values t))
 
 (defun drop (&key (force nil))
    (sqlite-client:with-current-connection (c *db* :if-does-not-exist :create)
-     (sql:%drop-schema "virtualhelm")))
+     (sql:%drop-schema "bitsailor")))
 
 (defun clear ()
   (sqlite-client:with-current-connection (c *db*)
     (sql:sql-exec c "PRAGMA foreign_keys = OFF;")
-    (sql::clear-schema (sql:get-schema-by-name "virtualhelm"))
+    (sql::clear-schema (sql:get-schema-by-name "bitsailor"))
     (sql:sql-exec c "PRAGMA foreign_keys = ON;")))
 
 

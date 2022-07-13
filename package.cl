@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-03 20:39:56>
+;;; Last Modified <michael 2022-07-13 21:34:02>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -47,8 +47,8 @@
    "getBoatPosition"
    "getTWAPath"
    "checkWindow"
-   ;; VH backend
-   "RUN-VIRTUAL-HELM"
+   ;; Main 
+   "START-ROUTER"
    ;; Constraints
    "ADD-CONSTRAINT"
    "LIMIT-SOUTH"

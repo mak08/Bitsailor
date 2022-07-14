@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-03 20:49:38>
+;;; Last Modified <michael 2022-07-14 23:24:53>
 
 (in-package :bitsailor)
 
@@ -18,9 +18,9 @@
 (defvar *run* nil)
 
 (defun start-router (&key
-                           (rcfile ".vhrc")
-                           (resolution  '("1p00" "0p25"))
-                           (start-sentinel t))
+                       (rcfile ".bitsailor")
+                       (resolution  '("1p00" "0p25"))
+                       (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((rcfile
           (merge-pathnames (make-pathname :name rcfile)

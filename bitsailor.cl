@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-14 23:24:53>
+;;; Last Modified <michael 2022-07-14 23:39:13>
 
 (in-package :bitsailor)
 
@@ -22,15 +22,20 @@
                        (resolution  '("1p00" "0p25"))
                        (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
-  (let ((rcfile
+  (let ((local-rcfile
+          (make-pathname :name rcfile))
+        (home-rcfile
           (merge-pathnames (make-pathname :name rcfile)
                            (user-homedir-pathname))))
     (cond
-      ((probe-file rcfile)
-       (log2:info "Loading ~a " rcfile)        
-       (load rcfile :verbose t :print t))
+      ((probe-file local-rcfile)
+       (log2:info "Loading ~a " local-rcfile)        
+       (load local-rcfile :verbose t :print t))
+      ((probe-file home-rcfile)
+       (log2:info "Loading ~a " home-rcfile)        
+       (load home-rcfile :verbose t :print t))
       (t
-       (log2:warning "~a does not exist" rcfile)))
+       (log2:warning "FOund neither ~a nor ~a" local-rcfile home-rcfile)))
 
     (multiple-value-bind
           (success error)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-13 21:34:02>
+;;; Last Modified <michael 2022-07-18 23:02:44>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -19,6 +19,7 @@
         #-ccl"BABEL")
   (:export
    "*DB*"
+   "*RCFILE*"
    "*SERVER-CONFIG*"
    "*POLARS-DIR*"
    "*POLARS-DIR-RS*"

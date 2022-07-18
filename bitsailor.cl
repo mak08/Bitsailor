@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-14 23:39:13>
+;;; Last Modified <michael 2022-07-18 23:02:23>
 
 (in-package :bitsailor)
 
@@ -12,13 +12,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Main function
 
+(defvar *rcfile*  ".bitsailor")
+
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
 (defvar *run* nil)
 
 (defun start-router (&key
-                       (rcfile ".bitsailor")
+                       (rcfile *rcfile*)
                        (resolution  '("1p00" "0p25"))
                        (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-06-12 12:03:06>
+;;; Last Modified <michael 2022-07-12 21:23:41>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -126,9 +126,13 @@
                                                                    heading)))
                                    (when t ;; (in-latlng-box box new-pos)
                                      (let* ((origin-distance (course-distance start-pos new-pos))
+                                            (dest-distance (course-distance new-pos (routing-dest routing)))
                                             (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
-                                       (when (heading-between left right origin-angle)
-                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left step-time heading speed sail reason wind-dir wind-speed)))))))))
+                                       (when (and
+                                              (heading-between left right origin-angle)
+                                              #-()(< (+ origin-distance dest-distance)
+                                                     (* 1.25d0 (routing-dist routing)))) 
+                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-time heading speed sail reason wind-dir wind-speed)))))))))
                       (add-point heading-port twa)
                       (add-point heading-stbd (- twa)))
               :finally (return added))))))))
@@ -488,6 +492,20 @@
                     v)
                  (push (routepoint-position p) v))))
 
+(declaim (inline best-point))
+(defun best-point (isochrone destination)
+  (loop
+     :with min-dtf = nil :and min-point = nil
+     :for point :across isochrone
+     :do (progn
+           ;; (setf (routepoint-destination-distance point)
+           ;;      (course-distance (routepoint-position point) destination))
+           (when (or (null min-point)
+                     (< (routepoint-destination-distance point) min-dtf))
+             (setf min-dtf (routepoint-destination-distance point)
+                   min-point point)))
+     :finally (return min-point)))
+
 (defun construct-route (isochrone destination)
   (let  ((best (best-point isochrone destination)))
     (do ((route nil)
@@ -505,18 +523,6 @@
                 (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
         (push (create-trackpoint cur-point (or successor cur-point)) route)))))
 
-(defun best-point (isochrone destination)
-  (loop
-     :with min-dtf = nil :and min-point = nil
-     :for point :across isochrone
-     :do (progn
-           (setf (routepoint-destination-distance point)
-                 (course-distance (routepoint-position point) destination))
-           (when (or (null min-point)
-                     (< (routepoint-destination-distance point) min-dtf))
-             (setf min-dtf (routepoint-destination-distance point)
-                   min-point point)))
-     :finally (return min-point)))
 
 (defun get-statistics (track elapsed stepnum pointnum)
   (let ((sails nil)

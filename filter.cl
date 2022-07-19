@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-01-14 20:40:37>
+;;; Last Modified <michael 2022-07-10 21:25:47>
 
 (in-package :bitsailor)
 
@@ -15,6 +15,7 @@
                               (origin-angle double-float)
                               (delta-angle double-float)
                               (left double-float)
+                              (destination-distance double-float)
                               step-time
                               heading
                               speed
@@ -45,7 +46,7 @@
                                  position
                                  step-time
                                  heading
-                                 nil
+                                 destination-distance
                                  speed
                                  sail
                                  reason

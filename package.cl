@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-18 23:02:44>
+;;; Last Modified <michael 2022-07-19 23:03:08>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -18,19 +18,19 @@
         "RDPARSE"
         #-ccl"BABEL")
   (:export
-   "*DB*"
+   ;; Parameters & configuration
    "*RCFILE*"
    "*SERVER-CONFIG*"
-   "*POLARS-DIR*"
-   "*POLARS-DIR-RS*"
-   "*TWA-STEPS*"
-   "*RACES-DIR*"
-   "*RACES-DIR-RS*"
-   "*TRACKS*"
-   "*RS-MAX-HOURS*"
-   "*RS-GFS-RESOLUTION*"
    "*API-KEY*"
+   "*DB*"
    "*USE-BITMAP*"
+   "*RESOLUTIONS*"
+   "*POLARS-DIR*"
+   "*RACES-DIR*"
+   "*TWA-STEPS*"
+   "*RS-MAX-HOURS*"
+   "*VR-MAX-HOURS*"
+   "*TRACKS*"
    ;; HTTP API
    "GET-PAGE"
    "ACTIVATE-ACCOUNT"

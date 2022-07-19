@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-26 22:11:16>
+;;; Last Modified <michael 2022-07-10 20:44:24>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -33,7 +33,14 @@
   options
   starttime
   start
-  dest)
+  dest
+  %dist)
+
+(defmethod routing-dist (routing)
+  (or (routing-%dist routing)
+      (setf  (routing-%dist routing)
+             (course-distance (routing-start routing)
+                              (routing-dest routing)))))
 
 (defmethod print-object ((thing routing) stream)
   (format stream "{D=~a T=~a C=~a O=~a}"

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-18 23:02:23>
+;;; Last Modified <michael 2022-07-19 22:56:06>
 
 (in-package :bitsailor)
 
@@ -9,19 +9,39 @@
 
 (log2:info "Heap space: ~a" (sb-ext:dynamic-space-size))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Main function
 
-(defvar *rcfile*  ".bitsailor")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Main configuration files
+;;; - rcfile
+;;; - server-config
+
+(defvar *rcfile*  "bitsailor.conf")
 
 (defvar *server-config* 
   (merge-pathnames (make-pathname :name "server-config" :type "cl")
                    *source-root*))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Stopping the router main function
+
 (defvar *run* nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Router main function
+;;;
+;;; 1 - Load *rcfile*, applying customizations
+;;; 2 - Create or open user database
+;;; 3 - Load map
+;;; 4 - Load polars and races
+;;; 5 - Start timer loop
+;;; 6 - Start NMEA listener
+;;; 7 - Cleanup old weather data
+;;; 8 - Start weather updates
+;;; 9 - Configure and start web server from *server-config*   
 
 (defun start-router (&key
                        (rcfile *rcfile*)
-                       (resolution  '("1p00" "0p25"))
+                       (resolution *resolutions*)
                        (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((local-rcfile
@@ -37,7 +57,7 @@
        (log2:info "Loading ~a " home-rcfile)        
        (load home-rcfile :verbose t :print t))
       (t
-       (log2:warning "FOund neither ~a nor ~a" local-rcfile home-rcfile)))
+       (log2:warning "Found neither ~a nor ~a" local-rcfile home-rcfile)))
 
     (multiple-value-bind
           (success error)
@@ -97,11 +117,6 @@
                (log2:warning "Exiting.")))
         (setf *run* t)
         (sentinel)))))
-
-(defvar *races-dir*
-  (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")
-                   *source-root*)
-  "A string designating the directory containing race definitions")
 
 (defvar *races-ht* (make-hash-table :test #'equalp))
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-03-12 20:24:14>
+;;; Last Modified <michael 2022-07-19 22:55:49>
 
 (in-package :bitsailor)
 
@@ -16,10 +16,6 @@
 (defmethod print-object ((thing polars) stream)
   (format stream "[Polars ~a]" (polars-name thing)))
 
-(defvar *polars-dir*
-  (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")
-                   *source-root*)
-  "A string designating the directory containing polar files")
 
 (defvar +jib+ 0)
 (defvar +spi+ 1)
@@ -33,11 +29,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars preprocessing: Precompute best sail & speed for each wind speed and TWA
-
-(defparameter *twa-steps* nil
-  "Set this to the desired TWA step width (eg. 5d0).
-   NIL (default) mean use only points provided in polar file.
-   Clear *combined-polars-ht* to force recomputation of cpolars.")
 
 (defvar *combined-polars-ht* (make-hash-table :test 'equal))
 

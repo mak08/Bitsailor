@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2022-07-19 23:06:06>
+;;; Last Modified <michael 2022-07-20 21:43:39>
 
 
 (in-package :bitsailor)
@@ -34,6 +34,10 @@
 (defvar *rs-max-hours* (* 24 10))
 (defvar *vr-max-hours* (* 24 15))
 (defvar *resolutions* '("1p00" "0p25"))
+
+(defvar *web-root-directory*
+  (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
+                                    '("web"))))
 
 (defvar *polars-dir*
   (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")

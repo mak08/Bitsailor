@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-06-20 23:19:28>
+;;; Last Modified <michael 2022-07-20 21:43:29>
 
 (in-package :bitsailor)
 
@@ -17,8 +17,7 @@
              (app (get-request-app request))
              (race-id (get-routing-request-race-id request))
              (path (merge-pathnames (make-pathname :name app :type "html")
-                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                      '("web"))))))
+                                    *web-root-directory*)))
         (log2:info "race-id: ~a" race-id)
         (setf (http-header response :|Content-Location|)
               (path request))
@@ -33,8 +32,7 @@
   (handler-case 
       (let* ((path
                (merge-pathnames (make-pathname :name "startpage" :type "html")
-                                (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                  '("web"))))))
+                                *web-root-directory*)))
         (load-file path response))
     (error (e)
       (log2:error "~a" e)
@@ -53,8 +51,7 @@
                  (race-info-rs "router-rs")
                  (race-info-vr "router-vr")))
              (path (merge-pathnames (make-pathname :name page-base-name :type "html")
-                                    (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
-                                                                      '("web")))))
+                                    *web-root-directory*))
              (query (parameters request)))
         (log2:info "race-id: ~a" race-id)
         (log2:info "type: ~a" (type-of (race-info race-id)))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-19 23:03:08>
+;;; Last Modified <michael 2022-07-20 21:44:03>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -25,6 +25,7 @@
    "*DB*"
    "*USE-BITMAP*"
    "*RESOLUTIONS*"
+   "*WEB-ROOT-DIRECTORY*"
    "*POLARS-DIR*"
    "*RACES-DIR*"
    "*TWA-STEPS*"

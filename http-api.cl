@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-07-20 21:43:29>
+;;; Last Modified <michael 2022-08-16 23:18:35>
 
 (in-package :bitsailor)
 
@@ -205,6 +205,25 @@
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
+
+(defun vh:|getRouteRS| (handler request response &key
+                                                (|polarsID| "aA32bToWbF")
+                                                |latStart|
+                                                |lonStart|
+                                                |latDest|
+                                                |lonDest|
+                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                                (|duration| (* 4 3600))
+                                                (|resolution| "1p00"))
+  (|getRouteRS| handler request response
+                      :|polarsID| |polarsID|
+                      :|latStart| |latStart|
+                      :|lonStart| |lonStart|
+                      :|latDest| |latDest|
+                      :|lonDest| |lonDest|
+                      :|cycleTS| |cycleTS|
+                      :|duration| |duration|
+                      :|resolution| |resolution|))
 
 (defun |getRouteRS| (handler request response &key
                                                 (|polarsID| "aA32bToWbF")

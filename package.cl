@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-20 21:44:03>
+;;; Last Modified <michael 2022-08-16 22:58:56>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -59,6 +59,13 @@
    "LIMIT-EAST"
    "EASTBOUND-SOUTH-GATE"
    "EASTBOUND-NORTH-GATE"))
+
+(defpackage VIRTUALHELM
+  (:nicknames "VH")
+  (:use "COMMON-LISP")
+  (:export
+   ;; Parameters & configuration
+   "getRouteRS"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

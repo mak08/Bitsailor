@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-08-16 23:18:35>
+;;; Last Modified <michael 2022-09-10 17:30:44>
 
 (in-package :bitsailor)
 
@@ -305,8 +305,6 @@
 ;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
 (defun |getWind| (handler request response &key (|presets|) (|cycle|) (|time|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
   (declare (ignore |ySteps| |xSteps|))
-  ;; (sqlite-client:with-current-connection (c *db*)
-  
   (log2:info "Cycle:~a Time:~a Res:~a N:~a S:~a W:~a E:~a" |cycle| |time| |resolution| |north| |south| |west| |east|)
   (assert (and |cycle| |time|))
   (handler-case
@@ -433,8 +431,6 @@
 ;;; Race list  & race info
 
 (defun |getRaceInfo| (handler request response)
-  ;; (sqlite-client:with-current-connection (c *db*)
-
     (let* ((user-id
              (http-authenticated-user handler request))
            (race-id
@@ -443,9 +439,7 @@
              (race-info race-id)))
       (values
        (with-output-to-string (s)
-         (json s race-info))))
-  ;;)
-  )
+         (json s race-info)))))
 
 (defstruct raceinfo type name id gfs025 record class start-time closing-time start-pos finish-pos closed)
 

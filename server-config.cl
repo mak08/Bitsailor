@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-08-16 23:19:33>
+;;; Last Modified <michael 2022-08-24 20:41:24>
 
 (in-package :bitsailor)
 
@@ -189,7 +189,7 @@
  :request (:method :get
            :path "/quit")
  :handler (:dynamic  (lambda (server handler request response)
-                       (declare (ignore response))
+                       (declare (ignore server response))
                        (cond
                          ((string= (http-authenticated-user handler request)
                                    "admin")

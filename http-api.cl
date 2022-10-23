@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-10-23 11:53:28>
+;;; Last Modified <michael 2022-10-23 13:46:52>
 
 (in-package :bitsailor)
 
@@ -250,20 +250,17 @@
                         (make-cycle :timestamp (parse-datetime |cycleTS|))
                         |cycleTS|))
              (routing
-               (make-routing :interpolation :bilinear
-                             :resolution |resolution|
-                             :polars |polarsID|
-                             :options '("realsail")
-                             :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                             :stepmax (min (* *rs-max-hours* 3600) ;; 2d
-                                           (read-arg |duration|))
-                             :cycle cycle
-                             :merge-start 6d0
-                             :merge-window 0d0
-                             :start (make-latlng :lat (coerce (read-arg |latStart|) 'double-float)
-                                                 :lng (coerce (read-arg |lonStart|) 'double-float))
-                             :dest  (make-latlng :lat (coerce (read-arg |latDest|) 'double-float)
-                                                 :lng (coerce (read-arg |lonDest|) 'double-float))))
+               (get-routing-presets "RS"
+                                    :options '("realsail")
+                                    :resolution |resolution|
+                                    :polars |polarsID|
+                                    :stepmax (min (* *rs-max-hours* 3600) ;; 2d
+                                                  (read-arg |duration|))
+                                    :cycle cycle
+                                    :slat (read-arg |latStart| 'double-float)
+                                    :slon (read-arg |lonStart| 'double-float)
+                                    :dlat (read-arg |latDest| 'double-float)
+                                    :dlon (read-arg |lonDest| 'double-float)))
              (routeinfo
                (get-route routing)))
         (log2:info "User:~a Race:(RS) Status ~a ~a"

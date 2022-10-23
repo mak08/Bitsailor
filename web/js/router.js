@@ -6,7 +6,8 @@ import * as Util from './Util.js';
 var settings = {
     "resolution": "1p00",
     "presets": "VR",
-    "polars": "1"
+    "options": ["hull", "winch", "foil", "heavy", "light", "reach"],
+    "polarsId": "1"
 };
 
 var googleMap = null;
@@ -472,6 +473,19 @@ function setResolution (resolution) {
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
 
+function makeQuery (object) {
+    var s = "";
+    for (const m in object) {
+        if (s == "") {
+            s = "?";
+        } else {
+            s += "&";
+        }
+        s += `${ m }=${ object[m]}`;
+    }
+    return s;
+}
+
 function getRoute () {
     var bt_execute=$("#bt_getroute")[0];
     bt_execute.disabled = true;
@@ -491,8 +505,7 @@ function getRoute () {
     var startPos = startMarker.getPosition();
     var destPos = destinationMarker.getPosition();
     
-    var query = `?presets=${settings.presets}`;
-    query += `&polarsId=${settings.polars}`;
+    var query = makeQuery(settings);
     query += `&resolution=${settings.resolution}`;
     query += `&duration=${duration * 3600}`;
     query += `&startTime=${startTime}`;
@@ -586,15 +599,20 @@ function displayRouting (data) {
     routeTracks[routeTracks.length] = bestTrack;
     
     for ( var i = 0; i < best.length; i++ ) {
-        var trackMarker = new google.maps.Marker({
-            position: best[i].position,
-            map: googleMap,
-            icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
-            draggable: false
-        });
-        addMarkerListener(trackMarker);
-        addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
-        trackMarkers[i] = trackMarker;
+        if ( i==0
+             || best[i].penalty
+             || best[i].twa != best[i-1].twa
+             || best[i].sail != best[i-1].sail ) {
+            var trackMarker = new google.maps.Marker({
+                position: best[i].position,
+                map: googleMap,
+                icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
+                draggable: false
+            });
+            addMarkerListener(trackMarker);
+            addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
+            trackMarkers.unshift(trackMarker);
+        }
     }
 
     
@@ -632,7 +650,7 @@ function loadPolars (id) {
                    var data = JSON.parse(request.responseText);
                    if (data) {
                        console.log('Loaded ' + id);
-                       settings.polars = id;
+                       settings.polarsId = id;
                        polars = data;
                    } else {
                        alert("No leg info for race");
@@ -898,9 +916,10 @@ function getTWAPath (event) {
         var lng = event.latLng.lng();
         var isochrone = getIsochroneByTime(time);
         var cycle = isochrone?isochrone.time:availableForecastCycle();
+        var query = makeQuery(settings);
 
         $.ajax({
-            url: `/function/router.getTWAPath?presets=${settings.presets}&polars=${settings.polars}&resolution=${settings.resolution}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
+            url: `/function/router.getTWAPath${query}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);

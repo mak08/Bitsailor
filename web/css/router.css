@@ -55,11 +55,11 @@ button:active {
 	grid-template-areas: 'header menu'
 							 'controls main'
 							 'footer-left footer';
-	grid-template-rows: 40px 1fr 30px;
+	grid-template-rows: 48px 1fr 30px;
 	grid-template-columns: 45vh 1fr;
 	grid-gap: 1px;
 	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
-	height: calc(100vh - 12px);
+	height: calc(100vh - 8px);
 	background-color: white;
 	padding: 2px;
 }
@@ -171,6 +171,12 @@ button:disabled {
 
 label {
 	font-size: 90%;
+}
+
+.lbl_option {
+	display:inline-block;
+	text-align: right;
+	width: 40px;
 }
 
 input[type=checkbox] {

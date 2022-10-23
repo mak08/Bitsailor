@@ -60,6 +60,10 @@
 			  <div class="content-pane"  style="font-size:90%">
 				<h3>News</h3>
 				<ul>
+				  <li><b>2022-10-23</b><br>
+					Added option selection (VR version)<br>
+					Improved route display
+				  </li>
 				  <li><b>2022-06-12</b><br>
 					Store current forecasts by resolution, date and cycle<br>
 					Store archived forecasts by year, month and day.
@@ -127,11 +131,11 @@
 		  <div class="tab2">
 
 			<div class="content-pane"  style="font-size:90%">
-			  <h4>Basic usage</h4>
+			  <h3>Basic usage</h3>
 			  Select the desired race from the Realsail or VR race lists.
 	  		  <ol>
 				<li>
-				  Drag&amp;drop the <img src="img/start_32x20.png">start and <img src="img/finish_32x20.png">finish flags or use the context menu to position them.
+				  Drag&amp;drop the <img src="img/start_32x20.png">start and <img src="img/finish_32x20.png">finish flags or right-click on the map to position them.
 				</li>
 				<li>
 				  Select the maximum duration.
@@ -147,7 +151,17 @@
 				  </p>
 				</li>
 			  </ol>
-			  <h4>NMEA  (Realsail only)</h4>
+			  <h3>Options (VR only)</h3>
+			  <p>
+				Select the equipped options of your boat.<br>
+				<b><em>Winch</em></b> currently cannot be de-selected. The router uses a hard-coded default penalty.
+			  </p>
+			  <p style="font-size:80%">
+				It is planned to add variable penalties. Unsuitable penalty values may affect the quality of the route however.
+			  </p>
+			  
+			  
+			  <h3>NMEA  (Realsail only)</h3>
 			  <ol>
 				<li>
 				  Enter your NMEA port in the input field and press 'Reconnect'.
@@ -163,7 +177,7 @@
 				  </p>
 				</li>
 			  </ol>
-			  <h4>TWA tool</h4>
+			  <h3>TWA tool</h3>
 			  <ul>
 				<li>
 				  <p>
@@ -176,7 +190,7 @@
 				  </p>
 				</li>
 			  </ul>
-			  <h4>Waypoints and Isochrones</h4>
+			  <h3>Waypoints and Isochrones</h3>
 			  <ul>
 				<li>
 				  Clicking on a waypoint or an isochrone sets the wind interpolation to the corresponding time.

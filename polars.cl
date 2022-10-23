@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-07-19 22:55:49>
+;;; Last Modified <michael 2022-10-23 00:24:32>
 
 (in-package :bitsailor)
 
 (defstruct cpolars id label name maxspeed twa vmg speed)
 (defstruct polars id label name maxspeed tws twa sails)
-(defstruct (polars-vr (:include polars)))
+(defstruct (polars-vr (:include polars)) winch)
 (defstruct (polars-rs (:include polars)))
 (defstruct sail name speed)
 

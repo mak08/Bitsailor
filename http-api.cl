@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-09-10 17:30:44>
+;;; Last Modified <michael 2022-10-23 11:53:28>
 
 (in-package :bitsailor)
 
@@ -161,10 +161,17 @@
    :merge-window (if (string= presets "RS") 0d0 1d0)
    :penalties  (if (string= presets "RS")
                    (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                   (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))))
+                   (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))
+   :simplify-route (string= presets "RS")))
 
 (defun |getRoute| (handler request response &key
-                                              (|presets| "VR") |polarsId| |slat| |slon| |dlat| |dlon|
+                                              (|presets| "VR")
+                                              (|options| nil)
+                                              |polarsId|
+                                              |slat|
+                                              |slon|
+                                              |dlat|
+                                              |dlon|
                                               (|startTime| nil)
                                               (|cycleTS| (available-cycle (now)) cycle-supplied-p)
                                               (|duration| (if (string= |presets| "RS")
@@ -181,6 +188,7 @@
                         |cycleTS|))
              (routing
                (get-routing-presets |presets|
+                                    :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|
                                     :polars |polarsId|
                                     :stepmax (if duration-supplied-p
@@ -387,14 +395,19 @@
                   (setf (aref result ilat ilon 1) (round-to-digits speed 2)))))
     result))
 
-(defun |getTWAPath| (handler request response &key |presets| |polars| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
+(defun |getTWAPath| (handler request response &key |presets| |options| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (user-id
                (http-authenticated-user handler request))
              (race-id (get-routing-request-race-id request))
              (routing
-               (get-routing-presets |presets| :cycle |cycle| :polars |polars| :starttime |time| :resolution |resolution|))
+               (get-routing-presets |presets|
+                                    :options (cl-utilities:split-sequence #\, |options|)
+                                    :cycle |cycle|
+                                    :polars |polarsId|
+                                    :starttime |time|
+                                    :resolution |resolution|))
              (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
              (time (parse-datetime |time|))
              (lat-a (read-arg |latA|))

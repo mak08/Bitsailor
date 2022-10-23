@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-07-12 21:23:41>
+;;; Last Modified <michael 2022-10-23 11:46:15>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -243,7 +243,7 @@
           
           (let ((elapsed (timestamp-difference (now) elapsed0)))
             (multiple-value-bind  (best-route best-path)
-                (construct-route isochrone destination)
+                (construct-route routing isochrone destination)
               (log-stats elapsed stepnum pointnum)
               (setf *best-route* best-route)
               (setf *isochrones* isochrones)
@@ -506,7 +506,7 @@
                    min-point point)))
      :finally (return min-point)))
 
-(defun construct-route (isochrone destination)
+(defun construct-route (routing isochrone destination)
   (let  ((best (best-point isochrone destination)))
     (do ((route nil)
          (path nil)
@@ -516,7 +516,8 @@
          (values route
                  path))
       (push (routepoint-position cur-point) path)
-      (when (or (null successor)
+      (when (or (not (routing-simplify-route routing))
+                (null successor)
                 (routepoint-penalty cur-point)
                 ;; (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
                 (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))

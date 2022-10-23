@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2021-10-29 21:58:32>
+;;; Last Modified <michael 2022-10-23 00:24:17>
 
 (in-package :bitsailor)
 
@@ -45,7 +45,9 @@
          (sail
           (joref polars "sail"))
          (saildefs
-           (make-array (length sail))))
+           (make-array (length sail)))
+         (winch
+           (joref polars "winch")))
     (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" (joref polars "label") id (length sail) tws twa)
     (loop
        :for saildef :across sail
@@ -75,7 +77,8 @@
                     :maxspeed maxspeed
                     :tws tws
                     :twa twa
-                    :sails saildefs)))
+                    :sails saildefs
+                    :winch winch)))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

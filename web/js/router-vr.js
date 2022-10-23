@@ -215,22 +215,22 @@ import * as Router from './router.js';
         }
     }
 
-    const patterns = {
-        lat: {
-            isDMS: /^(([1-8]?[0-9])\D+([1-5]?[0-9]|60)\D+([1-5]?[0-9]|60)(\.[0-9]+)?|90\D+0\D+0)\D+[NSns]$/,
-            isDDM: /^(([1-8]?[0-9])\D+[1-6]?[0-9](\.\d{1,3})?|90(\D+0)?)\D+([NSns])$/,
-            isDD:  /^[\+-]?(([1-8]?[0-9])(\.\d{1,6})?|90)\D*[NSns]?$/
-        },
-        lng: {
-            isDMS: /^((1[0-7][0-9]|[1-9]?[0-9])\D+([1-5]?[0-9]|60)\D+([1-5]?[0-9]|60)(\.[0-9]+)?|180\D+0\D+0)\D+[EWew]$/,
-            isDDM: /^((1[0-7][0-9]|[1-9]?[0-9])\D+[1-6]?[0-9](\.\d{1,3})?|180(\D+0)?)\D+([EWew])$/,
-            isDD:  /^[\+-]?((1[0-7][0-9]|[1-9]?[0-9])(\.\d{1,6})?|180)\D*[EWew]?$/
+    function onOptionToggled (event) {
+        Router.settings.options = Router.settings.options.filter(e => e !== event.currentTarget.name);
+        if (event.currentTarget.checked) {
+            Router.settings.options.unshift(event.currentTarget.name);
         }
-    };
+    }
 
     function setUpVR () {
         Router.setUp(getVMG);
         Router.settings.presets = "VR";
+        document.getElementById("cb_hull").addEventListener("click", onOptionToggled);
+        document.getElementById("cb_winch").addEventListener("click", onOptionToggled);
+        document.getElementById("cb_foil").addEventListener("click", onOptionToggled);
+        document.getElementById("cb_heavy").addEventListener("click", onOptionToggled);
+        document.getElementById("cb_light").addEventListener("click", onOptionToggled);
+        document.getElementById("cb_reach").addEventListener("click", onOptionToggled);
 
         getRaceInfo()
 

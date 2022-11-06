@@ -190,7 +190,7 @@ import * as Router from './router.js';
         if (dest) {
             dest = JSON.parse(dest);
         } else {
-            dest =  {"lat": vrData.end.lat, "lng": vrData.end.lon};
+            dest =  {"lat": vrData.end.lat, "lon": vrData.end.lon};
         }
         var destPos = new google.maps.LatLng(dest.lat, dest.lon);
         Router.setRoutePoint('dest', destPos);

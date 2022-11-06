@@ -57,6 +57,8 @@ function setUp (getVMG) {
     var mapProp = {
         center:new google.maps.LatLng(49.187, 8.473),
         zoom:5,
+        minZoom:3,
+        maxZoom:14,
         scaleControl: true,
         mapTypeId:google.maps.MapTypeId.ROADMAP,
         draggableCursor: "crosshair"
@@ -122,10 +124,10 @@ function setUp (getVMG) {
 
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
         if (event.keyCode === 13) {
-            onSetPosition(event);
+            onSetStartPosition(event);
         }
     });
-    document.getElementById("bt_position").addEventListener("click", onSetPosition);
+    document.getElementById("bt_position").addEventListener("click", onSetStartPosition);
     document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
     google.maps.event.addListener(startMarker,'dragend', function () {
         // Update position entry/display
@@ -282,7 +284,7 @@ function onUpdateStartMarker (marker) {
     textBox.value = Util.formatPosition(position.lat(), position.lng()); 
 }
 
-function onSetPosition (event) {
+function onSetStartPosition (event) {
     var position = document.getElementById("tb_position").value;
     var latlon = parsePosition(position);
     if (latlon) {
@@ -292,14 +294,26 @@ function onSetPosition (event) {
 }
 
 function onSetDuration (event) {
+    storeValue('duration', event.target.value);
+}
+
+function storeValue (name, value) {
     try {
-        var storage = window.localStorage;
-        var query = new URL(document.URL).searchParams;
-        var raceId = query.get('race');
-        storage.setItem(`${raceId}.duration`, event.target.value);
+        let storage = window.localStorage;
+        let query = new URL(document.URL).searchParams;
+        let raceId = query.get('race');
+        storage.setItem(`${raceId}.${name}`, value);
     } catch (e) {
     }
 }
+
+function getValue (name) {
+    let storage = window.localStorage;
+    let query = new URL(document.URL).searchParams;
+    let raceId = query.get('race');
+    return storage.getItem(`${raceId}.${name}`);
+}
+
 
 function parsePosition (string) {
     try {
@@ -540,12 +554,16 @@ function getRoute () {
 }
 
 
-function setRoutePoint(point, latlng) {
+function setRoutePoint(point, latLng) {
+
+    storeValue(point, `{"lat":${latLng.lat()}, "lon": ${latLng.lng()}}`);
+
     if ( point === 'start' ) {
-        updateStartPosition(latlng);
+        startMarker.setPosition(latLng);
     } else if ( point === 'dest' ) {
-        destinationMarker.setPosition(latlng);
+        destinationMarker.setPosition(latLng);
     }
+    
     if (courseGCLine) {
         courseGCLine.setMap(null);
     };
@@ -668,10 +686,6 @@ function setupCanvas () {
     geometry.height = mapRect.height * 6;
     mapCanvas.width = geometry.width;
     mapCanvas.height = geometry.height;
-}
-
-function updateStartPosition (latLng) {
-    startMarker.setPosition(latLng);
 }
 
 function createIsochrones (isochrones) {
@@ -1181,6 +1195,7 @@ export {
     formatLatLngPosition,
     getRoute,
     getURLParams,
+    getValue,
     googleMap,
     loadPolars,
     mapEvent,
@@ -1192,8 +1207,8 @@ export {
     setRoutePoint,
     setUp,
     startMarker,
-    updateMap,
-    updateStartPosition
+    storeValue,
+    updateMap
 }
 
 /// EOF

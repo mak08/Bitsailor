@@ -409,6 +409,7 @@ input[type=checkbox] {
 	grid-row: 20;
 	grid-column: 1;
 	align-self: flex-start;
+	overflow: auto;
 }
 .statistics-sails {
 	grid-row: 20;

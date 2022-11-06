@@ -108,19 +108,33 @@ import * as Router from './router.js';
         var start = queryParams.startPos;
         if (start) {
         } else {
-            Router.startMarker.setPosition( {"lat": rsData.startLocation.latitude,
-                                             "lng": rsData.startLocation.longitude});
-            var startPos = new google.maps.LatLng(rsData.startLocation.latitude, rsData.startLocation.longitude);
-            Router.setRoutePoint('start', startPos);
+            start = Router.getValue('start');
+            if (start) {
+                start = JSON.parse(start);
+            } else {
+                start = {'lat': rsData.startLocation.latitude,
+                         'lon': rsData.startLocation.longitude};
+            }
         }
-
+        let startPos = new google.maps.LatLng(start.lat, start.lon);
+        // setRoutePoint also updates storage via updateStartPosition
+        Router.setRoutePoint('start', startPos);            
+            
         // Destination 
         var lastP0 = rsData.gates[rsData.gates.length-1][0]
         var lastP1 = rsData.gates[rsData.gates.length-1][1]
-        // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
-        var destLat = (lastP0.latitude + lastP1.latitude)/2;
-        var destLon = (lastP0.longitude + lastP1.longitude)/2; 
-        var destPos = new google.maps.LatLng(destLat, destLon);
+
+        let dest = Router.getValue('dest');
+        if (dest) {
+            dest = JSON.parse(dest);
+        } else {
+            // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
+            dest = {
+                'lat': (lastP0.latitude + lastP1.latitude)/2,
+                'lon': (lastP0.longitude + lastP1.longitude)/2
+            }
+        }
+        var destPos = new google.maps.LatLng(dest.lat, dest.lon);
         Router.setRoutePoint('dest', destPos);
         
         Router.googleMap.panTo(Router.startMarker.getPosition());
@@ -147,8 +161,7 @@ import * as Router from './router.js';
         }
 
         // NMEA port
-        var storage = window.localStorage;
-        var nmeaPort = storage.getItem(`${rsData.objectId}.nmea_port`);
+        var nmeaPort = Router.getValue('nmea_port');
         var portTB = document.getElementById("tb_nmeaport");
         portTB.value = nmeaPort;
         
@@ -185,8 +198,7 @@ import * as Router from './router.js';
     
     function resetNMEAConnection (event) {
         var port= document.getElementById("tb_nmeaport").value
-        var storage = window.localStorage;
-        storage.setItem(`${rsData.objectId}.nmea_port`, port);
+        Router.storeValue('nmea_port', port);
         
         $.ajax({
             url: "/function/router.resetNMEAConnection?port=" + port,

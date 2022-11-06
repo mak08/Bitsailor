@@ -165,11 +165,16 @@ import * as Router from './router.js';
         var queryParams = Router.getURLParams()
         var start = queryParams.startPos;
         if (start) {
-            start = new google.maps.LatLng(start.lat, start.lon);
         } else {
-            start = new google.maps.LatLng(vrData.start.lat, vrData.start.lon);
+            start = Router.getValue('start');
+            if (start) {
+                start = JSON.parse(start);
+            } else {
+                start = vrData.start;
+            }
         }
-        Router.startMarker.setPosition( start);
+        start = new google.maps.LatLng(start.lat, start.lon);
+        // setRoutePoint also updates storage via updateStartPosition
         Router.setRoutePoint('start', start);
         var textBox = document.getElementById("tb_position");
         textBox.value = Util.formatPosition(start.lat(), start.lng()); 
@@ -180,9 +185,14 @@ import * as Router from './router.js';
             cbDelayed.checked = true;
             tbStartTime.value = queryParams.startTime.toISOString().substring(0,16);
         }
-        
-        Router.destinationMarker.setPosition( {"lat": vrData.end.lat, "lng": vrData.end.lon});
-        var destPos = new google.maps.LatLng(vrData.end.lat, vrData.end.lon);
+
+        let dest = Router.getValue('dest');
+        if (dest) {
+            dest = JSON.parse(dest);
+        } else {
+            dest =  {"lat": vrData.end.lat, "lng": vrData.end.lon};
+        }
+        var destPos = new google.maps.LatLng(dest.lat, dest.lon);
         Router.setRoutePoint('dest', destPos);
         
         Router.googleMap.panTo(Router.startMarker.getPosition());
@@ -220,11 +230,24 @@ import * as Router from './router.js';
         if (event.currentTarget.checked) {
             Router.settings.options.unshift(event.currentTarget.name);
         }
+        Router.storeValue('options', JSON.stringify(Router.settings.options));
     }
 
     function setUpVR () {
         Router.setUp(getVMG);
         Router.settings.presets = "VR";
+        let options =  Router.getValue('options');
+        if (options) {
+            Router.settings.options = JSON.parse(options);
+        } else {
+            Router.settings.options = ['winch'];
+        }
+        document.getElementById("cb_hull").checked  = Router.settings.options.includes('hull');
+        document.getElementById("cb_winch").checked = Router.settings.options.includes('winch');
+        document.getElementById("cb_foil").checked  = Router.settings.options.includes('foil');
+        document.getElementById("cb_heavy").checked = Router.settings.options.includes('heavy');
+        document.getElementById("cb_light").checked = Router.settings.options.includes('light');
+        document.getElementById("cb_reach").checked = Router.settings.options.includes('reach');
         document.getElementById("cb_hull").addEventListener("click", onOptionToggled);
         document.getElementById("cb_winch").addEventListener("click", onOptionToggled);
         document.getElementById("cb_foil").addEventListener("click", onOptionToggled);
@@ -232,7 +255,7 @@ import * as Router from './router.js';
         document.getElementById("cb_light").addEventListener("click", onOptionToggled);
         document.getElementById("cb_reach").addEventListener("click", onOptionToggled);
 
-        getRaceInfo()
+        getRaceInfo();
 
         Router.updateMap();
     }

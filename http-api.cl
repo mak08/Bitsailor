@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-10-23 13:46:52>
+;;; Last Modified <michael 2022-11-27 17:39:01>
 
 (in-package :bitsailor)
 
@@ -134,6 +134,7 @@
                               (starttime nil)
                               (resolution "1p00")
                               (polars)
+                              (gfs-mode "06h")
                               (options)
                               (stepmax (* 24 60 60))
                               (cycle)
@@ -157,12 +158,25 @@
    :interpolation  (if (string= presets "RS") :bilinear :vr)
    :polars polars
    :cycle cycle
-   :merge-start  (if (string= presets "RS") 6d0 4d0)
+   :merge-start  (if (string= presets "RS")
+                     (get-rs-merge-delay cycle gfs-mode)
+                     4d0)
    :merge-window (if (string= presets "RS") 0d0 1d0)
    :penalties  (if (string= presets "RS")
                    (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
                    (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))
    :simplify-route (string= presets "RS")))
+
+(defun get-rs-merge-delay (cycle gfs-mode)
+  (values
+   (cond
+     ((string= gfs-mode "06h")
+      6d0)
+     ((string= gfs-mode "12h")
+      12d0)
+     (t
+      (error "Unknown GFS mode ~a" gfs-mode)))
+   cycle))
 
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
@@ -216,6 +230,7 @@
 
 (defun vh:|getRouteRS| (handler request response &key
                                                 (|polarsID| "aA32bToWbF")
+                                                (|gfsMode| "06h")
                                                 |latStart|
                                                 |lonStart|
                                                 |latDest|
@@ -225,6 +240,7 @@
                                                 (|resolution| "1p00"))
   (|getRouteRS| handler request response
                       :|polarsID| |polarsID|
+                      :|gfsMode| |gfsMode|
                       :|latStart| |latStart|
                       :|lonStart| |lonStart|
                       :|latDest| |latDest|
@@ -235,11 +251,12 @@
 
 (defun |getRouteRS| (handler request response &key
                                                 (|polarsID| "aA32bToWbF")
+                                                (|gfsMode| "06h")
                                                 |latStart|
                                                 |lonStart|
                                                 |latDest|
                                                 |lonDest|
-                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                                (|cycleTS| (determine-rs-cycle |gfsMode|) cycle-supplied-p)
                                                 (|duration| (* 4 3600))
                                                 (|resolution| "1p00"))
   (handler-case
@@ -254,6 +271,7 @@
                                     :options '("realsail")
                                     :resolution |resolution|
                                     :polars |polarsID|
+                                    :gfs-mode |gfsMode|
                                     :stepmax (min (* *rs-max-hours* 3600) ;; 2d
                                                   (read-arg |duration|))
                                     :cycle cycle
@@ -274,6 +292,22 @@
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
+
+(defun determine-rs-cycle (gfs-mode)
+  (let* ((cycle
+           (available-cycle (now)))
+         (run
+           (cycle-run cycle)))
+    (cond
+      ((string= gfs-mode "12h")
+       (if (or (eql run 0)
+               (eql run 12))
+           (previous-cycle cycle)
+           cycle))
+      ((string= gfs-mode "06h")
+       cycle)
+      (T
+       (error "Unknown GFS mode ~a" gfs-mode)))))
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))
@@ -332,6 +366,7 @@
              (south (read-arg |south|))
              (east (read-arg |east|))
              (west (read-arg |west|)))
+        (log2:info "DX: ~a DDX: ~a  DY: ~a DDY: ~a" (arc-length west east) ddx (- north south) ddy)
         (log2:info "Requested time: ~a Using cycle: ~a" requested-time cycle)
         (when (< west 0d0) (incf west 360d0))
         (when (< east 0d0) (incf east 360d0))
@@ -364,6 +399,11 @@
            (setf (status-code response) 500)
            (setf (status-text response) (format nil "~a" e)))))
 
+(defun arc-length (a b)
+  (when (< a 0) (incf a 360))
+  (when (< b 0) (incf b 360))
+  (when (< b a) (incf b 360))
+  (- b a))
 
 (defun get-wind-data (presets cycle resolution time north south west east ddx ddy)
   (let* ((routing
@@ -391,6 +431,40 @@
                   (setf (aref result ilat ilon 0) (round-to-digits dir 2))
                   (setf (aref result ilat ilon 1) (round-to-digits speed 2)))))
     result))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Wind Tiles
+
+(defun get-wind-tile (server handler request response)
+  (handler-case 
+      (destructuring-bind (tile resolution level lat name)
+          (path request)
+        (let ((cycle (available-cycle (now)))
+              (path (merge-pathnames (tilespec-pathname resolution level lat name)
+                                     *web-root-directory*))
+              (lon (first (cl-utilities:split-sequence #\. name))))
+          (unless (probe-file path)
+            (ensure-directories-exist path)
+            (setf lat (read-arg lat 'fixnum))
+            (setf lon (read-arg lon 'fixnum))
+            (create-wind-tile-binary path lat (+ lat 10) lon (+ lon 10)
+                                     :cycle cycle
+                                     :resolution resolution
+                                     :from-forecast 0
+                                     :to-forecast 48))
+          (load-file path response)))
+    (error (e)
+      (log2:error "~a" e)
+      (setf (status-code response) 500)
+      (setf (status-text response) (format nil "~a" e)))))
+
+(defun tilespec-pathname (res level lat name)
+  (make-pathname :directory (list :relative res level lat)
+                 :name name))
+               
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; TWA Path
 
 (defun |getTWAPath| (handler request response &key |presets| |options| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
   (handler-case

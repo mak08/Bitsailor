@@ -37,6 +37,7 @@ import * as Util from './Util.js';
     }
     
     async function onSubmit (event) {
+        var gfsmode =  document.getElementById("gfsmode").value;
         var startlat = document.getElementById("startlat").value;
         var startlon = document.getElementById("startlon").value;
         var destlat = document.getElementById("destlat").value;
@@ -68,6 +69,7 @@ import * as Util from './Util.js';
 
                        },
                        {
+                           "gfsMode": gfsmode,
                            "polarsID": polars,
                            "duration": duration * 3600,
                            "resolution": resolution,

@@ -100,88 +100,97 @@ input {
 	grid-row: 2;
 }
 
-.startlat-label {
+.gfsmode-label {
 	grid-column: 2;
 	grid-row: 3;
 }
-.startlat-input {
+.gfsmode-input {
 	grid-column: 3;
 	grid-row: 3;
 }
 
-.startlon-label {
+.startlat-label {
 	grid-column: 2;
 	grid-row: 4;
 }
-.startlon-input {
+.startlat-input {
 	grid-column: 3;
 	grid-row: 4;
+}
+
+.startlon-label {
+	grid-column: 2;
+	grid-row: 5;
+}
+.startlon-input {
+	grid-column: 3;
+	grid-row: 5;
 }
 
 
 .destlat-label {
 	grid-column: 2;
-	grid-row: 5;
+	grid-row: 6;
 }
 .destlat-input {
 	grid-column: 3;
-	grid-row: 5;
+	grid-row: 6;
 }
 
 .destlon-label {
 	grid-column: 2;
-	grid-row: 6;
+	grid-row: 7;
 }
 .destlon-input {
 	grid-column: 3;
-	grid-row: 6;
+	grid-row: 7;
 }
 
 .duration-label {
 	grid-column: 2;
-	grid-row: 7;
+	grid-row: 8;
 }
 .duration-input {
 	grid-column: 3;
-	grid-row: 7;
+	grid-row: 8;
 }
 
 .resolution-label {
 	grid-column: 2;
-	grid-row: 8;
+	grid-row: 9;
 }
 .resolution-input {
 	grid-column: 3;
-	grid-row: 8;
+	grid-row: 9;
 }
 
 .threads-label {
 	grid-column: 2;
-	grid-row: 9;
+	grid-row: 10;
 }
 .threads-input {
 	grid-column: 3;
-	grid-row: 9;
+	grid-row: 10;
 }
 
 .delay-label {
 	grid-column: 2;
-	grid-row: 10;
+	grid-row: 11;
 }
 .delay-input {
 	grid-column: 3;
-	grid-row: 10;
+	grid-row: 11;
 }
 
 
 .polars-select {
 	grid-column: 3;
-	grid-row: 11
+	grid-row: 12
 }
 
 .bt-submit {
 	grid-column: 4;
-	grid-row: 12;
+	grid-row: 13;
 }
 
 

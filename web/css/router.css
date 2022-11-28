@@ -285,6 +285,17 @@ input[type=checkbox] {
 	grid-column: 2;
 }
 
+/* GFS mode */
+.gfsmode-label {
+	grid-row: 8;
+	grid-column: 1;
+
+}
+.gfsmode-selector {
+	grid-row: 8;
+	grid-column: 2;
+}
+
 
 /* Hide wind */
 .displaywind-label {
@@ -320,14 +331,14 @@ input[type=checkbox] {
 
 /* Execute */
 .execute-button {
-	grid-row: 8;
+	grid-row: 9;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 9;
+	grid-row: 10;
 	grid-column: 1;
 
 }

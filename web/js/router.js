@@ -2,13 +2,18 @@
 /// Bitsailor Router UI Stateless
 
 import * as Util from './Util.js';
+// import WindTile from './WindTile.js';
 
 var settings = {
     "resolution": "1p00",
+    "gfsMode": "06h",
     "presets": "VR",
     "options": ["hull", "winch", "foil", "heavy", "light", "reach"],
     "polarsId": "1"
 };
+
+
+var windTile = undefined;
 
 var googleMap = null;
 var mapEvent;
@@ -49,7 +54,7 @@ var twaPath = [];
 var hdgPath = [];
 
 function setUp (getVMG) {
-    
+
     setupColors();
     
     // Create a map object, and include the MapTypeId to add
@@ -80,7 +85,7 @@ function setUp (getVMG) {
     });
     google.maps.event.addListener(googleMap, 'click', getTWAPath);
     google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
-    
+
     // Connect button events
     $("#bt_getroute").click(getRoute);
     
@@ -120,6 +125,7 @@ function setUp (getVMG) {
     startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 1, 45);
     destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
     
+    // Wind canvas
     setupCanvas();
 
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
@@ -177,6 +183,11 @@ function updateMap () {
             }
         }
         var bounds = getMapBounds();
+
+        // Load wind
+        // let canvas = document.getElementById('wind-canvas');
+        // windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, "1p00", new Date());
+
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
         if (forecastData.basetime) {
@@ -433,6 +444,9 @@ function onSetResolution (event) {
     redrawWindByOffset(forecastData.basetime, ir_index.value);
 }
 
+function onSetGFSMode (event) {
+    settings.gfsMode = event.currentTarget.value;
+}
 
 function onMapMenuMouseLeave (event) {
     var mapMenu=$("#mapMenu")[0];
@@ -520,7 +534,6 @@ function getRoute () {
     var destPos = destinationMarker.getPosition();
     
     var query = makeQuery(settings);
-    query += `&resolution=${settings.resolution}`;
     query += `&duration=${duration * 3600}`;
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
@@ -960,10 +973,14 @@ function redrawWindByOffset (cycle, offset) {
 }
 
 function getWind (cycle, time) {
-    var bounds = getMapBounds();
+    let bounds = getMapBounds();
+
+    // windTile.update(bounds);
     
-    var lat0 = bounds.north + ((bounds.north - bounds.south) / ySteps)/2;
-    var lon0 = bounds.east + (Util.arcLength(bounds.west, bounds.east) / xSteps)/2;
+    let dLat = (bounds.north - bounds.south);
+    let dLon = Util.arcLength(bounds.west, bounds.east);
+    var lat0 = bounds.north + (dLat / ySteps)/2;
+    var lon0 = bounds.east + ( dLon / xSteps)/2;
     var ddx = (Util.arcLength(bounds.west, bounds.east)/xSteps).toFixed(8);
     var ddy = ((bounds.north-bounds.south)/ySteps).toFixed(8);
     // $('div, button, input').css('cursor', 'wait');
@@ -985,6 +1002,7 @@ function getWind (cycle, time) {
         // $('div, button, input').css('cursor', 'auto');
         forecastData = data;
         drawWind(data)
+        // alert(`N:${bounds.north.toFixed(2)} S:${bounds.south.toFixed(2)} \nW:${bounds.west.toFixed(2)} E:${bounds.east.toFixed(2)}\nLat:${dLat.toFixed(1)} Lon:${dLon.toFixed(1)}`);
     }).fail( function (jqXHR, textStatus, errorThrown) {
         // $('div, button, input').css('cursor', 'auto');
         alert("Could not get wind data:" + textStatus + ' ' + errorThrown);
@@ -1103,13 +1121,15 @@ function getMapBounds () {
     var bounds = googleMap.getBounds();
     var sw = bounds.getSouthWest();
     var ne = bounds.getNorthEast();
-    
+    var mapProjection = googleMap.getProjection();
+
     return { northEast: ne,
              southWest: sw,
              north: ne.lat(),
              south: sw.lat(),
              west: sw.lng(),
-             east: ne.lng()
+             east: ne.lng(),
+             projection: mapProjection
            };
 }
 
@@ -1201,6 +1221,7 @@ export {
     mapEvent,
     onMarkerClicked,
     onSetResolution,
+    onSetGFSMode,
     polars,
     settings,
     setResolution,

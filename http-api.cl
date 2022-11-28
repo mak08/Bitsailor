@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-11-27 17:39:01>
+;;; Last Modified <michael 2022-11-28 20:08:21>
 
 (in-package :bitsailor)
 
@@ -155,6 +155,7 @@
                     '("realsail")
                     '("hull" "foil" "winch" "heavy" "light" "reach")))
    :resolution resolution
+   :gfs-mode gfs-mode
    :interpolation  (if (string= presets "RS") :bilinear :vr)
    :polars polars
    :cycle cycle
@@ -173,7 +174,11 @@
      ((string= gfs-mode "06h")
       6d0)
      ((string= gfs-mode "12h")
-      12d0)
+      (case (cycle-run cycle)
+        ((6 18)
+         6d0)
+        ((0 12)
+         12d0)))
      (t
       (error "Unknown GFS mode ~a" gfs-mode)))
    cycle))
@@ -181,18 +186,19 @@
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
                                               (|options| nil)
+                                              (|resolution| "1p00")
+                                              (|gfsMode| "06h")
                                               |polarsId|
                                               |slat|
                                               |slon|
                                               |dlat|
                                               |dlon|
                                               (|startTime| nil)
-                                              (|cycleTS| (available-cycle (now)) cycle-supplied-p)
+                                              (|cycleTS|  (determine-rs-cycle |gfsMode|) cycle-supplied-p)
                                               (|duration| (if (string= |presets| "RS")
                                                               (* *rs-max-hours* 3600)
                                                               (* *vr-max-hours* 3600))
-                                                          duration-supplied-p)
-                                              (|resolution| "1p00"))
+                                                          duration-supplied-p))
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (user-id
@@ -202,6 +208,7 @@
                         |cycleTS|))
              (routing
                (get-routing-presets |presets|
+                                    :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|
                                     :polars |polarsId|
@@ -466,7 +473,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TWA Path
 
-(defun |getTWAPath| (handler request response &key |presets| |options| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
+(defun |getTWAPath| (handler request response &key |presets| |options| |gfsMode| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (user-id
@@ -474,6 +481,7 @@
              (race-id (get-routing-request-race-id request))
              (routing
                (get-routing-presets |presets|
+                                    :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :cycle |cycle|
                                     :polars |polarsId|

@@ -221,6 +221,7 @@ import * as Router from './router.js';
         document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
         document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
         document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);
+        document.getElementById("sel_gfsmode").addEventListener("change", Router.onSetGFSMode);
 
         getRaceInfo()
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-08-24 20:41:24>
+;;; Last Modified <michael 2022-11-19 22:03:47>
 
 (in-package :bitsailor)
 
@@ -76,6 +76,7 @@
 (register-function "router.removeSession" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceInfo" :authorizer #'vh-function-authorizer)
 (register-function "router.getWind" :authorizer #'vh-function-authorizer)
+(register-function "router.getWindTile" :authorizer (constantly t))
 (register-function "router.getTWAPath" :authorizer #'vh-function-authorizer)
 (register-function "router.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceList" :authorizer (constantly t))
@@ -160,6 +161,12 @@
 
 (handle
  :request (:method :get
+           :prefix "/tile")
+ :handler (:dynamic 'get-wind-tile
+           :authentication nil))
+
+(handle
+ :request (:method :get
            :path "/router")
  :handler (:dynamic 'router
            :realm "bitsailor"
@@ -169,6 +176,7 @@
            :prefix "/activate-account")
  :handler (:dynamic 'activate-account
            :authentication nil))
+
 ;;; We can't match root for now, match length priority is not implemented or does not work...
 (handle 
  :request (:prefix "")

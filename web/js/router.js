@@ -2,7 +2,7 @@
 /// Bitsailor Router UI Stateless
 
 import * as Util from './Util.js';
-// import WindTile from './WindTile.js';
+import WindTile from './WindTile.js';
 
 var settings = {
     "resolution": "1p00",
@@ -185,8 +185,8 @@ function updateMap () {
         var bounds = getMapBounds();
 
         // Load wind
-        // let canvas = document.getElementById('wind-canvas');
-        // windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, "1p00", new Date());
+        let canvas = document.getElementById('wind-canvas');
+        windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, "1p00", new Date());
 
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
@@ -975,39 +975,13 @@ function redrawWindByOffset (cycle, offset) {
 function getWind (cycle, time) {
     let bounds = getMapBounds();
 
-    // windTile.update(bounds);
-    
-    let dLat = (bounds.north - bounds.south);
-    let dLon = Util.arcLength(bounds.west, bounds.east);
-    var lat0 = bounds.north + (dLat / ySteps)/2;
-    var lon0 = bounds.east + ( dLon / xSteps)/2;
-    var ddx = (Util.arcLength(bounds.west, bounds.east)/xSteps).toFixed(8);
-    var ddy = ((bounds.north-bounds.south)/ySteps).toFixed(8);
-    // $('div, button, input').css('cursor', 'wait');
-    $.ajax({
-        url: "/function/router.getWind"
-            + `?cycle=${cycle}&time=${time}`
-            + `&presets=${settings.presets}`
-            + `&resolution=${settings.resolution}`
-            + "&north=" + lat0.toFixed(6)
-            + "&south=" + bounds.south.toFixed(6)
-            + "&west=" + bounds.west.toFixed(6)
-            + "&east=" + lon0.toFixed(6)
-            + "&ddx=" + ddx
-            + "&ddy=" + ddy
-            + "&xSteps=" + xSteps
-            + "&ySteps=" + ySteps,
-        dataType: 'json'
-    }).done( function(data) {
-        // $('div, button, input').css('cursor', 'auto');
-        forecastData = data;
-        drawWind(data)
-        // alert(`N:${bounds.north.toFixed(2)} S:${bounds.south.toFixed(2)} \nW:${bounds.west.toFixed(2)} E:${bounds.east.toFixed(2)}\nLat:${dLat.toFixed(1)} Lon:${dLon.toFixed(1)}`);
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        // $('div, button, input').css('cursor', 'auto');
-        alert("Could not get wind data:" + textStatus + ' ' + errorThrown);
-        console.log("Could not get wind data:" + textStatus + ' ' + errorThrown);
-    });
+    windTile.update(bounds);
+
+    //////////////////////////////////////////////////////////////////////
+    // ToDo:
+    // Restore status displays
+    // forecastData = data;
+    // drawWind(data)
 }
 
 function drawWind (data) {

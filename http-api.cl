@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-11-28 20:08:21>
+;;; Last Modified <michael 2022-11-28 21:40:18>
 
 (in-package :bitsailor)
 
@@ -450,15 +450,19 @@
               (path (merge-pathnames (tilespec-pathname resolution level lat name)
                                      *web-root-directory*))
               (lon (first (cl-utilities:split-sequence #\. name))))
-          (unless (probe-file path)
-            (ensure-directories-exist path)
-            (setf lat (read-arg lat 'fixnum))
-            (setf lon (read-arg lon 'fixnum))
-            (create-wind-tile-binary path lat (+ lat 10) lon (+ lon 10)
-                                     :cycle cycle
-                                     :resolution resolution
-                                     :from-forecast 0
-                                     :to-forecast 48))
+          (cond
+            ((probe-file path)
+             (log2:info "HIT: ~a" path))
+            (t
+             (log2:info "MISS: ~a" path)
+             (ensure-directories-exist path)
+             (setf lat (read-arg lat 'fixnum))
+             (setf lon (read-arg lon 'fixnum))
+             (create-wind-tile-binary path lat (+ lat 10) lon (+ lon 10)
+                                      :cycle cycle
+                                      :resolution resolution
+                                      :from-forecast 0
+                                      :to-forecast 48)))
           (load-file path response)))
     (error (e)
       (log2:error "~a" e)

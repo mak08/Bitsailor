@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-08-16 22:58:56>
+;;; Last Modified <michael 2022-11-16 21:29:05>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -40,6 +40,7 @@
    "removeSession"
    "getRaceInfo"
    "getWind"
+   "getWindTile"
    "setRoute"
    "setParameter"
    "getRoute"

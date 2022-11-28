@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-10-23 11:46:15>
+;;; Last Modified <michael 2022-11-27 23:46:50>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -206,12 +206,14 @@
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (params (interpolation-parameters start-time
+                                            :gfs-mode (routing-gfs-mode routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
                                             :cycle cycle
                                             :resolution resolution)
                   (interpolation-parameters step-time
+                                            :gfs-mode (routing-gfs-mode routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)

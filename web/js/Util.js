@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// No JQuery
 
-function doGET (url, success, error, queryParams) {
+function doGET (url, success, error, queryParams, requestParams = {"responseType": ""}) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function ( ){
         if ( xhr.readyState == 4 ) {
@@ -18,7 +18,12 @@ function doGET (url, success, error, queryParams) {
         alert(xhr.statusText);
     };
 
-    xhr.open("GET", url + makeQuery(queryParams), false);
+    for (const p in requestParams) {
+        xhr[p] = requestParams[p];
+    }
+    
+    xhr.open("GET", url + makeQuery(queryParams), true);
+
     try {
         xhr.send(null);
     } catch (e) {

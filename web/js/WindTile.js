@@ -410,7 +410,10 @@ export default class WindTile {
     }
     
     async getTile (cycleString, res, offset, lat0, lon0) {
-        let response = await fetch(this.tilePath(cycleString, res, offset, lat0, lon0));
+        let offsetStr = offset.toFixed().padStart(3, '0');
+        let latStr = lat0.toFixed().padStart(3, '0');
+        let lonStr = lon0.toFixed().padStart(3, '0');
+        let response = await fetch(this.tilePath(cycleString, res, offsetStr, latStr, lonStr));
         if (!response.ok) {
             throw new Error(`${response.statusText}`);
         }

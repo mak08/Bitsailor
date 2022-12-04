@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-12-04 21:59:07>
+;;; Last Modified <michael 2022-12-05 00:12:42>
 
 (in-package :bitsailor)
 
@@ -473,7 +473,8 @@
                (lat (read-arg lat 'fixnum))
                (lon (read-arg (first (cl-utilities:split-sequence #\. lon)) 'fixnum))
                (path (tile-filename cycle resolution offset lat lon
-                                    :tile-root-dir *web-root-directory*)))
+                                    :tile-root-dir (merge-pathnames (make-pathname :directory '(:relative "tile"))
+                                                                    *web-root-directory*))))
           (let ((lock (get-wind-tile-lock path)))
             (bordeaux-threads:with-lock-held (lock)
               (cond

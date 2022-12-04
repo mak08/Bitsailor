@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-11-28 21:40:18>
+;;; Last Modified <michael 2022-12-04 00:16:57>
 
 (in-package :bitsailor)
 
@@ -442,37 +442,41 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Wind Tiles
 
+(defun parse-cycle-string (cycle)
+  (make-cycle
+   :timestamp (parse-datetime
+               (format nil "~a-~a-~aT~a:00Z"
+                       (subseq cycle 0 4)
+                       (subseq cycle 4 6)
+                       (subseq cycle 6 8)
+                       (subseq cycle 9 11)))))
+
 (defun get-wind-tile (server handler request response)
   (handler-case 
-      (destructuring-bind (tile resolution level lat name)
+      (destructuring-bind (tile cycle resolution offset lat lon)
           (path request)
-        (let ((cycle (available-cycle (now)))
-              (path (merge-pathnames (tilespec-pathname resolution level lat name)
-                                     *web-root-directory*))
-              (lon (first (cl-utilities:split-sequence #\. name))))
+        (let* ((cycle (parse-cycle-string cycle))
+               (offset (read-arg offset 'fixnum))
+               (lat (read-arg lat 'fixnum))
+               (lon (read-arg (first (cl-utilities:split-sequence #\. lon)) 'fixnum))
+               (path (tile-filename cycle resolution offset lat lon
+                                    :tile-root-dir *web-root-directory*)))
           (cond
             ((probe-file path)
-             (log2:info "HIT: ~a" path))
+             (log2:trace "HIT: ~a" path))
             (t
-             (log2:info "MISS: ~a" path)
+             (log2:trace "MISS: ~a" path)
              (ensure-directories-exist path)
-             (setf lat (read-arg lat 'fixnum))
-             (setf lon (read-arg lon 'fixnum))
-             (create-wind-tile-binary path lat (+ lat 10) lon (+ lon 10)
-                                      :cycle cycle
-                                      :resolution resolution
-                                      :from-forecast 0
-                                      :to-forecast 48)))
+             (create-tile path lat (+ lat 10) lon (+ lon 10)
+                          :cycle cycle
+                          :resolution resolution
+                          :from-forecast offset
+                          :to-forecast offset)))
           (load-file path response)))
     (error (e)
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
-
-(defun tilespec-pathname (res level lat name)
-  (make-pathname :directory (list :relative res level lat)
-                 :name name))
-               
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TWA Path
@@ -483,15 +487,15 @@
              (user-id
                (http-authenticated-user handler request))
              (race-id (get-routing-request-race-id request))
+             (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
              (routing
                (get-routing-presets |presets|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
-                                    :cycle |cycle|
+                                    :cycle cycle
                                     :polars |polarsId|
                                     :starttime |time|
                                     :resolution |resolution|))
-             (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
              (time (parse-datetime |time|))
              (lat-a (read-arg |latA|))
              (lng-a (read-arg |lngA|))

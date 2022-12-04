@@ -12,6 +12,7 @@ var settings = {
     "polarsId": "1"
 };
 
+let selectedCursor = 'crosshair';
 
 var windTile = undefined;
 
@@ -30,6 +31,8 @@ var east;
 // Time index
 var ir_index;
 
+var currentCycle = getCurrentCycle()
+
 var startMarker = {};
 var destinationMarker = {};
 var twaAnchor = undefined;
@@ -46,9 +49,6 @@ var routeIsochrones = [];
 var trackMarkers = [];
 
 var polars = null;
-var forecastData = {};
-var forecastCycle;
-var windData = null;
 var currentRouting = {};
 var twaPath = [];
 var hdgPath = [];
@@ -190,12 +190,7 @@ function updateMap () {
 
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
-        if (forecastData.basetime) {
-            redrawWindByOffset(forecastData.basetime, ir_index.value);
-        } else {
-            var baseTime = availableForecastCycle();
-            redrawWindByOffset(baseTime, ir_index.value);
-        }
+        redrawWindByOffset(ir_index.value);
     });
 }
 
@@ -206,7 +201,7 @@ function availableForecastCycle (d=new Date()) {
     return new Date(fc).toISOString();
 }
 
-function currentCycle (d=new Date()) {
+function getCurrentCycle (d=new Date()) {
     var availDate = d - 210 * 60 * 1000;
     var fc = truncate(availDate, 6 * 3600 * 1000);
     return new Date(fc).toISOString();
@@ -220,11 +215,11 @@ function onContextMenu (point) {
 }
 
 function onSelectIsochrone (isochrone) {
-    var baseTime = isochrone.get('time');
+    currentCycle = isochrone.get('time');
     var offset = isochrone.get('offset');
     $("#ir_index")[0].value = offset;
     updateIsochrones();
-    redrawWindByOffset(baseTime, offset);
+    redrawWindByOffset(offset);
 }
 
 function onDisplaywind (event) {
@@ -242,10 +237,22 @@ function onDisplayTracks (event) {
 }
 
 function onCursorSelect (event, type) {
+    selectedCursor = type;
     googleMap.setOptions({draggableCursor:type});
 }
 
 
+function setBusyCursor () {
+    document.getElementById('bt_getroute').style.cursor = "wait";
+    document.getElementById("body").style.cursor = "wait";
+    googleMap.setOptions({draggableCursor:"wait"});
+}
+
+function restoreCursor () {
+    document.getElementById("body").style.cursor = "pointer";
+    document.getElementById('bt_getroute').style.cursor = "pointer";
+    googleMap.setOptions({draggableCursor:selectedCursor});
+}
 
 function onAdjustIndex (event) {
     var source = event.target.id;
@@ -258,7 +265,7 @@ function onAdjustIndex (event) {
     else if (source == "bt_inc6")
         ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
     updateIsochrones();
-    redrawWindByOffset(forecastData.basetime, ir_index.value);
+    redrawWindByOffset(ir_index.value);
 }
 
 function onDelayedStart (event) {
@@ -420,7 +427,7 @@ function onManualCycle (event) {
         "/function/router.setParameter",
         function (request) {
             console.log(request.responseText);
-            redrawWindByOffset(cycle, 0);
+            redrawWindByOffset(0);
         },
         function (request) {
             alert('Could not set cycle: ' + request.textStatus + ' ' + request.errorThrown + ' ' + request.responseText);
@@ -435,13 +442,13 @@ function onSetCycleTS (event) {
         var dateInput =  document.getElementById("tb_cycledate");
         var hourInput =  document.getElementById("sel_cyclehour");
         setttings.cycleTS = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-        redrawWindByOffset(settings.cycleTS, "0");
+        redrawWindByOffset("0");
     }
 }
 
 function onSetResolution (event) {
     settings.resolution = event.currentTarget.value;
-    redrawWindByOffset(forecastData.basetime, ir_index.value);
+    redrawWindByOffset(ir_index.value);
 }
 
 function onSetGFSMode (event) {
@@ -487,7 +494,7 @@ function onMarkerClicked (marker) {
         baseTime = availableForecastCycle();
     }
     
-    redrawWindByTime(baseTime, time);
+    redrawWindByTime(time);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -515,6 +522,7 @@ function makeQuery (object) {
 }
 
 function getRoute () {
+    setBusyCursor();
     var bt_execute=$("#bt_getroute")[0];
     bt_execute.disabled = true;
     
@@ -555,11 +563,12 @@ function getRoute () {
         clearRoute();
         displayRouting(data);
         bt_execute.disabled = false;
-        
+        restoreCursor();
     }).fail( function (jqXHR, textStatus, errorThrown) {
         // $('div, button, input').css('cursor', 'auto');
 
         bt_execute.disabled = false;
+        restoreCursor();
         window.clearInterval(timer);
         pgGetRoute.value = pgGetRoute.max;
         alert(textStatus + ' ' + errorThrown);
@@ -702,7 +711,7 @@ function setupCanvas () {
 }
 
 function createIsochrones (isochrones) {
-    var c = new Date(currentCycle());
+    var c = new Date(currentCycle);
     for ( var i = 0; i < isochrones.length; i++ ) {
         var startSymbol = {
             path: google.maps.SymbolPath.CIRCLE,
@@ -750,7 +759,7 @@ function getIsoStyle (isochrone, selectedOffset, availableCycle) {
 }
 
 function updateIsochrones () {
-    var c = new Date(currentCycle());
+    var c = new Date(currentCycle);
     for (const isochrone of routeIsochrones ) {
         var style = getIsoStyle(isochrone, ir_index.valueAsNumber, c);
         isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
@@ -961,83 +970,41 @@ function getTWAPath (event) {
     }
 }
 
-function redrawWindByTime (cycle, time) {
-    getWind(cycle, time);
+function redrawWindByTime (time) {
+    getWind(currentCycle, time);
 }
 
-function redrawWindByOffset (cycle, offset) {
-    var time = new Date(cycle).getTime();
+function redrawWindByOffset (offset) {
+    let d = new Date(currentCycle);
+    let time = d.getTime();
     time = time + parseInt(offset) * 3600000;
     time = new Date(time);
-    redrawWindByTime(cycle, time.toISOString());
+    redrawWindByTime(time.toISOString());
 }
 
-function getWind (cycle, time) {
+async function getWind (cycle, time) {
     let bounds = getMapBounds();
 
-    windTile.update(bounds);
-
-    //////////////////////////////////////////////////////////////////////
-    // ToDo:
-    // Restore status displays
-    // forecastData = data;
-    // drawWind(data)
-}
-
-function drawWind (data) {
-
-    // Update time
-    forecastCycle = data.basetime;
-    $("#lb_modelrun").text(data.cycle);
-    $("#lb_index").text(data.time);
-    $("#lb_fcmax").text(' ' + data.maxoffset + 'hrs');
-
-    var offset = (new Date(data.time) - new Date(data.basetime)) / 3600000;
+    try {
+        await windTile.update(bounds, cycle, time, settings.resolution);
+    } catch (e) {
+        alert(e);
+    }
+    
+    document.getElementById('lb_modelrun').innerHTML = cycle.substring(11, 13) + 'Z';
+    document.getElementById('lb_index').innerHTML = time.substring(0, 16) + 'Z';
+    
+    var offset = (new Date(time) - new Date(cycle)) / 3600000;
     ir_index.value = offset;
 
-    // Keep new wind data in global var for displaying wind data at mouse position
-    windData = data.data;
-    
-    var mapCanvas = document.getElementById('wind-canvas');
-    var ctx = mapCanvas.getContext("2d");
-    ctx.globalAlpha = 0.6;
-    ctx.clearRect(0, 0, geometry.width, geometry.height);
-
-    // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
-    var bounds = getMapBounds();
-
-    var mapProjection = googleMap.getProjection();
-    var nwLatLng =  new google.maps.LatLng(bounds.north, bounds.west);
-    var seLatLng =  new google.maps.LatLng(bounds.south, bounds.east);
-    var nwPoint = mapProjection.fromLatLngToPoint(nwLatLng);
-    var sePoint = mapProjection.fromLatLngToPoint(seLatLng);
-    var mapWidth = (sePoint.x - nwPoint.x);
-    var mapHeight = (sePoint.y - nwPoint.y);
-
-    // Wind values are at evenly distributed lat/lng values
-    var width = (bounds.east-bounds.west);
-    var height = (bounds.south-bounds.north);
-    var dlng = (width/xSteps);
-    var dlat = (height/ySteps);
-
-    // Shift Lat/Lng by 1/2 delta to center wind arrows on screen.
-    for ( var lat = bounds.north+dlat/2, y=0; y < ySteps; lat += dlat, y++ ) {
-        for ( var lng = bounds.west+dlng/2, x=0; x < xSteps; lng += dlng, x++ ) {
-            var latLng = new google.maps.LatLng(lat, lng);
-            var mapPoint = mapProjection.fromLatLngToPoint(latLng);
-            var pointX = (mapPoint.x - nwPoint.x) / mapWidth * ctx.canvas.width;
-            var pointY = (mapPoint.y - nwPoint.y) / mapHeight * ctx.canvas.height;
-            drawWindArrow(ctx, pointX, pointY, windData[y][x][0], windData[y][x][1]);
-        }
-    }
 }
 
 function updateWindInfo (event, getVMG) {
-    if (windData) {
+    $("#lb_position").text(formatLatLngPosition(event.latLng));
+    
+    if (windTile) {
         var zoom = googleMap.getZoom();
-        
-        $("#lb_position").text(formatLatLngPosition(event.latLng));
-        
+            
         var bounds = getMapBounds();
 
         var curLat = event.latLng.lat();
@@ -1065,14 +1032,10 @@ function updateWindInfo (event, getVMG) {
         var lbDFS = document.getElementById("lb_dfs");
         lbDFS.innerText = `${dfs.toFixed(1)} | ${startBearing.toFixed(1)}°`;
         
-        
-        var iLat = Math.round((curLat - bounds.north) / (bounds.south - bounds.north) * ySteps);
-        var iLng = Math.round(Util.arcLength(bounds.west, curLng) / Util.arcLength(bounds.west, bounds.east) * xSteps);
-
-        var wind = windData[iLat][iLng];
+        var wind = windTile.getWind(curLat, curLng);
         if (wind) {
-            var windDir = wind[0].toFixed(0);
-            var windSpeed = Util.ms2knots(windData[iLat][iLng][1]).toFixed(1);
+            var windDir = wind.direction.toFixed();
+            var windSpeed = Util.ms2knots(wind.speed).toFixed(1);
             $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
 
             var lbVMGUp = document.getElementById("lb_vmg_up");
@@ -1105,29 +1068,6 @@ function getMapBounds () {
              east: ne.lng(),
              projection: mapProjection
            };
-}
-
-function drawWindArrow(ctx, x, y, direction, speed) {
-    direction = direction + 90;
-    if (direction > 360) {
-        direction = direction - 360;
-    }
-    ctx.fillStyle = colors[ms2bf(speed)];
-    ctx.strokeStyle = colors[ms2bf(speed)];
-    ctx.save();
-    ctx.translate(x , y);
-    ctx.rotate((direction*Math.PI/180));
-    var scale = (speed>0)?0.4 + speed/30:0;
-    ctx.scale(scale, scale);
-    ctx.beginPath();
-    ctx.moveTo(-0, 0);
-    ctx.lineTo(-15 * 6, 12 * 6);
-    ctx.lineTo(18 * 6, 0);
-    ctx.lineTo(-15 * 6, -12 * 6);
-    ctx.closePath()
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1197,6 +1137,8 @@ export {
     onSetResolution,
     onSetGFSMode,
     polars,
+    restoreCursor,
+    setBusyCursor,
     settings,
     setResolution,
     setRoutePoint,

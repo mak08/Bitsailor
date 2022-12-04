@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-12-04 00:16:57>
+;;; Last Modified <michael 2022-12-04 21:59:07>
 
 (in-package :bitsailor)
 
@@ -451,6 +451,19 @@
                        (subseq cycle 6 8)
                        (subseq cycle 9 11)))))
 
+(defvar +wind-tile-lock+
+    (bordeaux-threads:make-lock "wind-tile-lock-ht"))
+
+(defvar *wind-tile-lock-ht*
+  (make-hash-table :test 'equal))
+
+(defun get-wind-tile-lock (path)
+  (let ((name (namestring path)))
+  (bordeaux-threads:with-lock-held (+wind-tile-lock+)
+    (or (gethash name *wind-tile-lock-ht*)
+        (setf (gethash name *wind-tile-lock-ht*)
+              (bordeaux-threads:make-lock name))))))
+
 (defun get-wind-tile (server handler request response)
   (handler-case 
       (destructuring-bind (tile cycle resolution offset lat lon)
@@ -461,17 +474,19 @@
                (lon (read-arg (first (cl-utilities:split-sequence #\. lon)) 'fixnum))
                (path (tile-filename cycle resolution offset lat lon
                                     :tile-root-dir *web-root-directory*)))
-          (cond
-            ((probe-file path)
-             (log2:trace "HIT: ~a" path))
-            (t
-             (log2:trace "MISS: ~a" path)
-             (ensure-directories-exist path)
-             (create-tile path lat (+ lat 10) lon (+ lon 10)
-                          :cycle cycle
-                          :resolution resolution
-                          :from-forecast offset
-                          :to-forecast offset)))
+          (let ((lock (get-wind-tile-lock path)))
+            (bordeaux-threads:with-lock-held (lock)
+              (cond
+                ((probe-file path)
+                 (log2:trace "HIT: ~a" path))
+                (t
+                 (log2:trace "MISS: ~a" path)
+                 (ensure-directories-exist path)
+                 (create-tile path lat (+ lat 10) lon (+ lon 10)
+                              :cycle cycle
+                              :resolution resolution
+                              :from-forecast offset
+                              :to-forecast offset)))))
           (load-file path response)))
     (error (e)
       (log2:error "~a" e)

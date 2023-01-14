@@ -394,6 +394,12 @@ input[type=checkbox] {
 	font-weight: bold;
 }
 
+/* Download */
+.download-button {
+	grid-row: 17;
+	grid-column: 2;
+}
+
 .statistics-from-label {
 	grid-row: 18;
 	grid-column: 1;

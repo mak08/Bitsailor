@@ -3,6 +3,7 @@
 
 import * as Util from './Util.js';
 import WindTile from './WindTile.js';
+import * as GPX from './GPX.js';
 
 var settings = {
     "resolution": "1p00",
@@ -49,7 +50,7 @@ var routeIsochrones = [];
 var trackMarkers = [];
 
 var polars = null;
-var currentRouting = {};
+var routeInfo = {};
 var twaPath = [];
 var hdgPath = [];
 
@@ -88,6 +89,7 @@ function setUp (getVMG) {
 
     // Connect button events
     $("#bt_getroute").click(getRoute);
+    $("#bt_downloadroute").click(onDownloadRoute);
     
     $("#bt_inc").click(onAdjustIndex);
     $("#bt_dec").click(onAdjustIndex);
@@ -169,6 +171,20 @@ function initMarker (type, title, url, x, y) {
 function onWindowResize (event) {
 }
 
+function onDownloadRoute (event) {
+    let link = document.createElement("a");
+    let content = getRouteGPX();
+    let file = new Blob([content], { type: 'text/plain' });
+    link.href = URL.createObjectURL(file);
+    link.download = "route.gpx";
+    link.click();
+    URL.revokeObjectURL(link.href);
+}
+
+function getRouteGPX () {
+    return GPX.exportRoute(routeInfo);
+}
+
 function updateMap () {
     // Delegate to callback -
     // This causes the update to be executed only when the map bounds are valid.
@@ -233,7 +249,7 @@ function onDisplaywind (event) {
 
 function onDisplayTracks (event) {
     clearRoute();
-    displayRouting(currentRouting);
+    displayRouting(routeInfo);
 }
 
 function onCursorSelect (event, type) {
@@ -553,7 +569,7 @@ function getRoute () {
         // $('div, button, input').css('cursor', 'auto');
 
         // Remember routing data
-        currentRouting = data;
+        routeInfo = data;
 
         // Reset timer
         window.clearInterval(timer);
@@ -930,7 +946,7 @@ function isochroneTime (isochrone) {
 
 function getIsochroneByTime (time) {
     var refTime = new Date(time);
-    var isochrones = currentRouting.isochrones;
+    var isochrones = routeInfo.isochrones;
     if (isochrones) {
         isochrones = isochrones.slice().reverse();
     }
@@ -985,16 +1001,23 @@ function redrawWindByOffset (offset) {
 async function getWind (cycle, time) {
     let bounds = getMapBounds();
 
+    let usedCycle = cycle;
+
     try {
-        await windTile.update(bounds, cycle, time, settings.resolution);
-    } catch (e) {
-        alert(e);
+        await windTile.update(bounds, usedCycle, time, settings.resolution);
+    } catch (e1) {
+        console.log(e1);
+        try {
+            usedCycle = availableForecastCycle();
+            await windTile.update(bounds, usedCycle, time, settings.resolution);
+        } catch (e2) {
+            console.log(e2);
+        }
     }
-    
-    document.getElementById('lb_modelrun').innerHTML = cycle.substring(11, 13) + 'Z';
+    document.getElementById('lb_modelrun').innerHTML = usedCycle.substring(11, 13) + 'Z';
     document.getElementById('lb_index').innerHTML = time.substring(0, 16) + 'Z';
     
-    var offset = (new Date(time) - new Date(cycle)) / 3600000;
+    var offset = (new Date(time) - new Date(usedCycle)) / 3600000;
     ir_index.value = offset;
 
 }

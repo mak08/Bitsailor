@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-12-05 00:12:42>
+;;; Last Modified <michael 2023-01-15 00:02:11>
 
 (in-package :bitsailor)
 
@@ -223,8 +223,9 @@
                                     :dlon (read-arg |dlon| 'double-float)))
              (routeinfo
                (get-route routing)))
-        (log2:info "User:~a Race:(RS) Status ~a ~a"
+        (log2:info "User:~a Race:(~a) Status ~a ~a"
                    user-id
+                   |presets|
                    (routeinfo-status routeinfo)
                    (routeinfo-stats routeinfo))
         (values

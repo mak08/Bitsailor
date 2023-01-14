@@ -413,14 +413,18 @@ export default class WindTile {
         let offsetStr = offset.toFixed().padStart(3, '0');
         let latStr = lat0.toFixed().padStart(3, '0');
         let lonStr = lon0.toFixed().padStart(3, '0');
-        let response = await fetch(this.tilePath(cycleString, res, offsetStr, latStr, lonStr));
-        if (!response.ok) {
-            throw new Error(`${response.statusText}`);
+        try {
+            let response = await fetch(this.tilePath(cycleString, res, offsetStr, latStr, lonStr));
+            if (!response.ok) {
+                throw new Error(`${response.statusText}`);
+            }
+            let buffer = await response.arrayBuffer();
+            let tile = this.decodeTile(buffer);
+            cachePutTile(cycleString, res, offset, lat0, lon0, tile);
+            return tile;
+        } catch (e) {
+            throw new Error(e);
         }
-        let buffer = await response.arrayBuffer();
-        let tile = this.decodeTile(buffer);
-        cachePutTile(cycleString, res, offset, lat0, lon0, tile);
-        return tile;
     }
 
     async getTileCached (cycle, res, offset, lat0, lon0) {

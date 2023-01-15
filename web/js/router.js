@@ -172,17 +172,19 @@ function onWindowResize (event) {
 }
 
 function onDownloadRoute (event) {
-    let link = document.createElement("a");
-    let content = getRouteGPX();
-    let file = new Blob([content], { type: 'text/plain' });
-    link.href = URL.createObjectURL(file);
-    link.download = "route.gpx";
-    link.click();
-    URL.revokeObjectURL(link.href);
-}
-
-function getRouteGPX () {
-    return GPX.exportRoute(routeInfo);
+    if (routeInfo && routeInfo.best) {
+        let rbGPX = document.getElementById('rb_gpx');
+        let format = rbGPX.checked?'gpx':'csv';
+        let content = GPX.exportRoute(routeInfo, format);
+        let file = new Blob([content], { type: 'text/plain' });
+        let link = document.createElement("a");
+        link.href = URL.createObjectURL(file);
+        link.download = `route.${format}`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    } else {
+        alert('No route information');
+    }
 }
 
 function updateMap () {

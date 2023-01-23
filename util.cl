@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-05-02 20:08:48>
+;;; Last Modified <michael 2023-01-24 00:26:29>
 
 (in-package :bitsailor)
 
@@ -61,7 +61,6 @@
       (values (m/s-to-knots speed)
               sail))))
 
-
 (defun boat-speed-raw (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (declare (ignorable options))
   (let* ((polars (get-polars-raw polars-name))
@@ -73,7 +72,6 @@
        :for saildef :across saildefs
        :collect (list (joref saildef "name")
                       (aref (aref (joref saildef "speed") twa-index) tws-index)))))
-    
 
 (defvar *polars-raw-ht* (make-hash-table :test #'equal))
 (defun get-polars-raw (polars-name)

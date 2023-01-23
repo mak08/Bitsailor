@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2022-11-19 22:03:47>
+;;; Last Modified <michael 2022-12-08 22:54:36>
 
 (in-package :bitsailor)
 
@@ -33,7 +33,7 @@
         :mt-method :ondemand
         ;; :mt-method :pooled
         :port "8080"
-        :max-handlers 3)
+        :max-handlers 10)
           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; -----
@@ -183,6 +183,12 @@
  :handler (:static (namestring
                     (merge-pathnames (make-pathname :directory '(:relative "web"))
                                      *source-root*))
+           :authentication nil))
+
+(handle
+ :request (:method :post
+           :path "/checkPaths")
+ :handler (:dynamic 'check-paths
            :authentication nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

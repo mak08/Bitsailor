@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-11-27 23:46:50>
+;;; Last Modified <michael 2023-01-24 00:26:12>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -73,7 +73,7 @@
        (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing box routepoint hull foils start-pos left right step-size step-time params polars delta-angle)
+(defun expand-routepoint (routing box routepoint left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -82,7 +82,8 @@
     ((> (latlng-lat (routepoint-position routepoint)) 89.9d0)
      (return-from expand-routepoint 0))
     (t
-     (let* ((cur-twa (routepoint-twa routepoint))
+     (let* ((start-pos (routing-start routing))
+            (cur-twa (routepoint-twa routepoint))
             (cur-sail (routepoint-sail routepoint))
             (twa-points (cpolars-twa polars))
             (all-twa-points (make-array (length twa-points)
@@ -116,7 +117,7 @@
                              (progn
                                (incf added)
                                (multiple-value-bind (speed sail reason)
-                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalties hull foils)
+                                   (get-penalized-avg-speed cur-twa cur-sail wind-speed polars twa penalties (routing-hull routing) (routing-foils routing))
                                  (declare (double-float speed)
                                           (integer step-size))
                                  (let*
@@ -193,11 +194,9 @@
           (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
           (pointnum 0)
-          (hull (routing-hull routing))
-          (foils  (routing-foils routing))
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 600 (min +max-iso-points+ (+ max-points 12)))
+          (max-points 750 (min +max-iso-points+ (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
           (max-dist (make-array +max-iso-points+ :initial-element 0d0))
           (min-angle (/ 360d0 +max-iso-points+))
@@ -270,7 +269,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (let ((new-point-num
-                         (expand-routepoint routing box rp hull foils start-pos left right step-size step-time params polars delta-angle)))
+                         (expand-routepoint routing box rp left right step-size step-time params polars delta-angle)))
                    (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)
@@ -345,12 +344,12 @@
     (lambda ()
       (let ((step-size
               (cond
-                ((equal step-time start-time)
+                ((eql step-time start-time)
                  ;; First step - runs up to full 10min
                  (- 600 (mod start-seconds 600)))
                 (t
                  (let ((delta-t
-                         (timestamp-difference step-time (unix-to-timestamp start))))
+                         (- (timestamp-to-unix step-time) start)))
                    (cond ((and (<= step-max 21600) ;; 6*3600s
                                (< delta-t (+ hour-fill (* 120 60))))
                           120)
@@ -365,6 +364,7 @@
         (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
         (values step-size
                 step-time)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed

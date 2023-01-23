@@ -242,6 +242,9 @@ import * as Router from './router.js';
         } else {
             Router.settings.options = ['winch'];
         }
+
+        document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);
+
         document.getElementById("cb_hull").checked  = Router.settings.options.includes('hull');
         document.getElementById("cb_winch").checked = Router.settings.options.includes('winch');
         document.getElementById("cb_foil").checked  = Router.settings.options.includes('foil');

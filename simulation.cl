@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-01-24 00:26:12>
+;;; Last Modified <michael 2023-01-31 22:57:37>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -131,8 +131,11 @@
                                             (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                        (when (and
                                               (heading-between left right origin-angle)
-                                              #-()(< (+ origin-distance dest-distance)
-                                                     (* 1.25d0 (routing-dist routing)))) 
+                                              (< (+ (expt origin-distance 2) (expt  dest-distance 2))
+                                                 ;; (+  origin-distance  dest-distance)
+                                                 (* 1.1d0 (expt (routing-dist routing) 2))
+                                                 ;; (* 1.25d0 (routing-dist routing))
+                                                 )) 
                                          (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-time heading speed sail reason wind-dir wind-speed)))))))))
                       (add-point heading-port twa)
                       (add-point heading-stbd (- twa)))

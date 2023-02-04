@@ -329,8 +329,17 @@ function onSetStartPosition (event) {
     }
 }
 
+function onSetResolution (event) {
+    let resolution= event.currentTarget.value;
+    settings.resolution = resolution;
+    storeValue('resolution', resolution);
+    redrawWindByOffset(ir_index.value);
+}
+
 function onSetDuration (event) {
-    storeValue('duration', event.target.value);
+    let duration =  event.target.value;
+    settings.duration = duration;
+    storeValue('duration', duration);
 }
 
 function storeValue (name, value) {
@@ -464,11 +473,6 @@ function onSetCycleTS (event) {
     }
 }
 
-function onSetResolution (event) {
-    settings.resolution = event.currentTarget.value;
-    redrawWindByOffset(ir_index.value);
-}
-
 function onSetGFSMode (event) {
     settings.gfsMode = event.currentTarget.value;
 }
@@ -522,6 +526,12 @@ function setResolution (resolution) {
     settings.resolution = resolution;
     document.getElementById("sel_resolution").value = resolution;
 }
+
+function setDuration (duration) {
+    settings.duration = duration;
+    document.getElementById('sel_duration').value = duration;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
@@ -1166,6 +1176,7 @@ export {
     setBusyCursor,
     settings,
     setResolution,
+    setDuration,
     setRoutePoint,
     setUp,
     startMarker,

@@ -162,6 +162,17 @@ import * as Router from './router.js';
 
         Router.loadPolars( vrData.boat.polar_id);
 
+        let resolution = Router.getValue('resolution');
+        if (resolution) {
+            Router.setResolution(resolution);
+        }
+
+        // Duration
+        let duration = Router.getValue('duration');
+        if (duration) {
+            Router.setDuration(duration);
+        }
+        
         var queryParams = Router.getURLParams()
         var start = queryParams.startPos;
         if (start) {

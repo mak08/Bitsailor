@@ -98,10 +98,21 @@ import * as Router from './router.js';
 
         Router.loadPolars(rsData.polar.objectId);
 
+        // Resolution
         if (rsData.gfs025 == "TRUE") {
             Router.setResolution("0p25");
         } else {
             Router.setResolution("1p00");
+        }
+        let resolution = Router.getValue('resolution');
+        if (resolution) {
+            Router.setResolution(resolution);
+        }
+        
+        // Duration
+        let duration = Router.getValue('duration');
+        if (duration) {
+            Router.setDuration(duration);
         }
         
         var queryParams = Router.getURLParams()
@@ -118,8 +129,8 @@ import * as Router from './router.js';
         }
         let startPos = new google.maps.LatLng(start.lat, start.lon);
         // setRoutePoint also updates storage via updateStartPosition
-        Router.setRoutePoint('start', startPos);            
-            
+        Router.setRoutePoint('start', startPos);
+
         // Destination 
         var lastP0 = rsData.gates[rsData.gates.length-1][0]
         var lastP1 = rsData.gates[rsData.gates.length-1][1]

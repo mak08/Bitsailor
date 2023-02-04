@@ -338,7 +338,7 @@ function onSetResolution (event) {
 
 function onSetDuration (event) {
     let duration =  event.target.value;
-    settings.duration = duration;
+    settings.duration = duration * 3600;
     storeValue('duration', duration);
 }
 
@@ -528,7 +528,7 @@ function setResolution (resolution) {
 }
 
 function setDuration (duration) {
-    settings.duration = duration;
+    settings.duration = duration * 3600;
     document.getElementById('sel_duration').value = duration;
 }
 
@@ -570,7 +570,6 @@ function getRoute () {
     var destPos = destinationMarker.getPosition();
     
     var query = makeQuery(settings);
-    query += `&duration=${duration * 3600}`;
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 

@@ -539,12 +539,14 @@ function setDuration (duration) {
 function makeQuery (object) {
     var s = "";
     for (const m in object) {
-        if (s == "") {
-            s = "?";
-        } else {
-            s += "&";
+        if (object[m]) {
+            if (s == "") {
+                s = "?";
+            } else {
+                s += "&";
+            }
+            s += `${ m }=${ object[m]}`;
         }
-        s += `${ m }=${ object[m]}`;
     }
     return s;
 }
@@ -979,7 +981,11 @@ function getTWAPath (event) {
         var lng = event.latLng.lng();
         var isochrone = getIsochroneByTime(time);
         var cycle = isochrone?isochrone.time:availableForecastCycle();
-        var query = makeQuery(settings);
+
+        let twaSettings = JSON.parse(JSON.stringify(settings));
+        twaSettings.duration = null;
+        
+        var query = makeQuery(twaSettings);
 
         $.ajax({
             url: `/function/router.getTWAPath${query}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,

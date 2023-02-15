@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-10-23 00:24:17>
+;;; Last Modified <michael 2023-02-13 18:48:56>
 
 (in-package :bitsailor)
 
@@ -36,8 +36,6 @@
            (normalize-vr-polar-id (joref polars "_id")))
          (label
           (joref polars "label"))
-         (maxspeed
-          (joref polars "maxSpeed"))
          (tws
           (joref polars "tws"))
          (twa
@@ -74,7 +72,6 @@
     (make-polars-vr :name polars-name
                     :id (format nil "~a" id)
                     :label label
-                    :maxspeed maxspeed
                     :tws tws
                     :twa twa
                     :sails saildefs

@@ -555,6 +555,9 @@ function getRoute () {
     setBusyCursor();
     var bt_execute=$("#bt_getroute")[0];
     bt_execute.disabled = true;
+
+    let documentQuery = new URL(document.URL).searchParams;
+    let raceId = documentQuery.get('race');
     
     var mapMenu=$("#mapMenu")[0];
     var windowEvent = window.event;
@@ -572,6 +575,7 @@ function getRoute () {
     var destPos = destinationMarker.getPosition();
     
     var query = makeQuery(settings);
+    query += `&raceId=${raceId}`;
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 

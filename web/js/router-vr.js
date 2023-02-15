@@ -162,6 +162,12 @@ import * as Router from './router.js';
 
         Router.loadPolars( vrData.boat.polar_id);
 
+        // Resolution
+        if (vrData.fineWinds == "TRUE") {
+            Router.setResolution("0p25");
+        } else {
+            Router.setResolution("1p00");
+        }
         let resolution = Router.getValue('resolution');
         if (resolution) {
             Router.setResolution(resolution);

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-19 22:56:06>
+;;; Last Modified <michael 2023-02-15 00:28:29>
 
 (in-package :bitsailor)
 
@@ -139,6 +139,7 @@
                      :resolution (race-info-resolution race-info)
                      :merge-start 6d0
                      :merge-window 0d0
+                     :minwind nil
                      :options '("realsail")
                      :penalties (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)))
       (race-info-vr
@@ -147,7 +148,11 @@
                      :resolution "1p00"
                      :merge-start 4.0d0
                      :merge-window 1d0
-                     :minwind t
+                     :minwind (if (string=
+                                   (joref (race-info-data race-info) "fineWinds")
+                                   "TRUE")
+                                  (knots-to-m/s 2d0)
+                                  (knots-to-m/s 1d0))
                      :options '("hull" "foil" "winch" "heavy" "light" "reach")
                      :penalties (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0)))
       (null

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-01-15 00:02:11>
+;;; Last Modified <michael 2023-02-15 00:54:54>
 
 (in-package :bitsailor)
 
@@ -129,8 +129,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
+(defun determine-minwind (presets race-id)
+  (when (string= presets "VR")
+    (if (string=
+         (joref (race-info-data (race-info race-id)) "fineWinds")
+         "TRUE")
+        (knots-to-m/s 1d0)
+        (knots-to-m/s 2d0))))
+
 (defun get-routing-presets (presets
                             &key
+                              (race-id)
                               (starttime nil)
                               (resolution "1p00")
                               (polars)
@@ -143,6 +152,7 @@
                               (dlat)
                               (dlon))
   (make-routing
+   :race-id race-id
    :start (when (and slat slon) (make-latlng :lat slat :lng slon))
    :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
    :starttime starttime
@@ -155,6 +165,7 @@
                     '("realsail")
                     '("hull" "foil" "winch" "heavy" "light" "reach")))
    :resolution resolution
+   :minwind (determine-minwind presets race-id)
    :gfs-mode gfs-mode
    :interpolation  (if (string= presets "RS") :bilinear :vr)
    :polars polars
@@ -185,6 +196,7 @@
 
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
+                                              (|raceId| nil)
                                               (|options| nil)
                                               (|resolution| "1p00")
                                               (|gfsMode| "06h")
@@ -208,6 +220,7 @@
                         |cycleTS|))
              (routing
                (get-routing-presets |presets|
+                                    :race-id |raceId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|

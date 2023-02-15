@@ -1,14 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-10-23 00:24:32>
+;;; Last Modified <michael 2023-02-13 23:24:29>
 
 (in-package :bitsailor)
 
-(defstruct cpolars id label name maxspeed twa vmg speed)
-(defstruct polars id label name maxspeed tws twa sails)
+(defstruct polars id label name tws twa sails)
 (defstruct (polars-vr (:include polars)) winch)
 (defstruct (polars-rs (:include polars)))
+(defstruct cpolars id label name maxspeed sailspeeds twa vmg speed)
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
@@ -37,7 +37,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
-
 
 (defun encode-options (option-list)
   (let ((options 3))
@@ -90,27 +89,25 @@
   (let* ((polars (get-polars-by-id id))
          (tws (polars-tws polars))
          (twa (polars-twa polars))
-         (max-wind (aref tws (1- (length tws))))
+         (max-wind (ceiling (aref tws (1- (length tws)))))
          (twa-steps (if (null *twa-steps*)
                         twa
                         (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
-         (precomputed
-          (loop
-             :for angle :from 0 :to 1800
-             :collect (loop
-                         :for wind :from 0d0 :to (* max-wind 10d0)
-                         :collect (multiple-value-list
-                                   (get-max-speed% (/ angle  10.d0) (/ wind 10.d0) polars options)))))
-         (speed (make-array (list (length precomputed)
-                                  (length (car precomputed)))
-                            :initial-contents precomputed)))
+         (maxspeed (make-array (list (1+ 1800)
+                                  (1+ (* max-wind 10))))))
+    (loop
+      :for angle :from 0 :to 1800
+      :do (loop
+            :for wind :from 0 :to (* max-wind 10)
+            :do (setf (aref maxspeed angle wind)
+                      (multiple-value-list
+                       (get-max-speed% (/ angle  10.d0) (/ wind 10.d0) polars options)))))
     (make-cpolars :id id
                   :label (polars-label polars)
                   :name (polars-name polars)
-                  :maxspeed  (polars-maxspeed polars)
                   :twa twa-steps
-                  :speed speed
-                  :vmg (precompute-vmg speed max-wind))))
+                  :maxspeed maxspeed
+                  :vmg (precompute-vmg maxspeed max-wind))))
 
 (defun precompute-vmg (cpolars-speed max-wind)
   (let ((precomputed

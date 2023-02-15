@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-11-27 23:12:23>
+;;; Last Modified <michael 2023-02-12 16:18:58>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,6 +66,14 @@
 (defun routing-winches (routing)
   (member "winch" (routing-options routing) :test #'string=))
 
+(defstruct routestats start duration sails min-wind max-wind min-twa max-twa calctime steps points)
+
+(defmethod print-object ((thing routestats) stream)
+  (format stream "D:~a T:~,2f S:~a"
+          (routestats-duration thing)
+          (routestats-calctime thing)
+          (format-datetime nil (routestats-start thing))))
+
 (defstruct routeinfo status best path polars options maxspeed stats tracks isochrones)
 
 (defmethod print-object ((thing routeinfo) stream)
@@ -76,13 +84,6 @@
             (routestats-duration stats)
             (length (routeinfo-isochrones thing)))))
 
-(defstruct routestats start duration sails min-wind max-wind min-twa max-twa calctime steps points)
-
-(defmethod print-object ((thing routestats) stream)
-  (format stream "D:~a T:~,2f S:~a"
-          (routestats-duration thing)
-          (routestats-calctime thing)
-          (format-datetime nil (routestats-start thing))))
 
 (defstruct isochrone center time offset path)
 

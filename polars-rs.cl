@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2022-02-20 22:41:16>
+;;; Last Modified <michael 2023-02-13 18:49:01>
 
 (in-package :bitsailor)
 
@@ -23,8 +23,6 @@
            (joref json-object "objectId"))
          (label
            (joref json-object "classBoat"))
-         (maxspeed
-           nil)
          (polar-data
            (joref json-object "polarData"))
          (jib
@@ -62,7 +60,6 @@
     (make-polars-rs :name polars-name
                     :id id
                     :label label
-                    :maxspeed maxspeed
                     :tws tws
                     :twa twa
                     :sails saildefs)))

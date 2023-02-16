@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-15 18:57:24>
+;;; Last Modified <michael 2023-02-16 21:27:05>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -202,10 +202,10 @@
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 750 (min +max-iso-points+ (+ max-points 10)))
+          (max-points 250 (min *max-iso-points* (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
-          (max-dist (make-array +max-iso-points+ :initial-element 0d0))
-          (min-angle (/ 360d0 +max-iso-points+))
+          (max-dist (make-array *max-iso-points* :initial-element 0d0))
+          (min-angle (/ 360d0 *max-iso-points*))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           ;; Get wind data for simulation time
@@ -252,8 +252,6 @@
             (multiple-value-bind  (best-route best-path)
                 (construct-route routing isochrone destination)
               (log-stats elapsed stepnum pointnum)
-              (setf *best-route* best-route)
-              (setf *isochrones* isochrones)
               (make-routeinfo :status (if reached "reached"
                                           (if error "no_route"
                                               "max_duration"))

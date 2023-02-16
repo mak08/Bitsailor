@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2022-07-20 21:43:39>
+;;; Last Modified <michael 2023-02-16 21:27:17>
 
 
 (in-package :bitsailor)
@@ -23,13 +23,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parameters and configuration
 
-(defconstant  +max-iso-points+ 1250)
-
-(defvar *isochrones* nil)
-(defvar *best-route*)
+(defparameter *disable-nmea*  nil)
+(defparameter *max-iso-points* 720)
+(defparameter *max-route-hours* (* 24 8))
 
 (defvar *api-key*)
-(defvar *use-bitmap* t)
+(defvar *use-bitmap* nil)
 (defvar *tracks* nil)
 (defvar *rs-max-hours* (* 24 10))
 (defvar *vr-max-hours* (* 24 15))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-15 00:54:54>
+;;; Last Modified <michael 2023-02-16 21:34:41>
 
 (in-package :bitsailor)
 
@@ -156,10 +156,7 @@
    :start (when (and slat slon) (make-latlng :lat slat :lng slon))
    :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
    :starttime starttime
-   :stepmax (min (if (string= presets "RS")
-                     (* 16 24 3600)
-                     (* 16 24 3600))
-                 stepmax)
+   :stepmax (min (* *max-route-hours* 3600) stepmax)
    :options (or options
                 (if (string= presets "RS")
                     '("realsail")
@@ -576,7 +573,7 @@
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  (load-race-definitions :directory *races-dir*)
+  ;; (load-race-definitions :directory *races-dir*)
   (let ((races (list)))
     (map-races 
      (lambda (k v)
@@ -622,6 +619,8 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+  (unless *disable-nmea*
+    (error "NMEA support is currently disabled. Please enter position manually.")) 
   (let* ((user-id (http-authenticated-user handler request))
          (race-id (get-routing-request-race-id request))
          (host |host|)
@@ -637,6 +636,8 @@
             (get-nmea-position user-id race-id)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+  (unless *disable-nmea*
+    (error "NMEA support is currently disabled. Please enter position manually."))
   (let* ((user-id (http-authenticated-user handler request))
          (race-id (get-routing-request-race-id request))
          (host |host|)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2022-07-10 21:25:47>
+;;; Last Modified <michael 2023-02-17 23:11:10>
 
 (in-package :bitsailor)
 
@@ -17,6 +17,7 @@
                               (left double-float)
                               (destination-distance double-float)
                               step-time
+                              twa
                               heading
                               speed
                               sail
@@ -45,6 +46,7 @@
               (create-routepoint predecessor
                                  position
                                  step-time
+                                 twa
                                  heading
                                  destination-distance
                                  speed

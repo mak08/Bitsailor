@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-17 22:41:14>
+;;; Last Modified <michael 2023-02-17 23:12:12>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -139,7 +139,7 @@
                                                  (* 1.1d0 (expt (routing-dist routing) 2))
                                                  ;; (* 1.25d0 (routing-dist routing))
                                                  )) 
-                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-time heading speed sail reason wind-dir wind-speed)))))))))
+                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-time twa heading speed sail reason wind-dir wind-speed)))))))))
                       (add-point heading-port twa)
                       (add-point heading-stbd (- twa)))
               :finally (return added))))))))
@@ -237,7 +237,7 @@
                (interpolated-prediction (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time nil (course-distance start-pos destination) nil nil nil wind-dir wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil nil wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))

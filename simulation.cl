@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-16 21:27:05>
+;;; Last Modified <michael 2023-02-17 22:41:14>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -52,7 +52,7 @@
             (not (equal sail cur-sail)))
        (values (* speed (the double-float (penalty-sail penalties))) sail "Sail Change"))
       ((and cur-twa
-            (> (penalty-tack penalties) 1d0)
+            (< (penalty-tack penalties) 1d0)
             (not (eql (signum twa) (signum cur-twa))))
        (values (* speed (the double-float (penalty-tack penalties)))
                sail

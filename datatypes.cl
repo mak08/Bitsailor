@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-17 18:57:46>
+;;; Last Modified <michael 2023-02-17 22:47:16>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -121,8 +121,8 @@
 (defun routepoint-twa (rp)
   (when (and (routepoint-heading rp)
              (routepoint-wind-dir rp))
-    (round (heading-twa (routepoint-wind-dir rp)
-                        (routepoint-heading rp)))))
+    (heading-twa (routepoint-wind-dir rp)
+                 (routepoint-heading rp))))
 
 (defmethod print-object ((thing routepoint) stream)
   (format stream "<~a@~a|~a|~a>"

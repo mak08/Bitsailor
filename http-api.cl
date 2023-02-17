@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-16 21:34:41>
+;;; Last Modified <michael 2023-02-17 21:42:16>
 
 (in-package :bitsailor)
 
@@ -508,7 +508,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TWA Path
 
-(defun |getTWAPath| (handler request response &key |presets| |options| |gfsMode| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
+(defun |getTWAPath| (handler request response &key |presets| |raceId| |options| |gfsMode| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
              (user-id
@@ -517,6 +517,7 @@
              (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
              (routing
                (get-routing-presets |presets|
+                                    :race-id |raceId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :cycle cycle

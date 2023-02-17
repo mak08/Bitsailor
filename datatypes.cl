@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-12 16:18:58>
+;;; Last Modified <michael 2023-02-17 18:57:46>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -125,9 +125,11 @@
                         (routepoint-heading rp)))))
 
 (defmethod print-object ((thing routepoint) stream)
-  (format stream " ~a@~a"
+  (format stream "<~a@~a|~a|~a>"
           (routepoint-position thing)
-          (routepoint-time thing)))
+          (routepoint-time thing)
+          (routepoint-twa thing)
+          (routepoint-sail thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Time

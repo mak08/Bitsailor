@@ -990,9 +990,11 @@ function getTWAPath (event) {
         twaSettings.duration = null;
         
         var query = makeQuery(twaSettings);
+        let documentQuery = new URL(document.URL).searchParams;
+        let raceId = documentQuery.get('race');
 
         $.ajax({
-            url: `/function/router.getTWAPath${query}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
+            url: `/function/router.getTWAPath${query}&raceId=${raceId}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);

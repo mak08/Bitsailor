@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-17 21:42:16>
+;;; Last Modified <michael 2023-02-19 16:45:06>
 
 (in-package :bitsailor)
 
@@ -151,30 +151,43 @@
                               (slon)
                               (dlat)
                               (dlon))
-  (make-routing
-   :race-id race-id
-   :start (when (and slat slon) (make-latlng :lat slat :lng slon))
-   :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
-   :starttime starttime
-   :stepmax (min (* *max-route-hours* 3600) stepmax)
-   :options (or options
-                (if (string= presets "RS")
-                    '("realsail")
-                    '("hull" "foil" "winch" "heavy" "light" "reach")))
-   :resolution resolution
-   :minwind (determine-minwind presets race-id)
-   :gfs-mode gfs-mode
-   :interpolation  (if (string= presets "RS") :bilinear :vr)
-   :polars polars
-   :cycle cycle
-   :merge-start  (if (string= presets "RS")
-                     (get-rs-merge-delay cycle gfs-mode)
-                     4d0)
-   :merge-window (if (string= presets "RS") 0d0 1d0)
-   :penalties  (if (string= presets "RS")
-                   (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                   (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))
-   :simplify-route (string= presets "RS")))
+  (let ((vr-finewinds
+          (and (string= presets "VR")
+               (string= "TRUE"
+                        (joref (race-info-data (race-info race-id)) "fineWinds")))))
+    (make-routing
+     :race-id race-id
+     :start (when (and slat slon) (make-latlng :lat slat :lng slon))
+     :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
+     :starttime starttime
+     :stepmax (min (* *max-route-hours* 3600) stepmax)
+     :options (or options
+                  (if (string= presets "RS")
+                      '("realsail")
+                      '("hull" "foil" "winch" "heavy" "light" "reach")))
+     :resolution resolution
+     :minwind (determine-minwind presets race-id)
+     :gfs-mode gfs-mode
+     :grib-source (if vr-finewinds :vr :noaa)
+     :interpolation  (if (or
+                          vr-finewinds
+                          (string= presets "RS"))
+                         :bilinear
+                         :vr)
+     :polars polars
+     :cycle cycle
+     :merge-start  (if (string= presets "RS")
+                       (get-rs-merge-delay cycle gfs-mode)
+                       (if vr-finewinds
+                           6d0
+                           4d0))
+     :merge-window (if (string= presets "RS")
+                       0d0
+                       (if vr-finewinds 0d0 1d0))
+     :penalties  (if (string= presets "RS")
+                     (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
+                     (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))
+     :simplify-route (string= presets "RS"))))
 
 (defun get-rs-merge-delay (cycle gfs-mode)
   (values
@@ -611,6 +624,7 @@
         :type "vr"
         :name (joref race "name")
         :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
+        :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
         :record (when (string= (joref (joref race "race") "type") "record") "yes")
         :class (joref boat "label")
         :start-time (joref start "date")

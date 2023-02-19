@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-17 23:12:12>
+;;; Last Modified <michael 2023-02-18 23:37:34>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -213,6 +213,7 @@
           (params (interpolation-parameters start-time
                                             :gfs-mode (routing-gfs-mode routing)
                                             :method (routing-interpolation routing)
+                                            :source (routing-grib-source routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
                                             :cycle cycle
@@ -220,6 +221,7 @@
                   (interpolation-parameters step-time
                                             :gfs-mode (routing-gfs-mode routing)
                                             :method (routing-interpolation routing)
+                                            :source (routing-grib-source routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
                                             :cycle cycle

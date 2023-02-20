@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-19 16:45:06>
+;;; Last Modified <michael 2023-02-21 00:02:38>
 
 (in-package :bitsailor)
 
@@ -172,7 +172,7 @@
      :interpolation  (if (or
                           vr-finewinds
                           (string= presets "RS"))
-                         :bilinear
+                         :enorm
                          :vr)
      :polars polars
      :cycle cycle
@@ -235,11 +235,11 @@
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|
                                     :polars |polarsId|
+                                    :starttime |startTime|
+                                    :cycle cycle
                                     :stepmax (if duration-supplied-p
                                                  (read-arg |duration|)
                                                  |duration|)
-                                    :starttime |startTime|
-                                    :cycle cycle
                                     :slat (read-arg |slat| 'double-float)
                                     :slon (read-arg |slon| 'double-float)
                                     :dlat (read-arg |dlat| 'double-float)
@@ -533,10 +533,10 @@
                                     :race-id |raceId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
-                                    :cycle cycle
+                                    :resolution |resolution|
                                     :polars |polarsId|
                                     :starttime |time|
-                                    :resolution |resolution|))
+                                    :cycle cycle))
              (time (parse-datetime |time|))
              (lat-a (read-arg |latA|))
              (lng-a (read-arg |lngA|))

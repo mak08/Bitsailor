@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-18 23:37:34>
+;;; Last Modified <michael 2023-02-20 16:35:52>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -98,7 +98,7 @@
             (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
              (wind-dir wind-speed)
-           (interpolated-prediction lat lng params)
+           (interpolate lat lng params)
          (when (null wind-dir)
            ;; No wind forecast
            (return-from expand-routepoint 0))
@@ -236,7 +236,7 @@
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (interpolated-prediction (latlng-lat start-pos) (latlng-lng start-pos) params)
+               (interpolate (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
                           (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil nil wind-dir wind-speed)))))
@@ -593,14 +593,14 @@
          (heading (course-angle startpos targetpos))
          (curpos-twa (copy-latlng startpos))
          (curpos-hdg (copy-latlng startpos))
-         (wind-dir (interpolated-prediction (latlng-lat startpos)
-                                            (latlng-lng startpos)
-                                            (interpolation-parameters time
-                                                                      :method (routing-interpolation routing)
-                                                                      :merge-start (routing-merge-start routing)
-                                                                      :merge-window (routing-merge-window routing)
-                                                                      :resolution (routing-resolution routing)
-                                                                      :cycle cycle)))
+         (wind-dir (interpolate (latlng-lat startpos)
+                                (latlng-lng startpos)
+                                (interpolation-parameters time
+                                                          :method (routing-interpolation routing)
+                                                          :merge-start (routing-merge-start routing)
+                                                          :merge-window (routing-merge-window routing)
+                                                          :resolution (routing-resolution routing)
+                                                          :cycle cycle)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
          (twa-path nil)
          (hdg-path nil))
@@ -616,14 +616,14 @@
       ;; Create new timestamp, Increment time
       ;; Determine next position - TWA
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-twa)
-                                   (latlng-lng curpos-twa)
-                                   (interpolation-parameters time
-                                                             :method (routing-interpolation routing)
-                                                             :merge-start (routing-merge-start routing)
-                                                             :merge-window (routing-merge-window routing)
-                                                             :resolution (routing-resolution routing)
-                                                             :cycle cycle))
+          (interpolate (latlng-lat curpos-twa)
+                       (latlng-lng curpos-twa)
+                       (interpolation-parameters time
+                                                 :method (routing-interpolation routing)
+                                                 :merge-start (routing-merge-start routing)
+                                                 :merge-window (routing-merge-window routing)
+                                                 :resolution (routing-resolution routing)
+                                                 :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
             (get-penalized-avg-speed nil wind-speed polars twa routing)
@@ -633,14 +633,14 @@
                   (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
       ;; Determine next position - HDG
       (multiple-value-bind (wind-dir wind-speed)
-          (interpolated-prediction (latlng-lat curpos-hdg)
-                                   (latlng-lng curpos-hdg)
-                                   (interpolation-parameters time
-                                                             :method (routing-interpolation routing)
-                                                             :merge-start (routing-merge-start routing)
-                                                             :merge-window (routing-merge-window routing)
-                                                             :resolution (routing-resolution routing)
-                                                             :cycle cycle))
+          (interpolate (latlng-lat curpos-hdg)
+                       (latlng-lng curpos-hdg)
+                       (interpolation-parameters time
+                                                 :method (routing-interpolation routing)
+                                                 :merge-start (routing-merge-start routing)
+                                                 :merge-window (routing-merge-window routing)
+                                                 :resolution (routing-resolution routing)
+                                                 :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-20 16:35:52>
+;;; Last Modified <michael 2023-02-21 00:01:31>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -212,16 +212,16 @@
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (params (interpolation-parameters start-time
                                             :gfs-mode (routing-gfs-mode routing)
-                                            :method (routing-interpolation routing)
                                             :source (routing-grib-source routing)
+                                            :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
                                             :cycle cycle
                                             :resolution resolution)
                   (interpolation-parameters step-time
                                             :gfs-mode (routing-gfs-mode routing)
-                                            :method (routing-interpolation routing)
                                             :source (routing-grib-source routing)
+                                            :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
                                             :merge-window (routing-merge-window routing)
                                             :cycle cycle
@@ -596,6 +596,7 @@
          (wind-dir (interpolate (latlng-lat startpos)
                                 (latlng-lng startpos)
                                 (interpolation-parameters time
+                                                          :source (routing-grib-source routing)
                                                           :method (routing-interpolation routing)
                                                           :merge-start (routing-merge-start routing)
                                                           :merge-window (routing-merge-window routing)
@@ -619,6 +620,7 @@
           (interpolate (latlng-lat curpos-twa)
                        (latlng-lng curpos-twa)
                        (interpolation-parameters time
+                                                 :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)
                                                  :merge-window (routing-merge-window routing)
@@ -636,6 +638,7 @@
           (interpolate (latlng-lat curpos-hdg)
                        (latlng-lng curpos-hdg)
                        (interpolation-parameters time
+                                                 :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)
                                                  :merge-window (routing-merge-window routing)

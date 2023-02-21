@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-21 00:01:31>
+;;; Last Modified <michael 2023-02-21 22:05:10>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -175,8 +175,8 @@
          (distance (course-distance start-pos destination))
          (polars (get-routing-polars routing))
          (race-info (get-routing-race-info routing))
-         (limits (when race-info
-                   (get-race-limits-rs race-info)))
+         (limits (when (race-info-vr-p race-info)
+                   (get-race-limits race-info)))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -317,7 +317,7 @@
         candidate))
 
 (defun get-race-limits (leg-info)
-  (let* ((south (joref (joref leg-info "ice_limits") "south"))
+  (let* ((south (joref (joref (race-info-data leg-info) "ice_limits") "south"))
          (result (make-array (+ (length south) 1))))
     (map-into result
               (lambda (p)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2022-01-14 20:30:48>
+;;; Last Modified <michael 2023-02-21 21:51:37>
 
 (in-package :bitsailor)
 
@@ -60,6 +60,7 @@
 
 (declaim (inline check-limits))
 (defun check-limits (p0 p1 limits)
+  (log2:trace "Limits ~a pts" (length limits))
   (loop
      :for k :from 1 :below (length limits)
      :never (segment-intersects p0 p1 (aref limits (1- k)) (aref limits k))))

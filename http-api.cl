@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-21 00:02:38>
+;;; Last Modified <michael 2023-02-22 20:59:29>
 
 (in-package :bitsailor)
 
@@ -169,11 +169,13 @@
      :minwind (determine-minwind presets race-id)
      :gfs-mode gfs-mode
      :grib-source (if vr-finewinds :vr :noaa)
-     :interpolation  (if (or
-                          vr-finewinds
-                          (string= presets "RS"))
-                         :enorm
-                         :vr)
+     :interpolation (cond
+                      (vr-finewinds
+                       :enorm)
+                      ((string= presets "RS")
+                       :bilinear)
+                      (t
+                       :vr))
      :polars polars
      :cycle cycle
      :merge-start  (if (string= presets "RS")

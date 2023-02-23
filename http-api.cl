@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-22 20:59:29>
+;;; Last Modified <michael 2023-02-23 21:53:03>
 
 (in-package :bitsailor)
 
@@ -47,9 +47,11 @@
              (race-id (get-routing-request-race-id request))
              (race-info (race-info race-id))
              (page-base-name
-               (etypecase race-info
+               (typecase race-info
                  (race-info-rs "router-rs")
-                 (race-info-vr "router-vr")))
+                 (race-info-vr "router-vr")
+                 (null
+                  (error "Unknown race ~a" race-id))))
              (path (merge-pathnames (make-pathname :name page-base-name :type "html")
                                     *web-root-directory*))
              (query (parameters request)))
@@ -60,8 +62,11 @@
         (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" *api-key*))))
     (error (e)
       (log2:error "~a" e)
+      (setf (http-header response "Connection") "Close")
       (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
+      (setf (status-text response) (format nil "~a" e))
+      (setf (http-body response)
+            (format nil "<html><body>~a</body></html>" e)))))
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)

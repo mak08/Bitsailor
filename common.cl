@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2023-02-16 21:27:17>
+;;; Last Modified <michael 2023-02-28 21:08:24>
 
 
 (in-package :bitsailor)
@@ -25,13 +25,11 @@
 
 (defparameter *disable-nmea*  nil)
 (defparameter *max-iso-points* 720)
-(defparameter *max-route-hours* (* 24 8))
+(defparameter *max-route-hours* (* 24 12))
 
 (defvar *api-key*)
 (defvar *use-bitmap* nil)
 (defvar *tracks* nil)
-(defvar *rs-max-hours* (* 24 10))
-(defvar *vr-max-hours* (* 24 15))
 (defvar *resolutions* '("1p00" "0p25"))
 
 (defvar *web-root-directory*

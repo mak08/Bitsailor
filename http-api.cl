@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-23 21:53:03>
+;;; Last Modified <michael 2023-02-26 21:12:05>
 
 (in-package :bitsailor)
 
@@ -224,9 +224,7 @@
                                               |dlon|
                                               (|startTime| nil)
                                               (|cycleTS|  (determine-rs-cycle |gfsMode|) cycle-supplied-p)
-                                              (|duration| (if (string= |presets| "RS")
-                                                              (* *rs-max-hours* 3600)
-                                                              (* *vr-max-hours* 3600))
+                                              (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
   (handler-case
       (let* ((*read-default-float-format* 'double-float)
@@ -310,7 +308,7 @@
                                     :resolution |resolution|
                                     :polars |polarsID|
                                     :gfs-mode |gfsMode|
-                                    :stepmax (min (* *rs-max-hours* 3600) ;; 2d
+                                    :stepmax (min (* *max-route-hours* 3600) ;; 2d
                                                   (read-arg |duration|))
                                     :cycle cycle
                                     :slat (read-arg |latStart| 'double-float)

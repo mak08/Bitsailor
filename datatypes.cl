@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-01 18:47:59>
+;;; Last Modified <michael 2023-03-01 20:30:13>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -101,8 +101,21 @@
 ;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
 
 (defstruct (routepoint
-             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
-  predecessor position time twa heading destination-distance speed sail penalty wind-dir wind-speed origin-angle origin-distance)
+             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail (condition 100d0) penalty wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
+  predecessor
+  position
+  time
+  twa
+  heading
+  destination-distance
+  speed
+  sail
+  condition 
+  penalty
+  wind-dir
+  wind-speed
+  origin-angle
+  origin-distance)
 
 (defstruct trackpoint
   time position heading dtf speed sail penalty twd tws twa)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-26 21:12:50>
+;;; Last Modified <michael 2023-03-01 18:43:40>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -29,7 +29,9 @@
    "*POLARS-DIR*"
    "*RACES-DIR*"
    "*TWA-STEPS*"
+   "*MAX-ANGLE*"
    "*MAX-ROUTE-HOURS*"
+   "*MAX-ISO-POINTS*"
    "*TRACKS*"
    ;; HTTP API
    "GET-PAGE"

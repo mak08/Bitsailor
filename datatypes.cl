@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-18 23:38:50>
+;;; Last Modified <michael 2023-03-01 18:47:59>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,7 +30,7 @@
   simplify-route
   minwind
   stepmax
-  (fan 110)
+  (fan *max-angle*)
   merge-start
   merge-window
   options

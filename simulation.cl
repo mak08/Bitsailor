@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-21 22:05:10>
+;;; Last Modified <michael 2023-03-01 17:49:23>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -73,7 +73,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
 
-(declaim (notinline valid-twa))
+(declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
   (and (> twa 0)
        (<= up twa down)))

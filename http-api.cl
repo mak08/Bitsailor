@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-26 21:12:05>
+;;; Last Modified <michael 2023-03-01 18:40:23>
 
 (in-package :bitsailor)
 
@@ -162,6 +162,7 @@
                         (joref (race-info-data (race-info race-id)) "fineWinds")))))
     (make-routing
      :race-id race-id
+     :fan *max-angle*
      :start (when (and slat slon) (make-latlng :lat slat :lng slon))
      :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
      :starttime starttime
@@ -463,7 +464,7 @@
             :do (multiple-value-bind (dir speed)
                     (let ((nlon
                             (if (> lon 0) (- lon 360) lon)))
-                      (interpolated-prediction lat nlon iparams))
+                      (interpolate lat nlon iparams))
                   (setf (aref result ilat ilon 0) (round-to-digits dir 2))
                   (setf (aref result ilat ilon 1) (round-to-digits speed 2)))))
     result))

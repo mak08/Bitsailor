@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-01 17:49:23>
+;;; Last Modified <michael 2023-03-04 14:33:54>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -54,7 +54,7 @@
       ((and cur-twa
             (< (penalty-tack penalties) 1d0)
             (not (eql (signum twa) (signum cur-twa))))
-       (values (* speed (the double-float (penalty-tack penalties)))
+       (values (* speed (the double-float (penalty-gybe penalties)))
                sail
                "Tack/Gybe"))
       (t

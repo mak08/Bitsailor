@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-01 18:40:23>
+;;; Last Modified <michael 2023-03-04 14:25:09>
 
 (in-package :bitsailor)
 
@@ -188,10 +188,10 @@
                        (get-rs-merge-delay cycle gfs-mode)
                        (if vr-finewinds
                            6d0
-                           4d0))
+                           3.5d0))
      :merge-window (if (string= presets "RS")
                        0d0
-                       (if vr-finewinds 0d0 1d0))
+                       (if vr-finewinds 0d0 2.5d0))
      :penalties  (if (string= presets "RS")
                      (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
                      (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))

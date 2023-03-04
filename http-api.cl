@@ -1,7 +1,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 14:25:09>
+;;; Last Modified <michael 2023-03-04 15:32:10>
+
 
 (in-package :bitsailor)
 
@@ -194,7 +195,7 @@
                        (if vr-finewinds 0d0 2.5d0))
      :penalties  (if (string= presets "RS")
                      (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                     (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.9375d0))
+                     (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0))
      :simplify-route (string= presets "RS"))))
 
 (defun get-rs-merge-delay (cycle gfs-mode)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 15:32:42>
+;;; Last Modified <michael 2023-03-04 18:41:12>
 
 
 ;; -- marks
@@ -218,7 +218,7 @@
                                             :source (routing-grib-source routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
-                                            :merge-window (routing-merge-window routing)
+                                            :merge-duration (routing-merge-window routing)
                                             :cycle cycle
                                             :resolution resolution)
                   (interpolation-parameters step-time
@@ -226,7 +226,7 @@
                                             :source (routing-grib-source routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
-                                            :merge-window (routing-merge-window routing)
+                                            :merge-duration (routing-merge-window routing)
                                             :cycle cycle
                                             :resolution resolution))
           (base-time (iparams-effective-cycle params)
@@ -242,7 +242,7 @@
                (interpolate (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil nil wind-dir wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil 100d0 nil wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
@@ -602,7 +602,7 @@
                                                           :source (routing-grib-source routing)
                                                           :method (routing-interpolation routing)
                                                           :merge-start (routing-merge-start routing)
-                                                          :merge-window (routing-merge-window routing)
+                                                          :merge-duration (routing-merge-window routing)
                                                           :resolution (routing-resolution routing)
                                                           :cycle cycle)))
          (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
@@ -626,7 +626,7 @@
                                                  :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)
-                                                 :merge-window (routing-merge-window routing)
+                                                 :merge-duration (routing-merge-window routing)
                                                  :resolution (routing-resolution routing)
                                                  :cycle cycle))
         (declare (double-float wind-dir wind-speed))
@@ -644,7 +644,7 @@
                                                  :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)
-                                                 :merge-window (routing-merge-window routing)
+                                                 :merge-duration (routing-merge-window routing)
                                                  :resolution (routing-resolution routing)
                                                  :cycle cycle))
         (declare (double-float wind-dir wind-speed))

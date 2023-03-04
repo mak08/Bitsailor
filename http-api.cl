@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 15:32:10>
+;;; Last Modified <michael 2023-03-04 20:19:02>
 
 
 (in-package :bitsailor)
@@ -189,10 +189,10 @@
                        (get-rs-merge-delay cycle gfs-mode)
                        (if vr-finewinds
                            6d0
-                           3.5d0))
+                           4d0))
      :merge-window (if (string= presets "RS")
                        0d0
-                       (if vr-finewinds 0d0 2.5d0))
+                       (if vr-finewinds 0d0 2d0))
      :penalties  (if (string= presets "RS")
                      (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
                      (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0))
@@ -450,7 +450,7 @@
            (interpolation-parameters time
                                      :method (routing-interpolation routing)
                                      :merge-start (routing-merge-start routing)
-                                     :merge-window (routing-merge-window routing)
+                                     :merge-duration (routing-merge-window routing)
                                      :cycle cycle
                                      :resolution resolution))
          (result (make-array (list (1+ (truncate (- north south) ddy))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-17 23:11:10>
+;;; Last Modified <michael 2023-03-04 15:40:01>
 
 (in-package :bitsailor)
 
@@ -51,6 +51,7 @@
                                  destination-distance
                                  speed
                                  sail
+                                 100d0
                                  reason
                                  wind-dir
                                  wind-speed

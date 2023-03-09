@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-05 12:42:12>
+;;; Last Modified <michael 2023-03-06 21:04:42>
 
 
 ;; -- marks
@@ -33,38 +33,64 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Boat speed
 
-(declaim (inline get-penalized-speed))
-(defun get-penalized-speed (routepoint wind-speed polars twa routing)
-  (declare (double-float wind-speed twa))
+
+(declaim (inline is-tack))
+(defun is-tack (a b)
+  (when (< a 0) (incf a 360))
+  (when (< b 0) (incf b 360)) 
+  (>= (abs (- b a)) 180))
+
+(declaim (notinline get-penalized-speed))
+(defun get-penalized-speed (routepoint tws twa routing)
+  (declare (double-float tws twa))
   (let ((cur-twa (when routepoint (routepoint-twa routepoint)))
         (cur-sail (when routepoint (routepoint-sail routepoint)))
+        (energy (if routepoint (routepoint-energy routepoint) 100d0))
+        (stepsize 600)
+        (polars (routing-polars routing))
         (penalties (routing-penalties routing)))
-  (multiple-value-bind (speed sail)
-      (twa-boatspeed polars wind-speed (normalize-angle twa))
-    (declare (double-float speed))
-    (when (routing-foils routing)
-      ;; Foiling speed if twa and tws (in m/s) falls in the specified range
-      (setf speed (* speed (the double-float (foiling-factor wind-speed twa)))))
-    (when (routing-hull routing)
-      (setf speed (* speed 1.003d0)))
-    (cond
-      ((and cur-sail
-            (not (eql (penalty-sail penalties) 1d0))
-            (not (equal sail cur-sail)))
-       (values (* speed (the double-float (penalty-sail penalties)))
-               sail
-               "Sail Change"))
-      ((and cur-twa
-            (< (penalty-tack penalties) 1d0)
-            (not (eql (signum twa) (signum cur-twa))))
-       (values (* speed (the double-float (penalty-gybe penalties)))
-               sail
-               "Tack/Gybe"))
-      (t
-       (values speed
-               sail
-               nil))))))
-
+    (multiple-value-bind
+          (speed sail) (twa-boatspeed polars tws (normalize-angle twa))
+      (declare (double-float speed))
+      (when (routing-foils routing)
+        ;; Foiling speed if twa and tws (in m/s) falls in the specified range
+        (setf speed (* speed (the double-float (foiling-factor tws twa)))))
+      (when (routing-hull routing)
+        (setf speed (* speed 1.003d0)))
+      (cond
+        ((and cur-sail
+              (not (eql (penalty-sail penalties) 1d0))
+              (not (equal sail cur-sail)))
+         (multiple-value-bind (factor time)
+             (penalty polars "sailChange" tws stepsize energy)
+           (values (* speed factor)
+                   sail
+                   time
+                   "sailChange")))
+        ((and cur-twa
+              (< (penalty-tack penalties) 1d0)
+              (not (eql (signum twa) (signum cur-twa)))
+              (is-tack twa cur-twa))
+         (multiple-value-bind (factor time)
+             (penalty polars "tack" tws stepsize energy)
+           (values (* speed factor)
+                   sail
+                   time
+                   "tack")))
+        ((and cur-twa
+              (< (penalty-tack penalties) 1d0)
+              (not (eql (signum twa) (signum cur-twa))))
+         (multiple-value-bind (factor time)
+             (penalty polars "gybe" tws stepsize energy)
+           (values (* speed factor)
+                   sail
+                   time
+                   "gybe")))
+        (t
+         (values speed
+                 sail
+                 0d0
+                 nil))))))
 
 (declaim (inline get-origin-angle))
 (defun get-origin-angle (start-pos new-pos origin-distance)
@@ -122,8 +148,8 @@
                 :do (flet ((add-point (heading twa)
                              (progn
                                (incf added)
-                               (multiple-value-bind (speed sail reason)
-                                   (get-penalized-speed routepoint wind-speed polars twa routing)
+                               (multiple-value-bind (speed sail penalty-time reason)
+                                   (get-penalized-speed routepoint wind-speed twa routing)
                                  (declare (double-float speed)
                                           (integer step-size))
                                  (let*
@@ -142,7 +168,7 @@
                                                  (* 1.1d0 (expt (routing-dist routing) 2))
                                                  ;; (* 1.25d0 (routing-dist routing))
                                                  )) 
-                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-time twa heading speed sail reason wind-dir wind-speed)))))))))
+                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail reason penalty-time wind-dir wind-speed)))))))))
                       (add-point heading-port twa)
                       (add-point heading-stbd (- twa)))
               :finally (return added))))))))
@@ -176,7 +202,7 @@
          (destination (normalized-destination routing))
          (box (make-routing-box start-pos (routing-dest routing)))
          (distance (course-distance start-pos destination))
-         (polars (get-routing-polars routing))
+         (polars (routing-polars routing))
          (race-info (get-routing-race-info routing))
          (limits (when (race-info-vr-p race-info)
                    (get-race-limits race-info)))
@@ -418,10 +444,6 @@
               (/ elapsed stepnum)
               (coerce (/ pointnum stepnum) 'float)))
 
-(defun get-routing-polars (routing)
-  (let ((sails (encode-options (routing-options routing))))
-    (get-combined-polars (routing-polars routing) sails)))
-
 (defun get-routing-race-info (routing)
   (race-info (routing-race-id routing)))
 
@@ -584,7 +606,7 @@
 (defun get-twa-path (routing &key cycle time lat-a lng-a lat lng
                                (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
-  (let* ((polars (get-routing-polars routing))
+  (let* ((polars (routing-polars routing))
          (time (or time (now)))
          (time-increment +10min+)
          (first-increment
@@ -631,7 +653,7 @@
                                                  :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
-            (get-penalized-speed nil wind-speed polars twa routing)
+            (get-penalized-speed nil wind-speed twa routing)
           (declare (double-float speed))
           (let ((twa-heading (twa-heading wind-dir twa)))
             (setf curpos-twa
@@ -650,7 +672,7 @@
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)
-              (get-penalized-speed nil wind-speed polars heading-twa routing)
+              (get-penalized-speed nil wind-speed heading-twa routing)
             (setf curpos-hdg
                   (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading)))))
       (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment)))))))

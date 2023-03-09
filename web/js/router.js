@@ -679,7 +679,7 @@ function displayRouting (data) {
             var trackMarker = new google.maps.Marker({
                 position: best[i].position,
                 map: googleMap,
-                icon: (best[i].penalty === "Sail Change")?redMarkerIcon:markerIcon,
+                icon: ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe")) ?redMarkerIcon:markerIcon,
                 draggable: false
             });
             addMarkerListener(trackMarker);
@@ -867,6 +867,8 @@ function makeWaypointInfo(startTime, point) {
     result += "</p>";
     result += "<p>";
     result += "<b> Penalty</b>: " + point.penalty;
+    result += "<b> E</b>: " + point.energy.toFixed(0);
+    result += "<b> T</b>: " + point.ptime.toFixed(0);
     result += "</p>";
     
     result += "</div>";

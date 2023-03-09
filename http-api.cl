@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 20:19:02>
+;;; Last Modified <michael 2023-03-05 22:49:03>
 
 
 (in-package :bitsailor)
@@ -157,10 +157,16 @@
                               (slon)
                               (dlat)
                               (dlon))
-  (let ((vr-finewinds
-          (and (string= presets "VR")
-               (string= "TRUE"
-                        (joref (race-info-data (race-info race-id)) "fineWinds")))))
+  (let* ((vr-finewinds
+           (and (string= presets "VR")
+                (string= "TRUE"
+                         (joref (race-info-data (race-info race-id)) "fineWinds"))))
+         (options
+           (or options
+               (if (string= presets "RS")
+                   '("realsail")
+                   '("hull" "foil" "winch" "heavy" "light" "reach"))))
+         (polars (get-combined-polars polars (encode-options options))))
     (make-routing
      :race-id race-id
      :fan *max-angle*
@@ -168,10 +174,7 @@
      :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
-     :options (or options
-                  (if (string= presets "RS")
-                      '("realsail")
-                      '("hull" "foil" "winch" "heavy" "light" "reach")))
+     :options options
      :resolution resolution
      :minwind (determine-minwind presets race-id)
      :gfs-mode gfs-mode

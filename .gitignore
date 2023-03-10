@@ -18,3 +18,4 @@
 *.wx32fsl
 local
 local/*
+/API_KEY.txt

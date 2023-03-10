@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-06 21:04:42>
+;;; Last Modified <michael 2023-03-09 21:59:40>
 
 
 ;; -- marks
@@ -40,7 +40,7 @@
   (when (< b 0) (incf b 360)) 
   (>= (abs (- b a)) 180))
 
-(declaim (notinline get-penalized-speed))
+(declaim (inline get-penalized-speed))
 (defun get-penalized-speed (routepoint tws twa routing)
   (declare (double-float tws twa))
   (let ((cur-twa (when routepoint (routepoint-twa routepoint)))
@@ -54,7 +54,7 @@
       (declare (double-float speed))
       (when (routing-foils routing)
         ;; Foiling speed if twa and tws (in m/s) falls in the specified range
-        (setf speed (* speed (the double-float (foiling-factor tws twa)))))
+        (setf speed (* speed (foiling-factor tws twa))))
       (when (routing-hull routing)
         (setf speed (* speed 1.003d0)))
       (cond

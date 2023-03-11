@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 20:19:02>
+;;; Last Modified <michael 2023-03-11 19:02:37>
 
 
 (in-package :bitsailor)
@@ -591,17 +591,27 @@
 
 (defstruct raceinfo type name id gfs025 record class start-time closing-time start-pos finish-pos closed)
 
+(defun |getRaceListAdmin| (handler request response &key (|forceReload| "false"))
+  ;; Admin only!
+  (declare (ignore handler request response))
+  (get-race-list :force-reload (string= |forceReload| "true")))
+
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  ;; (load-race-definitions :directory *races-dir*)
-  (let ((races (list)))
+  (get-race-list :force-reload nil))
+
+(defun get-race-list (&key (force-reload nil))
+  (let* ((races (list)))
+    (when force-reload
+      (load-race-definitions :directory *races-dir*))
     (map-races 
      (lambda (k v)
        (declare (ignore k))
        (push (get-raceinfo (race-info-data v)) races)))
     (with-output-to-string (s)
       (json s races))))
+
 
 (defun get-raceinfo (race)
   (cond

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-12 12:23:37>
+;;; Last Modified <michael 2023-03-12 18:12:30>
 
 
 ;; -- marks
@@ -265,7 +265,7 @@
                (interpolate (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil 100d0 nil wind-dir wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil 100d0 nil 0d0 wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))

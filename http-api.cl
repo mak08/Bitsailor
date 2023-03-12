@@ -1,8 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-11 19:02:37>
-
+;;; Last Modified <michael 2023-03-12 22:11:32>
 
 (in-package :bitsailor)
 
@@ -534,7 +533,7 @@
              (user-id
                (http-authenticated-user handler request))
              (race-id (get-routing-request-race-id request))
-             (cycle (make-cycle :timestamp (parse-timestring |cycle|)))
+             (cycle (when |cycle| (make-cycle :timestamp (parse-timestring |cycle|))))
              (routing
                (get-routing-presets |presets|
                                     :race-id |raceId|

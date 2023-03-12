@@ -986,7 +986,8 @@ function getTWAPath (event) {
         var lat = event.latLng.lat();
         var lng = event.latLng.lng();
         var isochrone = getIsochroneByTime(time);
-        var cycle = isochrone?isochrone.time:availableForecastCycle();
+        // var cycle = isochrone?isochrone.time:availableForecastCycle();
+        var cycle = getCurrentCycle();
 
         let twaSettings = JSON.parse(JSON.stringify(settings));
         twaSettings.duration = null;
@@ -996,7 +997,7 @@ function getTWAPath (event) {
         let raceId = documentQuery.get('race');
 
         $.ajax({
-            url: `/function/router.getTWAPath${query}&raceId=${raceId}&cycle=${cycle}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
+            url: `/function/router.getTWAPath${query}&raceId=${raceId}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
             dataType: 'json'
         }).done( function(data) {
             drawTWAPath(data.twapath);

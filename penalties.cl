@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-03-09 23:30:53>
+;;; Last Modified <michael 2023-03-12 11:32:59>
 
 (in-package :bitsailor)
 
@@ -62,26 +62,26 @@
 (defvar *penalty-spec-ht*
   (make-hash-table :test #'equalp))
 
-(defun get-penalty-spec (cpolars event)
-  (or (gethash (cons cpolars event) *penalty-spec-ht*)
-      (setf (gethash (cons cpolars event) *penalty-spec-ht*)
+(defun get-penalty-spec (cpolars event &key (winch-mode "pro"))
+  (or (gethash (list cpolars event winch-mode) *penalty-spec-ht*)
+      (setf (gethash (list cpolars event winch-mode) *penalty-spec-ht*)
             (let* ((polars (get-polars-by-id (cpolars-id cpolars)))
                    (winch (polars-vr-winch polars))
                    (lws (knots-to-m/s (joref winch "lws")))
                    (hws (knots-to-m/s (joref winch "hws")))
-                   (spec-pro (joref (joref winch event) "pro"))
-                   (spec-pro-lw (joref spec-pro "lw"))
-                   (spec-pro-hw (joref spec-pro "hw")))
+                   (spec (joref (joref winch event) winch-mode))
+                   (spec-lw (joref spec "lw"))
+                   (spec-hw (joref spec "hw")))
               (make-penalty-spec :windspeed-l (coerce lws 'double-float)
                                  :windspeed-h (coerce hws 'double-float)
-                                 :factor-l (coerce (joref spec-pro-lw "ratio") 'double-float)
-                                 :factor-h (coerce (joref spec-pro-hw "ratio") 'double-float)
-                                 :time-l (coerce (joref spec-pro-lw "timer") 'double-float)
-                                 :time-h (coerce (joref spec-pro-hw "timer") 'double-float))))))
+                                 :factor-l (coerce (joref spec-lw "ratio") 'double-float)
+                                 :factor-h (coerce (joref spec-hw "ratio") 'double-float)
+                                 :time-l (coerce (joref spec-lw "timer") 'double-float)
+                                 :time-h (coerce (joref spec-hw "timer") 'double-float))))))
 
 (declaim (inline penalty-parameters))
-(defun-t penalty-parameters (values double-float double-float) (cpolars event tws)
-  (let* ((pspec (get-penalty-spec cpolars event))
+(defun-t penalty-parameters (values double-float double-float) (cpolars event winch-mode tws)
+  (let* ((pspec (get-penalty-spec cpolars event :winch-mode winch-mode))
          (lws (penalty-spec-windspeed-l pspec))
          (hws (penalty-spec-windspeed-h pspec))
          (ratio-l (penalty-spec-factor-l pspec))
@@ -108,9 +108,9 @@
      step-duration))
 
 (declaim (inline penalty))
-(defun-t  penalty (values double-float double-float) (cpolars event tws stepsize stamina)
+(defun-t  penalty (values double-float double-float) (cpolars event winch-mode tws stepsize stamina)
   (multiple-value-bind (factor time)
-      (penalty-parameters cpolars event tws)
+      (penalty-parameters cpolars event winch-mode tws)
     (values
      (step-penalty-factor (* time (s-factor stamina)) factor stepsize)
      time)))

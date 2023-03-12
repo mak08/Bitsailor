@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-05 22:49:03>
+;;; Last Modified <michael 2023-03-12 11:30:09>
 
 
 (in-package :bitsailor)
@@ -196,6 +196,9 @@
      :merge-window (if (string= presets "RS")
                        0d0
                        (if vr-finewinds 0d0 2d0))
+     :winch-mode (if (member "winch" options :test #'string=)
+                     "pro"
+                     "std")
      :penalties  (if (string= presets "RS")
                      (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
                      (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0))

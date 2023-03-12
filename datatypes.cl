@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-06 21:09:01>
+;;; Last Modified <michael 2023-03-12 12:25:31>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -26,6 +26,7 @@
   resolution
   cycle
   polars
+  winch-mode
   penalties
   simplify-route
   minwind
@@ -46,14 +47,14 @@
                               (routing-dest routing)))))
 
 (defmethod print-object ((thing routing) stream)
-  (format stream "{D=~a T=~a M=~a+~a C=~a O=~a}"
+  (format stream "{D=~a T=~a M=~a+~a C=~a O=~a P=~a}"
           (routing-stepmax thing)
           (routing-starttime thing)
           (routing-merge-start thing)
           (routing-merge-window thing)
           (routing-cycle thing)
-          (routing-options thing)))
-
+          (routing-options thing)
+          (routing-winch-mode thing)))
 
 (defstruct duration days hours minutes seconds)
 (defmethod print-object ((thing duration) stream)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-09 21:59:40>
+;;; Last Modified <michael 2023-03-12 12:23:37>
 
 
 ;; -- marks
@@ -48,7 +48,7 @@
         (energy (if routepoint (routepoint-energy routepoint) 100d0))
         (stepsize 600)
         (polars (routing-polars routing))
-        (penalties (routing-penalties routing)))
+        (winch-mode (routing-winch-mode routing)))
     (multiple-value-bind
           (speed sail) (twa-boatspeed polars tws (normalize-angle twa))
       (declare (double-float speed))
@@ -59,29 +59,26 @@
         (setf speed (* speed 1.003d0)))
       (cond
         ((and cur-sail
-              (not (eql (penalty-sail penalties) 1d0))
               (not (equal sail cur-sail)))
          (multiple-value-bind (factor time)
-             (penalty polars "sailChange" tws stepsize energy)
+             (penalty polars "sailChange" winch-mode tws stepsize energy)
            (values (* speed factor)
                    sail
                    time
                    "sailChange")))
         ((and cur-twa
-              (< (penalty-tack penalties) 1d0)
               (not (eql (signum twa) (signum cur-twa)))
               (is-tack twa cur-twa))
          (multiple-value-bind (factor time)
-             (penalty polars "tack" tws stepsize energy)
+             (penalty polars "tack" winch-mode tws stepsize energy)
            (values (* speed factor)
                    sail
                    time
                    "tack")))
         ((and cur-twa
-              (< (penalty-tack penalties) 1d0)
               (not (eql (signum twa) (signum cur-twa))))
          (multiple-value-bind (factor time)
-             (penalty polars "gybe" tws stepsize energy)
+             (penalty polars "gybe" winch-mode tws stepsize energy)
            (values (* speed factor)
                    sail
                    time
@@ -606,8 +603,7 @@
 (defun get-twa-path (routing &key cycle time lat-a lng-a lat lng
                                (total-time +24h+)
                                (step-num (truncate total-time +10min+)))
-  (let* ((polars (routing-polars routing))
-         (time (or time (now)))
+  (let* ((time (or time (now)))
          (time-increment +10min+)
          (first-increment
           (let* ((utime (timestamp-to-unix time)))

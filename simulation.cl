@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-12 18:12:30>
+;;; Last Modified <michael 2023-03-13 21:39:51>
 
 
 ;; -- marks
@@ -43,9 +43,13 @@
 (declaim (inline get-penalized-speed))
 (defun get-penalized-speed (routepoint tws twa routing)
   (declare (double-float tws twa))
-  (let ((cur-twa (when routepoint (routepoint-twa routepoint)))
+  (let ((cur-twa
+          ;; Initialized from routing struct in get-route!
+          (when routepoint (routepoint-twa routepoint)))
         (cur-sail (when routepoint (routepoint-sail routepoint)))
-        (energy (if routepoint (routepoint-energy routepoint) 100d0))
+        (energy
+          ;; Initialized from routing struct in get-route!
+          (when routepoint (routepoint-energy routepoint)))
         (stepsize 600)
         (polars (routing-polars routing))
         (winch-mode (routing-winch-mode routing)))
@@ -265,7 +269,7 @@
                (interpolate (latlng-lat start-pos) (latlng-lng start-pos) params)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil 100d0 nil 0d0 wind-dir wind-speed)))))
+                          (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil nil (routing-energy routing) nil 0d0 wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))

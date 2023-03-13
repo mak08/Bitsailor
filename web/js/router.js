@@ -579,6 +579,16 @@ function getRoute () {
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
 
+    var energyInput = document.getElementById('tb_currentenergy');
+    if (energyInput) {
+        query += `&energy=${energyInput.value}`;
+    }
+    
+    var tackInput = document.getElementById('sel_currenttack');
+    if (tackInput) {
+        query += `&tack=${tackInput.value}`;
+    }
+
     $.ajax({
         url: "/function/router.getRoute" + query,
         dataType: 'json'

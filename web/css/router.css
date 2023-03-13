@@ -297,6 +297,18 @@ input[type=checkbox] {
 }
 
 
+/* Boat state */
+.boatstate-label {
+	grid-row: 8;
+	grid-column: 1;
+
+}
+.boatstate-group {
+	grid-row: 8;
+	grid-column: 2;
+}
+
+
 /* Hide wind */
 .displaywind-label {
 	grid-row: 11;

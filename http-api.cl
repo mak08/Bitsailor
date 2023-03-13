@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-12 17:21:21>
+;;; Last Modified <michael 2023-03-13 21:56:51>
 
 
 (in-package :bitsailor)
@@ -151,6 +151,8 @@
                               (polars)
                               (gfs-mode "06h")
                               (options)
+                              (energy)
+                              (tack)
                               (stepmax (* 24 60 60))
                               (cycle)
                               (slat)
@@ -175,6 +177,15 @@
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :options options
+     :tack (cond
+             ((string= tack "port")
+              90d0)
+             ((string= tack "stbd")
+              -90d0)
+            (t
+             (log2:warning "No valid initial tack ~a" tack)
+             nil))
+     :energy energy
      :resolution resolution
      :minwind (determine-minwind presets race-id)
      :gfs-mode gfs-mode
@@ -223,6 +234,8 @@
                                               (|presets| "VR")
                                               (|raceId| nil)
                                               (|options| nil)
+                                              (|energy| nil)
+                                              (|tack| nil)
                                               (|resolution| "1p00")
                                               (|gfsMode| "06h")
                                               |polarsId|
@@ -246,6 +259,8 @@
                                     :race-id |raceId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
+                                    :energy (read-arg |energy| 'double-float)
+                                    :tack |tack|
                                     :resolution |resolution|
                                     :polars |polarsId|
                                     :starttime |startTime|

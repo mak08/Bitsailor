@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-12 12:25:31>
+;;; Last Modified <michael 2023-03-13 21:17:58>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -35,6 +35,8 @@
   merge-start
   merge-window
   options
+  energy
+  tack
   starttime
   start
   dest

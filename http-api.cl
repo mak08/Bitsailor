@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-13 21:56:51>
+;;; Last Modified <michael 2023-03-14 23:01:13>
 
 
 (in-package :bitsailor)
@@ -170,7 +170,7 @@
                    '("hull" "foil" "winch" "heavy" "light" "reach"))))
          (polars (get-combined-polars polars (encode-options options))))
     (make-routing
-     :race-id race-id
+     :race-info   (race-info race-id)
      :fan *max-angle*
      :start (when (and slat slon) (make-latlng :lat slat :lng slon))
      :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
@@ -234,7 +234,7 @@
                                               (|presets| "VR")
                                               (|raceId| nil)
                                               (|options| nil)
-                                              (|energy| nil)
+                                              (|energy| "100")
                                               (|tack| nil)
                                               (|resolution| "1p00")
                                               (|gfsMode| "06h")

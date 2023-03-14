@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-13 23:48:59>
+;;; Last Modified <michael 2023-03-14 23:02:00>
 
 
 ;; -- marks
@@ -43,6 +43,40 @@
 (declaim (inline get-penalized-speed))
 (defun get-penalized-speed (routepoint tws twa step-size routing)
   (declare (double-float tws twa))
+  (typecase (routing-race-info routing)
+    (race-info-rs
+     (get-penalized-speed-rs routepoint tws twa step-size routing))
+    (race-info-vr
+     (get-penalized-speed-vr routepoint tws twa step-size routing))))
+
+
+(defun get-penalized-speed-rs (routepoint tws twa step-size routing)
+  (let ((cur-twa
+          ;; Initialized from routing struct in get-route!
+          (when routepoint (routepoint-twa routepoint)))
+        (cur-sail (when routepoint (routepoint-sail routepoint)))
+        (polars (routing-polars routing)))
+    (multiple-value-bind
+          (speed sail) (twa-boatspeed polars tws (normalize-angle twa))
+      (declare (double-float speed))
+      (cond
+        ((and cur-sail
+              (not (equal sail cur-sail)))
+         (let ((factor   (/ (+ (* 0.9 300)
+                               (- step-size 300))
+                            step-size))
+               (time 300))
+           (values (* speed factor)
+                   sail
+                   time
+                   "sailChange")))
+        (t
+         (values speed
+                 sail
+                 0d0
+                 nil))))))
+
+(defun get-penalized-speed-vr (routepoint tws twa step-size routing)
   (let ((cur-twa
           ;; Initialized from routing struct in get-route!
           (when routepoint (routepoint-twa routepoint)))
@@ -203,7 +237,7 @@
          (box (make-routing-box start-pos (routing-dest routing)))
          (distance (course-distance start-pos destination))
          (polars (routing-polars routing))
-         (race-info (get-routing-race-info routing))
+         (race-info (routing-race-info routing))
          (limits (when (race-info-vr-p race-info)
                    (get-race-limits race-info)))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
@@ -443,9 +477,6 @@
               (/ pointnum elapsed)
               (/ elapsed stepnum)
               (coerce (/ pointnum stepnum) 'float)))
-
-(defun get-routing-race-info (routing)
-  (race-info (routing-race-id routing)))
 
 (defun normalized-destination (routing)
   (if (>= (- (latlng-lng (routing-dest routing))

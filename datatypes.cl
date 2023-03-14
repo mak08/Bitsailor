@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-13 21:17:58>
+;;; Last Modified <michael 2023-03-14 22:06:13>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,7 +19,7 @@
 (defstruct posinfo time position speed course)
 
 (defstruct routing
-  race-id
+  race-info
   interpolation
   gfs-mode
   grib-source

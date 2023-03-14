@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-13 21:39:51>
+;;; Last Modified <michael 2023-03-13 23:48:59>
 
 
 ;; -- marks
@@ -41,7 +41,7 @@
   (>= (abs (- b a)) 180))
 
 (declaim (inline get-penalized-speed))
-(defun get-penalized-speed (routepoint tws twa routing)
+(defun get-penalized-speed (routepoint tws twa step-size routing)
   (declare (double-float tws twa))
   (let ((cur-twa
           ;; Initialized from routing struct in get-route!
@@ -50,7 +50,6 @@
         (energy
           ;; Initialized from routing struct in get-route!
           (when routepoint (routepoint-energy routepoint)))
-        (stepsize 600)
         (polars (routing-polars routing))
         (winch-mode (routing-winch-mode routing)))
     (multiple-value-bind
@@ -65,7 +64,7 @@
         ((and cur-sail
               (not (equal sail cur-sail)))
          (multiple-value-bind (factor time)
-             (penalty polars "sailChange" winch-mode tws stepsize energy)
+             (penalty polars "sailChange" winch-mode tws step-size energy)
            (values (* speed factor)
                    sail
                    time
@@ -74,7 +73,7 @@
               (not (eql (signum twa) (signum cur-twa)))
               (is-tack twa cur-twa))
          (multiple-value-bind (factor time)
-             (penalty polars "tack" winch-mode tws stepsize energy)
+             (penalty polars "tack" winch-mode tws step-size energy)
            (values (* speed factor)
                    sail
                    time
@@ -82,7 +81,7 @@
         ((and cur-twa
               (not (eql (signum twa) (signum cur-twa))))
          (multiple-value-bind (factor time)
-             (penalty polars "gybe" winch-mode tws stepsize energy)
+             (penalty polars "gybe" winch-mode tws step-size energy)
            (values (* speed factor)
                    sail
                    time
@@ -150,7 +149,7 @@
                              (progn
                                (incf added)
                                (multiple-value-bind (speed sail penalty-time reason)
-                                   (get-penalized-speed routepoint wind-speed twa routing)
+                                   (get-penalized-speed routepoint wind-speed twa step-size routing)
                                  (declare (double-float speed)
                                           (integer step-size))
                                  (let*
@@ -653,7 +652,7 @@
                                                  :cycle cycle))
         (declare (double-float wind-dir wind-speed))
         (multiple-value-bind (speed)
-            (get-penalized-speed nil wind-speed twa routing)
+            (get-penalized-speed nil wind-speed twa 600d0 routing)
           (declare (double-float speed))
           (let ((twa-heading (twa-heading wind-dir twa)))
             (setf curpos-twa
@@ -672,7 +671,7 @@
         (declare (double-float wind-dir wind-speed))
         (let ((heading-twa (heading-twa wind-dir heading)))
           (multiple-value-bind (speed)
-              (get-penalized-speed nil wind-speed heading-twa routing)
+              (get-penalized-speed nil wind-speed heading-twa 600d0 routing)
             (setf curpos-hdg
                   (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading)))))
       (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment)))))))

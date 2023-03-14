@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-14 23:02:00>
+;;; Last Modified <michael 2023-03-14 23:15:11>
 
 
 ;; -- marks
@@ -49,7 +49,7 @@
     (race-info-vr
      (get-penalized-speed-vr routepoint tws twa step-size routing))))
 
-
+(declaim (inline get-penalized-speed-rs))
 (defun get-penalized-speed-rs (routepoint tws twa step-size routing)
   (let ((cur-twa
           ;; Initialized from routing struct in get-route!

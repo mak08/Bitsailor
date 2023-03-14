@@ -76,6 +76,7 @@
                  0d0
                  nil))))))
 
+(declaim (inline get-penalized-speed-vr))
 (defun get-penalized-speed-vr (routepoint tws twa step-size routing)
   (let ((cur-twa
           ;; Initialized from routing struct in get-route!

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-06 22:24:37>
+;;; Last Modified <michael 2023-03-15 23:43:58>
 
 (in-package :bitsailor)
 
@@ -24,15 +24,17 @@
                               sail
                               reason
                               penalty-time
+                              energy
                               wind-dir
                               wind-speed)
-  (declare (special next-isochrone max-dist min-angle))
+  (declare (special next-isochrone max-dist min-angle)
+           (simple-vector next-isochrone)
+           (type (array (double-float) *) max-dist))
   (let*
       ((maxpoints (length next-isochrone))
        (offset (bucket left delta-angle))
        (bucket (bucket origin-angle delta-angle))
-       (max-bucket (bucket origin-angle min-angle))
-       (energy (energy predecessor reason wind-speed step-size)))
+       (max-bucket (bucket origin-angle min-angle)))
     (when
         (or (< bucket 0)
             (>= bucket maxpoints))

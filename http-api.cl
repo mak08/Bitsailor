@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-16 18:49:06>
+;;; Last Modified <michael 2023-03-16 18:52:09>
 
 (in-package :bitsailor)
 
@@ -667,7 +667,7 @@
             (get-nmea-position user-id race-id)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (unless *disable-nmea*
+  (when *disable-nmea*
     (error "NMEA support is currently disabled. Please enter position manually."))
   (let* ((user-id (http-authenticated-user handler request))
          (race-id (get-routing-request-race-id request))

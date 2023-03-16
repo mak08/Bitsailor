@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-14 23:01:13>
+;;; Last Modified <michael 2023-03-16 18:46:30>
 
 
 (in-package :bitsailor)
@@ -662,8 +662,8 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (unless *disable-nmea*
-    (error "NMEA support is currently disabled. Please enter position manually.")) 
+  (when *disable-nmea*
+    (error "NMEA support is currently disabled. Please enter position manually."))
   (let* ((user-id (http-authenticated-user handler request))
          (race-id (get-routing-request-race-id request))
          (host |host|)

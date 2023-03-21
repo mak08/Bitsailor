@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-03-12 11:32:59>
+;;; Last Modified <michael 2023-03-16 22:33:35>
 
 (in-package :bitsailor)
 
@@ -108,12 +108,14 @@
      step-duration))
 
 (declaim (inline penalty))
-(defun-t  penalty (values double-float double-float) (cpolars event winch-mode tws stepsize stamina)
-  (multiple-value-bind (factor time)
-      (penalty-parameters cpolars event winch-mode tws)
-    (values
-     (step-penalty-factor (* time (s-factor stamina)) factor stepsize)
-     time)))
+(defun-t  penalty (values double-float double-float) (cpolars event winch-mode tws stepsize energy)
+    (multiple-value-bind (factor time)
+        (penalty-parameters cpolars event winch-mode tws)
+      (let* ((s-factor (s-factor energy))
+             (penalty-time  (* time s-factor)))
+        (values
+         (step-penalty-factor penalty-time factor stepsize)
+         penalty-time))))
 
 
 ;;; EOF

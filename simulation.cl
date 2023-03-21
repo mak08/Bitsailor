@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-15 23:44:10>
+;;; Last Modified <michael 2023-03-22 00:06:14>
 
 
 ;; -- marks
@@ -198,8 +198,9 @@
 
 (declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
-  (and (> twa 0)
-       (<= up twa down)))
+  (assert (> twa 0))
+  
+  (or t (and (> twa 0) (<= up twa down))))
 
 (declaim (inline expand-routepoint))
 (defun expand-routepoint (routing box routepoint left right step-size step-time params polars delta-angle)
@@ -222,11 +223,7 @@
        (multiple-value-bind
              (wind-dir wind-speed)
            (interpolate lat lng params)
-         (when (null wind-dir)
-           ;; No wind forecast
-           (return-from expand-routepoint 0))
-         (when (routing-minwind routing)
-           (setf wind-speed (max (routing-minwind routing) wind-speed)))
+         (setf wind-speed (max (routing-minwind routing) wind-speed))
          (multiple-value-bind (up-vmg down-vmg)
              (best-vmg polars wind-speed)
            (vector-push-extend (vmg-twa up-vmg) all-twa-points)
@@ -236,8 +233,8 @@
               :with down-vmg-angle = (vmg-twa down-vmg)
               :with added = 0
               :for twa :across all-twa-points
-              :for heading-port = (twa-heading wind-dir twa)
-              :for heading-stbd = (twa-heading wind-dir (- twa))
+              :for heading-port = (twa-heading wind-dir (- twa))
+              :for heading-stbd = (twa-heading wind-dir twa)
               :when (valid-twa up-vmg-angle down-vmg-angle twa)
                 :do (flet ((add-point (heading twa)
                              (progn
@@ -266,8 +263,8 @@
                                                  ;; (* 1.25d0 (routing-dist routing))
                                                  )) 
                                          (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail reason penalty-time energy wind-dir wind-speed)))))))))
-                      (add-point heading-port twa)
-                      (add-point heading-stbd (- twa)))
+                      (add-point heading-port (- twa))
+                      (add-point heading-stbd twa))
               :finally (return added))))))))
 
 (defstruct box north south west east antimed-p)
@@ -328,7 +325,7 @@
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 250 (min *max-iso-points* (+ max-points 10)))
+          (max-points 360 (min *max-iso-points* (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
           (max-dist (make-array *max-iso-points* :initial-element 0d0))
           (min-angle (/ 360d0 *max-iso-points*))
@@ -369,13 +366,11 @@
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
-
          ;; When the maximum number of iterations is reached, construct the best path
          ;; from the most advanced point's predecessor chain.
          ((or reached
               error
               (>= stepsum (routing-stepmax routing)))
-          
           (let ((elapsed (timestamp-difference (now) elapsed0)))
             (multiple-value-bind  (best-route best-path)
                 (construct-route routing isochrone destination)
@@ -392,11 +387,14 @@
                               :tracks (when *tracks*
                                         (extract-tracks start-pos (course-angle start-pos destination) isochrone))
                               :isochrones (prepare-routepoints isochrones)))))
+      
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
       (declare (vector next-isochrone))
       (declare (special max-dist min-angle))
 
+      (log2:trace "Step ~a, Isochrone max points: ~a" step-size max-points)
+      
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)

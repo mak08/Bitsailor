@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-15 22:02:21>
+;;; Last Modified <michael 2023-03-20 21:18:32>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -29,7 +29,7 @@
   winch-mode
   penalties
   simplify-route
-  minwind
+  (minwind 0d0)
   stepmax
   (fan *max-angle*)
   merge-start

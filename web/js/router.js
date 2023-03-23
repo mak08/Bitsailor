@@ -724,6 +724,19 @@ function getURLParams () {
     if (starttime) {
         res.startTime = new Date(starttime + 'Z');
     }
+    var sail = query.get('sail');
+    if (sail) {
+        res.sail = sail;
+    }
+    var energy = query.get('energy');
+    if (energy) {
+        res.energy = energy;
+    }
+    var twa = query.get('twa');
+    if (twa) {
+        res.twa = twa;
+    }
+    
     return res;
 }
 

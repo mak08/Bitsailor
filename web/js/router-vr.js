@@ -178,7 +178,8 @@ import * as Router from './router.js';
         if (duration) {
             Router.setDuration(duration);
         }
-        
+
+        // Start position
         var queryParams = Router.getURLParams()
         var start = queryParams.startPos;
         if (start) {
@@ -196,6 +197,7 @@ import * as Router from './router.js';
         var textBox = document.getElementById("tb_position");
         textBox.value = Util.formatPosition(start.lat(), start.lng()); 
 
+        // Start time
         if (queryParams.startTime) {
             var cbDelayed = document.getElementById('cb_startdelayed');
             var tbStartTime = document.getElementById('tb_starttime');
@@ -203,6 +205,7 @@ import * as Router from './router.js';
             tbStartTime.value = queryParams.startTime.toISOString().substring(0,16);
         }
 
+        // Destination
         let dest = Router.getValue('dest');
         if (dest) {
             dest = JSON.parse(dest);
@@ -211,7 +214,18 @@ import * as Router from './router.js';
         }
         var destPos = new google.maps.LatLng(dest.lat, dest.lon);
         Router.setRoutePoint('dest', destPos);
-        
+
+        // Boat state
+        let energy = queryParams.energy;
+        if (energy) {
+            document.getElementById('tb_currentenergy').value = (energy*1).toFixed();
+        }
+        let twa = queryParams.twa;
+        if (twa) {
+            document.getElementById('sel_currenttack').value = twa<0?'port':'stbd';
+        }
+
+        // Center map
         Router.googleMap.panTo(Router.startMarker.getPosition());
 
         for (const c of vrData.checkpoints) {

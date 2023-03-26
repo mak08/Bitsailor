@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-15 21:07:01>
+;;; Last Modified <michael 2023-03-26 15:49:35>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -32,6 +32,7 @@
    "*MAX-ANGLE*"
    "*MAX-ROUTE-HOURS*"
    "*MAX-ISO-POINTS*"
+   "*VALID-VMG-ANGLES*"
    "*PENALTY-MODE-VR*"
    "*PENALTY-MODE-RS*"
    "*TRACKS*"

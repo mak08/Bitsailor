@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-22 00:06:14>
+;;; Last Modified <michael 2023-03-26 15:57:29>
 
 
 ;; -- marks
@@ -198,9 +198,8 @@
 
 (declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
-  (assert (> twa 0))
-  
-  (or t (and (> twa 0) (<= up twa down))))
+  (or (not *valid-vmg-angles*)
+      (and (> twa 0) (<= up twa down))))
 
 (declaim (inline expand-routepoint))
 (defun expand-routepoint (routing box routepoint left right step-size step-time params polars delta-angle)

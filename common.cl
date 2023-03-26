@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2023-03-17 19:56:44>
+;;; Last Modified <michael 2023-03-26 15:49:15>
 
 
 (in-package :bitsailor)
@@ -27,7 +27,7 @@
 (defparameter *max-angle* 110)
 (defparameter *max-iso-points* 1500)
 (defparameter *max-route-hours* (* 24 12))
-
+(defparameter *valid-vmg-angles* t)
 (defparameter *penalty-mode-vr* :dynamic)
 (defparameter *penalty-mode-rs* :simple)
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-13 23:24:29>
+;;; Last Modified <michael 2023-03-26 16:28:25>
 
 (in-package :bitsailor)
 
@@ -94,7 +94,7 @@
                         twa
                         (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
          (maxspeed (make-array (list (1+ 1800)
-                                  (1+ (* max-wind 10))))))
+                                     (1+ (* max-wind 10))))))
     (loop
       :for angle :from 0 :to 1800
       :do (loop

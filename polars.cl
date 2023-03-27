@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-26 16:28:25>
+;;; Last Modified <michael 2023-03-26 21:45:27>
 
 (in-package :bitsailor)
 
@@ -109,6 +109,29 @@
                   :maxspeed maxspeed
                   :vmg (precompute-vmg maxspeed max-wind))))
 
+(defun interpolated-speeds (polars options)
+  (let* ((tws (polars-tws polars))
+         (max-wind (ceiling (aref tws (1- (length tws)))))
+         (speeds (make-array (list (1+ 1800)
+                                   (1+ (* max-wind 10))))))
+    (loop
+      :for twa :from 0 :to 1800
+      :do (loop
+            :for wind :from 0 :to (* max-wind 10)
+            :do (setf (aref speeds twa wind)
+                      (interpolated-speed (/ twa  10.d0) (/ wind 10.d0) polars options)))
+      :finally (return speeds))))
+
+(defun interpolated-speed (twa tws polars options)
+  (let ((sail-speeds
+          (loop
+            :for k :from 0 :to 6
+            :collect (get-boat-speed twa tws
+                                     (polars-twa polars)
+                                     (polars-tws polars)
+                                     (sail-speed (aref (polars-sails polars) k))))))
+    (make-array 7 :initial-contents sail-speeds)))
+
 (defun precompute-vmg (cpolars-speed max-wind)
   (let ((precomputed
          (loop
@@ -162,14 +185,14 @@
     (when (= (ldb (byte 1 i) options) 1)
       (let ((v (get-boat-speed (abs angle)
                                wind-speed
-                               tws
                                twa
+                               tws
                                (sail-speed (aref (polars-sails polars) i)))))
         (when (>= v vmax)
           (setf imax i
                 vmax v))))))
 
-(defun get-boat-speed (angle wind-speed tws twa sailspeeds)
+(defun get-boat-speed (angle wind-speed twa tws sailspeeds)
   (multiple-value-bind
         (speed-index speed-fraction)
       (fraction-index wind-speed tws)

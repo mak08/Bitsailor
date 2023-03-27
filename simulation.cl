@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-26 15:57:29>
+;;; Last Modified <michael 2023-03-26 22:00:59>
 
 
 ;; -- marks
@@ -262,8 +262,12 @@
                                                  ;; (* 1.25d0 (routing-dist routing))
                                                  )) 
                                          (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail reason penalty-time energy wind-dir wind-speed)))))))))
-                      (add-point heading-port (- twa))
-                      (add-point heading-stbd twa))
+                      (when (or (null (routepoint-penalty routepoint))
+                                (not (is-tack (routepoint-twa routepoint) (- twa))))
+                        (add-point heading-port (- twa)))
+                      (when (or (null (routepoint-penalty routepoint))
+                                (not (is-tack (routepoint-twa routepoint) twa)))
+                        (add-point heading-stbd twa)))
               :finally (return added))))))))
 
 (defstruct box north south west east antimed-p)

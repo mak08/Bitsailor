@@ -130,45 +130,47 @@ import * as Router from './router.js';
         let startPos = new google.maps.LatLng(start.lat, start.lon);
         // setRoutePoint also updates storage via updateStartPosition
         Router.setRoutePoint('start', startPos);
-
-        // Destination 
-        var lastP0 = rsData.gates[rsData.gates.length-1][0]
-        var lastP1 = rsData.gates[rsData.gates.length-1][1]
-
-        let dest = Router.getValue('dest');
-        if (dest) {
-            dest = JSON.parse(dest);
-        } else {
-            // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
-            dest = {
-                'lat': (lastP0.latitude + lastP1.latitude)/2,
-                'lon': (lastP0.longitude + lastP1.longitude)/2
-            }
-        }
-        var destPos = new google.maps.LatLng(dest.lat, dest.lon);
-        Router.setRoutePoint('dest', destPos);
-        
         Router.googleMap.panTo(Router.startMarker.getPosition());
 
-        var gateCount = 1; 
-        for (const gate of rsData.gates) {
-            var mark0 = new google.maps.Marker({
-                position: {"lat": gate[0].latitude,
-                           "lng": gate[0].longitude},
-                map: Router.googleMap,
-                label: `${ gateCount }`,
-                title: `Gate ${ gateCount }`,
-                draggable: false
-            });
-            var mark1 = new google.maps.Marker({
-                position: {"lat": gate[1].latitude,
-                           "lng": gate[1].longitude},
-                map: Router.googleMap,
-                label: `${ gateCount }`,
-                title: `Gate ${ gateCount }`,
-                draggable: false
-            });
-            gateCount++;
+
+        // Destination
+        if (rsData.hunt != 'TRUE') {
+            var lastP0 = rsData.gates[rsData.gates.length-1][0]
+            var lastP1 = rsData.gates[rsData.gates.length-1][1]
+
+            let dest = Router.getValue('dest');
+            if (dest) {
+                dest = JSON.parse(dest);
+            } else {
+                // Gate midpoint - this will go wrong if the gate spans the 0 or 180 meridian
+                dest = {
+                    'lat': (lastP0.latitude + lastP1.latitude)/2,
+                    'lon': (lastP0.longitude + lastP1.longitude)/2
+                }
+            }
+            var destPos = new google.maps.LatLng(dest.lat, dest.lon);
+            Router.setRoutePoint('dest', destPos);
+            
+            var gateCount = 1; 
+            for (const gate of rsData.gates) {
+                var mark0 = new google.maps.Marker({
+                    position: {"lat": gate[0].latitude,
+                               "lng": gate[0].longitude},
+                    map: Router.googleMap,
+                    label: `${ gateCount }`,
+                    title: `Gate ${ gateCount }`,
+                    draggable: false
+                });
+                var mark1 = new google.maps.Marker({
+                    position: {"lat": gate[1].latitude,
+                               "lng": gate[1].longitude},
+                    map: Router.googleMap,
+                    label: `${ gateCount }`,
+                    title: `Gate ${ gateCount }`,
+                    draggable: false
+                });
+                gateCount++;
+            }
         }
 
         // NMEA port
@@ -224,7 +226,7 @@ import * as Router from './router.js';
     }
     
     function setUpRS () {
- 
+        
         Router.setUp(getVMG);
         Router.settings.presets = "RS";
         Router.settings.options = ["realsail"];

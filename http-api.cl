@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-16 18:46:30>
+;;; Last Modified <michael 2023-03-29 22:51:52>
 
 
 (in-package :bitsailor)
@@ -153,6 +153,7 @@
                               (options)
                               (energy)
                               (tack)
+                              (sail)
                               (stepmax (* 24 60 60))
                               (cycle)
                               (slat)
@@ -177,6 +178,7 @@
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :options options
+     :energy energy
      :tack (cond
              ((string= tack "port")
               90d0)
@@ -185,11 +187,14 @@
             (t
              (log2:warning "No valid initial tack ~a" tack)
              nil))
-     :energy energy
+     :sail sail
      :resolution resolution
      :minwind (determine-minwind presets race-id)
      :gfs-mode gfs-mode
-     :grib-source (if vr-finewinds :vr :noaa)
+     :grib-source (if (and (string= resolution "0p25")
+                           vr-finewinds)
+                      :vr
+                      :noaa)
      :interpolation (cond
                       (vr-finewinds
                        :enorm)
@@ -236,6 +241,7 @@
                                               (|options| nil)
                                               (|energy| "100")
                                               (|tack| nil)
+                                              (|sail| nil)
                                               (|resolution| "1p00")
                                               (|gfsMode| "06h")
                                               |polarsId|
@@ -261,6 +267,7 @@
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :energy (read-arg |energy| 'double-float)
                                     :tack |tack|
+                                    :sail |sail|
                                     :resolution |resolution|
                                     :polars |polarsId|
                                     :starttime |startTime|

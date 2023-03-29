@@ -225,6 +225,11 @@ import * as Router from './router.js';
             document.getElementById('sel_currenttack').value = twa<0?'port':'stbd';
         }
 
+        let sail = queryParams.sail;
+        if (sail) {
+            document.getElementById('sel_currentsail').value = sail;
+        }
+
         // Center map
         Router.googleMap.panTo(Router.startMarker.getPosition());
 

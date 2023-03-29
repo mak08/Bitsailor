@@ -1,14 +1,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-26 21:45:27>
+;;; Last Modified <michael 2023-03-28 23:22:57>
 
 (in-package :bitsailor)
 
 (defstruct polars id label name tws twa sails)
 (defstruct (polars-vr (:include polars)) winch)
 (defstruct (polars-rs (:include polars)))
-(defstruct cpolars id label name maxspeed sailspeeds twa vmg speed)
+(defstruct cpolars id label name maxspeed speed sailspeeds twa vmg)
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
@@ -37,6 +37,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
+(declaim (inline get-max-speed))
+(defun get-max-speed (cpolars twa tws)
+  (aref (cpolars-maxspeed cpolars) (round (* twa 10)) (round (* tws 10))))
+
+(defun get-sail-speed (cpolars twa tws sail) 
+  (aref (aref (cpolars-speed cpolars) (round (* twa 10)) (round (* tws 10))) sail))
 
 (defun encode-options (option-list)
   (let ((options 3))
@@ -52,14 +58,28 @@
       (setf options (dpb 1 (byte 1 +c0rs+) options)))
     options))
 
-(defun get-max-speed (cpolars-speed twa wind-speed)
-  (declare (double-float twa wind-speed))
-  ;; (check-type twa angle)
-  (let ((dim (array-dimension cpolars-speed 1)))
-    (aref cpolars-speed
-          (round (* (abs twa) 10d0))
-          (min (round (* wind-speed 10d0))
-               (1- dim)))))
+(defun compute-max-speed (speed options)
+  (let* ((dimensions (array-dimensions speed))
+         (max (make-array dimensions)))
+    (loop
+      :for twa :below (first dimensions)
+      :do (loop :for tws :below (second dimensions)
+                :do (setf (aref max twa tws)
+                          (compute-max-speed-1 speed twa tws)))
+      :finally (return max))))
+              
+(defun compute-max-speed-1 (speed twa tws)
+  (do
+   ((imax 0)
+    (vmax 0)
+    (i 0 (1+ i)))
+   ((= i 7)
+       (list (max vmax 0.007d0)
+             imax))
+    (let ((v (aref (aref speed twa tws) i)))
+      (when (>= v vmax)
+        (setf imax i
+              vmax v)))))
 
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
@@ -93,19 +113,14 @@
          (twa-steps (if (null *twa-steps*)
                         twa
                         (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
-         (maxspeed (make-array (list (1+ 1800)
-                                     (1+ (* max-wind 10))))))
-    (loop
-      :for angle :from 0 :to 1800
-      :do (loop
-            :for wind :from 0 :to (* max-wind 10)
-            :do (setf (aref maxspeed angle wind)
-                      (multiple-value-list
-                       (get-max-speed% (/ angle  10.d0) (/ wind 10.d0) polars options)))))
+         (speed (interpolated-speeds polars options))
+         (maxspeed (compute-max-speed speed options)))
+
     (make-cpolars :id id
                   :label (polars-label polars)
                   :name (polars-name polars)
                   :twa twa-steps
+                  :speed speed
                   :maxspeed maxspeed
                   :vmg (precompute-vmg maxspeed max-wind))))
 
@@ -132,12 +147,12 @@
                                      (sail-speed (aref (polars-sails polars) k))))))
     (make-array 7 :initial-contents sail-speeds)))
 
-(defun precompute-vmg (cpolars-speed max-wind)
+(defun precompute-vmg (maxspeed max-wind)
   (let ((precomputed
          (loop
             :for windspeed :from 0d0 :to max-wind :by 0.1
             :collect (multiple-value-list
-                      (best-vmg% windspeed cpolars-speed)))))
+                      (best-vmg% maxspeed windspeed)))))
     (make-array (length precomputed)
                 :initial-contents precomputed)))
 
@@ -146,7 +161,7 @@
   (twa 0d0 :type double-float)
   (sail nil :type t))
 
-(defun best-vmg% (windspeed cpolars-speed)
+(defun best-vmg% (maxspeed tws)
   (loop
      :with best-vmg-up = 0.0d0
      :with best-twa-up = 0.0d0
@@ -154,43 +169,23 @@
      :with best-vmg-down = 0.0d0
      :with best-twa-down = 0.0d0
      :with best-sail-down = nil
-     :for angle :from 0.0d0 :to 170.0d0
-     :for (speed sail) = (get-max-speed cpolars-speed angle windspeed)
-     :for vmg = (* speed (cos (rad angle)))
+     :for twa :from 0 :to 170
+     :for (speed sail) = (aref maxspeed (* twa 10) (* (round tws) 10))
+     :for vmg = (* speed (cos (rad (coerce twa 'double-float))))
      :when (< vmg best-vmg-down)
-       :do (setf best-twa-down angle
+       :do (setf best-twa-down twa
                  best-vmg-down vmg
                  best-sail-down sail)
      :when (> vmg best-vmg-up)
-       :do (setf best-twa-up angle
+       :do (setf best-twa-up twa
                  best-vmg-up vmg
                  best-sail-up sail)
      :finally (return
                 (if (= best-vmg-up best-vmg-down)
-                    (values (make-vmg :vmg best-vmg-up :sail best-sail-up :twa 00d0)
-                            (make-vmg :vmg (abs best-vmg-down) :sail best-sail-down :twa 180d0))
-                    (values (make-vmg :vmg best-vmg-up :sail best-sail-up :twa best-twa-up)
-                            (make-vmg :vmg (abs best-vmg-down) :sail best-sail-down :twa best-twa-down))))))
-
-(defun get-max-speed% (angle wind-speed polars options)
-  (do
-   ((tws (polars-tws polars))
-    (twa (polars-twa polars))
-    (imax 0)
-    (vmax 0)
-    (i 0 (1+ i)))
-   ((= i 7)
-       (values (max vmax 0.01d0)
-               (sail-name (aref (polars-sails polars) imax))))
-    (when (= (ldb (byte 1 i) options) 1)
-      (let ((v (get-boat-speed (abs angle)
-                               wind-speed
-                               twa
-                               tws
-                               (sail-speed (aref (polars-sails polars) i)))))
-        (when (>= v vmax)
-          (setf imax i
-                vmax v))))))
+                    (values (make-vmg :vmg (coerce best-vmg-up 'double-float) :sail best-sail-up :twa 00d0)
+                            (make-vmg :vmg (coerce (abs best-vmg-down) 'double-float) :sail best-sail-down :twa 180d0))
+                    (values (make-vmg :vmg (coerce best-vmg-up 'double-float) :sail best-sail-up :twa (coerce best-twa-up 'double-float))
+                            (make-vmg :vmg (coerce (abs best-vmg-down) 'double-float) :sail best-sail-down :twa (coerce best-twa-down 'double-float)))))))
 
 (defun get-boat-speed (angle wind-speed twa tws sailspeeds)
   (multiple-value-bind
@@ -241,26 +236,6 @@
            (translate-polars-rs filename json-object))
           (t
            (error "Unknown polars format")))))
-
-(defun boat-performance (name)
-  (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))
-    (values
-     (round
-      (loop
-         :for windspeed :from 2d0 :to 25d0 :by 5d0
-         :sum (loop :for twa :from 40d0 :to 150d0 :by 5d0
-                 :sum (car (get-max-speed (cpolars-speed polars) twa windspeed))))
-      10))))
-
-
-(defun boat-vmg-performance (name)
-  (let ((polars (get-combined-polars name (encode-options '("foil" "reach" "heavy" "light")))))
-    (values
-     (round
-      (loop
-         :for windspeed :from 2d0 :to 35d0 :by 5d0
-         :sum (loop :for vmg :in (multiple-value-list (best-vmg polars windspeed))
-                 :sum (car vmg)))))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

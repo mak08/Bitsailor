@@ -5,6 +5,7 @@ import * as Util from './Util.js';
 import WindTile from './WindTile.js';
 import * as GPX from './GPX.js';
 
+const sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
     "resolution": "1p00",
     "gfsMode": "06h",
@@ -589,6 +590,11 @@ function getRoute () {
         query += `&tack=${tackInput.value}`;
     }
 
+    var sailInput = document.getElementById('sel_currentsail');
+    if (sailInput) {
+        query += `&sail=${sailInput.value}`;
+    }
+
     $.ajax({
         url: "/function/router.getRoute" + query,
         dataType: 'json'
@@ -886,7 +892,7 @@ function makeWaypointInfo(startTime, point) {
 
     result += "<p>";
     result += "<b> TWA</b>: " + point.twa.toFixed(1);
-    result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + point.sail;
+    result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + sailNames[point.sail];
     result += "</p>";
     result += "<p>";
     result += "<b> Penalty</b>: " + point.penalty;

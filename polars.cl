@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-28 23:22:57>
+;;; Last Modified <michael 2023-03-30 21:23:35>
 
 (in-package :bitsailor)
 
@@ -69,11 +69,12 @@
       :finally (return max))))
               
 (defun compute-max-speed-1 (speed twa tws)
-  (do
+  (do*
    ((imax 0)
     (vmax 0)
+    (n (length (aref speed 0 0)))
     (i 0 (1+ i)))
-   ((= i 7)
+   ((= i n)
        (list (max vmax 0.007d0)
              imax))
     (let ((v (aref (aref speed twa tws) i)))
@@ -92,6 +93,7 @@
         (setf (gethash options polars-ht)
               (preprocess-polars id options)))))
 
+(declaim (notinline best-vmg))
 (defun best-vmg (cpolars windspeed)
   (let ((index (round (* windspeed 10d0)))
         (vmg (cpolars-vmg cpolars)))
@@ -138,14 +140,15 @@
       :finally (return speeds))))
 
 (defun interpolated-speed (twa tws polars options)
-  (let ((sail-speeds
-          (loop
-            :for k :from 0 :to 6
-            :collect (get-boat-speed twa tws
-                                     (polars-twa polars)
-                                     (polars-tws polars)
-                                     (sail-speed (aref (polars-sails polars) k))))))
-    (make-array 7 :initial-contents sail-speeds)))
+  (let* ((number-of-sails (length (polars-sails polars)))
+         (sail-speeds
+           (loop
+             :for k :below number-of-sails
+             :collect (get-boat-speed twa tws
+                                      (polars-twa polars)
+                                      (polars-tws polars)
+                                      (sail-speed (aref (polars-sails polars) k))))))
+    (make-array number-of-sails :initial-contents sail-speeds)))
 
 (defun precompute-vmg (maxspeed max-wind)
   (let ((precomputed

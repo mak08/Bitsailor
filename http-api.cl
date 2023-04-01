@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-29 22:51:52>
+;;; Last Modified <michael 2023-03-30 21:34:07>
 
 
 (in-package :bitsailor)
@@ -136,12 +136,15 @@
 ;;; getRoute
 
 (defun determine-minwind (presets race-id)
-  (when (string= presets "VR")
-    (if (string=
-         (joref (race-info-data (race-info race-id)) "fineWinds")
-         "TRUE")
-        (knots-to-m/s 1d0)
-        (knots-to-m/s 2d0))))
+  (cond
+    ((string= presets "VR")
+     (if (string=
+          (joref (race-info-data (race-info race-id)) "fineWinds")
+          "TRUE")
+         (knots-to-m/s 1d0)
+         (knots-to-m/s 2d0)))
+    (t
+     0d0)))
 
 (defun get-routing-presets (presets
                             &key
@@ -151,9 +154,9 @@
                               (polars)
                               (gfs-mode "06h")
                               (options)
-                              (energy)
+                              (energy 100)
                               (tack)
-                              (sail)
+                              (sail -1)
                               (stepmax (* 24 60 60))
                               (cycle)
                               (slat)

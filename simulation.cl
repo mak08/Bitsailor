@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-29 21:28:30>
+;;; Last Modified <michael 2023-03-30 21:36:15>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -216,7 +216,7 @@
       (and (> twa 0) (<= up twa down))))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing box routepoint left right step-size step-time params polars delta-angle)
+(defun expand-routepoint (routing routepoint left right step-size step-time params polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -311,7 +311,6 @@
 (defun get-route (routing)
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
-         (box (make-routing-box start-pos (routing-dest routing)))
          (distance (course-distance start-pos destination))
          (polars (routing-polars routing))
          (race-info (routing-race-info routing))
@@ -417,7 +416,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (let ((new-point-num
-                         (expand-routepoint routing box rp left right step-size step-time params polars delta-angle)))
+                         (expand-routepoint routing rp left right step-size step-time params polars delta-angle)))
                    (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)

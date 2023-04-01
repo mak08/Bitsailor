@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-30 21:34:07>
+;;; Last Modified <michael 2023-04-01 15:42:28>
 
 
 (in-package :bitsailor)
@@ -256,8 +256,14 @@
                                               (|cycleTS|  (determine-rs-cycle |gfsMode|) cycle-supplied-p)
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
-  (handler-case
-      (let* ((*read-default-float-format* 'double-float)
+  (handler-bind
+      ((error (lambda (e)
+                    (log2:error "~a" e)
+                    (sb-debug:print-backtrace)
+                    (setf (status-code response) 500)
+                    (setf (status-text response) (format nil "~a" e))
+                    (return-from |getRoute| (format nil "~a" e)))))
+    (let* ((*read-default-float-format* 'double-float)
              (user-id
                (http-authenticated-user handler request))
              (cycle (if cycle-supplied-p
@@ -291,11 +297,7 @@
                    (routeinfo-stats routeinfo))
         (values
          (with-output-to-string (s)
-           (json s routeinfo))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
+           (json s routeinfo))))))
 
 (defun vh:|getRouteRS| (handler request response &key
                                                 (|polarsID| "aA32bToWbF")

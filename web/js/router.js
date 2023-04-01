@@ -1191,10 +1191,11 @@ function formatSails (data) {
 
     var result = "";
     for (const e in m) {
+        let sail  = sailNames[e];
         if (result) {
-            result = result + " - " + e + ":" + (m[e]/dt*100).toFixed() + "%" ;
+            result = result + " - " + sail + ":" + (m[e]/dt*100).toFixed() + "%" ;
         } else {
-            result = e + ":" + (m[e]/dt*100).toFixed() + "%";
+            result = sail + ":" + (m[e]/dt*100).toFixed() + "%";
         }
     }
     return result;

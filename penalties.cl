@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-04-01 16:51:17>
+;;; Last Modified <michael 2023-04-01 21:32:37>
 
 (in-package :bitsailor)
 
@@ -15,7 +15,7 @@
     (/ step-size duration)))
 
 ;; e-factor: percentual reduction of energy (stamina)
-(declaim (notinline e-factor))
+(declaim (inline e-factor))
 (defun e-factor (tws event)
   (let ((factor (cond ((< tws (knots-to-m/s 30d0))
                        (1+ (/ tws (knots-to-m/s 30d0))))

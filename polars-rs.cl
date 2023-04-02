@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-13 18:49:01>
+;;; Last Modified <michael 2023-04-02 19:08:26>
 
 (in-package :bitsailor)
 
@@ -26,11 +26,14 @@
          (polar-data
            (joref json-object "polarData"))
          (jib
-           (joref polar-data "jib"))
+           (or (joref polar-data "jib")
+               (joref polar-data "boat")))
          (gnk
-           (joref polar-data "gennaker"))
+           (or (joref polar-data "gennaker")
+               (joref polar-data "boat")))
          (spi
-           (joref polar-data "spi"))
+           (or (joref polar-data "spi")
+               (joref polar-data "boat")))
          (tws
            (check-tws jib gnk spi))
          (twa

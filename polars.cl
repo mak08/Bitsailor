@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-30 21:23:35>
+;;; Last Modified <michael 2023-04-02 18:01:35>
 
 (in-package :bitsailor)
 
@@ -41,6 +41,7 @@
 (defun get-max-speed (cpolars twa tws)
   (aref (cpolars-maxspeed cpolars) (round (* twa 10)) (round (* tws 10))))
 
+(declaim (inline get-sail-speed))
 (defun get-sail-speed (cpolars twa tws sail) 
   (aref (aref (cpolars-speed cpolars) (round (* twa 10)) (round (* tws 10))) sail))
 

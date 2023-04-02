@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-04-01 21:32:37>
+;;; Last Modified <michael 2023-04-02 18:25:26>
 
 (in-package :bitsailor)
 
@@ -65,23 +65,28 @@
   (make-hash-table :test #'equalp))
 
 (defun get-penalty-spec (cpolars event &key (winch-mode "pro"))
-  (or (gethash (list cpolars event winch-mode) *penalty-spec-ht*)
-      (setf (gethash (list cpolars event winch-mode) *penalty-spec-ht*)
-            (let* ((polars (get-polars-by-id (cpolars-id cpolars)))
-                   (winch (polars-vr-winch polars))
-                   (spec (joref (joref winch event) winch-mode)))
-              (when (null spec)
-                (error "Missing winch spec, outdated polar file?"))
-              (let* ((lws (knots-to-m/s (joref winch "lws")))
-                     (hws (knots-to-m/s (joref winch "hws")))
-                     (spec-lw (joref spec "lw"))
-                   (spec-hw (joref spec "hw")))
-                (make-penalty-spec :windspeed-l (coerce lws 'double-float)
-                                   :windspeed-h (coerce hws 'double-float)
-                                   :factor-l (coerce (joref spec-lw "ratio") 'double-float)
-                                   :factor-h (coerce (joref spec-hw "ratio") 'double-float)
-                                   :time-l (coerce (joref spec-lw "timer") 'double-float)
-                                   :time-h (coerce (joref spec-hw "timer") 'double-float)))))))
+  (let ((key  (list cpolars event winch-mode)))
+    (or (gethash key *penalty-spec-ht*)o
+        (setf (gethash key *penalty-spec-ht*)
+              (get-penalty-spec% cpolars event :winch-mode "pro")))))
+
+(defun get-penalty-spec% (cpolars event &key (winch-mode "pro"))
+  (setf (gethash (list cpolars event winch-mode) *penalty-spec-ht*)
+        (let* ((polars (get-polars-by-id (cpolars-id cpolars)))
+               (winch (polars-vr-winch polars))
+               (spec (joref (joref winch event) winch-mode)))
+          (when (null spec)
+            (error "Missing winch spec, outdated polar file?"))
+          (let* ((lws (knots-to-m/s (joref winch "lws")))
+                 (hws (knots-to-m/s (joref winch "hws")))
+                 (spec-lw (joref spec "lw"))
+                 (spec-hw (joref spec "hw")))
+            (make-penalty-spec :windspeed-l (coerce lws 'double-float)
+                               :windspeed-h (coerce hws 'double-float)
+                               :factor-l (coerce (joref spec-lw "ratio") 'double-float)
+                               :factor-h (coerce (joref spec-hw "ratio") 'double-float)
+                               :time-l (coerce (joref spec-lw "timer") 'double-float)
+                               :time-h (coerce (joref spec-hw "timer") 'double-float))))))
 
 (declaim (inline penalty-parameters))
 (defun-t penalty-parameters (values double-float double-float) (cpolars event winch-mode tws)

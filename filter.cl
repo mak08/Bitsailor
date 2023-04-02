@@ -1,10 +1,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-15 23:43:58>
+;;; Last Modified <michael 2023-04-02 16:55:21>
 
 (in-package :bitsailor)
 
+(declaim (inline bucket))
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate origin-angle delta-angle))
   

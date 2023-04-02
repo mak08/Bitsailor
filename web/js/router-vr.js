@@ -215,6 +215,9 @@ import * as Router from './router.js';
         var destPos = new google.maps.LatLng(dest.lat, dest.lon);
         Router.setRoutePoint('dest', destPos);
 
+        // Options
+        // Setup in setupVR()
+
         // Boat state
         let energy = queryParams.energy;
         if (energy) {
@@ -272,11 +275,16 @@ import * as Router from './router.js';
     function setUpVR () {
         Router.setUp(getVMG);
         Router.settings.presets = "VR";
-        let options =  Router.getValue('options');
+        let queryParams = Router.getURLParams()
+        let options = queryParams.options;
         if (options) {
-            Router.settings.options = JSON.parse(options);
+            try {
+                Router.settings.options = JSON.parse(options);
+            } catch (e) {
+                console.warn(e);
+            }
         } else {
-            Router.settings.options = ['winch'];
+            Router.settings.options = [];
         }
 
         document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);

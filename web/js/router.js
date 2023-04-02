@@ -716,11 +716,11 @@ function displayRouting (data) {
 }
 
 function getURLParams () {
-    var query = new URL(document.URL).searchParams;
-    var slat = query.get('slat');
-    var slon = query.get('slon');
-    var starttime = query.get('starttime');
-    var  res = {};
+    let query = new URL(document.URL).searchParams;
+    let slat = query.get('slat');
+    let slon = query.get('slon');
+    let starttime = query.get('starttime');
+    let res = {};
     if (slat) {
         res.startPos = {
             "lat": Number(slat),
@@ -730,6 +730,9 @@ function getURLParams () {
     if (starttime) {
         res.startTime = new Date(starttime + 'Z');
     }
+    
+    res.options = query.get('options') || '';
+    
     var sail = query.get('sail');
     if (sail) {
         res.sail = sail;

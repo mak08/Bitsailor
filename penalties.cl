@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-04-02 18:25:26>
+;;; Last Modified <michael 2023-04-04 00:16:45>
 
 (in-package :bitsailor)
 
@@ -66,7 +66,7 @@
 
 (defun get-penalty-spec (cpolars event &key (winch-mode "pro"))
   (let ((key  (list cpolars event winch-mode)))
-    (or (gethash key *penalty-spec-ht*)o
+    (or (gethash key *penalty-spec-ht*)
         (setf (gethash key *penalty-spec-ht*)
               (get-penalty-spec% cpolars event :winch-mode "pro")))))
 

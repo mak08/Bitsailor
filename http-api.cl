@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-04-01 15:42:28>
+;;; Last Modified <michael 2023-04-07 22:35:34>
 
 
 (in-package :bitsailor)
@@ -149,9 +149,9 @@
 (defun get-routing-presets (presets
                             &key
                               (race-id)
+                              (polars-id)
                               (starttime nil)
                               (resolution "1p00")
-                              (polars)
                               (gfs-mode "06h")
                               (options)
                               (energy 100)
@@ -163,16 +163,19 @@
                               (slon)
                               (dlat)
                               (dlon))
-  (let* ((vr-finewinds
+  (let* ((race-info (race-info race-id))
+         (vr-finewinds
            (and (string= presets "VR")
                 (string= "TRUE"
-                         (joref (race-info-data (race-info race-id)) "fineWinds"))))
+                         (joref (race-info-data race-info) "fineWinds"))))
+         (polars-id (format nil "~a" (or polars-id
+                                         (joref (joref (race-info-data race-info) "boat") "polar_id"))))
          (options
            (or options
                (if (string= presets "RS")
                    '("realsail")
                    '("hull" "foil" "winch" "heavy" "light" "reach"))))
-         (polars (get-combined-polars polars (encode-options options))))
+         (polars (get-combined-polars polars-id (encode-options options))))
     (make-routing
      :race-info   (race-info race-id)
      :fan *max-angle*
@@ -272,13 +275,13 @@
              (routing
                (get-routing-presets |presets|
                                     :race-id |raceId|
+                                    :polars-id |polarsId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :energy (read-arg |energy| 'double-float)
                                     :tack |tack|
                                     :sail |sail|
                                     :resolution |resolution|
-                                    :polars |polarsId|
                                     :starttime |startTime|
                                     :cycle cycle
                                     :stepmax (if duration-supplied-p
@@ -341,7 +344,7 @@
                (get-routing-presets "RS"
                                     :options '("realsail")
                                     :resolution |resolution|
-                                    :polars |polarsID|
+                                    :polars-id |polarsID|
                                     :gfs-mode |gfsMode|
                                     :stepmax (min (* *max-route-hours* 3600) ;; 2d
                                                   (read-arg |duration|))
@@ -571,10 +574,10 @@
              (routing
                (get-routing-presets |presets|
                                     :race-id |raceId|
+                                    :polars-id |polarsId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|
-                                    :polars |polarsId|
                                     :starttime |time|
                                     :cycle cycle))
              (time (parse-datetime |time|))
@@ -691,7 +694,7 @@
             (get-nmea-position user-id race-id)))))
 
 (defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (unless *disable-nmea*
+  (when *disable-nmea*
     (error "NMEA support is currently disabled. Please enter position manually."))
   (let* ((user-id (http-authenticated-user handler request))
          (race-id (get-routing-request-race-id request))

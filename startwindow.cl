@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2021-10-15 22:27:17>
+;;; Last Modified <michael 2023-04-06 20:06:21>
 
 (in-package :bitsailor)
 
@@ -14,13 +14,16 @@
               :polars "maxi_trimaran")
 |#
 
-(defun check-window (start-offset
+(defun check-window (race-id
+                     start-offset
                      window-size
                      &key
                        (logfile "startwindow.log")
                        (increment 60)
-                       (start +marseille+)
-                       (dest +carthago+)
+                       (slat 0d0)
+                       (slon 0d0)
+                       (dlat 0d0)
+                       (dlon 0d0)
                        (stepmax (* 60 60 24 6))
                        (polars "11")
                        (options  '("winch" "reach" "foil" "heavy" "light" "hull")))
@@ -39,13 +42,16 @@
           ((timestamp> starttime last)
            result)
         (let ((parameters
-               (make-routing :start start
-                             :dest dest
-                             :stepmax stepmax
-                             :polars polars
-                             :interpolation :vr
-                             :options options
-                             :starttime starttime)))
+               (get-routing-presets "VR"
+                                    :race-id race-id
+                                    :slat slat
+                                    :slon slon
+                                    :dlat dlat
+                                    :dlon dlon
+                                    :stepmax stepmax
+                                    :options options
+                                    :sail "Jib"
+                                    :starttime starttime)))
           (multiple-value-bind (route error)
               (ignore-errors
                 (get-route parameters))

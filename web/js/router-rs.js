@@ -7,6 +7,7 @@ import * as Router from './router.js';
 ( function () {
 
     var rsData = {};
+    let polarsMap = new Map();
     
     function getRaceInfo () {
         Util.doGET(
@@ -29,15 +30,24 @@ import * as Router from './router.js';
     }
 
     function getVMG (windSpeed) {
-        var polars = Router.polars;
+        let polars = Router.getPolars();
         if (polars && polars.polarData) {
-            var vJ = getMaxSpeed(polars.polarData.jib, windSpeed);
-            var vG = getMaxSpeed(polars.polarData.gennaker, windSpeed);
-            var vS = getMaxSpeed(polars.polarData.spi, windSpeed);
-            
-            return {
-                "up": vJ.up.vmg.toFixed(2) + '@' + vJ.up.twa.split('.')[0],
-                "down": Math.abs(vS.down.vmg).toFixed(2) + '@' + vS.down.twa.split('.')[0]
+            let data = polars.polarData;
+            if (data.boat) {
+                let vS = getMaxSpeed(data.boat, windSpeed);
+                return  {
+                    "up": vS.up.vmg.toFixed(2) + '@' + vS.up.twa.split('.')[0],
+                    "down": Math.abs(vS.down.vmg).toFixed(2) + '@' + vS.down.twa.split('.')[0]
+                }
+            } else {
+                let vJ = getMaxSpeed(data.jib, windSpeed);
+                let vG = getMaxSpeed(data.gennaker, windSpeed);
+                let vS = getMaxSpeed(data.spi, windSpeed);
+                
+                return {
+                    "up": vJ.up.vmg.toFixed(2) + '@' + vJ.up.twa.split('.')[0],
+                    "down": Math.abs(vS.down.vmg).toFixed(2) + '@' + vS.down.twa.split('.')[0]
+                }
             }
         } else {
             return {
@@ -92,11 +102,32 @@ import * as Router from './router.js';
         };
     }
 
+    function onSelectPolars (event) {
+        let polars = polarsMap.get(event.currentTarget.value);
+        Router.setPolars(polars);
+        Router.settings.polarsId = polars.objectId;
+    }
+
+    function addPolars (data) {
+        polarsMap.set(data.classBoat, data);
+        let selPolars = document.getElementById("sel_polars");
+        let option = document.createElement("option");
+        option.text = data.classBoat;
+        selPolars.add(option);
+        selPolars.value = data.classBoat;
+    }
+    
     function setupLegRS (raceinfo) {
         rsData = raceinfo.data;
         document.title = rsData.name;
 
-        Router.loadPolars(rsData.polar.objectId);
+        if (rsData.multiClass == "TRUE") {
+            for (const id of rsData.classes) {
+                Router.loadPolars(id, addPolars);
+            }
+        } else {
+            Router.loadPolars(rsData.polar.objectId);
+        }
 
         // Resolution
         if (rsData.gfs025 == "TRUE") {
@@ -235,11 +266,14 @@ import * as Router from './router.js';
         document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
         document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);
         document.getElementById("sel_gfsmode").addEventListener("change", Router.onSetGFSMode);
+        let selPolars = document.getElementById("sel_polars");
+        if (selPolars) {
+            selPolars.addEventListener("change", onSelectPolars);
+        }
 
         getRaceInfo()
 
         Router.updateMap();
-        
     }
 
     window.addEventListener("load", function (event) {

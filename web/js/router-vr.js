@@ -29,7 +29,7 @@ import * as Router from './router.js';
     }
 
     function getVMG (windSpeed) {
-        var polars = Router.polars.scriptData.polar;
+        var polars = Router.getPolars().scriptData.polar;
 
         if (polars) {
             var vmg = bestVMG(windSpeed, polars, ["heavy", "light", "reach", "hull", "foil"])

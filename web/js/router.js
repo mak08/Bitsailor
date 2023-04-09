@@ -533,6 +533,14 @@ function setDuration (duration) {
 }
 
 
+function setPolars (data) {
+    polars = data;
+}
+
+function getPolars () {
+    return polars;
+}
+
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
 
@@ -704,7 +712,7 @@ function getURLParams () {
     var slat = query.get('slat');
     var slon = query.get('slon');
     var starttime = query.get('starttime');
-    var  res = {};
+    var res = {};
     if (slat) {
         res.startPos = {
             "lat": Number(slat),
@@ -717,7 +725,7 @@ function getURLParams () {
     return res;
 }
 
-function loadPolars (id) {
+function loadPolars (id, callback) {
     Util.doGET(`/polars/${ id }.json`,
                function (request) {
                    var data = JSON.parse(request.responseText);
@@ -725,6 +733,9 @@ function loadPolars (id) {
                        console.log('Loaded ' + id);
                        settings.polarsId = id;
                        polars = data;
+                       if (callback) {
+                           callback(data);
+                       }
                    } else {
                        alert("No leg info for race");
                    }
@@ -1183,7 +1194,8 @@ export {
     onMarkerClicked,
     onSetResolution,
     onSetGFSMode,
-    polars,
+    setPolars,
+    getPolars,
     restoreCursor,
     setBusyCursor,
     settings,

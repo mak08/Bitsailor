@@ -56,7 +56,7 @@ button:active {
 							 'controls main'
 							 'footer-left footer';
 	grid-template-rows: 48px 1fr 30px;
-	grid-template-columns: 45vh 1fr;
+	grid-template-columns: 40vh 1fr;
 	grid-gap: 1px;
 	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
 	height: calc(100vh - 8px);
@@ -122,7 +122,7 @@ button:active {
     grid-area: controls;
 	display: grid;
 	max-content: 40px;
-	grid-template-columns: 150px 1fr;
+	grid-template-columns: 100px 40px 40px 40px 40px 40px 40px;
 	grid-template-rows: repeat(20, minmax(25px, 36px));
 	color: #ededeb;
     background-color: #464242;
@@ -218,40 +218,62 @@ input[type=checkbox] {
 }
 
 .position-set {
+	grid-row: 1;
+	grid-column: 7;
+}
+
+
+/* VR Options */
+.options-label {
 	grid-row: 2;
-	grid-column: 2;
+	grid-column: 1;
+}
+.vroptions-1 {
+	grid-row: 2;
+	grid-column: 2/7;
+}
+.vroptions-2 {
+	grid-row: 3;
+	grid-column: 2/7;
 }
 
 /* NMEA */
+#tb_nmeaport {
+	width: 5em;
+}
+
 .nmea-label {
-	grid-row: 3;
+	grid-row: 2;
 	grid-column: 1;
 }
 .nmea-port {
-	grid-row: 3;
+	grid-row: 2;
 	grid-column: 2;
 }
-
 .nmea-update {
-	grid-row: 4;
-	grid-column: 1;
+	grid-row: 2;
+	grid-column: 4;
 }
 .nmea-reset {
-	grid-row: 4;
-	grid-column: 2;
+	grid-row: 2;
+	grid-column: 6;
 }
 
-/* Start deleyed */
+/* Start delayed */
 .delayed-label {
 	grid-row: 5;
 	grid-column: 1;
 }
-.delayed-entry {
+.delayed-cb {
 	grid-row: 5;
 	grid-column: 2;
 
 }
+.delayed-entry {
+	grid-row: 5;
+	grid-column: 3;
 
+}
 /* Override cycle
 .cycle-label {
 	grid-row: 4;
@@ -287,11 +309,33 @@ input[type=checkbox] {
 
 /* GFS mode */
 .gfsmode-label {
+	grid-row: 7;
+	grid-column: 4/7;
+
+}
+.gfsmode-selector {
+	grid-row: 7;
+	grid-column: 7;
+}
+
+
+.polars-label {
+	grid-row: 8;
+	grid-column: 1;
+}
+
+.polars-selector {
+	grid-row: 8;
+	grid-column: 2/7;
+}
+
+/* Boat state */
+.boatstate-label {
 	grid-row: 8;
 	grid-column: 1;
 
 }
-.gfsmode-selector {
+.boatstate-group {
 	grid-row: 8;
 	grid-column: 2;
 }
@@ -326,7 +370,7 @@ input[type=checkbox] {
 }
 .cursor-select {
 	grid-row: 13;
-	grid-column: 2;
+	grid-column: 2/7;
 }
 
 /* Execute */
@@ -397,7 +441,7 @@ input[type=checkbox] {
 /* Download */
 .download-button {
 	grid-row: 17;
-	grid-column: 2;
+	grid-column: 2/7;
 }
 
 .statistics-from-label {
@@ -407,7 +451,7 @@ input[type=checkbox] {
 }
 .statistics-from {
 	grid-row: 18;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 
@@ -418,7 +462,7 @@ input[type=checkbox] {
 }
 .statistics-duration {
 	grid-row: 19;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 
@@ -430,7 +474,7 @@ input[type=checkbox] {
 }
 .statistics-sails {
 	grid-row: 20;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 	overflow: auto;
 }
@@ -442,7 +486,7 @@ input[type=checkbox] {
 }
 .statistics-min-wind {
 	grid-row: 21;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 
@@ -453,7 +497,7 @@ input[type=checkbox] {
 }
 .statistics-min-twa {
 	grid-row: 22;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 
@@ -464,7 +508,7 @@ input[type=checkbox] {
 }
 .statistics-polars {
 	grid-row: 23;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 
@@ -475,7 +519,7 @@ input[type=checkbox] {
 }
 .statistics-options {
 	grid-row: 24;
-	grid-column: 2;
+	grid-column: 2/7;
 	align-self: flex-start;
 }
 

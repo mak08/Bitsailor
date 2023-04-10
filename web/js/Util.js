@@ -52,6 +52,17 @@ function makeQuery (object) {
 
 var radius = 3437.74683;
 
+function addDistance (pos, distnm, angle, radiusnm=radius) {
+    var posR = {};
+    posR.lat = toRad(pos.lat);
+    posR.lon = toRad(pos.lon);
+    var d = distnm / radiusnm;
+    var angleR = toRad(angle);
+    var dLatR = d * Math.cos(angleR);
+    var dLonR = d * (Math.sin(angleR) / Math.cos(posR.lat + dLatR));
+    return { "lat": toDeg(posR.lat + dLatR),
+             "lon": toDeg(posR.lon + dLonR) };
+}
 
 function gcAngle(rlat0, rlon0, rlat1, rlon1) {
     return Math.acos(Math.sin(rlat0) * Math.sin(rlat1) + Math.cos(rlat0) * Math.cos(rlat1) * Math.cos(rlon1 - rlon0));
@@ -386,8 +397,8 @@ function MD5 (string) {
 export {
     MD5,
     doGET,
-    toRad,
     linear,
+    addDistance,
     gcAngle,
     courseAngle,
     gcDistance,
@@ -395,6 +406,7 @@ export {
     m2nm,
     ms2knots,
     toDeg,
+    toRad,
     toDMS,
     toDHM,
     toHHMMSS,

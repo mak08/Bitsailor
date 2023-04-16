@@ -23,12 +23,6 @@ var mapEvent;
 // Bounds and width from the map are kept here for convenience
 var geometry = {};
 
-// Number of wind arrows
-var xSteps = 70;
-var ySteps = 40;
-
-var east;
-
 // Time index
 var ir_index;
 
@@ -84,7 +78,9 @@ function setUp (getVMG) {
     google.maps.event.addListener(googleMap, 'mousemove', function (event) {
         return updateWindInfo(event, getVMG);
     });
-    google.maps.event.addListener(googleMap, 'click', getTWAPath);
+
+    // Moved to -vr.js
+    // google.maps.event.addListener(googleMap, 'click', getTWAPath);
     google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
 
     // Connect button events
@@ -987,40 +983,6 @@ function getIsochroneByTime (time) {
     return null;
 }
 
-function getTWAPath (event) {
-    if ( twaAnchor ) {
-        var latA = twaAnchor.getPosition().lat();
-        var lngA = twaAnchor.getPosition().lng();
-        var time = twaAnchor.get('time');
-        var lat = event.latLng.lat();
-        var lng = event.latLng.lng();
-        var isochrone = getIsochroneByTime(time);
-        // var cycle = isochrone?isochrone.time:availableForecastCycle();
-        var cycle = getCurrentCycle();
-
-        let twaSettings = JSON.parse(JSON.stringify(settings));
-        twaSettings.duration = null;
-        
-        var query = makeQuery(twaSettings);
-        let documentQuery = new URL(document.URL).searchParams;
-        let raceId = documentQuery.get('race');
-
-        $.ajax({
-            url: `/function/router.getTWAPath${query}&raceId=${raceId}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
-            dataType: 'json'
-        }).done( function(data) {
-            drawTWAPath(data.twapath);
-            drawHDGPath(data.hdgpath);
-            $("#lb_twa").text(data.twa);
-            $("#lb_twa_heading").text(data.heading);
-        }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-        });
-    } else {
-        console.log('No TWA anchor');
-    }
-}
-
 function redrawWindByTime (time) {
     getWind(currentCycle, time);
 }
@@ -1044,7 +1006,7 @@ async function getWind (cycle, time) {
         console.log(e1);
         try {
             usedCycle = availableForecastCycle();
-            await windTile.update(bounds, usedCycle, time, settings.resolution);
+            windTile.update(bounds, usedCycle, time, settings.resolution);
         } catch (e2) {
             console.log(e2);
         }
@@ -1057,7 +1019,7 @@ async function getWind (cycle, time) {
 
 }
 
-function updateWindInfo (event, getVMG) {
+async function updateWindInfo (event, getVMG) {
     $("#lb_position").text(formatLatLngPosition(event.latLng));
     
     if (windTile) {
@@ -1090,7 +1052,7 @@ function updateWindInfo (event, getVMG) {
         var lbDFS = document.getElementById("lb_dfs");
         lbDFS.innerText = `${dfs.toFixed(1)} | ${startBearing.toFixed(1)}°`;
         
-        var wind = windTile.getWind(curLat, curLng);
+        var wind = await windTile.getWind(curLat, curLng);
         if (wind) {
             var windDir = wind.direction.toFixed();
             var windSpeed = Util.ms2knots(wind.speed).toFixed(1);
@@ -1184,12 +1146,17 @@ export {
     // alphabetical
     courseGCLine,
     destinationMarker,
+    drawTWAPath,
+    drawHDGPath,
     formatLatLngPosition,
+    getCurrentCycle,
+    getIsochroneByTime,
     getRoute,
     getURLParams,
     getValue,
     googleMap,
     loadPolars,
+    makeQuery,
     mapEvent,
     onMarkerClicked,
     onSetResolution,
@@ -1205,7 +1172,9 @@ export {
     setUp,
     startMarker,
     storeValue,
-    updateMap
+    twaAnchor,
+    updateMap,
+    windTile
 }
 
 /// EOF

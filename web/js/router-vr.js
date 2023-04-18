@@ -152,48 +152,52 @@ import * as Router from './router.js';
         }
     }
 
+    let curTWA;
 
-    function computePath (event) {
+    async function computePath (event) {
         if ( Router.twaAnchor ) {
             let twaAnchor = Router.twaAnchor;
 
             // Start time
             let time = twaAnchor.get('time');
+            let startTime = new Date(time);
 
             // Start and target postion
             let slat = twaAnchor.getPosition().lat();
             let slon = twaAnchor.getPosition().lng();
 
-            let dlat = event.latLng.lat();
-            let dlon = event.latLng.lng();
-            
-            // Current wind
-            let wind = Router.windTile.getWind();
-
             // Heading and  TWA
-            let heading = Util.courseAngle(slat, slon, dlat, dlon);
-            
-            let cycle = Router.getCurrentCycle();
-            
-            let twaSettings = JSON.parse(JSON.stringify(Router.settings));
-            twaSettings.duration = null;
-            
-            var query = Router.makeQuery(twaSettings);
-            let documentQuery = new URL(document.URL).searchParams;
-            let raceId = documentQuery.get('race');
+            let heading = Util.toDeg(Util.courseAngle(slat, slon, event.latLng.lat(), event.latLng.lng()));
+            let wind = await Router.windTile.getWind(slat, slon, startTime);
+            let twa = Math.round(Util.toTWA(heading, wind.direction));
 
-            let polars = Router.getPolars().scriptData.polar;
-
-            
-            
-        } else {
-            console.log('No TWA anchor');
+            if (twa != curTWA) {
+                let options = Router.settings.options;
+                let polars = Router.getPolars().scriptData.polar;
+                let newPos = {
+                    "lat": slat,
+                    "lon": slon
+                }
+                let path = [[startTime, newPos]];
+                let stepTime = startTime;
+                let step0 = 600 - startTime.getSeconds()
+                
+                for (var step = step0; step < 86400; step += 600) {
+                    let wind = await Router.windTile.getWind(newPos.lat, newPos.lon, stepTime);
+                    let heading = Util.toHeading(twa, wind.direction);
+                    let speed = boatSpeed(Util.ms2knots(wind.speed), twa, options, polars).speed;
+                    newPos = Util.addDistance(newPos, speed/6, heading);
+                    stepTime = new Date(startTime.getTime() + step * 1000);
+                    path.push([stepTime, {"lat": newPos.lat, "lng": newPos.lon}]);
+                }
+                Router.drawTWAPath(path);
+                curTWA = twa;
+            }
         }
-        return [];
     }
     
-    function getTWAPath (event) {
-        computePath (event);
+    async function getTWAPath (event) {
+
         if ( Router.twaAnchor ) {
             let twaAnchor = Router.twaAnchor;
             var latA = twaAnchor.getPosition().lat();
@@ -350,7 +354,8 @@ import * as Router from './router.js';
 
         getRaceInfo();
 
-        google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
+        // google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
+        google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 
         Router.updateMap();
     }

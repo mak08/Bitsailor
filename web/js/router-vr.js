@@ -29,7 +29,7 @@ import * as Router from './router.js';
     }
 
     function getVMG (windSpeed) {
-        var polars = Router.polars.scriptData.polar;
+        var polars = Router.getPolars().scriptData.polar;
 
         if (polars) {
             var vmg = bestVMG(windSpeed, polars, ["heavy", "light", "reach", "hull", "foil"])
@@ -44,7 +44,7 @@ import * as Router from './router.js';
         var best = {"vmgUp": 0, "twaUp": 0, "vmgDown": 0, "twaDown": 0};
         var twaSteps = polars.twa;
         for (var twa = twaSteps[0]; twa < twaSteps[twaSteps.length-1]; twa++) {
-            var speed = theoreticalSpeed(tws, twa, options, polars).speed;
+            var speed = boatSpeed(tws, twa, options, polars).speed;
             var vmg = speed * Math.cos(twa / 180 * Math.PI);
             if (vmg > best.vmgUp) {
                 best.twaUp = twa;
@@ -57,15 +57,14 @@ import * as Router from './router.js';
         return  best;
     }
 
-
-    function theoreticalSpeed (tws, twa, options, boatPolars) {
+    function boatSpeed (tws, twa, options, polars) {
         const sailNames = [0, "Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
-        var foil = foilingFactor(options, tws, twa, boatPolars.foil);
+        var foil = foilingFactor(options, tws, twa, polars.foil);
         var hull = options.includes("hull") ? 1.003 : 1.0;
-        var ratio = boatPolars.globalSpeedRatio;
-        var twsLookup = fractionStep(tws, boatPolars.tws);
-        var twaLookup = fractionStep(twa, boatPolars.twa);
-        var speed = maxSpeed(options, twsLookup, twaLookup, boatPolars.sail);
+        var ratio = polars.globalSpeedRatio;
+        var twsLookup = fractionStep(tws, polars.tws);
+        var twaLookup = fractionStep(twa, polars.twa);
+        var speed = maxSpeed(options, twsLookup, twaLookup, polars.sail);
         return {
             "speed": Util.roundTo(speed.speed * foil * hull * ratio, 2),
             "sail": sailNames[speed.sail]
@@ -150,6 +149,84 @@ import * as Router from './router.js';
                 index: index - 1,
                 fraction: 1.0
             }
+        }
+    }
+
+    let curTWA;
+
+    async function computePath (event) {
+        if ( Router.twaAnchor ) {
+            let twaAnchor = Router.twaAnchor;
+
+            // Start time
+            let time = twaAnchor.get('time');
+            let startTime = new Date(time);
+
+            // Start and target postion
+            let slat = twaAnchor.getPosition().lat();
+            let slon = twaAnchor.getPosition().lng();
+
+            // Heading and  TWA
+            let heading = Util.toDeg(Util.courseAngle(slat, slon, event.latLng.lat(), event.latLng.lng()));
+            let wind = await Router.windTile.getWind(slat, slon, startTime);
+            let twa = Math.round(Util.toTWA(heading, wind.direction));
+
+            if (twa != curTWA) {
+                let options = Router.settings.options;
+                let polars = Router.getPolars().scriptData.polar;
+                let newPos = {
+                    "lat": slat,
+                    "lon": slon
+                }
+                let path = [[startTime, newPos]];
+                let stepTime = startTime;
+                let step0 = 600 - startTime.getSeconds()
+                
+                for (var step = step0; step < 86400; step += 600) {
+                    let wind = await Router.windTile.getWind(newPos.lat, newPos.lon, stepTime);
+                    let heading = Util.toHeading(twa, wind.direction);
+                    let speed = boatSpeed(Util.ms2knots(wind.speed), twa, options, polars).speed;
+                    newPos = Util.addDistance(newPos, speed/6, heading);
+                    stepTime = new Date(startTime.getTime() + step * 1000);
+                    path.push([stepTime, {"lat": newPos.lat, "lng": newPos.lon}]);
+                }
+                Router.drawTWAPath(path);
+                curTWA = twa;
+            }
+        }
+    }
+    
+    async function getTWAPath (event) {
+
+        if ( Router.twaAnchor ) {
+            let twaAnchor = Router.twaAnchor;
+            var latA = twaAnchor.getPosition().lat();
+            var lngA = twaAnchor.getPosition().lng();
+            var time = twaAnchor.get('time');
+            var lat = event.latLng.lat();
+            var lng = event.latLng.lng();
+            var cycle = Router.getCurrentCycle();
+            
+            let twaSettings = JSON.parse(JSON.stringify(Router.settings));
+            twaSettings.duration = null;
+            
+            var query = Router.makeQuery(twaSettings);
+            let documentQuery = new URL(document.URL).searchParams;
+            let raceId = documentQuery.get('race');
+            
+            $.ajax({
+                url: `/function/router.getTWAPath${query}&raceId=${raceId}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
+                dataType: 'json'
+            }).done( function (data) {
+                Router.drawTWAPath(data.twapath);
+                Router.drawHDGPath(data.hdgpath);
+                $("#lb_twa").text(data.twa);
+                $("#lb_twa_heading").text(data.heading);
+            }).fail( function (jqXHR, textStatus, errorThrown) {
+            alert(textStatus + ' ' + errorThrown);
+            });
+        } else {
+            console.log('No TWA anchor');
         }
     }
 
@@ -303,6 +380,9 @@ import * as Router from './router.js';
         document.getElementById("cb_reach").addEventListener("click", onOptionToggled);
 
         getRaceInfo();
+
+        // google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
+        google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 
         Router.updateMap();
     }

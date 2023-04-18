@@ -52,12 +52,24 @@ function makeQuery (object) {
 
 var radius = 3437.74683;
 
+function addDistance (pos, distnm, angle, radiusnm=radius) {
+    var posR = {
+        "lat": toRad(pos.lat),
+        "lon": toRad(pos.lon)
+    };
+    var d = distnm / radiusnm;
+    var angleR = toRad(angle);
+    var dLatR = d * Math.cos(angleR);
+    var dLonR = d * (Math.sin(angleR) / Math.cos(posR.lat + dLatR));
+    return { "lat": toDeg(posR.lat + dLatR),
+             "lon": toDeg(posR.lon + dLonR) };
+}
 
-function gcAngle(rlat0, rlon0, rlat1, rlon1) {
+function gcAngle (rlat0, rlon0, rlat1, rlon1) {
     return Math.acos(Math.sin(rlat0) * Math.sin(rlat1) + Math.cos(rlat0) * Math.cos(rlat1) * Math.cos(rlon1 - rlon0));
 }
 
-function courseAngle(lat0, lon0, lat1, lon1) {
+function courseAngle (lat0, lon0, lat1, lon1) {
     var rlat0 = toRad(lat0);
     var rlat1 = toRad(lat1);
     var rlon0 = toRad(lon0);
@@ -68,7 +80,7 @@ function courseAngle(lat0, lon0, lat1, lon1) {
 }
 
 // Greate circle distance
-function gcDistance(pos0, pos1) {
+function gcDistance (pos0, pos1) {
     // e = r · arccos(sin(φA) · sin(φB) + cos(φA) · cos(φB) · cos(λB – λA))
     var rlat0 = toRad(pos0.lat);
     var rlat1 = toRad(pos1.lat);
@@ -76,7 +88,36 @@ function gcDistance(pos0, pos1) {
     var rlon1 = toRad(pos1.lon);
     return radius * gcAngle(rlat0, rlon0, rlat1, rlon1);
 }
-function toRad(angle) {
+
+function toTWA (heading, windDir) {
+    return normalizeAngle(heading - windDir);
+}
+
+function toHeading (twa, windDir) {
+    return normalizeAngle(twa + windDir);
+}
+
+function normalizeHeading (heading) {
+    if (heading > 360) {
+        return  heading-360;
+    } else if (heading < 0) {
+        return heading + 360;
+    } else {
+        return heading;
+    }
+}
+
+function normalizeAngle (angle) {
+    if (angle <= -180) {
+        return angle + 360;
+    } else if (angle > 180) {
+        return  angle - 360;
+    } else {
+        return angle;
+    }
+}
+
+function toRad (angle) {
     return angle / 180 * Math.PI;
 }
 
@@ -386,8 +427,8 @@ function MD5 (string) {
 export {
     MD5,
     doGET,
-    toRad,
     linear,
+    addDistance,
     gcAngle,
     courseAngle,
     gcDistance,
@@ -395,8 +436,11 @@ export {
     m2nm,
     ms2knots,
     toDeg,
+    toRad,
+    toTWA,
     toDMS,
     toDHM,
+    toHeading,
     toHHMMSS,
     roundTo,
     formatPosition,

@@ -63,11 +63,10 @@
 		</div>
 
 		<div id="donate">
-		  <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_blank" style="background:none;">
-			<input type="hidden" name="cmd" value="_s-xclick" />
+		  <form action="https://www.paypal.com/donate" method="post" target="_blank">
 			<input type="hidden" name="hosted_button_id" value="DSTYB5K3BEQHJ" />
-			<input type="image" style="background:tranparent; border:none" width="70" height="20" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" title="Donate to BitSailor" alt="Donate with PayPal button" />
-          </form>
+			<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+		  </form>
 		</div>		
 	  </div>
 
@@ -102,16 +101,20 @@
           <input id="tb_nmeaport" name="nmeaport" type="text"  maxlength="5" placeholder="10000"/>
         </div>
 
-		<div class="nmea-reset">
+		<div class="nmea-update">
           <button id="bt_nmeaupdate"> Update </button>
-          <button id="bt_nmeareset"> Reconnect </button>
+ 		</div>
+ 		<div class="nmea-reset">
+	      <button id="bt_nmeareset"> Reconnect </button>
 		</div>
 		
         <div class="delayed-label">
           <label>Start time:</label>
         </div>
-        <div class="delayed-entry">
+        <div class="delayed-cb">
            <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
+        </div>
+        <div class="delayed-entry">
            <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
 
@@ -167,15 +170,23 @@
         </div>	
         
         <div class="gfsmode-label">
-          <label>GFS mode</label>
-        </div>
-        <div class="gfsmode-selector">
+          <label>Mode</label>
+        <!--/div>
+        <div class="gfsmode-selector"-->
           <select id="sel_gfsmode" name="gfsmode">
             <option value="06h">06h</option>
             <option value="12h">12h</option>
           </select>
         </div>	
-        
+
+		<div class="polars-label">
+          <label>Polars</label>
+		</div>
+		<div class="polars-selector">
+		  <select id="sel_polars" name="polars">
+		  </select>
+		</div>
+				
         <div class="displaywind-label">
           <label>Display wind</label>
         </div>

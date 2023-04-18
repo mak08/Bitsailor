@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2022-03-24 01:44:13>
+;;; Last Modified <michael 2023-03-11 23:01:37>
 
 (in-package :bitsailor)
 
@@ -149,6 +149,12 @@
    (default-authorizer handler request)))
 
 (defun vh-function-authorizer (handler request function)
+  (log2:trace "Authorizing ~a" function)
+  (or
+   (authorize-user request)
+   (function-authorizer handler request function)))
+
+(defun vh-admin-authorizer (handler request function)
   (log2:trace "Authorizing ~a" function)
   (or
    (authorize-user request)

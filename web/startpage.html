@@ -31,12 +31,14 @@
 		<input id="tab3" type="radio" name="tabs" />
 		<input id="tab4" type="radio" name="tabs" />
 		<input id="tab5" type="radio" name="tabs" />
+		<input id="tab6" type="radio" name="tabs" />
 		<nav>
 		  <label for="tab1">Home</label>
 		  <label for="tab2">Usage</label>
 		  <label for="tab3">Realsail</label>
 		  <label for="tab4">VR</label>
 		  <label for="tab5">Issues</label>
+		  <label for="tab6">Status</label>
 		</nav>
 
 		<figure>
@@ -60,6 +62,9 @@
 			  <div class="content-pane"  style="font-size:90%">
 				<h3>News</h3>
 				<ul>
+				  <li><b>2023-04-09</b><br>
+					Add Realsail multi class support
+				  </li>
 				  <li><b>2023-03-04</b><br>
 					Fixed interpolation bug in cycle merge (VR), was introduced with fineWinds support 
 				  </li>
@@ -323,6 +328,10 @@
 				</li>
 			  </ul>
 			</div>
+		  </div>
+
+		  <div class="tab6">
+			<button id="bt_racelist_reload">Reload race list</button>
 		  </div>
 		  
 		</figure>	

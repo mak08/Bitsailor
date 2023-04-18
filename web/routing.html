@@ -14,97 +14,105 @@
   <body>
 
 	<div>
-
-	  <form>
-		
-		<div class="grid-container" id="div_routing">
-
-		  <div class="routing-label"> 
-			<label>Fill in the fields below and press &lt;Submit&gt;. </label>
-		  </div>
+	  <div class="controls"> 
+		<button>Load races</button>
+		<button>Load polars</button>
+	  </div>
+	  
+	  <div>
+		<form>
 		  
-		  <div class="gfsmode-label">
-			<label for="gfsmode">GFS mode:</label>
-		  </div>
-		  <div class="gfsmode-input">
-			<input id="gfsmode" value="06h">		  
-		  </div>
-		  
-		  <div class="startlat-label">
-			<label for="startlat">Start lat:</label>
-		  </div>
-		  <div class="startlat-input">
-			<input id="startlat" value="60.0">
-		  </div>
-		  <div class="startlon-label">
-			<label for="startlon">Start lon:</label>
-		  </div>
-		  <div class="startlon-input">
-			<input id="startlon" value="-22.0">
+		  <div class="grid-container" id="div_routing">
+
+			<div class="routing-label"> 
+			  <label>Fill in the fields below and press &lt;Submit&gt;. </label>
+			</div>
+			
+			<div class="gfsmode-label">
+			  <label for="gfsmode">GFS mode:</label>
+			</div>
+			<div class="gfsmode-input">
+			  <input id="gfsmode" value="06h">		  
+			</div>
+			
+			<div class="startlat-label">
+			  <label for="startlat">Start lat:</label>
+			</div>
+			<div class="startlat-input">
+			  <input id="startlat" value="60.0">
+			</div>
+			<div class="startlon-label">
+			  <label for="startlon">Start lon:</label>
+			</div>
+			<div class="startlon-input">
+			  <input id="startlon" value="-22.0">
+			</div>
+
+			<div class="destlat-label">
+			  <label for="destlat">Dest lat:</label>
+			</div>
+			<div class="destlat-input">
+			  <input id="destlat" value="59.0">		  
+			</div>
+			
+			<div class="destlon-label">
+			  <label for="destlon">Dest lon:</label>
+			</div>
+			<div class="destlon-input">
+			  <input id="destlon" value="1.0">
+			</div>
+
+			<div class="duration-label">
+			  <label for="duration">Duration (h):</label>
+			</div>
+			<div class="duration-input">
+			  <input id="duration" value="12">
+			</div>
+
+			<div class="resolution-label">
+			  <label for="resolution">Resolution (1p00):</label>
+			</div>
+			<div class="resolution-input">
+			  <input id="resolution" value="1p00">
+			</div>
+
+			<div class="threads-label">
+			  <label for="threads">Threads:</label>
+			</div>
+			<div class="threads-input">
+			  <input id="threads" value="10">
+			</div>
+
+			<div class="delay-label">
+			  <label for="delay">Delay (ms):</label>
+			</div>
+			<div class="delay-input">
+			  <input id="delay" value="500">
+			</div>
+
+			<div class="polars-select">
+              <select id="polars" name="polars">
+				<option value="aA32bToWbF">IMOCA</option>
+				<option value="Y2ORckEdS7">Class32</option>
+				<option value="3RxpEWNXdj">ULDB70</option>
+				<option value="FOl9IOpLai">J125</option>
+              </select>
+			</div>
+
+			<div class="bt-submit">
+			  <button type="button" id="bt_submit" >Submit</button>
+			</div>
+
 		  </div>
 
-		  <div class="destlat-label">
-			<label for="destlat">Dest lat:</label>
-		  </div>
-		  <div class="destlat-input">
-			<input id="destlat" value="59.0">		  
-		  </div>
-		  
-		  <div class="destlon-label">
-			<label for="destlon">Dest lon:</label>
-		  </div>
-		  <div class="destlon-input">
-			<input id="destlon" value="1.0">
-		  </div>
+		</form>
 
-		  <div class="duration-label">
-			<label for="duration">Duration (h):</label>
+		<div class="modal" id="md_dialog">
+		  <!-- Modal content -->
+		  <div class="modal-content">
+			<label id="lb_dialog"></label><br>
+			<button type="button" id="bt_dialog_confirm" >OK</button>
 		  </div>
-		  <div class="duration-input">
-			<input id="duration" value="12">
-		  </div>
-
-		  <div class="resolution-label">
-			<label for="resolution">Resolution (1p00):</label>
-		  </div>
-		  <div class="resolution-input">
-			<input id="resolution" value="1p00">
-		  </div>
-
-		  <div class="threads-label">
-			<label for="threads">Threads:</label>
-		  </div>
-		  <div class="threads-input">
-			<input id="threads" value="10">
-		  </div>
-
-		  <div class="delay-label">
-			<label for="delay">Delay (ms):</label>
-		  </div>
-		  <div class="delay-input">
-			<input id="delay" value="500">
-		  </div>
-
-          <div class="polars-select">
-            <select id="polars" name="polars">
-              <option value="aA32bToWbF">IMOCA</option>
-              <option value="Y2ORckEdS7">Class32</option>
-            </select>
-          </div>
-
-		  <div class="bt-submit">
-			<button type="button" id="bt_submit" >Submit</button>
-		  </div>
-
-		</div>
-
-	  </form>
-
-	  <div class="modal" id="md_dialog">
-		<!-- Modal content -->
-		<div class="modal-content">
-		  <label id="lb_dialog"></label><br>
-		  <button type="button" id="bt_dialog_confirm" >OK</button>
 		</div>
 	  </div>
 	  

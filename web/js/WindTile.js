@@ -5,7 +5,6 @@
 
 import * as Util from './Util.js';
 
-
 const MAX_WORD = 2**15;
 const POS_MASK = 2**15 - 1;
 
@@ -54,52 +53,6 @@ function bilinear(x, y, f00, f10, f01, f11) {
     let w1 = f01 + x * (f11 - f01);
     return w0 + y * (w1 - w0);
     
-}
-
-////////////////////////////////////////////////////////////////////////////////
-/// Tile Cache 
-
-let tileCache = new Map();
-
-function ensureCache(parent, key) {
-    let cache = parent.get(key);
-    if (!cache) {
-        cache = new Map();
-        parent.set(key, cache);
-    }
-    return cache;
-}
-
-function cacheGetTile (cycle, res, offset, lat0, lon0) {
-    let cycleCache = tileCache.get(cycle);
-    if (!cycleCache) {
-        return undefined;
-    }
-    let offsetCache = cycleCache.get(res);
-    if (!offsetCache) {
-        return undefined;
-    }
-    let latCache = offsetCache.get(offset);
-    if (!latCache) {
-        return undefined;
-    }
-    let lonCache = latCache.get(lat0);
-    if (!lonCache) {
-        return undefined;
-    }
-    let tile = lonCache.get(lon0);
-    if (!tile) {
-        return undefined;
-    }
-    return tile;
-}
-
-function cachePutTile (cycle, res, offset, lat0, lon0, tile) {
-    let cycleCache = ensureCache(tileCache, cycle);
-    let offsetCache = ensureCache(cycleCache, res);
-    let latCache = ensureCache(offsetCache, offset);
-    let lonCache = ensureCache(latCache, lat0);
-    lonCache.set(lon0, tile);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -160,35 +113,6 @@ function interpolateTemporal (tile0, tile1, offset, time, lat0, lon0, lat1, lon1
     }
 }
 
-function windDataMagnitude (cycle, resolution, offset, time, lat, lon) {
-    let south = Math.floor(lat / 10) * 10;
-    let north = Math.ceil(lat / 10) * 10;
-    let west = Math.floor(lon / 10) * 10;
-    let east = Math.ceil(lon / 10) * 10;
-    let tile0 = cacheGetTile(cycle, resolution, offset, south, west);
-    let tile1 = cacheGetTile(cycle, resolution, offset + 3, south, west);
-    if (tile0 && tile1) {
-        let d = tile0.resolution/100;
-        let rlat = lat - south,  rlon = lon - west;
-        let drlat = rlat / d, drlon = rlon / d;
-        let lat0 = floor(rlat, d)/d, lat1 = ceil(rlat, d)/d
-        let lon0 = floor(rlon, d)/d, lon1 = ceil(rlon, d)/d;
-        let lambdaU = drlat-lat0, lambdaV = drlon-lon0;
-        let w_t = interpolateTemporal(tile0, tile1, offset, time, lat0, lon0, lat1, lon1)
-        let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
-        let direction = angle(w_s.u, w_s.v);
-        let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
-        return {
-            "direction": direction,
-            "speed": speed
-        }
-    } else {
-        return {
-            "direction": 315.0,
-            "speed": 11.5
-        }
-    }
-}
 
 function windDataBilinear (cycle, resolution, offset, time, lat, lon) {
     let south = Math.floor(lat / 10) * 10;
@@ -221,65 +145,6 @@ function windDataBilinear (cycle, resolution, offset, time, lat, lon) {
         }
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-/// Plotting wind data
-
-function drawWind (bounds, cycle, resolution, offset, time, canvas) {
-
-    let rect = canvas.getBoundingClientRect();
-    // Only draw if canvas is displayed (wind display enabled)
-    if (rect) {
-        let STEPS_X = floor(rect.width/15);
-        let STEPS_Y = floor(rect.height/15);
-
-        var ctx = canvas.getContext("2d");
-        ctx.globalAlpha = 0.3;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Draw wind arrows are at evenly spaced map points
-        // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
-        var projection = bounds.projection;
-        var nwLatLng =  new google.maps.LatLng(bounds.north, bounds.west);
-        var seLatLng =  new google.maps.LatLng(bounds.south, bounds.east);
-        var nwPoint = projection.fromLatLngToPoint(nwLatLng);
-        var sePoint = projection.fromLatLngToPoint(seLatLng);
-        var top = nwPoint.y;
-        var bottom = sePoint.y;
-        var left =  nwPoint.x;
-        var right = sePoint.x;
-
-        var dy = (bottom - top) / STEPS_Y;
-
-        if (left < right) {
-            var dx = (right - left) / STEPS_X;
-            drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
-        } else {
-            // left > right
-            var dx = (256 - left + right) / STEPS_X;
-            let mapWidthLeft = 256 - left;
-            let mapWidth = mapWidthLeft + right;
-            let canvasLeft = mapWidthLeft/mapWidth * ctx.canvas.width;
-            drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
-            drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
-        }
-    }
-}
-
-function drawMap (ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, canvasLeft, mapWidth) {
-    var mapHeight = bottom - top;
-    for (var y = top; y < bottom; y += dy) {
-        for (var x = left; x < right; x += dx) {
-            var mapPoint = new google.maps.Point(x, y);
-            var latLng = projection.fromPointToLatLng(mapPoint);
-            var pointX = canvasLeft + ((x - left) /  mapWidth) * ctx.canvas.width;
-            var pointY = (y - top) / mapHeight * ctx.canvas.height;
-            let w = windDataMagnitude(cycle, resolution, offset, time, latLng.lat(), latLng.lng()); 
-            drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
-        }
-    }
-}
-
 
 function drawWindArrow(ctx, x, y, direction, speed) {
     direction = direction + 90;
@@ -322,31 +187,172 @@ export default class WindTile {
         this.#canvas = canvas;
     }
 
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Interpolation
+    
+    async windDataMagnitude (cycle, resolution, time, lat, lon) {
+        let curTime = new  Date(time);
+        let baseTime = new Date(cycle);
+        let cycleStr = this.formatCycle(cycle);
+        let offset = floor((curTime - baseTime) / 3600000, 3);
+        let south = Math.floor(lat / 10) * 10;
+        let north = Math.ceil(lat / 10) * 10;
+        let west = Math.floor(lon / 10) * 10;
+        let east = Math.ceil(lon / 10) * 10;
+        let tile0 = await this.getTileCached(cycleStr, resolution, offset, south, west);
+        let tile1 = await this.getTileCached(cycleStr, resolution, offset + 3, south, west);
+        if (tile0 && tile1) {
+            let d = tile0.resolution/100;
+            let rlat = lat - south,  rlon = lon - west;
+            let drlat = rlat / d, drlon = rlon / d;
+            let lat0 = floor(rlat, d)/d, lat1 = ceil(rlat, d)/d
+            let lon0 = floor(rlon, d)/d, lon1 = ceil(rlon, d)/d;
+            let lambdaU = drlat-lat0, lambdaV = drlon-lon0;
+            let w_t = interpolateTemporal(tile0, tile1, offset, time, lat0, lon0, lat1, lon1)
+            let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
+            let direction = angle(w_s.u, w_s.v);
+            let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
+            return {
+                "direction": direction,
+                "speed": speed
+            }
+        } else {
+            return {
+                "direction": 315.0,
+                "speed": 11.5
+            }
+        }
+    }
 
-    getWind (lat, lon) {
-        return windDataMagnitude(this.#curCycle,
-                        this.#curRes,
-                        this.#curOffset,
-                        this.#curTime,
-                        lat,
-                        lon);
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Plotting wind data
+    
+    async drawWind (bounds, cycle, resolution, offset, time, canvas) {
+        
+        let rect = canvas.getBoundingClientRect();
+        // Only draw if canvas is displayed (wind display enabled)
+        if (rect) {
+            let STEPS_X = floor(rect.width/15);
+            let STEPS_Y = floor(rect.height/15);
+            
+            var ctx = canvas.getContext("2d");
+            ctx.globalAlpha = 0.3;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw wind arrows are at evenly spaced map points
+            // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
+            var projection = bounds.projection;
+            var nwLatLng =  new google.maps.LatLng(bounds.north, bounds.west);
+            var seLatLng =  new google.maps.LatLng(bounds.south, bounds.east);
+            var nwPoint = projection.fromLatLngToPoint(nwLatLng);
+            var sePoint = projection.fromLatLngToPoint(seLatLng);
+            var top = nwPoint.y;
+            var bottom = sePoint.y;
+            var left =  nwPoint.x;
+            var right = sePoint.x;
+            
+            var dy = (bottom - top) / STEPS_Y;
+            
+            if (left < right) {
+                var dx = (right - left) / STEPS_X;
+                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
+            } else {
+                // left > right
+                var dx = (256 - left + right) / STEPS_X;
+                let mapWidthLeft = 256 - left;
+                let mapWidth = mapWidthLeft + right;
+                let canvasLeft = mapWidthLeft/mapWidth * ctx.canvas.width;
+                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
+                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
+            }
+        }
+    }
+
+    async drawMap (ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, canvasLeft, mapWidth) {
+        var mapHeight = bottom - top;
+        for (var y = top; y < bottom; y += dy) {
+            for (var x = left; x < right; x += dx) {
+                var mapPoint = new google.maps.Point(x, y);
+                var latLng = projection.fromPointToLatLng(mapPoint);
+                var pointX = canvasLeft + ((x - left) /  mapWidth) * ctx.canvas.width;
+                var pointY = (y - top) / mapHeight * ctx.canvas.height;
+                let w = await this.windDataMagnitude(cycle, resolution, time, latLng.lat(), latLng.lng()); 
+                drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
+            }
+        }
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Tile Cache 
+
+    #tileCache = new Map();
+
+    ensureCache(parent, key) {
+        let cache = parent.get(key);
+        if (!cache) {
+            cache = new Map();
+            parent.set(key, cache);
+        }
+        return cache;
+    }
+
+    cacheGetTile (cycleStr, res, offset, lat0, lon0) {
+        let cycleCache = this.#tileCache.get(cycleStr);
+        if (!cycleCache) {
+            return undefined;
+        }
+        let offsetCache = cycleCache.get(res);
+        if (!offsetCache) {
+            return undefined;
+        }
+        let latCache = offsetCache.get(offset);
+        if (!latCache) {
+            return undefined;
+        }
+        let lonCache = latCache.get(lat0);
+        if (!lonCache) {
+            return undefined;
+        }
+        let tile = lonCache.get(lon0);
+        if (!tile) {
+            return undefined;
+        }
+        return tile;
+    }
+
+    cachePutTile (cycle, res, offset, lat0, lon0, tile) {
+        let cycleCache = this.ensureCache(this.#tileCache, cycle);
+        let offsetCache = this.ensureCache(cycleCache, res);
+        let latCache = this.ensureCache(offsetCache, offset);
+        let lonCache = this.ensureCache(latCache, lat0);
+        lonCache.set(lon0, tile);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Public methods
+    async getWind (lat, lon, time = this.#curTime) {
+        return await this.windDataMagnitude(this.#curCycle, this.#curRes, time, lat, lon);
     }
     
     async update (bounds, cycle, time = new Date(), resolution = "1p00") {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
+        let cycleStr = this.formatCycle(baseTime);
         let offset = floor((curTime - baseTime) / 3600000, 3);
         this.#curBounds = bounds;
-        this.#curCycle = this.formatCycle(baseTime);
+        this.#curCycle = baseTime;
         this.#curOffset = offset;
         this.#curTime = curTime;
         this.#curRes = resolution;
-        await this.loadTiles(bounds, this.#curCycle, offset, resolution);
+        await this.loadTiles(bounds, cycleStr, offset, resolution);
         this.updateCanvas();
     }
 
+    ////////////////////////////////////////////////////////////////////////////////
+    /// Internal methods
+    
     updateCanvas () {
-        drawWind(this.#curBounds, this.#curCycle, this.#curRes, this.#curOffset, this.#curTime, this.#canvas);
+        this.drawWind(this.#curBounds, this.#curCycle, this.#curRes, this.#curOffset, this.#curTime, this.#canvas);
     }
     
     decodeTile (buffer) {
@@ -420,45 +426,44 @@ export default class WindTile {
             }
             let buffer = await response.arrayBuffer();
             let tile = this.decodeTile(buffer);
-            cachePutTile(cycleString, res, offset, lat0, lon0, tile);
+            this.cachePutTile(cycleString, res, offset, lat0, lon0, tile);
             return tile;
         } catch (e) {
             throw new Error(e);
         }
     }
 
-    async getTileCached (cycle, res, offset, lat0, lon0) {
-        let cached = cacheGetTile(cycle, res, offset, lat0, lon0);
+    async getTileCached (cycleStr, res, offset, lat0, lon0) {
+        let cached = this.cacheGetTile(cycleStr, res, offset, lat0, lon0);
         if (! cached) {
-            cached = await this.getTile(cycle, res, offset, lat0, lon0);
+            cached = await this.getTile(cycleStr, res, offset, lat0, lon0);
         }
         return cached;
     }
 
-    async loadTilesInRange (cycle, resolution, offset, north, south, west, east) {
+    async loadTilesInRange (cycleStr, resolution, offset, north, south, west, east) {
         for (var lat = south; lat<north; lat += 10) {
             for (var lon = west; lon<east; lon += 10) {
-                await this.getTileCached(cycle, resolution, offset, lat, lon);
+                await this.getTileCached(cycleStr, resolution, offset, lat, lon);
             }
         }
     }
         
-    async loadTiles (bounds, cycle, offset, resolution = '1p00') {
+    async loadTiles (bounds, cycleStr, offset, resolution = '1p00') {
         let south = Math.floor(bounds.south / 10) * 10;
         let north = Math.ceil(bounds.north / 10) * 10;
         let west = Math.floor(bounds.west / 10) * 10;
         let east = Math.ceil(bounds.east / 10) * 10;
         if (west < east) {
-            await this.loadTilesInRange(cycle, resolution, offset, north, south, west, east);
-            await this.loadTilesInRange(cycle, resolution, offset + 3, north, south, west, east);
+            await this.loadTilesInRange(cycleStr, resolution, offset, north, south, west, east);
+            await this.loadTilesInRange(cycleStr, resolution, offset + 3, north, south, west, east);
         } else {
-            await this.loadTilesInRange(cycle, resolution, offset, north, south, west, 180);
-            await this.loadTilesInRange(cycle, resolution, offset, north, south, -180, east);
-            await this.loadTilesInRange(cycle, resolution, offset + 3, north, south, west, 180);
-            await this.loadTilesInRange(cycle, resolution, offset + 3, north, south, -180, east);
+            await this.loadTilesInRange(cycleStr, resolution, offset, north, south, west, 180);
+            await this.loadTilesInRange(cycleStr, resolution, offset, north, south, -180, east);
+            await this.loadTilesInRange(cycleStr, resolution, offset + 3, north, south, west, 180);
+            await this.loadTilesInRange(cycleStr, resolution, offset + 3, north, south, -180, east);
         }
     }
-
         
 }
 

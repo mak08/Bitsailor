@@ -98,16 +98,31 @@
 		  <label>Options</label>
 		</div>
 
+        <div class="vroptions-1">
+		  <label class="lbl_option" for="cb_winch">winch</label>
+		  <input id="cb_winch" name="winch" type="checkbox" checked="true" disabled="true"/>
+		  <label class="lbl_option" for="cb_hull">hull</label>
+		  <input id="cb_hull" name="hull" type="checkbox" checked="true"/>
+		  <label class="lbl_option" for="cb_foil">foil</label>
+		  <input id="cb_foil" name="foil" type="checkbox" checked="true"/>
+        </div>
+		<div class="vroptions-2">
+		  <label class="lbl_option" for="cb_heavy">heavy</label>
+		  <input id="cb_heavy" name="heavy" type="checkbox" checked="true"/>
+		  <label class="lbl_option" for="cb_light">light</label>
+		  <input id="cb_light" name="light" type="checkbox" checked="true"/>
+		  <label class="lbl_option" for="cb_reach">reach</label>
+		  <input id="cb_reach" name="reach" type="checkbox" checked="true"/>
         </div>
 		
         <div class="delayed-label">
           <label>Start time:</label>
         </div>
         <div class="delayed-cb">
-           <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
+          <input id="cb_startdelayed" name="startdelayed" type="checkbox"/>
         </div>
         <div class="delayed-entry">
-           <input id="tb_starttime" name="starttime" type="datetime-local"/>
+          <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
 
 		<!--
@@ -173,6 +188,7 @@
 				<option value="LG">LG</option>
 			  </select>
 			</div>
+			
 			<div class="boatstate-group">
 			  <label for="currenttwa">Tack</label>
 			  <select id="sel_currenttack" name="currenttack">

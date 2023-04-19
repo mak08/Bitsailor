@@ -337,19 +337,7 @@ input[type=checkbox] {
 }
 .boatstate-group {
 	grid-row: 8;
-	grid-column: 2;
-}
-
-
-/* Boat state */
-.boatstate-label {
-	grid-row: 8;
-	grid-column: 1;
-
-}
-.boatstate-group {
-	grid-row: 8;
-	grid-column: 2;
+	grid-column: 2/7;
 }
 
 

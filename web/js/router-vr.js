@@ -192,7 +192,7 @@ import * as Router from './router.js';
                 let hdgPath = [[startTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]];
 
                 let stepTime = startTime;
-                let step0 = 600 - startTime.getSeconds()
+                let step0 = 600 - startTime.getSeconds() - 60 * (startTime.getMinutes() % 10);
                 
                 for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
 

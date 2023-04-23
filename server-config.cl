@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2023-03-11 23:01:48>
+;;; Last Modified <michael 2023-04-22 23:22:37>
 
 (in-package :bitsailor)
 
@@ -70,6 +70,10 @@
 (handle
  :request (:prefix "/function")
  :handler (:query-function t :authentication nil :realm "bitsailor"))
+
+(handle
+ :request (:prefix "/admin")
+ :handler (:query-function t :authentication nil :realm "admin"))
 
 (register-function "router.signUp" :authorizer (constantly t))
 (register-function "router.getSession" :authorizer #'vh-function-authorizer)

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2023-03-11 23:01:37>
+;;; Last Modified <michael 2023-04-24 21:48:12>
 
 (in-package :bitsailor)
 
@@ -156,9 +156,7 @@
 
 (defun vh-admin-authorizer (handler request function)
   (log2:trace "Authorizing ~a" function)
-  (or
-   (authorize-user request)
-   (function-authorizer handler request function)))
+  (default-authorizer handler request))
 
 (defun authorize-user (request)
   (sql:with-connection (*dbcon*)

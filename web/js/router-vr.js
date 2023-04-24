@@ -196,40 +196,6 @@ import * as Router from './router.js';
         }
     }
     
-    async function getTWAPath (event) {
-
-        if ( Router.twaAnchor ) {
-            let twaAnchor = Router.twaAnchor;
-            var latA = twaAnchor.getPosition().lat();
-            var lngA = twaAnchor.getPosition().lng();
-            var time = twaAnchor.get('time');
-            var lat = event.latLng.lat();
-            var lng = event.latLng.lng();
-            var cycle = Router.getCurrentCycle();
-            
-            let twaSettings = JSON.parse(JSON.stringify(Router.settings));
-            twaSettings.duration = null;
-            
-            var query = Router.makeQuery(twaSettings);
-            let documentQuery = new URL(document.URL).searchParams;
-            let raceId = documentQuery.get('race');
-            
-            $.ajax({
-                url: `/function/router.getTWAPath${query}&raceId=${raceId}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
-                dataType: 'json'
-            }).done( function (data) {
-                Router.drawTWAPath(data.twapath);
-                Router.drawHDGPath(data.hdgpath);
-                $("#lb_twa").text(data.twa);
-                $("#lb_twa_heading").text(data.heading);
-            }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-            });
-        } else {
-            console.log('No TWA anchor');
-        }
-    }
-
     function setupLegVR (raceinfo) {
         vrData = raceinfo.data;
         document.title = vrData.name;

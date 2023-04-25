@@ -58,12 +58,18 @@ import * as Router from './router.js';
     }
     
     function boatSpeed (tws, twa, options, polars) {
-        let jib = getTWASpeed(tws, twa, polars.polarData.jib);
-        let gen = getTWASpeed(tws, twa, polars.polarData.gennaker);
-        let spi = getTWASpeed(tws, twa, polars.polarData.spi);
-        return {
-            "speed":  Math.max(jib, Math.max(gen, spi))
-        };
+        if (polars.polarData.boat) {
+            return {
+                "speed": getTWASpeed(tws, twa, polars.polarData.boat)
+            }
+        } else {
+            let jib = getTWASpeed(tws, twa, polars.polarData.jib);
+            let gen = getTWASpeed(tws, twa, polars.polarData.gennaker);
+            let spi = getTWASpeed(tws, twa, polars.polarData.spi);
+            return {
+                "speed":  Math.max(jib, Math.max(gen, spi))
+            };
+        }
     }
 
     function getTWASpeed (tws, twa, sail) {

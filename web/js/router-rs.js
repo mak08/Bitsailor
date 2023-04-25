@@ -29,12 +29,6 @@ import * as Router from './router.js';
             });
     }
 
-    function boatSpeed (tws, twa, options, polars) {
-        return {
-            "speed": 10
-        }
-    }
-    
     function getVMG (windSpeed) {
         let polars = Router.getPolars();
         if (polars && polars.polarData) {
@@ -63,6 +57,36 @@ import * as Router from './router.js';
         }           
     }
     
+    function boatSpeed (tws, twa, options, polars) {
+        let jib = getTWASpeed(tws, twa, polars.polarData.jib);
+        let gen = getTWASpeed(tws, twa, polars.polarData.gennaker);
+        let spi = getTWASpeed(tws, twa, polars.polarData.spi);
+        return {
+            "speed":  Math.max(jib, Math.max(gen, spi))
+        };
+    }
+
+    function getTWASpeed (tws, twa, sail) {
+        let twaSpeeds = sail[Math.abs(twa)];
+        let s0 = 0;
+        let v0 = 0;
+        let s1 = 0;
+        let v1 = 0;
+        for (const m in twaSpeeds) {
+            if ( m != "twa" ) {
+                v0 = v1;
+                s0 = s1;
+                v1 = Number.parseFloat(twaSpeeds[m]);
+                s1 = Number.parseFloat(m);
+                if (s1 >= tws) {
+                    break;
+                }
+            }
+        }
+        let speed = Util.linear(tws, s0, s1, v0, v1);
+        return speed;
+    }
+    
     function getMaxSpeed(sail, windSpeed) {
         
         var vmgUp = sail.reduce ((acc, next) => {
@@ -84,7 +108,7 @@ import * as Router from './router.js';
         
         return {"up": vmgUp, "down": vmgDown };
     }
-    
+
     function twaVMG (twaSpeeds, windSpeed) {
         var s0 = 0;
         var v0 = 0;
@@ -136,38 +160,75 @@ import * as Router from './router.js';
             // Start and target postion
             let slat = twaAnchor.getPosition().lat();
             let slon = twaAnchor.getPosition().lng();
-
+            let dlat = event.latLng.lat();
+            let dlon = event.latLng.lng();
+            let targetDist = Util.gcDistance({"lat": slat, "lon": slon}, {"lat": dlat, "lon": dlon});
+            let pathDist = 0;
             // Heading and  TWA
-            let heading = Util.toDeg(Util.courseAngle(slat, slon, event.latLng.lat(), event.latLng.lng()));
+            let heading = Util.toDeg(Util.courseAngle(slat, slon, dlat, dlon));
             let wind = await Router.windTile.getWind(slat, slon, startTime);
             let twa = Math.round(Util.toTWA(heading, wind.direction));
 
             if (twa != curTWA) {
+                document.getElementById('lb_twa').innerHTML = twa;
+                document.getElementById('lb_twa_heading').innerHTML = heading.toFixed(1);
                 let options = Router.settings.options;
                 let polars = Router.getPolars();
-
-                let newPos = {
+                let newTWAPos = {
                     "lat": slat,
                     "lon": slon
                 }
-                let path = [[startTime, newPos]];
-                let stepTime = startTime;
-                let step0 = 600 - startTime.getSeconds()
-                
-                for (var step = step0; step < 86400; step += 600) {
-                    let wind = await Router.windTile.getWind(newPos.lat, newPos.lon, stepTime);
-                    let heading = Util.toHeading(twa, wind.direction);
-                    let speed = boatSpeed(Util.ms2knots(wind.speed), twa, options, polars).speed;
-                    newPos = Util.addDistance(newPos, speed/6, heading);
-                    stepTime = new Date(startTime.getTime() + step * 1000);
-                    path.push([stepTime, {"lat": newPos.lat, "lng": newPos.lon}]);
+                let newHDGPos = {
+                    "lat": slat,
+                    "lon": slon
                 }
-                Router.drawTWAPath(path);
+                
+                let twaPath = [[startTime, {"lat": newTWAPos.lat, "lng": newTWAPos.lon}]];
+                let hdgPath = [[startTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]];
+
+                let stepTime = startTime;
+                let step0 = 600 - startTime.getSeconds() - 60 * (startTime.getMinutes() % 10);
+                let delta = step0;
+                
+                for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
+
+                    // Calc TWA and HDG step
+                    let windTWA = await Router.windTile.getWind(newTWAPos.lat, newTWAPos.lon, stepTime);
+                    let windHDG = await Router.windTile.getWind(newHDGPos.lat, newHDGPos.lon, stepTime);
+
+                    let twaHeading = Util.toHeading(twa, windTWA.direction);
+                    let hdgTWA = Math.round(Util.toTWA(heading, windHDG.direction));
+
+                    let speedTWA = boatSpeed(Util.ms2knots(windTWA.speed), twa, options, polars).speed;
+                    let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA, options, polars).speed;
+
+                    let distTWA = delta * (speedTWA/3600);
+                    let distHDG = delta * (speedHDG/3600);
+                    
+                    newTWAPos = Util.addDistance(newTWAPos, distTWA, twaHeading);
+                    newHDGPos = Util.addDistance(newHDGPos, distHDG, heading);
+
+                    // Increment stepTime AFTER step distance calc but BEFORE adding new point
+                    stepTime = new Date(startTime.getTime() + step * 1000);
+
+                    // Add new point
+                    twaPath.push([stepTime, {"lat": newTWAPos.lat, "lng": newTWAPos.lon}]);
+                    hdgPath.push([stepTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]);
+
+                    // Termination distance
+                    pathDist += distTWA;
+
+                    // Step width after initial step
+                    delta = 600;
+
+                }
+                Router.drawTWAPath(twaPath);
+                Router.drawHDGPath(hdgPath);
                 curTWA = twa;
             }
         }
     }
-    
+     
     function setupLegRS (raceinfo) {
         rsData = raceinfo.data;
         document.title = rsData.name;
@@ -324,7 +385,9 @@ import * as Router from './router.js';
 
         getRaceInfo()
 
-        google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
+        google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
+
         Router.updateMap();
     }
 

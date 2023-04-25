@@ -165,36 +165,75 @@ import * as Router from './router.js';
             // Start and target postion
             let slat = twaAnchor.getPosition().lat();
             let slon = twaAnchor.getPosition().lng();
-
+            let dlat = event.latLng.lat();
+            let dlon = event.latLng.lng();
+            let targetDist = Util.gcDistance({"lat": slat, "lon": slon}, {"lat": dlat, "lon": dlon});
+            let pathDist = 0;
             // Heading and  TWA
-            let heading = Util.toDeg(Util.courseAngle(slat, slon, event.latLng.lat(), event.latLng.lng()));
+            let heading = Util.toDeg(Util.courseAngle(slat, slon, dlat, dlon));
             let wind = await Router.windTile.getWind(slat, slon, startTime);
             let twa = Math.round(Util.toTWA(heading, wind.direction));
 
             if (twa != curTWA) {
+                document.getElementById('lb_twa').innerHTML = twa;
+                document.getElementById('lb_twa_heading').innerHTML = heading.toFixed(1);
                 let options = Router.settings.options;
                 let polars = Router.getPolars().scriptData.polar;
-                let newPos = {
+                let newTWAPos = {
                     "lat": slat,
                     "lon": slon
                 }
-                let path = [[startTime, newPos]];
-                let stepTime = startTime;
-                let step0 = 600 - startTime.getSeconds()
-                
-                for (var step = step0; step < 86400; step += 600) {
-                    let wind = await Router.windTile.getWind(newPos.lat, newPos.lon, stepTime);
-                    let heading = Util.toHeading(twa, wind.direction);
-                    let speed = boatSpeed(Util.ms2knots(wind.speed), twa, options, polars).speed;
-                    newPos = Util.addDistance(newPos, speed/6, heading);
-                    stepTime = new Date(startTime.getTime() + step * 1000);
-                    path.push([stepTime, {"lat": newPos.lat, "lng": newPos.lon}]);
+                let newHDGPos = {
+                    "lat": slat,
+                    "lon": slon
                 }
-                Router.drawTWAPath(path);
+                
+                let twaPath = [[startTime, {"lat": newTWAPos.lat, "lng": newTWAPos.lon}]];
+                let hdgPath = [[startTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]];
+
+                let stepTime = startTime;
+                let step0 = 600 - startTime.getSeconds() - 60 * (startTime.getMinutes() % 10);
+                let delta = step0;
+                
+                for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
+
+                    // Calc TWA and HDG step
+                    let windTWA = await Router.windTile.getWind(newTWAPos.lat, newTWAPos.lon, stepTime);
+                    let windHDG = await Router.windTile.getWind(newHDGPos.lat, newHDGPos.lon, stepTime);
+
+                    let twaHeading = Util.toHeading(twa, windTWA.direction);
+                    let hdgTWA = Util.toTWA(heading, windHDG.direction);
+
+                    let speedTWA = boatSpeed(Util.ms2knots(windTWA.speed), twa, options, polars).speed;
+                    let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA, options, polars).speed;
+
+                    let distTWA = delta * (speedTWA/3600);
+                    let distHDG = delta * (speedHDG/3600);
+                    
+                    newTWAPos = Util.addDistance(newTWAPos, distTWA, twaHeading);
+                    newHDGPos = Util.addDistance(newHDGPos, distHDG, heading);
+
+                    // Increment stepTime AFTER step distance calc but BEFORE adding new point
+                    stepTime = new Date(startTime.getTime() + step * 1000);
+
+                    // Add new point
+                    twaPath.push([stepTime, {"lat": newTWAPos.lat, "lng": newTWAPos.lon}]);
+                    hdgPath.push([stepTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]);
+
+                    // Termination distance
+                    pathDist += distTWA;
+
+                    // Step width after initial step
+                    delta = 600;
+
+                }
+                Router.drawTWAPath(twaPath);
+                Router.drawHDGPath(hdgPath);
                 curTWA = twa;
             }
         }
     }
+    
     
     function setupLegVR (raceinfo) {
         vrData = raceinfo.data;

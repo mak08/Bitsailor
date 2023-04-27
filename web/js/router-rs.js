@@ -203,10 +203,10 @@ import * as Router from './router.js';
                     let windHDG = await Router.windTile.getWind(newHDGPos.lat, newHDGPos.lon, stepTime);
 
                     let twaHeading = Util.toHeading(twa, windTWA.direction);
-                    let hdgTWA = Math.round(Util.toTWA(heading, windHDG.direction));
+                    let hdgTWA = Util.toTWA(heading, windHDG.direction);
 
                     let speedTWA = boatSpeed(Util.ms2knots(windTWA.speed), twa, options, polars).speed;
-                    let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA, options, polars).speed;
+                    let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed),  Math.round(hdgTWA), options, polars).speed;
 
                     let distTWA = delta * (speedTWA/3600);
                     let distHDG = delta * (speedHDG/3600);
@@ -391,8 +391,8 @@ import * as Router from './router.js';
 
         getRaceInfo()
 
-        // google.maps.event.addListener(Router.googleMap, 'click', computePath);
-        google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
+        google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 
         Router.updateMap();
     }

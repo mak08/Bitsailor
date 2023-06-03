@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-02-18 23:23:49>
+;;; Last Modified <michael 2023-06-03 22:22:20>
 
 (in-package :bitsailor)
 
@@ -25,6 +25,10 @@
 ;;; Stopping the router main function
 
 (defvar *run* nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Loading race lists
+(defvar *racelist-timer* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router main function
@@ -80,6 +84,13 @@
 
     ;; Start timers
     (timers:start-timer-loop)
+
+    (setf *racelist-timer*
+          (timers:add-timer (lambda ()
+                              (fetch-rs-race-definitions))
+                            :id (format nil "UPDATE-RACELIST")
+                            :hours nil
+                            :minutes nil))
 
     ;; NMEA
     (restart-nmea-listener-loop)
@@ -196,6 +207,23 @@
                  (store-race-data-rs json-object))
                 (T
                  (log2:warning "Skipping ~a" name))))))))
+
+(defun fetch-rs-race-definitions ()
+  (let* ((response (curl:http "https://frontend.realsail.net/classes/Race"
+                              :headers '(("accept" "*/*")
+                                         ("accept-language" "en-US,en")
+                                         ("content-type" "application/json")
+                                         ("referer" "https://bitsailor.net/"))
+                              :body "{\"where\":{\"visible\":true,\"version\":3},\"limit\":9007199254740991,\"order\":\"start\",\"_method\":\"GET\",\"_ApplicationId\":\"JFvkachvtsjN4f1glZ1ZHiGrchnkyeFtY9gNWbN4\",\"_JavaScriptKey\":\"e4QehnvfIIA1nrH0wc35onJkMq3fZA09uMNad0Ct\",\"_ClientVersion\":\"js2.19.0\",\"_InstallationId\":\"b1e14dd0-b68e-4cc0-9917-b47168ad350e\"}"))
+         (json-object (parse-json (curl:http-response-body response))))
+
+    (bordeaux-threads:with-lock-held (+races-ht-lock+)
+      (maphash (lambda (key entry)
+                 (when (typep entry 'race-info-rs)
+                   (remhash key *races-ht*)))
+               *races-ht*)
+      (store-race-data-rs json-object))))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

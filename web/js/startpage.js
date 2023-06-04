@@ -14,6 +14,8 @@ import * as Util from './Util.js';
             function (event) {
                 getRaceListAdmin(event);
             });
+        updateStatistics();
+        setTimeout(updateStatistics, 60000);
 
     };
   
@@ -61,6 +63,12 @@ import * as Util from './Util.js';
         }
     }
 
+
+    function displayStatistics (request) {
+        var tbRequests = document.getElementById('tb_requests');
+        tbRequests.value = request.responseText;
+    }
+    
     function handleError (xhr) {
         alert(xhr.responseText);
     }
@@ -72,6 +80,11 @@ import * as Util from './Util.js';
     function getRaceListAdmin (event) {
         Util.doGET("/admin/router.getRaceListAdmin", buildRaceList, handleError, {"forceReload": "true"});
     }
+
+    function updateStatistics () {
+        Util.doGET("/function/router.getStatistics", displayStatistics, handleError);
+    }
+    
     
     function appendTextCell (row, text) {
         var cell = row.insertCell(-1);

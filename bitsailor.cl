@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-06-03 22:22:20>
+;;; Last Modified <michael 2023-06-04 20:04:04>
 
 (in-package :bitsailor)
 
@@ -25,10 +25,6 @@
 ;;; Stopping the router main function
 
 (defvar *run* nil)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Loading race lists
-(defvar *racelist-timer* nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router main function
@@ -89,6 +85,13 @@
           (timers:add-timer (lambda ()
                               (fetch-rs-race-definitions))
                             :id (format nil "UPDATE-RACELIST")
+                            :hours nil
+                            :minutes nil))
+
+    (setf *statistics-timer*
+          (timers:add-timer (lambda ()
+                              (update-statistics))
+                            :id (format nil "UPDATE-STATISTICS")
                             :hours nil
                             :minutes nil))
 
@@ -224,6 +227,14 @@
                *races-ht*)
       (store-race-data-rs json-object))))
 
+
+(defun update-statistics ()
+  (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))
+    (bordeaux-threads:with-lock-held (+last-request-lock+)
+      (setf *last-request*
+            (remove-if (lambda (entry)
+                         (local-time:timestamp< (car entry) lowbound))
+                       *last-request*)))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

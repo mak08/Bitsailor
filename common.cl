@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2023-03-01 18:39:40>
+;;; Last Modified <michael 2023-06-04 20:03:40>
 
 
 (in-package :bitsailor)
@@ -51,6 +51,14 @@
   "Set this to the desired TWA step width (eg. 5d0).
    NIL (default) mean use only points provided in polar file.
    Clear *combined-polars-ht* to force recomputation of cpolars.")
+
+;;; Loading race lists
+(defvar *racelist-timer* nil)
+
+;;; Statistics
+(defvar *statistics-timer* nil)
+(defvar *last-request* (list))
+(defvar +last-request-lock+ (bordeaux-threads:make-lock "LAST-REQUEST-LOCK"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Preventing eval injection

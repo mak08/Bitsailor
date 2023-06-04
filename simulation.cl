@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-04 18:41:12>
+;;; Last Modified <michael 2023-06-04 20:05:14>
 
 
 ;; -- marks
@@ -172,6 +172,9 @@
            (longitude-between (box-east box) (latlng-lng pos) (box-west box)))))
 
 (defun get-route (routing)
+  (bordeaux-threads:with-lock-held (+last-request-lock+)
+    (setf *last-request*
+          (push (list (local-time:now) 'get-route) *last-request*)))
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
          (box (make-routing-box start-pos (routing-dest routing)))

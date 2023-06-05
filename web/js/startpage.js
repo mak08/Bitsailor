@@ -15,7 +15,7 @@ import * as Util from './Util.js';
                 getRaceListAdmin(event);
             });
         updateStatistics();
-        setTimeout(updateStatistics, 60000);
+        setInterval(updateStatistics, 600000);
 
     };
   

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-06-04 20:04:04>
+;;; Last Modified <michael 2023-06-07 19:09:34>
 
 (in-package :bitsailor)
 
@@ -219,6 +219,13 @@
                                          ("referer" "https://bitsailor.net/"))
                               :body "{\"where\":{\"visible\":true,\"version\":3},\"limit\":9007199254740991,\"order\":\"start\",\"_method\":\"GET\",\"_ApplicationId\":\"JFvkachvtsjN4f1glZ1ZHiGrchnkyeFtY9gNWbN4\",\"_JavaScriptKey\":\"e4QehnvfIIA1nrH0wc35onJkMq3fZA09uMNad0Ct\",\"_ClientVersion\":\"js2.19.0\",\"_InstallationId\":\"b1e14dd0-b68e-4cc0-9917-b47168ad350e\"}"))
          (json-object (parse-json (curl:http-response-body response))))
+
+    (loop
+      :for race-def :across (joref json-object "results")
+      :do
+         (let* ((polars (joref race-def "polar"))
+                (polars-id (joref  polars "objectId")))
+           (setf (joref polars "classBoat") (polars-label (get-polars-by-id polars-id)))))
 
     (bordeaux-threads:with-lock-held (+races-ht-lock+)
       (maphash (lambda (key entry)

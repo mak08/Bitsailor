@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-06-07 19:09:34>
+;;; Last Modified <michael 2023-09-12 21:24:53>
 
 (in-package :bitsailor)
 
@@ -86,7 +86,7 @@
                               (fetch-rs-race-definitions))
                             :id (format nil "UPDATE-RACELIST")
                             :hours nil
-                            :minutes nil))
+                            :minutes '(0 15 30 45)))
 
     (setf *statistics-timer*
           (timers:add-timer (lambda ()

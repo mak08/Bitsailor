@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-02-13 23:24:29>
+;;; Last Modified <michael 2023-09-17 23:02:47>
 
 (in-package :bitsailor)
 
@@ -52,6 +52,7 @@
       (setf options (dpb 1 (byte 1 +c0rs+) options)))
     options))
 
+(declaim (inline get-max-speed))
 (defun get-max-speed (cpolars-speed twa wind-speed)
   (declare (double-float twa wind-speed))
   ;; (check-type twa angle)
@@ -169,6 +170,7 @@
           (setf imax i
                 vmax v))))))
 
+(declaim (inline get-boat-speed))
 (defun get-boat-speed (angle wind-speed tws twa sailspeeds)
   (multiple-value-bind
         (speed-index speed-fraction)

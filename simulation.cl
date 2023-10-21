@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-03-30 21:36:15>
+;;; Last Modified <michael 2023-10-21 13:01:22>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -309,6 +309,9 @@
            (longitude-between (box-east box) (latlng-lng pos) (box-west box)))))
 
 (defun get-route (routing)
+  (bordeaux-threads:with-lock-held (+last-request-lock+)
+    (setf *last-request*
+          (push (list (local-time:now) 'get-route) *last-request*)))
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
          (distance (course-distance start-pos destination))

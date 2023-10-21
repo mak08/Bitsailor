@@ -2,7 +2,7 @@
 ;;; Description
 ;;; Author         Michael Kappert
 ;;; Created        22/03/2000 11:15:16
-;;; Last Modified  <michael 2023-03-05 14:11:55>
+;;; Last Modified  <michael 2023-10-21 12:56:55>
 
 (defsystem "bitsailor"
   :description "Sailing route optimization using isochrones search"
@@ -12,6 +12,7 @@
   :components ((:file "package")
                (:file "common")
                (:file "macros")
+               (:file "curl")
                (:file "database")
                (:file "datatypes")
                (:file "polars")

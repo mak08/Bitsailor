@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-04-02 18:01:35>
+;;; Last Modified <michael 2023-10-21 13:00:49>
 
 (in-package :bitsailor)
 
@@ -59,6 +59,7 @@
       (setf options (dpb 1 (byte 1 +c0rs+) options)))
     options))
 
+(declaim (inline compute-max-speed))
 (defun compute-max-speed (speed options)
   (let* ((dimensions (array-dimensions speed))
          (max (make-array dimensions)))
@@ -68,7 +69,8 @@
                 :do (setf (aref max twa tws)
                           (compute-max-speed-1 speed twa tws)))
       :finally (return max))))
-              
+
+(declaim (inline compute-max-speed-1))
 (defun compute-max-speed-1 (speed twa tws)
   (do*
    ((imax 0)
@@ -82,6 +84,16 @@
       (when (>= v vmax)
         (setf imax i
               vmax v)))))
+
+(declaim (inline get-max-speed))
+(defun get-max-speed (cpolars-speed twa wind-speed)
+  (declare (double-float twa wind-speed))
+  ;; (check-type twa angle)
+  (let ((dim (array-dimension cpolars-speed 1)))
+    (aref cpolars-speed
+          (round (* (abs twa) 10d0))
+          (min (round (* wind-speed 10d0))
+               (1- dim)))))
 
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
@@ -191,6 +203,7 @@
                     (values (make-vmg :vmg (coerce best-vmg-up 'double-float) :sail best-sail-up :twa (coerce best-twa-up 'double-float))
                             (make-vmg :vmg (coerce (abs best-vmg-down) 'double-float) :sail best-sail-down :twa (coerce best-twa-down 'double-float)))))))
 
+(declaim (inline get-boat-speed))
 (defun get-boat-speed (angle wind-speed twa tws sailspeeds)
   (multiple-value-bind
         (speed-index speed-fraction)

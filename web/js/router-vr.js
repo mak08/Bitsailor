@@ -193,6 +193,8 @@ import * as Router from './router.js';
 
                 let stepTime = startTime;
                 let step0 = 600 - startTime.getSeconds() - 60 * (startTime.getMinutes() % 10);
+
+                let delta = step0;
                 
                 for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
 
@@ -206,8 +208,8 @@ import * as Router from './router.js';
                     let speedTWA = boatSpeed(Util.ms2knots(windTWA.speed), twa, options, polars).speed;
                     let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA, options, polars).speed;
 
-                    let distTWA = speedTWA/6;
-                    let distHDG = speedHDG/6;
+                    let distTWA = delta * (speedTWA/3600);
+                    let distHDG = delta * (speedHDG/3600);
                     
                     newTWAPos = Util.addDistance(newTWAPos, distTWA, twaHeading);
                     newHDGPos = Util.addDistance(newHDGPos, distHDG, heading);
@@ -222,6 +224,12 @@ import * as Router from './router.js';
                     // Termination distance
                     pathDist += distTWA;
 
+<<<<<<< HEAD
+=======
+                    // Step width after initial step
+                    delta = 600;
+
+>>>>>>> master
                 }
                 Router.drawTWAPath(twaPath);
                 Router.drawHDGPath(hdgPath);
@@ -230,40 +238,7 @@ import * as Router from './router.js';
         }
     }
     
-    async function getTWAPath (event) {
-
-        if ( Router.twaAnchor ) {
-            let twaAnchor = Router.twaAnchor;
-            var latA = twaAnchor.getPosition().lat();
-            var lngA = twaAnchor.getPosition().lng();
-            var time = twaAnchor.get('time');
-            var lat = event.latLng.lat();
-            var lng = event.latLng.lng();
-            var cycle = Router.getCurrentCycle();
-            
-            let twaSettings = JSON.parse(JSON.stringify(Router.settings));
-            twaSettings.duration = null;
-            
-            var query = Router.makeQuery(twaSettings);
-            let documentQuery = new URL(document.URL).searchParams;
-            let raceId = documentQuery.get('race');
-            
-            $.ajax({
-                url: `/function/router.getTWAPath${query}&raceId=${raceId}&time=${time}&latA=${latA}&lngA=${lngA}&lat=${lat}&lng=${lng}`,
-                dataType: 'json'
-            }).done( function (data) {
-                Router.drawTWAPath(data.twapath);
-                Router.drawHDGPath(data.hdgpath);
-                $("#lb_twa").text(data.twa);
-                $("#lb_twa_heading").text(data.heading);
-            }).fail( function (jqXHR, textStatus, errorThrown) {
-            alert(textStatus + ' ' + errorThrown);
-            });
-        } else {
-            console.log('No TWA anchor');
-        }
-    }
-
+    
     function setupLegVR (raceinfo) {
         vrData = raceinfo.data;
         document.title = vrData.name;
@@ -415,7 +390,10 @@ import * as Router from './router.js';
 
         getRaceInfo();
 
+<<<<<<< HEAD
         // google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
+=======
+>>>>>>> master
         google.maps.event.addListener(Router.googleMap, 'click', computePath);
         // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 

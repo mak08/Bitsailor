@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2023-03-27 23:47:19>
+;;; Last Modified <michael 2023-10-21 12:57:19>
 
 
 (in-package :bitsailor)
@@ -55,6 +55,7 @@
    NIL (default) mean use only points provided in polar file.
    Clear *combined-polars-ht* to force recomputation of cpolars.")
 
+<<<<<<< HEAD
 (defparameter +foil-speeds+ (map 'vector #'knots-to-m/s
                                 #(0.0d0 11.0d0 16.0d0 35.0d0 40.0d0 70.0d0)) )
 (defparameter +foil-angles+ #(0.0d0 70.0d0 80.0d0 160.0d0 170.0d0 180.0d0))
@@ -64,6 +65,15 @@
                                (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
                                (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
                                (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
+=======
+;;; Loading race lists
+(defvar *racelist-timer* nil)
+
+;;; Statistics
+(defvar *statistics-timer* nil)
+(defvar *last-request* (list))
+(defvar +last-request-lock+ (bordeaux-threads:make-lock "LAST-REQUEST-LOCK"))
+>>>>>>> master
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Preventing eval injection

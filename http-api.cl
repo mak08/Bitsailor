@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-04-18 19:53:11>
+;;; Last Modified <michael 2023-10-21 12:57:46>
 
 (in-package :bitsailor)
 
@@ -718,7 +718,17 @@
                     (numberp (parse-integer port)))
              (error "Invalid NMEA port ~a" port))
            (reset-nmea-listener user-id race-id host port)
-           (format nil "Connected to ~a:~a" host port))))) 
+           (format nil "Connected to ~a:~a" host port)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Statistics
+
+(defun |getStatistics| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+  (get-router-statistics))
+
+
+(defun get-router-statistics ()
+  (format nil "~a" (length *last-request*)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 

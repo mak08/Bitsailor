@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2023-04-22 23:22:37>
+;;; Last Modified <michael 2023-10-21 13:01:07>
 
 (in-package :bitsailor)
 
@@ -90,6 +90,7 @@
 (register-function "router.setRoute" :authorizer #'vh-function-authorizer)
 (register-function "router.getRoute" :authorizer #'vh-function-authorizer)
 (register-function "router.getRouteRS" :authorizer #'vh-function-authorizer)
+(register-function "router.getStatistics" :authorizer (constantly t))
 (register-function "vh.getRouteRS" :authorizer #'vh-function-authorizer)
 (register-function "router.checkWindow" :authorizer #'vh-function-authorizer)
 

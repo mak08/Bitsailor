@@ -964,13 +964,13 @@ function drawPath (bPath, data, color) {
     for ( var i=1; i<data.length; i++ ) {
         var twaPathSegment;
         var d = new Date(data[i][0]);
-        let m = d.getMinutes();
-        if ( (m % 10) === 0 ) {
+        let minutes = d.getMinutes();
+        if ( ( minutes % 10) == 0 ) {
             twaPathSegment = new google.maps.Polyline({
                 geodesic: true,
                 strokeColor: color,
                 strokeOpacity: 1,
-                strokeWeight: (m % 60) == 0 ? 4 : 2,
+                strokeWeight: (minutes == 0) ? 4 : 2,
                 icons: [{icon: lineSymbol,  offset: '100%'}]
             });
         } else {

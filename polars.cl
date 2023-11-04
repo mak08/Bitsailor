@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-10-21 13:00:49>
+;;; Last Modified <michael 2023-11-04 11:52:29>
 
 (in-package :bitsailor)
 
@@ -84,16 +84,6 @@
       (when (>= v vmax)
         (setf imax i
               vmax v)))))
-
-(declaim (inline get-max-speed))
-(defun get-max-speed (cpolars-speed twa wind-speed)
-  (declare (double-float twa wind-speed))
-  ;; (check-type twa angle)
-  (let ((dim (array-dimension cpolars-speed 1)))
-    (aref cpolars-speed
-          (round (* (abs twa) 10d0))
-          (min (round (* wind-speed 10d0))
-               (1- dim)))))
 
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!

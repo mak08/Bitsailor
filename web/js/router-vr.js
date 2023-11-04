@@ -224,12 +224,9 @@ import * as Router from './router.js';
                     // Termination distance
                     pathDist += distTWA;
 
-<<<<<<< HEAD
-=======
                     // Step width after initial step
                     delta = 600;
 
->>>>>>> master
                 }
                 Router.drawTWAPath(twaPath);
                 Router.drawHDGPath(hdgPath);
@@ -390,10 +387,6 @@ import * as Router from './router.js';
 
         getRaceInfo();
 
-<<<<<<< HEAD
-        // google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
-=======
->>>>>>> master
         google.maps.event.addListener(Router.googleMap, 'click', computePath);
         // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 

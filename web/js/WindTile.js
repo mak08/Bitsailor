@@ -95,16 +95,16 @@ function interpolatePoint (u0, u1, v0, v1, fraction) {
     }
 }
 
-function interpolateTemporal (tile0, tile1, offset, time, lat0, lon0, lat1, lon1) {
-    let timeFraction = ((time - tile0.cycle) / 3600000 - offset) / 3;
-    let p00 = getValue(tile0, offset, lat0, lon0);
-    let p01 = getValue(tile0, offset, lat0, lon1);
-    let p10 = getValue(tile0, offset, lat1, lon0);
-    let p11 = getValue(tile0, offset, lat1, lon1);
-    let q00 = getValue(tile1, offset+3, lat0, lon0);
-    let q01 = getValue(tile1, offset+3, lat0, lon1);
-    let q10 = getValue(tile1, offset+3, lat1, lon0);
-    let q11 = getValue(tile1, offset+3, lat1, lon1);
+function interpolateTemporal (tile0, tile1, offset0, offset1, time, lat0, lon0, lat1, lon1) {
+    let timeFraction = ((time - tile0.cycle) / 3600000 - offset0) / 3;
+    let p00 = getValue(tile0, offset0, lat0, lon0);
+    let p01 = getValue(tile0, offset0, lat0, lon1);
+    let p10 = getValue(tile0, offset0, lat1, lon0);
+    let p11 = getValue(tile0, offset0, lat1, lon1);
+    let q00 = getValue(tile1, offset1, lat0, lon0);
+    let q01 = getValue(tile1, offset1, lat0, lon1);
+    let q10 = getValue(tile1, offset1, lat1, lon0);
+    let q11 = getValue(tile1, offset1, lat1, lon1);
     return {
         "w00": interpolatePoint(p00.u, q00.u, p00.v, q00.v, timeFraction),
         "w01": interpolatePoint(p01.u, q01.u, p01.v, q01.v, timeFraction),
@@ -208,7 +208,54 @@ export default class WindTile {
             let lat0 = floor(rlat, d)/d, lat1 = ceil(rlat, d)/d
             let lon0 = floor(rlon, d)/d, lon1 = ceil(rlon, d)/d;
             let lambdaU = drlat-lat0, lambdaV = drlon-lon0;
-            let w_t = interpolateTemporal(tile0, tile1, offset, time, lat0, lon0, lat1, lon1)
+            let w_t = interpolateTemporal(tile0, tile1, offset, offset+3, time, lat0, lon0, lat1, lon1)
+            let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
+            let direction = angle(w_s.u, w_s.v);
+            let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
+            return {
+                "direction": direction,
+                "speed": speed
+            }
+        } else {
+            return {
+                "direction": 315.0,
+                "speed": 11.5
+            }
+        }
+    }
+
+    async windDataMagnitudeVR25 (cycle, resolution, time, lat, lon) {
+        let south = Math.floor(lat / 10) * 10;
+        let north = Math.ceil(lat / 10) * 10;
+        let west = Math.floor(lon / 10) * 10;
+        let east = Math.ceil(lon / 10) * 10;
+
+        let curTime = new  Date(time);
+        
+        let baseTime1 = new Date(cycle);
+        let cycleStr1 = this.formatCycle(cycle);
+        let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
+
+        let cycleStr0, offset0;
+        if (offset1 == 9 || offset1 ==12) {
+            let baseTime0 = new Date(baseTime1 - (6 * 60 * 60 * 1000));
+            cycleStr0 = this.formatCycle(baseTime0);
+            offset0 = floor((curTime - baseTime0) / 3600000, 3);
+        } else {
+            cycleStr0 = cycleStr1;
+            offset0 = offset1 - 3;
+        }
+        
+        let tile0 = await this.getTileCached(cycleStr0, resolution, offset0, south, west);
+        let tile1 = await this.getTileCached(cycleStr1, resolution, offset1, south, west);
+        if (tile0 && tile1) {
+            let d = tile0.resolution/100;
+            let rlat = lat - south,  rlon = lon - west;
+            let drlat = rlat / d, drlon = rlon / d;
+            let lat0 = floor(rlat, d)/d, lat1 = ceil(rlat, d)/d
+            let lon0 = floor(rlon, d)/d, lon1 = ceil(rlon, d)/d;
+            let lambdaU = drlat-lat0, lambdaV = drlon-lon0;
+            let w_t = interpolateTemporal(tile0, tile1, offset0, offset1, time, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
             let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
@@ -332,6 +379,10 @@ export default class WindTile {
     /// Public methods
     async getWind (lat, lon, time = this.#curTime) {
         return await this.windDataMagnitude(this.#curCycle, this.#curRes, time, lat, lon);
+    }
+    
+    async getWindVR (lat, lon, time = this.#curTime) {
+        return await this.windDataMagnitudeVR25(this.#curCycle, this.#curRes, time, lat, lon);
     }
     
     async update (bounds, cycle, time = new Date(), resolution = "1p00") {

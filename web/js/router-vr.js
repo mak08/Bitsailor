@@ -171,7 +171,7 @@ import * as Router from './router.js';
             let pathDist = 0;
             // Heading and  TWA
             let heading = Util.toDeg(Util.courseAngle(slat, slon, dlat, dlon));
-            let wind = await Router.windTile.getWind(slat, slon, startTime);
+            let wind = await Router.windTile.getWindVR(slat, slon, startTime);
             let twa = Math.round(Util.toTWA(heading, wind.direction));
 
             if (twa != curTWA) {
@@ -199,8 +199,8 @@ import * as Router from './router.js';
                 for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
 
                     // Calc TWA and HDG step
-                    let windTWA = await Router.windTile.getWind(newTWAPos.lat, newTWAPos.lon, stepTime);
-                    let windHDG = await Router.windTile.getWind(newHDGPos.lat, newHDGPos.lon, stepTime);
+                    let windTWA = await Router.windTile.getWindVR(newTWAPos.lat, newTWAPos.lon, stepTime);
+                    let windHDG = await Router.windTile.getWindVR(newHDGPos.lat, newHDGPos.lon, stepTime);
 
                     let twaHeading = Util.toHeading(twa, windTWA.direction);
                     let hdgTWA = Util.toTWA(heading, windHDG.direction);

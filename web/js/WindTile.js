@@ -237,11 +237,20 @@ export default class WindTile {
         let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
 
         let cycleStr0, offset0;
-        if (offset1 == 9 || offset1 ==12) {
+        if (offset1 <= 6) {
+            // use previous forecast only
+            let baseTime0 = new Date(baseTime1 - (6 * 60 * 60 * 1000));
+            cycleStr0 = this.formatCycle(baseTime0);
+            offset0 = floor((curTime - baseTime0) / 3600000, 3);
+            cycleStr1 = cycleStr0;
+            offset1 = offset0 + 3;
+        } else if (offset1 == 9) {
+            // merge with previous
             let baseTime0 = new Date(baseTime1 - (6 * 60 * 60 * 1000));
             cycleStr0 = this.formatCycle(baseTime0);
             offset0 = floor((curTime - baseTime0) / 3600000, 3);
         } else {
+            // use current forecast only
             cycleStr0 = cycleStr1;
             offset0 = offset1 - 3;
         }
@@ -381,8 +390,8 @@ export default class WindTile {
         return await this.windDataMagnitude(this.#curCycle, this.#curRes, time, lat, lon);
     }
     
-    async getWindVR (lat, lon, time = this.#curTime) {
-        return await this.windDataMagnitudeVR25(this.#curCycle, this.#curRes, time, lat, lon);
+    async getWindVR (lat, lon, time = this.#curTime, cycle=this.#curCycle, res=this.#curRes) {
+        return await this.windDataMagnitudeVR25(cycle, res, time, lat, lon);
     }
     
     async update (bounds, cycle, time = new Date(), resolution = "1p00") {

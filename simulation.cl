@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-10-21 13:01:22>
+;;; Last Modified <michael 2024-01-05 18:45:22>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -22,6 +22,7 @@
             sail)))
 ;; (declaim (notinline twa-boatspeed))
 
+(declaim (inline twa-sailspeed))
 (defun twa-sailspeed (polars sail tws twa)
   (if (null sail)
       0d0

@@ -125,8 +125,8 @@ function setUp (getVMG) {
     destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
     
     // Wind canvas
-    setupCanvas();
-
+    let canvas = setupCanvas();
+ 
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
         if (event.keyCode === 13) {
             onSetStartPosition(event);
@@ -200,8 +200,10 @@ function updateMap () {
         var bounds = getMapBounds();
 
         // Load wind
-        let canvas = document.getElementById('wind-canvas');
-        windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, "1p00", new Date());
+        if (!windTile) {
+            let canvas = document.getElementById('wind-canvas');
+            windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, settings.resolution, new Date());
+        }
 
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
         $("#lb_map_bounds").text("Kartenausschnitt: " + label);
@@ -780,6 +782,7 @@ function setupCanvas () {
     geometry.height = mapRect.height * 6;
     mapCanvas.width = geometry.width;
     mapCanvas.height = geometry.height;
+    return mapCanvas;
 }
 
 function createIsochrones (isochrones) {
@@ -1022,12 +1025,15 @@ function redrawWindByTime (time) {
     getWind(currentCycle, time);
 }
 
-function redrawWindByOffset (offset) {
-    let d = new Date(currentCycle);
+function getOffsetTime (offset, cycle=currentCycle) {
+    let d = new Date(cycle);
     let time = d.getTime();
     time = time + parseInt(offset) * 3600000;
-    time = new Date(time);
-    redrawWindByTime(time.toISOString());
+    return new Date(time);
+}
+
+function redrawWindByOffset (offset) {
+    redrawWindByTime(getOffsetTime(offset).toISOString());
 }
 
 async function getWind (cycle, time) {

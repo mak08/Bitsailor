@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-11-04 11:52:29>
+;;; Last Modified <michael 2024-01-10 23:11:37>
 
 (in-package :bitsailor)
 
@@ -147,10 +147,14 @@
          (sail-speeds
            (loop
              :for k :below number-of-sails
-             :collect (get-boat-speed twa tws
-                                      (polars-twa polars)
-                                      (polars-tws polars)
-                                      (sail-speed (aref (polars-sails polars) k))))))
+             :collect (cond
+                        ((logbitp k options)
+                         (get-boat-speed twa tws
+                                         (polars-twa polars)
+                                         (polars-tws polars)
+                                         (sail-speed (aref (polars-sails polars) k))))
+                        (t
+                         0d0)))))
     (make-array number-of-sails :initial-contents sail-speeds)))
 
 (defun precompute-vmg (maxspeed max-wind)

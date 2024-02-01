@@ -5,7 +5,7 @@ import * as Util from './Util.js';
 import WindTile from './WindTile.js';
 import * as GPX from './GPX.js';
 
-const sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
+var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
     "resolution": "1p00",
     "gfsMode": "06h",
@@ -113,6 +113,7 @@ function setUp (getVMG) {
     // Connect menu events
     $("#bt_setstart" ).click(function () { onContextMenu('start') });
     $("#bt_setdest"  ).click(function () { onContextMenu('dest') });
+    $("#bt_copypos"  ).click(onCopyPosition);
     $("#bt_ltpmark"  ).click(function () { onContextMenu('ltp') });
     $("#bt_ltsmark"  ).click(function () { onContextMenu('lts') });
     
@@ -229,6 +230,12 @@ function onContextMenu (point) {
     var mapMenu=$("#mapMenu")[0];
     mapMenu.style.display = "none";
     setRoutePoint(point, mapEvent.latLng);
+}
+
+function onCopyPosition (event) {
+    let label = document.getElementById('lb_position');
+    let text = label.__pos.lat() + ' ' + label.__pos.lng()
+    navigator.clipboard.writeText(text);
 }
 
 function onSelectIsochrone (isochrone) {
@@ -539,6 +546,11 @@ function setPolars (data) {
 function getPolars () {
     return polars;
 }
+
+function setSailnames (sailnames) {
+    sailNames = sailnames;
+}
+
 
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
@@ -1061,7 +1073,9 @@ async function getWind (cycle, time) {
 }
 
 async function updateWindInfo (event, getVMG) {
-    $("#lb_position").text(formatLatLngPosition(event.latLng));
+    let label = document.getElementById('lb_position');
+    label.textContent = '[ ' + formatLatLngPosition(event.latLng) + ' ]';
+    label.__pos = event.latLng;
     
     if (windTile) {
         var zoom = googleMap.getZoom();
@@ -1206,6 +1220,7 @@ export {
     setPolars,
     getPolars,
     restoreCursor,
+    setSailnames,
     setBusyCursor,
     settings,
     setResolution,

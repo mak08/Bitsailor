@@ -289,6 +289,15 @@ import * as Router from './router.js';
         }
 
         // Destination
+        let finish = new google.maps.Marker({
+            position: {"lat": vrData.end.lat, "lng": vrData.end.lon},
+            map: Router.googleMap,
+            // icon: (c.side=='port')?markPort:markStbd,
+            label: 'Finish',
+            title: 'Finish',
+            draggable: false
+        });
+
         let dest = Router.getValue('dest');
         if (dest) {
             dest = JSON.parse(dest);

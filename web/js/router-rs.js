@@ -287,6 +287,17 @@ import * as Router from './router.js';
             var lastP0 = rsData.gates[rsData.gates.length-1][0]
             var lastP1 = rsData.gates[rsData.gates.length-1][1]
 
+            let finish = new google.maps.Marker({
+                position:  {
+                    'lat': (lastP0.latitude + lastP1.latitude)/2,
+                    'lng': (lastP0.longitude + lastP1.longitude)/2
+                },
+                map: Router.googleMap,
+                label: 'Finish',
+                title: 'Finish',
+                draggable: false
+            });
+
             let dest = Router.getValue('dest');
             if (dest) {
                 dest = JSON.parse(dest);

@@ -390,7 +390,7 @@ import * as Router from './router.js';
         Router.setUp(getVMG);
         Router.settings.presets = "RS";
         Router.settings.options = ["realsail"];
-        Router.setSailnames(["Jib", "Spi", "Code0"]);
+        Router.setSailnames(["Jib", "Spi", "Gennaker"]);
         
         document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
         document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);

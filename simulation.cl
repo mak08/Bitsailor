@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-01-05 18:45:22>
+;;; Last Modified <michael 2024-02-03 12:13:37>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -55,7 +55,7 @@
       (cond
         ((and cur-sail
               (not (equal sail cur-sail)))
-         (let ((factor   (/ (+ (* 0.9 300)
+         (let ((factor   (/ (+ (* 0.95 300)
                                (- step-size 300))
                             step-size))
                (time 300))
@@ -266,9 +266,12 @@
                                      (let* ((origin-distance (course-distance start-pos new-pos))
                                             (dest-distance (course-distance new-pos (routing-dest routing)))
                                             (origin-angle (get-origin-angle start-pos new-pos origin-distance))
-                                            (energy (ecase *penalty-mode-vr*
-                                                      (:simple 0d0)
-                                                      (:dynamic (energy routepoint reason wind-speed step-size)))))
+                                            (energy (typecase (routing-race-info routing)
+                                                      (race-info-rs 100d0)
+                                                      (t
+                                                       (ecase *penalty-mode-vr*
+                                                         (:simple 0d0)
+                                                         (:dynamic (energy routepoint reason wind-speed step-size)))))))
                                        (when (and
                                               (heading-between left right origin-angle)
                                               (< (+ (expt origin-distance 2) (expt  dest-distance 2))

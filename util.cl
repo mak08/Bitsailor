@@ -1,12 +1,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-01-24 00:26:29>
+;;; Last Modified <michael 2024-02-02 21:12:03>
 
 (in-package :bitsailor)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helpers
+
+
+(defun getboatspeed (polars-id twa tws-kn)
+  (let ((polars (get-combined-polars polars-id bitsailor::+allsails+)))
+    (multiple-value-bind (speed sail)
+        (twa-boatspeed  polars (knots-to-m/s tws-kn) (coerce twa 'double-float))
+      (values sail (m/s-to-knots speed)))))
 
 (defun distance-knots (lat0 lon0 lat1 lon1 seconds)
   (m/s-to-knots

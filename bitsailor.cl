@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-10-21 12:57:10>
+;;; Last Modified <michael 2024-02-06 21:07:36>
 
 (in-package :bitsailor)
 
@@ -170,10 +170,12 @@
               (cond
                 ((typep json-object 'array)
                  (store-race-data-vr json-object))
-                ((joref json-object "results")
-                 (store-race-data-rs json-object))
                 (T
-                 (log2:warning "Skipping ~a" name))))))))
+                 (log2:warning "Skipping ~a" name)))))))
+  (ignore-errors
+   (bordeaux-threads:make-thread (lambda () 
+                                   (fetch-rs-race-definitions))
+                                 :name "FETCH-RS-RACES")))
 
 (defun fetch-rs-race-definitions ()
   (let* ((response (curl:http "https://frontend.realsail.net/classes/Race"

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-10-21 12:57:32>
+;;; Last Modified <michael 2024-02-15 21:07:52>
 
 (in-package :bitsailor)
 
@@ -66,7 +66,7 @@
                                  origin-distance)))))
   (values))
 
-(defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (use-bitmap *use-bitmap*))
+(defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (zones nil) (use-bitmap *use-bitmap*))
   (let ((filtered
           (loop
             :for p :across isochrone
@@ -75,6 +75,7 @@
             :when (and p
                        ;; (meets-all constraints new-pos old-pos)
                        (check-limits old-pos new-pos limits)
+                       (notany (lambda (zone) (point-in-poly-p new-pos zone)) zones)  
                        (cond (use-bitmap
                               (not (bm-is-land new-pos)))
                              (t

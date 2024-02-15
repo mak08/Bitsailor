@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-02-03 12:13:37>
+;;; Last Modified <michael 2024-02-15 21:07:38>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -323,6 +323,8 @@
          (race-info (routing-race-info routing))
          (limits (when (race-info-vr-p race-info)
                    (get-race-limits race-info)))
+         (zones (when (race-info-vr-p race-info)
+                  (get-exclusion-zones race-info)))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -429,7 +431,7 @@
            isochrone)
       
       ;; Step 2 - Filter isochrone.
-      (let ((candidate (filter-isochrone next-isochrone :limits limits)))
+      (let ((candidate (filter-isochrone next-isochrone :limits limits :zones zones)))
         (cond
           ((or (null candidate)
                (= (length candidate) 0)
@@ -463,6 +465,25 @@
                  (<= (abs (- angle a)) 1.5d0)
                  (>= d distance))))
         candidate))
+
+(defun get-exclusion-zones (leg-info)
+  (let* ((zones (joref (race-info-data leg-info) "restrictedZones"))
+         (result (make-array (length zones))))
+    (map-into result
+              (lambda (z)
+                (get-exclusion-zone z))
+              zones)))
+
+(defun get-exclusion-zone (zone-def)
+  (loop :with vertices = (joref zone-def "vertices")
+        :with result = (make-array (1+ (length vertices)) :fill-pointer 0)
+        :for vertice :across vertices
+        :for latlng = (make-latlng :lat (coerce (joref vertice "lat") 'double-float)
+                                   :lng (coerce (joref vertice "lon") 'double-float))
+        :do (vector-push latlng result)
+        :finally (progn (unless (equalp (aref result 0) (aref result (1- (length result))))
+                          (vector-push  (aref result 0) result))
+                        (return result))))
 
 (defun get-race-limits (leg-info)
   (let* ((south (joref (joref (race-info-data leg-info) "ice_limits") "south"))

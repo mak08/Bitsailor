@@ -340,6 +340,7 @@ import * as Router from './router.js';
             });
             mark.addListener('click', function () { Router.onMarkerClicked(mark) });
         }
+        
         if (vrData.ice_limits) {
             var iceLimit = [];
             for (const p of vrData.ice_limits.south) {
@@ -353,6 +354,25 @@ import * as Router from './router.js';
             });
             iceLine.setMap(Router.googleMap);
             iceLine.setPath(iceLimit);
+        }
+        if (vrData.restrictedZones) {
+            for (const zone of vrData.restrictedZones) {
+                let path = [];
+                let first = zone.vertices[0];
+                for (const p of zone.vertices) {
+                    path.push({"lat": p.lat, "lng": p.lon});
+                }
+                path.push({"lat": first.lat, "lng": first.lon});
+                
+                var line = new google.maps.Polyline({
+                    geodesic: false,
+                    strokeColor: '#ff0000',
+                    strokeOpacity: 1.0,
+                    strokeWeight: 1
+                });
+                line.setMap(Router.googleMap);
+                line.setPath(path);
+            }
         }
     }
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2023-10-21 12:57:46>
+;;; Last Modified <michael 2024-02-15 18:40:45>
 
 (in-package :bitsailor)
 
@@ -150,7 +150,7 @@
                               (race-id)
                               (polars-id)
                               (starttime nil)
-                              (resolution "1p00")
+                              (resolution "1p00" resolution-provided-p)
                               (gfs-mode "06h")
                               (options)
                               (energy 100)
@@ -175,6 +175,9 @@
                    '("realsail")
                    '("hull" "foil" "winch" "heavy" "light" "reach"))))
          (polars (get-combined-polars polars-id (encode-options options))))
+    (when (and vr-finewinds
+               (not resolution-provided-p))
+      (setf resolution "0p25"))
     (make-routing
      :race-info   (race-info race-id)
      :fan *max-angle*
@@ -216,7 +219,7 @@
                            4d0))
      :merge-window (if (string= presets "RS")
                        0d0
-                       (if vr-finewinds 0d0 2d0))
+                       (if vr-finewinds 3d0 2d0))
      :winch-mode (if (member "winch" options :test #'string=)
                      "pro"
                      "std")

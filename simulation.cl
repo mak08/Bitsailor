@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-02-15 21:07:38>
+;;; Last Modified <michael 2024-02-16 23:29:08>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -743,6 +743,7 @@
          (wind-dir (interpolate (latlng-lat startpos)
                                 (latlng-lng startpos)
                                 (interpolation-parameters time
+                                                          :gfs-mode (routing-gfs-mode routing)
                                                           :source (routing-grib-source routing)
                                                           :method (routing-interpolation routing)
                                                           :merge-start (routing-merge-start routing)
@@ -767,6 +768,7 @@
           (interpolate (latlng-lat curpos-twa)
                        (latlng-lng curpos-twa)
                        (interpolation-parameters time
+                                                 :gfs-mode (routing-gfs-mode routing)
                                                  :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)
@@ -785,6 +787,7 @@
           (interpolate (latlng-lat curpos-hdg)
                        (latlng-lng curpos-hdg)
                        (interpolation-parameters time
+                                                 :gfs-mode (routing-gfs-mode routing)
                                                  :source (routing-grib-source routing)
                                                  :method (routing-interpolation routing)
                                                  :merge-start (routing-merge-start routing)

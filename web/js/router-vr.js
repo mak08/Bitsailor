@@ -234,6 +234,48 @@ import * as Router from './router.js';
             }
         }
     }
+
+    function getTWAPath (event) {
+        let twaAnchor = Router.twaAnchor;
+
+        // Start time
+        let time = twaAnchor.get('time');
+        
+        // Start and target postion
+        let slat = twaAnchor.getPosition().lat();
+        let slon = twaAnchor.getPosition().lng();
+        let dlat = event.latLng.lat();
+        let dlon = event.latLng.lng();
+
+        Util.doGET(
+            "/function/router.getTWAPath",
+            function (request) {
+                let data = JSON.parse(request.responseText);
+                document.getElementById('lb_twa').innerHTML = data.twa;
+                document.getElementById('lb_twa_heading').innerHTML = data.heading.toFixed(1);
+                Router.drawTWAPath(data.twapath);
+                Router.drawHDGPath(data.hdgpath);
+                $("#lb_twa").text(data.twa);
+                $("#lb_twa_heading").text(data.heading);
+            },
+            function (request) {
+                console.log(request.responseText);
+            },
+            {
+                "presets": "VR",
+                "gfsMode": "06h",
+                "raceId": vrData._id.race_id + '.' + vrData._id.num,
+                "cycle": Router.getCurrentCycle(),
+                "resolution": Router.settings.resolution,
+                "options": Router.settings.options,
+                "time": time,
+                "latA": slat,
+                "lngA": slon,
+                "lat": dlat,
+                "lng": dlon
+            }
+        )
+    }
     
     
     function setupLegVR (raceinfo) {
@@ -416,7 +458,8 @@ import * as Router from './router.js';
 
         getRaceInfo();
 
-        google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        // google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
         // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
 
         Router.updateMap();

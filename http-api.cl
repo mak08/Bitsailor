@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-02-15 18:40:45>
+;;; Last Modified <michael 2024-02-17 11:50:40>
 
 (in-package :bitsailor)
 
@@ -157,7 +157,7 @@
                               (tack)
                               (sail -1)
                               (stepmax (* 24 60 60))
-                              (cycle)
+                              (cycle (current-cycle))
                               (slat)
                               (slon)
                               (dlat)

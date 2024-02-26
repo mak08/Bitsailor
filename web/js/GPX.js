@@ -4,6 +4,7 @@
 `use strict`;
 
 import * as Util from './Util.js';
+import * as Router from './router.js';
 
 function exportRoute ( routeInfo, format='gpx' ) {
         let stream = {"s": ''};
@@ -21,7 +22,7 @@ function exportRoute ( routeInfo, format='gpx' ) {
 /// CSV export
 
 function writeRouteCSV (stream, routeInfo) {
-    stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD\n';
+    stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD;Penalty;P.Time;Energy;DTF(nm)\n';
     for (const routePoint of routeInfo.best) {
         writePointCSV(stream, routePoint);
     }
@@ -32,11 +33,15 @@ function writePointCSV (stream, routePoint) {
     stream.s += routePoint.time;
     stream.s += ';' + Util.formatPosition(pos.lat, pos.lng);
     stream.s += ';' + routePoint.twa;
-    stream.s += ';' + routePoint.sail;
+    stream.s += ';' + Router.getSailnames()[routePoint.sail];
     stream.s += ';' + Util.ms2knots(routePoint.speed).toFixed(2);
     stream.s += ';' + routePoint.heading.toFixed(1);
     stream.s += ';' + Util.ms2knots(routePoint.tws).toFixed(2);
     stream.s += ';' + routePoint.twd.toFixed(1);
+    stream.s += ';' + routePoint.penalty;
+    stream.s += ';' + routePoint.ptime.toFixed();
+    stream.s += ';' + routePoint.energy.toFixed();
+    stream.s += ';' + Util.m2nm(routePoint.dtf).toFixed(2);
     stream.s += '\n';
 }
 

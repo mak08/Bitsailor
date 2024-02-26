@@ -4,6 +4,9 @@
 import * as Util from './Util.js';
 import WindTile from './WindTile.js';
 import * as GPX from './GPX.js';
+// import GRIB2 from './grib22json/grib2.js'
+// import * as GRIB2UTILS from './grib22json/grib2utils.js'
+
 
 var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
@@ -50,6 +53,8 @@ var twaPath = [];
 var hdgPath = [];
 
 function setUp (getVMG) {
+
+   //  loadWind('http://localhost:8080/Grib2JS/data/20240218.12.015.0p25.orig.grib2');
 
     setupColors();
     
@@ -139,6 +144,13 @@ function setUp (getVMG) {
         // Update position entry/display
         onUpdateStartMarker(startMarker);
     });
+}
+
+function loadWind (path) {
+    fetch(path)
+        .then(response => response.arrayBuffer())
+        .then(buffer => GRIB2UTILS.decodeGRIB2File(buffer))
+        .catch(error => console.log(error));
 }
 
 function initMarker (type, title, url, x, y) {
@@ -549,6 +561,10 @@ function getPolars () {
 
 function setSailnames (sailnames) {
     sailNames = sailnames;
+}
+
+function getSailnames () {
+    return sailNames;
 }
 
 
@@ -1219,6 +1235,7 @@ export {
     onSetGFSMode,
     setPolars,
     getPolars,
+    getSailnames,
     restoreCursor,
     setSailnames,
     setBusyCursor,

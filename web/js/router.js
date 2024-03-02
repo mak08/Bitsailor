@@ -81,8 +81,8 @@ function setUp (getVMG) {
     google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
     
     // Track cursor position
-    google.maps.event.addListener(googleMap, 'mousemove', function (event) {
-        return updateWindInfo(event, getVMG);
+    google.maps.event.addListener(googleMap, 'mousemove', async function (event) {
+        return await updateWindInfo(event, getVMG);
     });
 
     // Moved to -vr.js

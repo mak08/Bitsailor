@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2023-04-06 20:06:21>
+;;; Last Modified <michael 2024-02-29 18:45:25>
 
 (in-package :bitsailor)
 
@@ -18,7 +18,7 @@
                      start-offset
                      window-size
                      &key
-                       (logfile "startwindow.log")
+                       (logfile "startwindow")
                        (increment 60)
                        (slat 0d0)
                        (slon 0d0)
@@ -32,16 +32,12 @@
        (last (adjust-timestamp first (:offset :hour window-size))))
     (adjust-timestamp! first (:set :minute 0) (:set :sec 0))
     (adjust-timestamp! last (:set :minute 0) (:set :sec 0))
-    (with-open-file (f logfile
-                       :direction :output
-                       :if-exists :append
-                       :if-does-not-exist :create)
-      (do ((starttime first
-                      (adjust-timestamp starttime (:offset :minute increment)))
-           (result (list)))
-          ((timestamp> starttime last)
-           result)
-        (let ((parameters
+    (do ((starttime first
+                    (adjust-timestamp starttime (:offset :minute increment)))
+         (result (list)))
+        ((timestamp> starttime last)
+         result)
+      (let* ((parameters
                (get-routing-presets "VR"
                                     :race-id race-id
                                     :slat slat
@@ -51,14 +47,25 @@
                                     :stepmax stepmax
                                     :options options
                                     :sail "Jib"
-                                    :starttime starttime)))
+                                    :starttime starttime))
+             (path
+               (merge-pathnames (format nil "~a-~a" logfile (routing-cycle parameters))
+                                (make-pathname :type "log"))))
+
+        (with-open-file (f path
+                           :direction :output
+                           :if-exists :append
+                           :if-does-not-exist :create)
           (multiple-value-bind (route error)
               (ignore-errors
-                (get-route parameters))
+               (get-route parameters))
             (cond
               (route
                (push (routeinfo-stats route) result)
-               (format f "~a ~a~%" (routeinfo-stats route) (routeinfo-polars route)))
+               (format f "~a ~a ~a~%"
+                       (routing-cycle parameters)
+                       (routestats-start (routeinfo-stats route))
+                       (routestats-duration  (routeinfo-stats route))))
               (t
                (format f "Error: ~a, parameters were ~a ~%" error parameters)))))))))
 

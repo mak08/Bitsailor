@@ -1,11 +1,11 @@
-# VirtualHelm
+# Bitsailor
 
 ### Sailing route optimization
 
-VirtualHelm uses the well-known Isochrones method for sailing route optimization. This is basically a brute-force algorithm that computes all positions reachable from a given position by moving with constant speed and direction for a fixed amount of time (eg. 10min). The resulting positions are filtered to prevent exponential growth and constitute the next isochrone.
+Bitsailor uses the well-known Isochrones method for sailing route optimization. This is basically a brute-force algorithm that computes all positions reachable from a given position by moving with constant speed and direction for a fixed amount of time (eg. 10min). The resulting positions are filtered to prevent exponential growth and constitute the next isochrone.
 
 #### Map
-VirtualHelm uses geodata provided by [FOSSGIS e.V.](https://www.fossgis.de/) which in turn uses OpenStreetMap data.
+Bitsailor uses geodata provided by [FOSSGIS e.V.](https://www.fossgis.de/) which in turn uses OpenStreetMap data.
 
 Map data is accessed with libgdal. The 'Land Polygons' file with split polygons from openstreetmapdata is used. A geospatial index is computed off-line on the set of polygons. (The non-split polygons file, while smaller, provides a less selective index and is therefor much slower).
 
@@ -64,7 +64,7 @@ Boat polars are provided as CSV files or in JSON format containing separate arra
 	$ shptree land_polygons.shp
 	```
 
-In addition, VirtualHelm requires 
+In addition, Bitsailor requires 
 
 *	[PolarCL](https://github.com/mak08/PolarCL)
 

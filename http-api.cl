@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-05-19 22:36:43>
+;;; Last Modified <michael 2024-05-20 16:14:55>
 
 (in-package :bitsailor)
 
@@ -519,49 +519,6 @@
                        (subseq cycle 4 6)
                        (subseq cycle 6 8)
                        (subseq cycle 9 11)))))
-
-(defvar +wind-tile-lock+
-    (bordeaux-threads:make-lock "wind-tile-lock-ht"))
-
-(defvar *wind-tile-lock-ht*
-  (make-hash-table :test 'equal))
-
-(defun get-wind-tile-lock (path)
-  (let ((name (namestring path)))
-  (bordeaux-threads:with-lock-held (+wind-tile-lock+)
-    (or (gethash name *wind-tile-lock-ht*)
-        (setf (gethash name *wind-tile-lock-ht*)
-              (bordeaux-threads:make-lock name))))))
-
-(defun get-wind-tile (server handler request response)
-  (handler-case 
-      (destructuring-bind (tile cycle resolution offset lat lon)
-          (path request)
-        (let* ((cycle (parse-cycle-string cycle))
-               (offset (read-arg offset 'fixnum))
-               (lat (read-arg lat 'fixnum))
-               (lon (read-arg (first (cl-utilities:split-sequence #\. lon)) 'fixnum))
-               (path (tile-filename cycle resolution offset lat lon
-                                    :tile-root-dir (merge-pathnames (make-pathname :directory '(:relative "tile"))
-                                                                    *web-root-directory*))))
-          (let ((lock (get-wind-tile-lock path)))
-            (bordeaux-threads:with-lock-held (lock)
-              (cond
-                ((probe-file path)
-                 (log2:trace "HIT: ~a" path))
-                (t
-                 (log2:trace "MISS: ~a" path)
-                 (ensure-directories-exist path)
-                 (create-tile path lat (+ lat 10) lon (+ lon 10)
-                              :cycle cycle
-                              :resolution resolution
-                              :from-forecast offset
-                              :to-forecast offset)))))
-          (load-file path response)))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TWA Path

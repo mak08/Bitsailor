@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2023-10-21 13:01:07>
+;;; Last Modified <michael 2024-05-20 16:14:30>
 
 (in-package :bitsailor)
 
@@ -80,7 +80,6 @@
 (register-function "router.removeSession" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceInfo" :authorizer #'vh-function-authorizer)
 (register-function "router.getWind" :authorizer #'vh-function-authorizer)
-(register-function "router.getWindTile" :authorizer (constantly t))
 (register-function "router.getTWAPath" :authorizer #'vh-function-authorizer)
 (register-function "router.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceList" :authorizer (constantly t))
@@ -163,12 +162,6 @@
  :request (:method :get
            :path "/start")
  :handler (:dynamic 'start-page
-           :authentication nil))
-
-(handle
- :request (:method :get
-           :prefix "/tile")
- :handler (:dynamic 'get-wind-tile
            :authentication nil))
 
 (handle

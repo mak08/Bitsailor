@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-02-17 11:50:40>
+;;; Last Modified <michael 2024-05-19 22:36:43>
 
 (in-package :bitsailor)
 
@@ -155,7 +155,7 @@
                               (options)
                               (energy 100)
                               (tack)
-                              (sail -1)
+                              (sail nil)
                               (stepmax (* 24 60 60))
                               (cycle (current-cycle))
                               (slat)
@@ -258,7 +258,7 @@
                                               |dlat|
                                               |dlon|
                                               (|startTime| nil)
-                                              (|cycleTS|  (determine-rs-cycle |gfsMode|) cycle-supplied-p)
+                                              (|cycleTS| nil cycle-supplied-p)
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
   (handler-bind
@@ -273,7 +273,7 @@
                (http-authenticated-user handler request))
              (cycle (if cycle-supplied-p
                         (make-cycle :timestamp (parse-datetime |cycleTS|))
-                        |cycleTS|))
+                        (available-cycle (now))))
              (routing
                (get-routing-presets |presets|
                                     :race-id |raceId|

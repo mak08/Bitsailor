@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-02-16 23:29:08>
+;;; Last Modified <michael 2024-05-20 12:28:18>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -191,7 +191,7 @@
 (defun get-penalized-speed (routepoint tws twa step-size routing)
   (declare (double-float tws twa))
   (let ((race-info (routing-race-info routing)))
-    (typecase race-info
+    (etypecase race-info
       (race-info-rs
        (get-penalized-speed-rs routepoint tws twa step-size routing))
       (race-info-vr

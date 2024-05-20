@@ -2,11 +2,9 @@
 /// Bitsailor Router UI Stateless
 
 import * as Util from './Util.js';
-import WindTile from './WindTile.js';
+import GribCache from './GribCache.js';
 import * as GPX from './GPX.js';
-// import GRIB2 from './grib22json/grib2.js'
-// import * as GRIB2UTILS from './grib22json/grib2utils.js'
-
+// import {loadWind} from './grib2js.js'
 
 var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
@@ -19,7 +17,7 @@ var settings = {
 
 let selectedCursor = 'crosshair';
 
-var windTile = undefined;
+var gribCache = undefined;
 
 var googleMap = null;
 var mapEvent;
@@ -54,8 +52,6 @@ var hdgPath = [];
 
 function setUp (getVMG) {
 
-   //  loadWind('http://localhost:8080/Grib2JS/data/20240218.12.015.0p25.orig.grib2');
-
     setupColors();
     
     // Create a map object, and include the MapTypeId to add
@@ -71,7 +67,7 @@ function setUp (getVMG) {
     };
     var mapDiv = $("#map")[0];
     googleMap = new google.maps.Map(mapDiv, mapProp);
-    
+
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
     
@@ -146,13 +142,6 @@ function setUp (getVMG) {
     });
 }
 
-function loadWind (path) {
-    fetch(path)
-        .then(response => response.arrayBuffer())
-        .then(buffer => GRIB2UTILS.decodeGRIB2File(buffer))
-        .catch(error => console.log(error));
-}
-
 function initMarker (type, title, url, x, y) {
     var marker = new google.maps.Marker({
         position: {"lat": 0, "lng": 0},
@@ -213,9 +202,9 @@ function updateMap () {
         var bounds = getMapBounds();
 
         // Load wind
-        if (!windTile) {
+        if (!gribCache) {
             let canvas = document.getElementById('wind-canvas');
-            windTile = new WindTile(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, settings.resolution, new Date());
+            gribCache = new GribCache(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, settings.resolution, new Date());
         }
 
         var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
@@ -534,7 +523,7 @@ function onMarkerClicked (marker) {
         baseTime = availableForecastCycle();
     }
     
-    redrawWindByTime(time);
+    redrawWindByTime(new Date(time));
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1061,27 +1050,27 @@ function getOffsetTime (offset, cycle=currentCycle) {
 }
 
 function redrawWindByOffset (offset) {
-    redrawWindByTime(getOffsetTime(offset).toISOString());
+    redrawWindByTime(getOffsetTime(offset));
 }
 
 async function getWind (cycle, time) {
     let bounds = getMapBounds();
 
-    let usedCycle = cycle;
+    let usedCycle = new Date(cycle);
 
     try {
-        await windTile.update(bounds, usedCycle, time, settings.resolution);
+        await gribCache.update(bounds, usedCycle, time, settings.resolution);
     } catch (e1) {
         console.log(e1);
         try {
             usedCycle = availableForecastCycle();
-            windTile.update(bounds, usedCycle, time, settings.resolution);
+            gribCache.update(bounds, usedCycle, time, settings.resolution);
         } catch (e2) {
             console.log(e2);
         }
     }
-    document.getElementById('lb_modelrun').innerHTML = usedCycle.substring(11, 13) + 'Z';
-    document.getElementById('lb_index').innerHTML = time.substring(0, 16) + 'Z';
+    document.getElementById('lb_modelrun').innerHTML = usedCycle.toISOString().substring(11, 13) + 'Z';
+    document.getElementById('lb_index').innerHTML = time.toISOString().substring(0, 16) + 'Z';
     
     var offset = (new Date(time) - new Date(usedCycle)) / 3600000;
     ir_index.value = offset;
@@ -1093,7 +1082,7 @@ async function updateWindInfo (event, getVMG) {
     label.textContent = '[ ' + formatLatLngPosition(event.latLng) + ' ]';
     label.__pos = event.latLng;
     
-    if (windTile) {
+    if (gribCache) {
         var zoom = googleMap.getZoom();
             
         var bounds = getMapBounds();
@@ -1123,7 +1112,7 @@ async function updateWindInfo (event, getVMG) {
         var lbDFS = document.getElementById("lb_dfs");
         lbDFS.innerText = `${dfs.toFixed(1)} | ${startBearing.toFixed(1)}°`;
         
-        var wind = await windTile.getWind(curLat, curLng);
+        var wind = await gribCache.getWind(curLat, curLng);
         if (wind) {
             var windDir = wind.direction.toFixed();
             var windSpeed = Util.ms2knots(wind.speed).toFixed(1);
@@ -1248,7 +1237,7 @@ export {
     storeValue,
     twaAnchor,
     updateMap,
-    windTile
+    gribCache
 }
 
 /// EOF

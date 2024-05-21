@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2018
-;;; Last Modified <michael 2023-04-24 21:48:12>
+;;; Last Modified <michael 2024-05-21 22:04:23>
 
 (in-package :bitsailor)
 
@@ -130,7 +130,7 @@
 
 (defun add-user-provisional (email pwhash boatname status activation-secret)
   (sql:?upsert (make-instance 'bitsailor.user_prov
-                              :email email
+                              :email (string-downcase email)
                               :pwhash (string-upcase pwhash)
                               :boatname boatname
                               :status status
@@ -138,7 +138,7 @@
 
 (defun add-user (email pwhash boatname status)
   (sql:?upsert (make-instance 'bitsailor.user
-                              :email email
+                              :email (string-downcase email)
                               :pwhash (string-upcase pwhash)
                               :boatname boatname
                               :status status)))

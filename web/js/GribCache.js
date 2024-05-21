@@ -191,13 +191,7 @@ export default class GribCache {
     }
 
     async windDataMagnitudeVR25 (cycle, resolution, time, lat, lon) {
-        let south = Math.floor(lat / 10) * 10;
-        let north = Math.ceil(lat / 10) * 10;
-        let west = Math.floor(lon / 10) * 10;
-        let east = Math.ceil(lon / 10) * 10;
-
         let curTime = new  Date(time);
-        
         let baseTime1 = new Date(cycle);
         let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
         let baseTime0, offset0;
@@ -221,11 +215,11 @@ export default class GribCache {
         let grib0 = await this.getGribCached(baseTime0, resolution, offset0);
         let grib1 = await this.getGribCached(baseTime1, resolution, offset1);
         if (grib0 && grib1) {
-            let rlat = lat - south,  rlon = lon - west;
-            let lat0 = floor(rlat), lat1 = ceil(rlat)
-            let lon0 = floor(rlon), lon1 = ceil(rlon);
-            let lambdaU = rlat-lat0, lambdaV = rlon-lon0;
-            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, time, lat0, lon0, lat1, lon1)
+            let lat0 = floor(lat), lat1 = ceil(lat)
+            let lon0 = floor(lon), lon1 = ceil(lon);
+            let lambdaU = lat-lat0, lambdaV = lon-lon0;
+            let timeFraction = ((curTime - baseTime0) / 3600000 - offset0) / 3;
+            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
             let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);

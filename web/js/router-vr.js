@@ -459,7 +459,7 @@ import * as Router from './router.js';
         getRaceInfo();
 
         google.maps.event.addListener(Router.googleMap, 'click', computePath);
-        google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
+        // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
         // google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
 
         Router.updateMap();

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-05-20 16:14:55>
+;;; Last Modified <michael 2024-06-19 22:10:31>
 
 (in-package :bitsailor)
 
@@ -680,14 +680,23 @@
            (reset-nmea-listener user-id race-id host port)
            (format nil "Connected to ~a:~a" host port)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Statistics
+;;; Router status & stats
+
+(defstruct (routerstatus (:constructor routerstatus (requestcount datasource))) requestcount datasource)
 
 (defun |getStatistics| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (get-router-statistics))
-
-
-(defun get-router-statistics ()
-  (format nil "~a" (length *last-request*)))
+  (let ((datasource
+          (cond
+            ((string= cl-weather:*noaa-gfs-path* cl-weather::+NCEP-NOMADS+)
+             "NOMADS")
+            ((string= cl-weather:*noaa-gfs-path* cl-weather::+NCEP-FTPPRD+)
+             "FTPPRD")
+            (t
+             cl-weather:*noaa-gfs-path*))))
+    (with-output-to-string (s)
+      (json s
+            (routerstatus (length *last-request*)
+                          datasource)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

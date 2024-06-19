@@ -65,8 +65,11 @@ import * as Util from './Util.js';
 
 
     function displayStatistics (request) {
-        var tbRequests = document.getElementById('tb_requests');
-        tbRequests.value = request.responseText;
+        let tbRequests = document.getElementById('tb_requests');
+        let tbDatasource = document.getElementById('tb_datasource');
+        let routerstatus = JSON.parse(request.responseText);
+        tbRequests.value = routerstatus.requestcount;
+        tbDatasource.value = routerstatus.datasource;
     }
     
     function handleError (xhr) {

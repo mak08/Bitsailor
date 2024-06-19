@@ -3,8 +3,7 @@
 
 `use strict`;
 
-import * as Util from './Util.js';
-import {parseGrib2ByteArray} from './JSGrib/grib22json/index.js';
+import {decodeGRIB2ArrayBuffer} from './JSGrib/JSGrib.js';
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Aux math functions
@@ -54,11 +53,11 @@ function getValue(grib, offset, lat, lon) {
     lat = 90 - lat;
     lon = lon>=0 ? lon : lon+360;
     
-    let uData = grib[0].data.values;
-    let vData = grib[1].data.values;
+    let uData = grib.getMessageByParameterName('UGRD').DATA_SECTION.data;
+    let vData = grib.getMessageByParameterName('VGRD').DATA_SECTION.data;
 
-    let nLon = grib[0].data.grid.numLongPoints;
-    let nLat = grib[0].data.grid.numLatPoints;
+    let nLon = grib.messages[0].GRID_DEFINITION_SECTION.Ni;
+    let nLat = grib.messages[0].GRID_DEFINITION_SECTION.Nj;
 
     let resLon = nLon/360;
     let resLat = (nLat-1)/180;
@@ -119,29 +118,6 @@ function interpolateTemporal (grib0, grib1, offset0, offset1, timeFraction, lat0
     }
 }
 
-function drawWindArrow(ctx, x, y, direction, speed) {
-    direction = direction + 90;
-    if (direction > 360) {
-        direction = direction - 360;
-    }
-    ctx.fillStyle = colors[ms2bf(speed)];
-    ctx.strokeStyle = colors[ms2bf(speed)];
-    ctx.save();
-    ctx.translate(x , y);
-    ctx.rotate((direction*Math.PI/180));
-    var scale = (speed>0)?0.5 + speed/50:0;
-    ctx.scale(scale, scale);
-    ctx.beginPath();
-    ctx.moveTo(-0, 0);
-    ctx.lineTo(-15 * 6, 12 * 6);
-    ctx.lineTo(18 * 6, 0);
-    ctx.lineTo(-15 * 6, -12 * 6);
-    ctx.closePath()
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 /// Class GribCache 
 
@@ -194,32 +170,37 @@ export default class GribCache {
         let curTime = new  Date(time);
         let baseTime1 = new Date(cycle);
         let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
-        let baseTime0, offset0;
+        let baseTime0 = new Date(baseTime1 - (6 *  3600000));
+        let offset0 = floor((curTime - baseTime0) / 3600000, 3);
         
-        if (offset1 <= 6) {
+        if (offset1 <= 3) {
             // use previous forecast only
-            baseTime0 = new Date(baseTime1 - (6 * 60 * 60 * 1000));
-            offset0 = floor((curTime - baseTime0) / 3600000, 3);
             baseTime1 = baseTime0;
             offset1 = offset0 + 3;
-        } else if (offset1 == 9) {
+        } else if (offset1 == 6) {
             // merge with previous
-            baseTime0 = new Date(baseTime1 - (6 * 60 * 60 * 1000));
-            offset0 = floor((curTime - baseTime0) / 3600000, 3);
         } else {
             // use current forecast only
             baseTime0 = baseTime1;
             offset0 = offset1 - 3;
         }
-        
+
+        // console.log('____________________________');
+        // console.log(`Time : ${time.toISOString()}`);
+        // console.log(`Cycle: ${cycle.toISOString()}`);
+        // console.log(`baseTime0: ${baseTime0.toISOString()} + ${offset0}`);
+        // console.log(`baseTime1: ${baseTime1.toISOString()} + ${offset1}`);
+
         let grib0 = await this.getGribCached(baseTime0, resolution, offset0);
         let grib1 = await this.getGribCached(baseTime1, resolution, offset1);
         if (grib0 && grib1) {
             let lat0 = floor(lat), lat1 = ceil(lat)
             let lon0 = floor(lon), lon1 = ceil(lon);
             let lambdaU = lat-lat0, lambdaV = lon-lon0;
-            let timeFraction = ((curTime - baseTime0) / 3600000 - offset0) / 3;
-            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
+            let timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
+            // console.log(`Fraction: ${timeFraction}`);
+            // console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+           let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
             let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
@@ -288,9 +269,32 @@ export default class GribCache {
                 var pointX = canvasLeft + ((x - left) /  mapWidth) * ctx.canvas.width;
                 var pointY = (y - top) / mapHeight * ctx.canvas.height;
                 let w = await this.windDataMagnitude(cycle, resolution, time, latLng.lat(), latLng.lng()); 
-                drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
+                this.drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
             }
         }
+    }
+
+    drawWindArrow(ctx, x, y, direction, speed) {
+        direction = direction + 90;
+        if (direction > 360) {
+            direction = direction - 360;
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = colors[ms2bf(speed)];
+        ctx.strokeStyle = colors[ms2bf(speed)];
+        ctx.translate(x , y);
+        ctx.rotate((direction*Math.PI/180));
+        var scale = (speed>0)?0.5 + speed/50:0;
+        ctx.scale(scale, scale);
+        ctx.moveTo(-0.00, 0.00);
+        ctx.lineTo(-15 * 6, 12 * 6);
+        ctx.lineTo(18 * 6, 0);
+        ctx.lineTo(-15 * 6, -12 * 6);
+        ctx.closePath()
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
     }
     
     ////////////////////////////////////////////////////////////////////////////////
@@ -368,7 +372,7 @@ export default class GribCache {
                 throw new Error(`${response.statusText}`);
             }
             let buffer = await response.arrayBuffer();
-            let grib = parseGrib2ByteArray(buffer);
+            let grib = decodeGRIB2ArrayBuffer(buffer);
             this.cachePutGrib(cycle, res, offset, grib);
             return grib;
         } catch (e) {

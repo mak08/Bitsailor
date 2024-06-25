@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-05-20 12:28:18>
+;;; Last Modified <michael 2024-06-24 22:54:43>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -191,15 +191,11 @@
 (defun get-penalized-speed (routepoint tws twa step-size routing)
   (declare (double-float tws twa))
   (let ((race-info (routing-race-info routing)))
-    (etypecase race-info
-      (race-info-rs
-       (get-penalized-speed-rs routepoint tws twa step-size routing))
-      (race-info-vr
-       (ecase *penalty-mode-vr*
-         (:simple
-          (get-penalized-speed-vr-simple routepoint tws twa step-size routing))
-         (:dynamic
-          (get-penalized-speed-vr routepoint tws twa step-size routing)))))))
+    (ecase *penalty-mode-vr*
+      (:simple
+       (get-penalized-speed-vr-simple routepoint tws twa step-size routing))
+      (:dynamic
+       (get-penalized-speed-vr routepoint tws twa step-size routing)))))
 
 (declaim (inline get-origin-angle))
 (defun get-origin-angle (start-pos new-pos origin-distance)
@@ -266,12 +262,9 @@
                                      (let* ((origin-distance (course-distance start-pos new-pos))
                                             (dest-distance (course-distance new-pos (routing-dest routing)))
                                             (origin-angle (get-origin-angle start-pos new-pos origin-distance))
-                                            (energy (typecase (routing-race-info routing)
-                                                      (race-info-rs 100d0)
-                                                      (t
-                                                       (ecase *penalty-mode-vr*
-                                                         (:simple 0d0)
-                                                         (:dynamic (energy routepoint reason wind-speed step-size)))))))
+                                            (energy (ecase *penalty-mode-vr*
+                                                      (:simple 0d0)
+                                                      (:dynamic (energy routepoint reason wind-speed step-size)))))
                                        (when (and
                                               (heading-between left right origin-angle)
                                               (< (+ (expt origin-distance 2) (expt  dest-distance 2))
@@ -496,9 +489,6 @@
     ;; Wrap around
     (setf (aref result (1- (length result))) (aref result 1))
     result))
-
-(defun get-race-limits-rs (leg-info)
-  nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping

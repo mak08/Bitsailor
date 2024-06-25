@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-06-19 22:10:31>
+;;; Last Modified <michael 2024-06-24 23:53:37>
 
 (in-package :bitsailor)
 
@@ -48,7 +48,6 @@
              (race-info (race-info race-id))
              (page-base-name
                (typecase race-info
-                 (race-info-rs "router-rs")
                  (race-info-vr "router-vr")
                  (null
                   (error "Unknown race ~a" race-id))))
@@ -171,9 +170,7 @@
                                          (joref (joref (race-info-data race-info) "boat") "polar_id"))))
          (options
            (or options
-               (if (string= presets "RS")
-                   '("realsail")
-                   '("hull" "foil" "winch" "heavy" "light" "reach"))))
+               '("hull" "foil" "winch" "heavy" "light" "reach")))
          (polars (get-combined-polars polars-id (encode-options options))))
     (when (and vr-finewinds
                (not resolution-provided-p))
@@ -206,42 +203,19 @@
      :interpolation (cond
                       (vr-finewinds
                        :enorm)
-                      ((string= presets "RS")
-                       :bilinear)
                       (t
                        :vr))
      :polars polars
      :cycle cycle
-     :merge-start  (if (string= presets "RS")
-                       (get-rs-merge-delay cycle gfs-mode)
-                       (if vr-finewinds
-                           6d0
-                           4d0))
-     :merge-window (if (string= presets "RS")
-                       0d0
-                       (if vr-finewinds 3d0 2d0))
+     :merge-start (if vr-finewinds
+                      6d0
+                      4d0)
+     :merge-window (if vr-finewinds 3d0 2d0)
      :winch-mode (if (member "winch" options :test #'string=)
                      "pro"
                      "std")
-     :penalties  (if (string= presets "RS")
-                     (make-penalty :sail 0.975d0 :tack 1d0 :gybe 1d0)
-                     (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0))
-     :simplify-route (string= presets "RS"))))
-
-(defun get-rs-merge-delay (cycle gfs-mode)
-  (values
-   (cond
-     ((string= gfs-mode "06h")
-      6d0)
-     ((string= gfs-mode "12h")
-      (case (cycle-run cycle)
-        ((6 18)
-         6d0)
-        ((0 12)
-         12d0)))
-     (t
-      (error "Unknown GFS mode ~a" gfs-mode)))
-   cycle))
+     :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0)
+     :simplify-route nil)))
 
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
@@ -303,87 +277,6 @@
         (values
          (with-output-to-string (s)
            (json s routeinfo))))))
-
-(defun vh:|getRouteRS| (handler request response &key
-                                                (|polarsID| "aA32bToWbF")
-                                                (|gfsMode| "06h")
-                                                |latStart|
-                                                |lonStart|
-                                                |latDest|
-                                                |lonDest|
-                                                (|cycleTS| (available-cycle (now)) cycle-supplied-p)
-                                                (|duration| (* 4 3600))
-                                                (|resolution| "1p00"))
-  (|getRouteRS| handler request response
-                      :|polarsID| |polarsID|
-                      :|gfsMode| |gfsMode|
-                      :|latStart| |latStart|
-                      :|lonStart| |lonStart|
-                      :|latDest| |latDest|
-                      :|lonDest| |lonDest|
-                      :|cycleTS| |cycleTS|
-                      :|duration| |duration|
-                      :|resolution| |resolution|))
-
-(defun |getRouteRS| (handler request response &key
-                                                (|polarsID| "aA32bToWbF")
-                                                (|gfsMode| "06h")
-                                                |latStart|
-                                                |lonStart|
-                                                |latDest|
-                                                |lonDest|
-                                                (|cycleTS| (determine-rs-cycle |gfsMode|) cycle-supplied-p)
-                                                (|duration| (* 4 3600))
-                                                (|resolution| "1p00"))
-  (handler-case
-      (let* ((*read-default-float-format* 'double-float)
-             (user-id
-               (http-authenticated-user handler request))
-             (cycle (if cycle-supplied-p
-                        (make-cycle :timestamp (parse-datetime |cycleTS|))
-                        |cycleTS|))
-             (routing
-               (get-routing-presets "RS"
-                                    :options '("realsail")
-                                    :resolution |resolution|
-                                    :polars-id |polarsID|
-                                    :gfs-mode |gfsMode|
-                                    :stepmax (min (* *max-route-hours* 3600) ;; 2d
-                                                  (read-arg |duration|))
-                                    :cycle cycle
-                                    :slat (read-arg |latStart| 'double-float)
-                                    :slon (read-arg |lonStart| 'double-float)
-                                    :dlat (read-arg |latDest| 'double-float)
-                                    :dlon (read-arg |lonDest| 'double-float)))
-             (routeinfo
-               (get-route routing)))
-        (log2:info "User:~a Race:(RS) Status ~a ~a"
-                   user-id
-                   (routeinfo-status routeinfo)
-                   (routeinfo-stats routeinfo))
-        (values
-         (with-output-to-string (s)
-           (json s routeinfo))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
-
-(defun determine-rs-cycle (gfs-mode)
-  (let* ((cycle
-           (available-cycle (now)))
-         (run
-           (cycle-run cycle)))
-    (cond
-      ((string= gfs-mode "12h")
-       (if (or (eql run 0)
-               (eql run 12))
-           (previous-cycle cycle)
-           cycle))
-      ((string= gfs-mode "06h")
-       cycle)
-      (T
-       (error "Unknown GFS mode ~a" gfs-mode)))))
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))
@@ -607,84 +500,28 @@
     (with-output-to-string (s)
       (json s races))))
 
-
 (defun get-raceinfo (race)
-  (cond
-    ((joref race "objectId")
-     (make-raceinfo
-      :type "rs"
-      :name (joref race "name")
-      :id (joref race "objectId")
-      :gfs025 (ecase (joref race "gfs025")
-                (false "no")
-                (true "yes")
-                ((nil) "(no)"))
-      :record  (ecase (joref race "record")
-                 (false "no")
-                 (true "yes")
-                 ((nil) "no"))
-      :class (joref (joref race "polar") "classBoat")
-      :start-time (joref (joref race "start") "iso")
-      :start-pos (make-latlng
-                  :lat (joref (joref race "startLocation") "latitude")
-                  :lng (joref (joref race "startLocation") "longitude"))))
-    ((joref race "_id")
-     (let* ((id (joref race "_id"))
-            (boat (joref race "boat"))
-            (start (joref race "start")))
-       (make-raceinfo
-        :type "vr"
-        :name (joref race "name")
-        :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
-        :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
-        :record (when (string= (joref (joref race "race") "type") "record") "yes")
-        :class (joref boat "label")
-        :start-time (joref start "date")
-        :start-pos  (make-latlng
-                     :lat (joref start "lat")
-                     :lng (joref start "lon")))))))
+  (let* ((id (joref race "_id"))
+         (boat (joref race "boat"))
+         (start (joref race "start")))
+    (make-raceinfo
+     :type "vr"
+     :name (joref race "name")
+     :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
+     :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
+     :record (when (string= (joref (joref race "race") "type") "record") "yes")
+     :class (joref boat "label")
+     :start-time (joref start "date")
+     :start-pos  (make-latlng
+                  :lat (joref start "lat")
+                  :lng (joref start "lon")))))
 
-;;; The web page can't fetch the position from the Telnet port itself.
-(defun |getBoatPosition| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (when *disable-nmea*
-    (error "NMEA support is currently disabled. Please enter position manually."))
-  (let* ((user-id (http-authenticated-user handler request))
-         (race-id (get-routing-request-race-id request))
-         (host |host|)
-         (port |port|))
-    (log2:info "User:~a RaceID:~a Port:~a" user-id race-id port)
-    (unless (ignore-errors
-             (numberp (parse-integer port)))
-      (error "Invalid NMEA port ~a" port))
-    (unless (nmea-connection user-id race-id)
-      (reset-nmea-listener user-id race-id host port))
-    (with-output-to-string (s)
-      (json s
-            (get-nmea-position user-id race-id)))))
-
-(defun |resetNMEAConnection| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
-  (when *disable-nmea*
-    (error "NMEA support is currently disabled. Please enter position manually."))
-  (let* ((user-id (http-authenticated-user handler request))
-         (race-id (get-routing-request-race-id request))
-         (host |host|)
-         (port |port|))
-    (log2:info "User:~a RaceID:~a Connection: ~a:~a" user-id race-id host port)
-    (cond ((equal port "")
-           (remove-nmea-listener user-id race-id)
-           (format nil "Disconnected from ~a:~a" host port))
-          (t
-           (unless (ignore-errors
-                    (numberp (parse-integer port)))
-             (error "Invalid NMEA port ~a" port))
-           (reset-nmea-listener user-id race-id host port)
-           (format nil "Connected to ~a:~a" host port)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router status & stats
 
 (defstruct (routerstatus (:constructor routerstatus (requestcount datasource))) requestcount datasource)
 
-(defun |getStatistics| (handler request response &key (|host| "nmea.realsail.net") (|port| ""))
+(defun |getStatistics| (handler request response)
   (let ((datasource
           (cond
             ((string= cl-weather:*noaa-gfs-path* cl-weather::+NCEP-NOMADS+)

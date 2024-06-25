@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-01-10 23:11:37>
+;;; Last Modified <michael 2024-06-24 22:50:14>
 
 (in-package :bitsailor)
 
@@ -55,8 +55,6 @@
       (setf options (dpb 1 (byte 1 +hgn+) options)))
     (when (member "reach" option-list :test #'string=)
       (setf options (dpb 1 (byte 1 +cd0+) options)))
-    (when (member "realsail" option-list :test #'string=)
-      (setf options (dpb 1 (byte 1 +c0rs+) options)))
     options))
 
 (declaim (inline compute-max-speed))
@@ -243,8 +241,6 @@
   (let* ((json-object  (parse-json-file filename)))
     (cond ((joref json-object "scriptData")
            (translate-polars-vr filename json-object))
-          ((joref json-object "objectId")
-           (translate-polars-rs filename json-object))
           (t
            (error "Unknown polars format")))))
 

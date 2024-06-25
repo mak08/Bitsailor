@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-26 15:49:35>
+;;; Last Modified <michael 2024-06-24 22:20:50>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -34,7 +34,6 @@
    "*MAX-ISO-POINTS*"
    "*VALID-VMG-ANGLES*"
    "*PENALTY-MODE-VR*"
-   "*PENALTY-MODE-RS*"
    "*TRACKS*"
    ;; HTTP API
    "GET-PAGE"
@@ -48,7 +47,6 @@
    "setRoute"
    "setParameter"
    "getRoute"
-   "getRouteRS"
    "getRaceList"
    "resetNMEAConnection"
    "getBoatPosition"
@@ -64,13 +62,6 @@
    "LIMIT-EAST"
    "EASTBOUND-SOUTH-GATE"
    "EASTBOUND-NORTH-GATE"))
-
-(defpackage VIRTUALHELM
-  (:nicknames "VH")
-  (:use "COMMON-LISP")
-  (:export
-   ;; Parameters & configuration
-   "getRouteRS"))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

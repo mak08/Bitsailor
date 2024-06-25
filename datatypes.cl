@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2023-03-29 20:35:16>
+;;; Last Modified <michael 2024-06-24 22:51:15>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -10,11 +10,7 @@
 
 (defstruct race-info data)
 (defstruct (race-info-vr (:include race-info)) (mode "vr"))
-(defstruct (race-info-rs (:include race-info)) (mode "rs"))
-
 (defstruct penalty (sail 0.95d0) (tack 0.95d0) (gybe 0.95d0))
-
-(defstruct nmea-connection host port socket% cache%)
 
 (defstruct posinfo time position speed course)
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2023-10-21 13:11:15>
+;;; Last Modified <michael 2024-06-24 22:20:08>
 
 
 (in-package :bitsailor)
@@ -29,7 +29,6 @@
 (defparameter *max-route-hours* (* 24 12))
 (defparameter *valid-vmg-angles* t)
 (defparameter *penalty-mode-vr* :dynamic)
-(defparameter *penalty-mode-rs* :simple)
 
 (defvar *api-key*)
 (defvar *use-bitmap* nil)

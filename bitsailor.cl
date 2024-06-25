@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-02-06 21:07:36>
+;;; Last Modified <michael 2024-06-24 23:49:49>
 
 (in-package :bitsailor)
 
@@ -34,7 +34,7 @@
 ;;; 3 - Load map
 ;;; 4 - Load polars and races
 ;;; 5 - Start timer loop
-;;; 6 - Start NMEA listener
+;;; 6 - 
 ;;; 7 - Cleanup old weather data
 ;;; 8 - Start weather updates
 ;;; 9 - Configure and start web server from *server-config*   
@@ -68,7 +68,6 @@
     (log2:info "Opening database ~a" *db*)
     (setf *dbcon* (sqlite-client:%connect% *db* sqlite-client::+sqlite_open_fullmutex+))
 
-
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
     (if *use-bitmap*
@@ -81,22 +80,12 @@
     ;; Start timers
     (timers:start-timer-loop)
 
-    (setf *racelist-timer*
-          (timers:add-timer (lambda ()
-                              (fetch-rs-race-definitions))
-                            :id (format nil "UPDATE-RACELIST")
-                            :hours nil
-                            :minutes '(0 15 30 45)))
-
     (setf *statistics-timer*
           (timers:add-timer (lambda ()
                               (update-statistics))
                             :id (format nil "UPDATE-STATISTICS")
                             :hours nil
                             :minutes nil))
-
-    ;; NMEA
-    (restart-nmea-listener-loop)
     
     ;; Cleanup old forecasts once (also called periodically from cleanup timer)
     (cleanup-cycles :dry-run nil)
@@ -171,35 +160,7 @@
                 ((typep json-object 'array)
                  (store-race-data-vr json-object))
                 (T
-                 (log2:warning "Skipping ~a" name)))))))
-  (ignore-errors
-   (bordeaux-threads:make-thread (lambda () 
-                                   (fetch-rs-race-definitions))
-                                 :name "FETCH-RS-RACES")))
-
-(defun fetch-rs-race-definitions ()
-  (let* ((response (curl:http "https://frontend.realsail.net/classes/Race"
-                              :headers '(("accept" "*/*")
-                                         ("accept-language" "en-US,en")
-                                         ("content-type" "application/json")
-                                         ("referer" "https://bitsailor.net/"))
-                              :body "{\"where\":{\"visible\":true,\"version\":3},\"limit\":9007199254740991,\"order\":\"start\",\"_method\":\"GET\",\"_ApplicationId\":\"JFvkachvtsjN4f1glZ1ZHiGrchnkyeFtY9gNWbN4\",\"_JavaScriptKey\":\"e4QehnvfIIA1nrH0wc35onJkMq3fZA09uMNad0Ct\",\"_ClientVersion\":\"js2.19.0\",\"_InstallationId\":\"b1e14dd0-b68e-4cc0-9917-b47168ad350e\"}"))
-         (json-object (parse-json (curl:http-response-body response))))
-
-    (loop
-      :for race-def :across (joref json-object "results")
-      :do
-         (let* ((polars (joref race-def "polar"))
-                (polars-id (joref  polars "objectId")))
-           (setf (joref polars "classBoat") (polars-label (get-polars-by-id polars-id)))))
-
-    (bordeaux-threads:with-lock-held (+races-ht-lock+)
-      (maphash (lambda (key entry)
-                 (when (typep entry 'race-info-rs)
-                   (remhash key *races-ht*)))
-               *races-ht*)
-      (store-race-data-rs json-object))))
-
+                 (log2:warning "Skipping ~a" name))))))))
 
 (defun update-statistics ()
   (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))

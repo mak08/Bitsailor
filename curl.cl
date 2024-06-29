@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2023-06-03 17:13:55>
+;;; Last Modified <michael 2024-06-29 12:50:15>
 
 (defpackage :curl
   (:use :cl)
@@ -22,7 +22,7 @@
 (defstruct http-header name value)
 
 (defun http (url &key (headers ()) (method :get) (body nil))
-  (ecase method ((:get :head)))
+  (ecase method ((:get :head :post)))
   (let* ((head-flag (if (eq method :head) "-I" ""))
          (rbody (cond
                   ((and body (eq method :head))

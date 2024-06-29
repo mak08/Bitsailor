@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-06-24 23:49:49>
+;;; Last Modified <michael 2024-06-29 21:32:53>
 
 (in-package :bitsailor)
 
@@ -149,18 +149,53 @@
     (maphash function *races-ht*)))
 
 (defun load-race-definitions (&key (directory *races-dir*))
-  (let ((path (merge-pathnames directory (make-pathname :name :wild :type "json"))))
-    (log2:info "Loading races from ~a" path)
+  (log2:info "Loading races from URL")
+  (let ((races (get-leg-descriptions)))
     (bordeaux-threads:with-lock-held (+races-ht-lock+)
       (clrhash *races-ht*)
+      (store-race-data-vr races))))
+
+(defun get-leg-descriptions ()
+  (let* ((response
+          (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest"
+                     :method :post
+                     :body "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"3d87c3bb-8bf9-4d79-a0b3-4ed178287a35\",\"deviceOS\":\"WEBGL\"}"))
+         (body (parse-json (curl::http-response-body response)))
+         (token (joref body "authToken"))
+         (user-id (joref body "userId"))
+         (r 621356040007290000)
+         (d (+ r (* 10000 (timestamp-to-unix (now))))))
+    (let* ((response
+             (event-request :|authToken| token
+                            :|playerId| user-id
+                            :|requestId|  (format nil "~a_1" d)
+                            :|eventKey| "Leg_GetList"))
+           (leglist (joref
+                     (joref (parse-json (curl::http-response-body response))
+                            "scriptData")
+                     "res"))
+           (legids (loop
+                     :for legdef :across leglist
+                     :collect (list (joref legdef "raceId")
+                                    (joref legdef "legNum")
+                                    (joref legdef "raceName")))))
       (loop
-        :for name :in (directory path)
-        :do (let ((json-object (parse-json-file name)))
-              (cond
-                ((typep json-object 'array)
-                 (store-race-data-vr json-object))
-                (T
-                 (log2:warning "Skipping ~a" name))))))))
+        :for (race-id leg-num &rest _) :in legids
+        :for k :from 2
+        :collect (curl::http-response-body
+                  (event-request :|authToken| token
+                                 :|playerId| user-id
+                                 :|requestId|  (format nil "~a_~a" d k)
+                                 :|eventKey| "Leg_GetInfo"
+                                 :|race_id| race-id
+                                 :|leg_num| leg-num))))))
+
+(defun event-request (&rest key-pairs &key (|@class| "LogEventRequest") |authToken| |playerId| |requestId| |eventKey| &allow-other-keys)
+  (let ((body
+          (format nil "{~{\"~a\": \"~a\"~^, ~}}" (list* :|@class| |@class| :|authToken| |authToken| :|playerId| |playerId| :|requestId| |requestId| :|eventKey| |eventKey| key-pairs))))
+    (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/LogEventRequest"
+               :method :post
+               :body body)))
 
 (defun update-statistics ()
   (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))

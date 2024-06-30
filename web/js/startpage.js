@@ -42,6 +42,8 @@ import * as Util from './Util.js';
             var row = tbodyVR.insertRow(-1);
             var date = new Date(race["start-time"]).toISOString();
             appendTextCell(row, race.name);
+            appendTextCell(row, race.category);
+            appendTextCell(row, race.level);
             appendTextCell(row, race.class);
             appendTextCell(row, race.record || 'no');
             appendTextCell(row, race.gfs025);

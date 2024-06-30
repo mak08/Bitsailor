@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-06-24 23:53:37>
+;;; Last Modified <michael 2024-06-30 17:54:44>
 
 (in-package :bitsailor)
 
@@ -477,7 +477,7 @@
        (with-output-to-string (s)
          (json s race-info)))))
 
-(defstruct raceinfo type name id gfs025 record class start-time closing-time start-pos finish-pos closed)
+(defstruct raceinfo type name id gfs025 record class level category start-time closing-time start-pos finish-pos closed)
 
 (defun |getRaceListAdmin| (handler request response &key (|forceReload| "false"))
   ;; Admin only!
@@ -498,7 +498,8 @@
        (declare (ignore k))
        (push (get-raceinfo (race-info-data v)) races)))
     (with-output-to-string (s)
-      (json s races))))
+      (json s races)
+      )))
 
 (defun get-raceinfo (race)
   (let* ((id (joref race "_id"))
@@ -511,6 +512,8 @@
      :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
      :record (when (string= (joref (joref race "race") "type") "record") "yes")
      :class (joref boat "label")
+     :level (joref race "priceLevel")
+     :category  (joref race "vsrLevel")
      :start-time (joref start "date")
      :start-pos  (make-latlng
                   :lat (joref start "lat")

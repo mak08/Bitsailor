@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-06-29 21:32:53>
+;;; Last Modified <michael 2024-07-05 19:34:20>
 
 (in-package :bitsailor)
 
@@ -59,6 +59,17 @@
       (t
        (log2:warning "Found neither ~a nor ~a" local-rcfile home-rcfile)))
 
+    (bt:make-thread
+     (lambda ()
+       (get-all-polars)
+       (load-polars-directory))
+     :name "LOAD-POLARS")
+
+    (bt:make-thread
+     (lambda ()
+       (load-race-definitions :directory *races-dir*))
+     :name "LOAD-RACES")
+
     (multiple-value-bind
           (success error)
         (ignore-errors
@@ -73,9 +84,6 @@
     (if *use-bitmap*
         (ensure-bitmap)
         (ensure-map))
-    
-    (load-polars-directory)
-    (load-race-definitions :directory *races-dir*)
 
     ;; Start timers
     (timers:start-timer-loop)
@@ -189,6 +197,58 @@
                                  :|eventKey| "Leg_GetInfo"
                                  :|race_id| race-id
                                  :|leg_num| leg-num))))))
+
+(defun get-all-polars (&key (directory *polars-dir*) (min-id 0) (max-id 21))
+  (let* ((response
+          (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest"
+                     :method :post
+                     :body "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"3d87c3bb-8bf9-4d79-a0b3-4ed178287a35\",\"deviceOS\":\"WEBGL\"}"))
+         (body (parse-json (curl::http-response-body response)))
+         (token (joref body "authToken"))
+         (user-id (joref body "userId"))
+         (r 621356040007290000)
+         (d (+ r (* 10000 (timestamp-to-unix (now))))))
+    (loop
+      :for id :from min-id :to max-id
+      :for k :from 2
+      :do (let* ((polar-id (format nil "~a" id))
+                 (response
+                   (event-request :|authToken| token
+                                  :|playerId| user-id
+                                  :|requestId|  (format nil "~a_1" k)
+                                  :|eventKey| "Meta_GetPolar"
+                                  :|polar_id| id))
+                 (status (curl:http-response-status response)))
+            (handler-case
+                (if (eql (curl:http-status-code status) 200)
+                    (let* ((body
+                             (parse-json (curl:http-response-body response)))
+                           (label
+                             (joref (joref (joref body "scriptData") "polar") "label"))
+                           (pos
+                             (position #\/ label))
+                           (name
+                             (subseq label (if pos (1+ pos)  0)))
+                           (path (make-pathname :name (format nil"~a" id)
+                                                :directory (pathname-directory directory)
+                                                :type "json")))
+                      (ensure-directories-exist path)
+                      (log2:info "Saving ~a~%" path)
+                      (with-open-file (f path
+                                         :direction :output
+                                         :if-does-not-exist :create
+                                         :if-exists :supersede)
+                        (json f body)))
+                    (format t "~a~%" status))
+              (error (e)
+                (log2:error "~a ~a" e status)))))))
+
+(defun authentication-request (&key (|@class| "AuthenticationRequest") |password| |userName|)
+  (let ((body
+          (format nil "{~{\"~a\": \"~a\"~^, ~}}" (list :|@class| |@class| :|password| |password| :|userName| |userName|))))
+    (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/AuthenticationRequest"
+               :method :post
+               :body body)))
 
 (defun event-request (&rest key-pairs &key (|@class| "LogEventRequest") |authToken| |playerId| |requestId| |eventKey| &allow-other-keys)
   (let ((body

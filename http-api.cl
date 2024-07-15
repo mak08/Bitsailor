@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-06-30 17:54:44>
+;;; Last Modified <michael 2024-07-14 23:08:19>
 
 (in-package :bitsailor)
 
@@ -215,7 +215,7 @@
                      "pro"
                      "std")
      :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0)
-     :simplify-route nil)))
+     :simplify-route t)))
 
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
@@ -462,6 +462,37 @@
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Commands
+
+(defun handle-options (server handler request response)
+  (format t "~a~%" request)
+  (format t "~a~%" (http-body request))
+  (setf (http-header response :|Access-Control-Allow-Origin|)
+        "*")
+  (setf (http-header response :|Access-Control-Allow-Methods|)
+        "POST, GET, OPTIONS")
+  (setf (http-header response :|Access-Control-Allow-Headers|)
+        "Authorization, Content-Type")
+  (setf (status-code response) 204)
+  (setf (status-text response) "No Content"))
+
+(defun execute-commands (server handler request response)
+  (format t "~a~%" request)
+  (format t "~a~%" (http-body request))
+  (setf (http-header response :|Content-Type|)
+        "application/json")
+  
+  (let* ((payload (parse-json (http-body request)))
+         (device-id (joref payload "deviceId"))
+         (body (joref payload "body"))
+         (url
+           (format nil "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/LogEventRequest" device-id)))
+    (log2:info "~a~%" body)
+    (let ((reply
+            (curl:http url :method :post :body (with-output-to-string (s) (json s body  :preserve-slotname-case t)))))
+      (setf (http-body response) (curl:http-response-body reply)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Race list  & race info

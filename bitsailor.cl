@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-07-05 19:34:20>
+;;; Last Modified <michael 2024-07-06 17:38:48>
 
 (in-package :bitsailor)
 
@@ -163,16 +163,17 @@
       (clrhash *races-ht*)
       (store-race-data-vr races))))
 
+(defun request-timestamp ()
+  (let* ((r 641356040007290000))
+    (+ r (* 10000 (timestamp-to-unix (now))))))
+
 (defun get-leg-descriptions ()
   (let* ((response
-          (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest"
-                     :method :post
-                     :body "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"3d87c3bb-8bf9-4d79-a0b3-4ed178287a35\",\"deviceOS\":\"WEBGL\"}"))
+          (device-authentication-request))
          (body (parse-json (curl::http-response-body response)))
          (token (joref body "authToken"))
          (user-id (joref body "userId"))
-         (r 621356040007290000)
-         (d (+ r (* 10000 (timestamp-to-unix (now))))))
+         (d (request-timestamp)))
     (let* ((response
              (event-request :|authToken| token
                             :|playerId| user-id
@@ -198,21 +199,16 @@
                                  :|race_id| race-id
                                  :|leg_num| leg-num))))))
 
-(defun get-all-polars (&key (directory *polars-dir*) (min-id 0) (max-id 21))
+(defun get-all-polars (&key (directory *polars-dir*) (min-id 1) (max-id 21))
   (let* ((response
-          (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest"
-                     :method :post
-                     :body "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"3d87c3bb-8bf9-4d79-a0b3-4ed178287a35\",\"deviceOS\":\"WEBGL\"}"))
+           (device-authentication-request))
          (body (parse-json (curl::http-response-body response)))
          (token (joref body "authToken"))
-         (user-id (joref body "userId"))
-         (r 621356040007290000)
-         (d (+ r (* 10000 (timestamp-to-unix (now))))))
+         (user-id (joref body "userId")))
     (loop
       :for id :from min-id :to max-id
       :for k :from 2
-      :do (let* ((polar-id (format nil "~a" id))
-                 (response
+      :do (let* ((response
                    (event-request :|authToken| token
                                   :|playerId| user-id
                                   :|requestId|  (format nil "~a_1" k)
@@ -243,6 +239,13 @@
               (error (e)
                 (log2:error "~a ~a" e status)))))))
 
+(defun device-authentication-request (&key (|deviceId| "3d87c3bb-8bf9-4d79-a0b3-4ed178287a35") (|device| "Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt"))
+  (let ((url
+          (format nil "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest" |device|))
+        (body
+          (format nil "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"~a\",\"deviceOS\":\"WEBGL\"}" |deviceId|)))
+    (curl:http url :method :post :body body)))
+
 (defun authentication-request (&key (|@class| "AuthenticationRequest") |password| |userName|)
   (let ((body
           (format nil "{~{\"~a\": \"~a\"~^, ~}}" (list :|@class| |@class| :|password| |password| :|userName| |userName|))))
@@ -256,6 +259,7 @@
     (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/LogEventRequest"
                :method :post
                :body body)))
+
 
 (defun update-statistics ()
   (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2024-06-24 22:22:19>
+;;; Last Modified <michael 2024-07-11 21:33:49>
 
 (in-package :bitsailor)
 
@@ -187,6 +187,19 @@
            :path "/checkPaths")
  :handler (:dynamic 'check-paths
            :authentication nil))
+
+(handle
+ :request (:method :options
+           :prefix "")
+ :handler (:dynamic 'handle-options
+           :authentication nil))
+
+(handle
+ :request (:method :post
+           :prefix "/executeCommands")
+ :handler (:dynamic 'execute-commands
+           :authentication nil))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

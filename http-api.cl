@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-07-14 23:08:19>
+;;; Last Modified <michael 2024-07-20 21:31:33>
 
 (in-package :bitsailor)
 
@@ -488,8 +488,8 @@
          (device-id (joref payload "deviceId"))
          (body (joref payload "body"))
          (url
-           (format nil "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/LogEventRequest" device-id)))
-    (log2:info "~a~%" body)
+           (format nil "https://prod.vro.sparks.virtualregatta.com/rs/device/~a/LogEventRequest" device-id)))
+    (log2:info "~a ~a~%" url  body)
     (let ((reply
             (curl:http url :method :post :body (with-output-to-string (s) (json s body  :preserve-slotname-case t)))))
       (setf (http-body response) (curl:http-response-body reply)))))

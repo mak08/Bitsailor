@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2024-06-29 21:12:29>
+;;; Last Modified <michael 2024-09-22 21:14:43>
 
 (in-package :bitsailor)
 
@@ -13,7 +13,7 @@
                (leg (joref (joref body-json "res") "leg"))
                (id (joref leg "_id"))
                (race-id (joref id "race_id"))
-               (leg-num (joref id "num"))
+               (leg-num (or (joref id "num") (joref id "leg_num")))
                (leg-id (format nil "~a.~a" race-id leg-num)))
           (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
           (setf (gethash leg-id *races-ht*)
@@ -27,7 +27,7 @@
                (leg (joref race "leg"))
                (id (joref leg "_id"))
                (race-id (joref id "race_id"))
-               (leg-num (joref id "num"))
+               (leg-num (or (joref id "num") (joref id "leg_num")))
                (leg-id (format nil "~a.~a" race-id leg-num)))
           (log2:info "Loading race ~a ~a" leg-id (joref leg "name"))
           (setf (gethash leg-id *races-ht*)

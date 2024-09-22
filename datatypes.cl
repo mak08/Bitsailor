@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-06-24 22:51:15>
+;;; Last Modified <michael 2024-07-25 23:17:22>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -46,12 +46,13 @@
                               (routing-dest routing)))))
 
 (defmethod print-object ((thing routing) stream)
-  (format stream "{D=~a T=~a M=~a+~a C=~a O=~a P=~a}"
+  (format stream "{D=~a T=~a M=~a+~a C=~a S=~a O=~a P=~a}"
           (routing-stepmax thing)
           (routing-starttime thing)
           (routing-merge-start thing)
           (routing-merge-window thing)
           (routing-cycle thing)
+          (routing-grib-source thing)
           (routing-options thing)
           (routing-winch-mode thing)))
 

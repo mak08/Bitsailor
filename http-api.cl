@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-07-20 21:31:33>
+;;; Last Modified <michael 2024-09-22 21:06:50>
 
 (in-package :bitsailor)
 
@@ -539,7 +539,8 @@
     (make-raceinfo
      :type "vr"
      :name (joref race "name")
-     :id (format nil "~a.~a" (joref id "race_id") (joref id "num"))
+     :id (format nil "~a.~a" (joref id "race_id") (or (joref id "num")
+                                                      (joref id "leg_num")))
      :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
      :record (when (string= (joref (joref race "race") "type") "record") "yes")
      :class (joref boat "label")

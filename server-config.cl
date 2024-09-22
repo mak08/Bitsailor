@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2024-07-11 21:33:49>
+;;; Last Modified <michael 2024-07-16 22:03:52>
 
 (in-package :bitsailor)
 
@@ -84,8 +84,6 @@
 (register-function "router.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceList" :authorizer (constantly t))
 (register-function "router.getRaceListAdmin" :authorizer #'vh-admin-authorizer)
-(register-function "router.resetNMEAConnection" :authorizer #'vh-function-authorizer)
-(register-function "router.getBoatPosition" :authorizer #'vh-function-authorizer)
 (register-function "router.setRoute" :authorizer #'vh-function-authorizer)
 (register-function "router.getRoute" :authorizer #'vh-function-authorizer)
 (register-function "router.getStatistics" :authorizer (constantly t))
@@ -199,7 +197,6 @@
            :prefix "/executeCommands")
  :handler (:dynamic 'execute-commands
            :authentication nil))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------

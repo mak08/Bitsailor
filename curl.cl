@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2023
-;;; Last Modified <michael 2024-06-29 12:50:15>
+;;; Last Modified <michael 2024-11-01 17:21:11>
 
 (defpackage :curl
   (:use :cl)
@@ -21,7 +21,7 @@
 (defstruct http-status protocol code text)
 (defstruct http-header name value)
 
-(defun http (url &key (headers ()) (method :get) (body nil))
+(defun http (url &key (headers ()) (method :get) (body nil) (max-time 10) (connect-timeout 2))
   (ecase method ((:get :head :post)))
   (let* ((head-flag (if (eq method :head) "-I" ""))
          (rbody (cond
@@ -31,7 +31,7 @@
                   (t
                    body)))
          (ftp-command
-           (format () "curl --max-time 3 -i ~a ~:{ -H '~a: ~a'~} ~:[~;--data-raw ~:*'~a'~] \"~a\"" head-flag headers rbody url))
+           (format () "curl --max-time ~a --connect-timeout ~a -i ~a ~:{ -H '~a: ~a'~} ~:[~;--data-raw ~:*'~a'~] \"~a\"" max-time connect-timeout head-flag headers rbody url))
          (out-stream (make-array '(0) :element-type 'character :fill-pointer 0 :adjustable t))
          (err-stream (make-array '(0) :element-type 'character :fill-pointer 0 :adjustable t)))
     (log2:trace "~a" ftp-command)

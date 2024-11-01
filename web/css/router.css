@@ -261,16 +261,16 @@ input[type=checkbox] {
 
 /* Start delayed */
 .delayed-label {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 1;
 }
 .delayed-cb {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 2;
 
 }
 .delayed-entry {
-	grid-row: 5;
+	grid-row: 4;
 	grid-column: 3;
 
 }
@@ -287,45 +287,47 @@ input[type=checkbox] {
 
 /* Routing duration */
 .duration-label {
-	grid-row: 6;
+	grid-row: 5;
 	grid-column: 1;
 
 }
+
 .duration-selector {
-	grid-row: 6;
+	grid-row: 5;
 	grid-column: 2;
 }
 
+
 /* Resolution */
 .resolution-label {
-	grid-row: 7;
+	grid-row: 6;
 	grid-column: 1;
 
 }
 .resolution-selector {
-	grid-row: 7;
+	grid-row: 6;
 	grid-column: 2;
 }
 
 /* GFS mode */
 .gfsmode-label {
-	grid-row: 7;
+	grid-row: 6;
 	grid-column: 4/7;
 
 }
 .gfsmode-selector {
-	grid-row: 7;
+	grid-row: 6;
 	grid-column: 7;
 }
 
 
 .polars-label {
-	grid-row: 8;
+	grid-row: 7;
 	grid-column: 1;
 }
 
 .polars-selector {
-	grid-row: 8;
+	grid-row: 7;
 	grid-column: 2/7;
 }
 

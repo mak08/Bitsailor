@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2024-07-16 22:03:52>
+;;; Last Modified <michael 2024-11-01 18:47:07>
 
 (in-package :bitsailor)
 
@@ -83,6 +83,7 @@
 (register-function "router.getTWAPath" :authorizer #'vh-function-authorizer)
 (register-function "router.setParameter" :authorizer #'vh-function-authorizer)
 (register-function "router.getRaceList" :authorizer (constantly t))
+(register-function "router.getPolarsList" :authorizer  #'vh-admin-authorizer)
 (register-function "router.getRaceListAdmin" :authorizer #'vh-admin-authorizer)
 (register-function "router.setRoute" :authorizer #'vh-function-authorizer)
 (register-function "router.getRoute" :authorizer #'vh-function-authorizer)

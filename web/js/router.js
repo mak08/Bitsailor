@@ -52,8 +52,6 @@ var hdgPath = [];
 
 function setUp (getVMG) {
 
-    setupColors();
-    
     // Create a map object, and include the MapTypeId to add
     // to the map type control.
     var mapProp = {
@@ -63,6 +61,7 @@ function setUp (getVMG) {
         maxZoom:14,
         scaleControl: true,
         mapTypeId:google.maps.MapTypeId.ROADMAP,
+        disableDoubleClickZoom: true,
         draggableCursor: "crosshair"
     };
     var mapDiv = $("#map")[0];
@@ -341,6 +340,11 @@ function onSetResolution (event) {
     settings.resolution = resolution;
     storeValue('resolution', resolution);
     redrawWindByOffset(ir_index.value);
+}
+
+function onSetPolars (event) {
+    let polarsId = event.currentTarget.value;
+    loadPolars(polarsId);
 }
 
 function onSetDuration (event) {
@@ -1220,6 +1224,7 @@ export {
     makeQuery,
     mapEvent,
     onMarkerClicked,
+    onSetPolars,
     onSetResolution,
     onSetGFSMode,
     setPolars,

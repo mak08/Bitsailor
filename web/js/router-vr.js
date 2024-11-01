@@ -7,6 +7,32 @@ import * as Router from './router.js';
 ( function () {
 
     var vrData = {};
+
+
+    function getPolarsList () {
+        Util.doGET(
+            "/function/router.getPolarsList",
+            function(xhr) {
+                if (xhr.responseText) {
+                    var polars = JSON.parse(xhr.responseText);
+                    if (polars) {
+                        let selPolars  = document.getElementById('sel_polars');
+                        for (const entry of polars) {
+                            let opt = document.createElement('option');
+                            opt.value = entry.id;
+                            opt.innerHTML = entry.label;
+                            selPolars.appendChild(opt);
+                        }
+
+                    }
+                } else {
+                    alert("No polars");
+                }
+            },
+            function (xhr) {
+                alert(`${xhr.status} ${xhr.statusText}: ${xhr.responseText}`);
+            });
+    }
     
     function getRaceInfo () {
         Util.doGET(
@@ -285,6 +311,9 @@ import * as Router from './router.js';
         var markStbd = 'img/mark_green.png';
         var markPort = 'img/mark_red.png';
 
+        let selPolars = document.getElementById('sel_polars');
+        selPolars.value = vrData.boat.polar_id;
+        
         Router.loadPolars( vrData.boat.polar_id);
 
         // Resolution
@@ -442,6 +471,7 @@ import * as Router from './router.js';
         }
 
         document.getElementById("sel_resolution").addEventListener("change", Router.onSetResolution);
+        document.getElementById("sel_polars").addEventListener("change", Router.onSetPolars);
 
         document.getElementById("cb_hull").checked  = Router.settings.options.includes('hull');
         document.getElementById("cb_winch").checked = Router.settings.options.includes('winch');
@@ -456,11 +486,12 @@ import * as Router from './router.js';
         document.getElementById("cb_light").addEventListener("click", onOptionToggled);
         document.getElementById("cb_reach").addEventListener("click", onOptionToggled);
 
+        getPolarsList();
         getRaceInfo();
 
-        // google.maps.event.addListener(Router.googleMap, 'click', computePath);
-        // google.maps.event.addListener(Router.googleMap, 'mousemove', computePath);
-        google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
+        google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        google.maps.event.addListener(Router.googleMap, 'dblclick', getTWAPath);
+
 
         Router.updateMap();
     }

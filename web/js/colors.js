@@ -1,13 +1,13 @@
 var colors = [];
 
 function setupColors () {
-	colors.push("#0080ff");
+    colors.push("#0080ff");
     colors.push("#00ffff");
     colors.push("#00ffa0");
     colors.push("#00cc00");
     colors.push("#a0ff00");
     colors.push("#ffff00");
-	colors.push("#ffc000");
+    colors.push("#ffc000");
     colors.push("#ff8000");
     colors.push("#ff0000");
     colors.push("#f00080");
@@ -17,7 +17,7 @@ function setupColors () {
 }
 
 function ms2bf ( windspeed ) {
-	// Beaufort scale according to http://de.wikipedia.org/wiki/Beaufortskala
+    // Beaufort scale according to http://de.wikipedia.org/wiki/Beaufortskala
     if ( windspeed < 0.3 ) {
         return 0;
     } else if ( windspeed < 1.6 ) {
@@ -47,4 +47,4 @@ function ms2bf ( windspeed ) {
     }
 }
 
-
+setupColors();

@@ -173,11 +173,11 @@ export default class GribCache {
         let baseTime0 = new Date(baseTime1 - (6 *  3600000));
         let offset0 = floor((curTime - baseTime0) / 3600000, 3);
         
-        if (offset1 <= 3) {
+        if (offset1 <= 9) {
             // use previous forecast only
             baseTime1 = baseTime0;
             offset1 = offset0 + 3;
-        } else if (offset1 == 6) {
+        } else if (offset1 == 12) {
             // merge with previous
         } else {
             // use current forecast only
@@ -200,7 +200,7 @@ export default class GribCache {
             let timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
             // console.log(`Fraction: ${timeFraction}`);
             // console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
-           let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
+            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
             let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);

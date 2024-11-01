@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-06-24 22:50:14>
+;;; Last Modified <michael 2024-11-01 17:33:19>
 
 (in-package :bitsailor)
 
@@ -12,9 +12,9 @@
 (defstruct sail name speed)
 
 (defmethod print-object ((thing cpolars) stream)
-  (format stream "[Compiled polars ~a]" (cpolars-name thing)))
+  (format stream "[CPolars ~a ~a]" (cpolars-label thing) (cpolars-name thing)))
 (defmethod print-object ((thing polars) stream)
-  (format stream "[Polars ~a]" (polars-name thing)))
+  (format stream "[Polars ~a ~a]" (polars-label thing) (polars-name thing)))
 
 
 (defvar +jib+ 0)
@@ -164,6 +164,9 @@
     (make-array (length precomputed)
                 :initial-contents precomputed)))
 
+(declaim (inline vmg-vmg
+                 vmg-twa
+                 vmg-sail))
 (defstruct vmg
   (vmg 0d0 :type double-float)
   (twa 0d0 :type double-float)
@@ -224,6 +227,18 @@
         (error "No polars found with id=(~a)~a" (type-of id) id))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Return list of available polars
+
+(defun get-polars-list ()
+  (let ((polars-list (list)))
+    (maphash (lambda (k v)
+               (push (make-polars :id k
+                                  :label (polars-label v))
+                     polars-list))
+             *polars-id-ht*)
+    polars-list))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
@@ -239,6 +254,7 @@
 
 (defun load-polars-file (filename)
   (let* ((json-object  (parse-json-file filename)))
+    (log2:info "Loading ~a" filename)
     (cond ((joref json-object "scriptData")
            (translate-polars-vr filename json-object))
           (t

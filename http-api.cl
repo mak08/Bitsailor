@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-09-22 21:06:50>
+;;; Last Modified <michael 2024-11-01 18:46:27>
 
 (in-package :bitsailor)
 
@@ -493,6 +493,14 @@
     (let ((reply
             (curl:http url :method :post :body (with-output-to-string (s) (json s body  :preserve-slotname-case t)))))
       (setf (http-body response) (curl:http-response-body reply)))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Polars
+
+(defun |getPolarsList| (handler request response)
+  (with-output-to-string (s)
+    (json s (get-polars-list))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Race list  & race info

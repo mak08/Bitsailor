@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-07-06 17:38:48>
+;;; Last Modified <michael 2024-10-31 21:55:40>
 
 (in-package :bitsailor)
 
@@ -61,7 +61,8 @@
 
     (bt:make-thread
      (lambda ()
-       (get-all-polars)
+       (ignore-errors
+        (get-all-polars))
        (load-polars-directory))
      :name "LOAD-POLARS")
 

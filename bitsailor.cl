@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-10-31 21:55:40>
+;;; Last Modified <michael 2024-11-17 16:52:58>
 
 (in-package :bitsailor)
 
@@ -41,7 +41,6 @@
 
 (defun start-router (&key
                        (rcfile *rcfile*)
-                       (resolution *resolutions*)
                        (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
   (let ((local-rcfile
@@ -102,7 +101,7 @@
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Downloading forecasts and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
-                                    (start-cycle-updates :resolution resolution))
+                                    (start-cycle-updates :resolution *resolutions*))
                                   :name "GFS-DOWNLOAD")
     
     ;; Start web server

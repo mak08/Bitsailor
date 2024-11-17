@@ -290,7 +290,7 @@ import * as Router from './router.js';
             {
                 "presets": "VR",
                 "gfsMode": "06h",
-                "raceId": vrData._id.race_id + '.' + vrData._id.num,
+                "raceId": vrData._id.race_id + '.' + vrData._id.leg_num,
                 "cycle": Router.getCurrentCycle(),
                 "resolution": Router.settings.resolution,
                 "options": Router.settings.options,

@@ -489,8 +489,8 @@ import * as Router from './router.js';
         getPolarsList();
         getRaceInfo();
 
-        google.maps.event.addListener(Router.googleMap, 'click', computePath);
-        google.maps.event.addListener(Router.googleMap, 'dblclick', getTWAPath);
+        //google.maps.event.addListener(Router.googleMap, 'click', computePath);
+        google.maps.event.addListener(Router.googleMap, 'click', getTWAPath);
 
 
         Router.updateMap();

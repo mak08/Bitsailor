@@ -1,0 +1,20 @@
+================================================================================
+Systemd integration
+--------------------------------------------------------------------------------
+
+*   https://docs.fedoraproject.org/en-US/quick-docs/understanding-and-administering-systemd/
+*   Run 'systemctl edit --force --full bitsailor.service' to create a new unit.
+*   (sb-posix:getpid)
+
+================================================================================
+bitsailor.service
+--------------------------------------------------------------------------------
+[Service]
+Restart=always
+RestartSec=5
+[Service]
+ExecStart=/usr/local/bin/sbcl --load /usr/local/bitsailor/start.cl
+
+
+--------------------------------------------------------------------------------
+================================================================================

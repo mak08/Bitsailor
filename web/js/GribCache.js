@@ -353,9 +353,10 @@ export default class GribCache {
 
     gribPath (cycle, res, offset) {
         let cycleDirStr = this.formatCycle(cycle, '/');
-        let cycleFileStr = this.formatCycle(cycle, '.');
+        let cycleFileStr = this.formatCycle(cycle, '_gfs.t');
         let offsetStr = offset.toFixed().padStart(3, '0');
-        return `/weather/vr/${res}/${cycleDirStr}/${cycleFileStr}.${offsetStr}.${res}.grb`;
+        // /weather/1p00/20250813/12/20250813_gfs.t12z.pgrb2.0p25.f291.grib2
+        return `/weather/${res}/${cycleDirStr}/${cycleFileStr}z.pgrb2.${res}.f${offsetStr}.grib2`;
     }
 
     formatCycle (d, sep = '-') {

@@ -1,10 +1,9 @@
 ////////////////////////////////////////////////////////////////////////////////
-/// Bitsailor Router UI Stateless
+/// Bitsailor Router UI Stateless (Leaflet/OpenStreetMap version)
 
 import * as Util from './Util.js';
 import GribCache from './GribCache.js';
 import * as GPX from './GPX.js';
-// import {loadWind} from './grib2js.js'
 
 var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
@@ -19,7 +18,27 @@ let selectedCursor = 'crosshair';
 
 var gribCache = undefined;
 
-var googleMap = null;
+var map = null;
+
+function initMap() {
+    if (!map) {
+        map = L.map('map', {
+            center: [49.187, 8.473],
+            zoom: 5,
+            minZoom: 3,
+            maxZoom: 14,
+            doubleClickZoom: false,
+            dragging: true,
+            zoomControl: true,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+    }
+    return map;
+}
+
 var mapEvent;
 
 // Bounds and width from the map are kept here for convenience
@@ -28,18 +47,13 @@ var geometry = {};
 // Time index
 var ir_index;
 
-var currentCycle = getCurrentCycle()
+var currentCycle = getCurrentCycle();
 
-var startMarker = {};
-var destinationMarker = {};
+var startMarker = null;
+var destinationMarker = null;
 var twaAnchor = undefined;
 
-var courseGCLine = new google.maps.Polyline({
-    geodesic: true,
-    strokeColor: '#ff0000',
-    strokeOpacity: 1.0,
-    strokeWeight: 1
-});
+var courseGCLine = null;
 
 var routeTracks = [];
 var routeIsochrones = [];
@@ -50,84 +64,64 @@ var routeInfo = {};
 var twaPath = [];
 var hdgPath = [];
 
-function setUp (getVMG) {
-
-    // Create a map object, and include the MapTypeId to add
-    // to the map type control.
-    var mapProp = {
-        center:new google.maps.LatLng(49.187, 8.473),
-        zoom:5,
-        minZoom:3,
-        maxZoom:14,
-        scaleControl: true,
-        mapTypeId:google.maps.MapTypeId.ROADMAP,
-        disableDoubleClickZoom: true,
-        draggableCursor: "crosshair"
-    };
-    var mapDiv = $("#map")[0];
-    googleMap = new google.maps.Map(mapDiv, mapProp);
-
+function setUp(getVMG) {
+    // Initialize Leaflet map in router-vr.js
+    
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
-    
-    // Connect map events
-    google.maps.event.addListener(googleMap, 'zoom_changed', updateMap);
-    google.maps.event.addListener(googleMap, 'dragend', updateMap);
-    google.maps.event.addDomListener(googleMap, 'rightclick', onMapRightClick);
-    
-    // Track cursor position
-    google.maps.event.addListener(googleMap, 'mousemove', async function (event) {
+
+    // Map events
+    map.on('zoomend moveend', updateMap);
+    map.on('contextmenu', onMapRightClick);
+    map.on('mousemove', async function (event) {
         return await updateWindInfo(event, getVMG);
     });
-
-    // Moved to -vr.js
-    // google.maps.event.addListener(googleMap, 'click', getTWAPath);
-    google.maps.event.addListener(googleMap, 'click', drawOrthodromic);
+    map.on('click', drawOrthodromic);
 
     // Connect button events
     $("#bt_getroute").click(getRoute);
     $("#bt_downloadroute").click(onDownloadRoute);
-    
+
     $("#bt_inc").click(onAdjustIndex);
     $("#bt_dec").click(onAdjustIndex);
     $("#bt_inc6").click(onAdjustIndex);
     $("#bt_dec6").click(onAdjustIndex);
     $("#ir_index").change(onAdjustIndex);
-    
+
     $("#cb_startdelayed").click(onDelayedStart);
-    
+
     $("#cb_manualcycle").click(onManualCycle);
     $("#tb_cycledate").change(onSetCycleTS);
     $("#sel_cyclehour").change(onSetCycleTS);
-    
+
     // Connect option selectors
     $("#sel_duration").change(onSetDuration);
     $("#cb_displaywind").change(onDisplaywind);
     $("#cb_displaytracks").change(onDisplayTracks);
     $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
     $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
-    
+
     // Disable default contextmenu
-    window.oncontextmenu = function (event) { event.preventDefault() }; 
-    
+    window.oncontextmenu = function (event) { event.preventDefault(); };
+
     // Connect menu events
-    $("#bt_setstart" ).click(function () { onContextMenu('start') });
-    $("#bt_setdest"  ).click(function () { onContextMenu('dest') });
-    $("#bt_copypos"  ).click(onCopyPosition);
-    $("#bt_ltpmark"  ).click(function () { onContextMenu('ltp') });
-    $("#bt_ltsmark"  ).click(function () { onContextMenu('lts') });
-    
+    $("#bt_setstart").click(function () { onContextMenu('start'); });
+    $("#bt_setdest").click(function () { onContextMenu('dest'); });
+    $("#bt_copypos").click(onCopyPosition);
+    $("#bt_ltpmark").click(function () { onContextMenu('ltp'); });
+    $("#bt_ltsmark").click(function () { onContextMenu('lts'); });
+
     var mapMenu = $("#mapMenu")[0];
     mapMenu.onmouseleave = onMapMenuMouseLeave;
-    
+
     ir_index = $("#ir_index")[0];
-    
-    startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 1, 45);
-    destinationMarker = initMarker('dest', 'Destination',  'img/finish_32x20.png', 1, 32);
-    
+
+    startMarker = initMarker('start', 'Start', 'img/start_45x32.png');
+    destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png');
+
     // Wind canvas
     let canvas = setupCanvas();
- 
+
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
         if (event.keyCode === 13) {
             onSetStartPosition(event);
@@ -135,44 +129,43 @@ function setUp (getVMG) {
     });
     document.getElementById("bt_position").addEventListener("click", onSetStartPosition);
     document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
-    google.maps.event.addListener(startMarker,'dragend', function () {
-        // Update position entry/display
+
+    startMarker.on('dragend', function (e) {
         onUpdateStartMarker(startMarker);
     });
 }
 
-function initMarker (type, title, url, x, y) {
-    var marker = new google.maps.Marker({
-        position: {"lat": 0, "lng": 0},
-        map: googleMap,
+function initMarker(type, title, url) {
+    var marker = L.marker([0, 0], {
         title: title,
-        icon: {
-            url: url,
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(x, y)
-        },
+        icon: L.icon({
+            iconUrl: url,
+            iconAnchor: [16, 16],
+            popupAnchor: [0, -16],
+        }),
         draggable: true
+    }).addTo(map);
+
+    marker.on('click', function () { onMarkerClicked(marker); });
+
+    marker.on('dragend', function (e) {
+        setRoutePoint(type, marker.getLatLng());
     });
-    
-    marker.addListener('click', function () { onMarkerClicked(marker) });
-    
-    google.maps.event.addListener(marker,'dragend',function() {
-        setRoutePoint(type, marker.getPosition());
-    });
-    
+
     return marker;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Event handlers
 
-function onWindowResize (event) {
+function onWindowResize(event) {
+    map.invalidateSize();
 }
 
-function onDownloadRoute (event) {
+function onDownloadRoute(event) {
     if (routeInfo && routeInfo.best) {
         let rbGPX = document.getElementById('rb_gpx');
-        let format = rbGPX.checked?'gpx':'csv';
+        let format = rbGPX.checked ? 'gpx' : 'csv';
         let content = GPX.exportRoute(routeInfo, format);
         let file = new Blob([content], { type: 'text/plain' });
         let link = document.createElement("a");
@@ -185,68 +178,53 @@ function onDownloadRoute (event) {
     }
 }
 
-function updateMap () {
-    // Delegate to callback -
-    // This causes the update to be executed only when the map bounds are valid.
-    // Probably only matters on the first update after page load.
-    google.maps.event.addListenerOnce(googleMap, 'idle', function(){
-        if ((googleMap.getMapTypeId() == google.maps.MapTypeId.ROADMAP)
-            || (googleMap.getMapTypeId() == google.maps.MapTypeId.TERRAIN)) {
-            if ( googleMap.zoom < 6 ) {
-                googleMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-            } else {
-                googleMap.setMapTypeId(google.maps.MapTypeId.TERRAIN);
-            }
-        }
-        var bounds = getMapBounds();
+function updateMap() {
+    var bounds = getMapBounds();
 
-        // Load wind
-        if (!gribCache) {
-            let canvas = document.getElementById('wind-canvas');
-            gribCache = new GribCache(canvas, bounds || {"north": 50, "south": 40, "west": 0, "east": 10}, settings.resolution, new Date());
-        }
+    // Load wind
+    if (!gribCache) {
+        let canvas = document.getElementById('wind-canvas');
+        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date());
+    }
 
-        var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " +  formatLatLngPosition(bounds.northEast) + "⌉";
-        $("#lb_map_bounds").text("Kartenausschnitt: " + label);
-        redrawWindByOffset(ir_index.value);
-    });
+    var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " + formatLatLngPosition(bounds.northEast) + "⌉";
+    $("#lb_map_bounds").text("Kartenausschnitt: " + label);
+    redrawWindByOffset(ir_index.value);
 }
 
-function availableForecastCycle (d=new Date()) {
-    // Display cycle only when it's (supposed to be) fully available
+function availableForecastCycle(d = new Date()) {
     var availDate = d - 300 * 60 * 1000;
     var fc = truncate(availDate, 6 * 3600 * 1000);
     return new Date(fc).toISOString();
 }
 
-function getCurrentCycle (d=new Date()) {
+function getCurrentCycle(d = new Date()) {
     var availDate = d - 210 * 60 * 1000;
     var fc = truncate(availDate, 6 * 3600 * 1000);
     return new Date(fc).toISOString();
 }
 
-// Event handler for context menu mapMenu 
-function onContextMenu (point) {
-    var mapMenu=$("#mapMenu")[0];
+function onContextMenu(point) {
+    var mapMenu = $("#mapMenu")[0];
     mapMenu.style.display = "none";
-    setRoutePoint(point, mapEvent.latLng);
+    setRoutePoint(point, mapEvent.latlng);
 }
 
-function onCopyPosition (event) {
+function onCopyPosition(event) {
     let label = document.getElementById('lb_position');
-    let text = label.__pos.lat() + ' ' + label.__pos.lng()
+    let text = label.__pos.lat + ' ' + label.__pos.lng;
     navigator.clipboard.writeText(text);
 }
 
-function onSelectIsochrone (isochrone) {
-    currentCycle = isochrone.get('time');
-    var offset = isochrone.get('offset');
+function onSelectIsochrone(isochrone) {
+    currentCycle = isochrone.time;
+    var offset = isochrone.offset;
     $("#ir_index")[0].value = offset;
     updateIsochrones();
     redrawWindByOffset(offset);
 }
 
-function onDisplaywind (event) {
+function onDisplaywind(event) {
     var cbDisplaywind = $("#cb_displaywind")[0];
     if (cbDisplaywind.checked) {
         $("#wind-canvas").show();
@@ -255,30 +233,29 @@ function onDisplaywind (event) {
     }
 }
 
-function onDisplayTracks (event) {
+function onDisplayTracks(event) {
     clearRoute();
     displayRouting(routeInfo);
 }
 
-function onCursorSelect (event, type) {
+function onCursorSelect(event, type) {
     selectedCursor = type;
-    googleMap.setOptions({draggableCursor:type});
+    map.getContainer().style.cursor = type;
 }
 
-
-function setBusyCursor () {
+function setBusyCursor() {
     document.getElementById('bt_getroute').style.cursor = "wait";
     document.getElementById("body").style.cursor = "wait";
-    googleMap.setOptions({draggableCursor:"wait"});
+    map.getContainer().style.cursor = "wait";
 }
 
-function restoreCursor () {
+function restoreCursor() {
     document.getElementById("body").style.cursor = "pointer";
     document.getElementById('bt_getroute').style.cursor = "pointer";
-    googleMap.setOptions({draggableCursor:selectedCursor});
+    map.getContainer().style.cursor = selectedCursor;
 }
 
-function onAdjustIndex (event) {
+function onAdjustIndex(event) {
     var source = event.target.id;
     if (source == "bt_dec6")
         ir_index.valueAsNumber = ir_index.valueAsNumber - 6;
@@ -292,68 +269,67 @@ function onAdjustIndex (event) {
     redrawWindByOffset(ir_index.value);
 }
 
-function onDelayedStart (event) {
-    var dateInput =  $("#tb_starttime")[0];
+function onDelayedStart(event) {
+    var dateInput = $("#tb_starttime")[0];
     if (event.target.checked === true) {
         var d = new Date();
-        var isoDate = d.toISOString().substring(0,16);
+        var isoDate = d.toISOString().substring(0, 16);
         dateInput.value = isoDate;
     } else {
         dateInput.value = null;
     }
 }
 
-function getStartTime () {
-    var cbDelayed =  $("#cb_startdelayed")[0];
+function getStartTime() {
+    var cbDelayed = $("#cb_startdelayed")[0];
     if (cbDelayed.checked === true) {
-        var dateInput =  $("#tb_starttime")[0];
+        var dateInput = $("#tb_starttime")[0];
         return dateInput.value;
     } else {
         var d = new Date();
-        return d.toISOString().substring(0,16);
+        return d.toISOString().substring(0, 16);
     }
 }
 
-function onContextMenuSetStart (event) {
+function onContextMenuSetStart(event) {
     var textBox = document.getElementById("tb_position");
-    var position = mapEvent.latLng;
-    textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+    var position = mapEvent.latlng;
+    textBox.value = Util.formatPosition(position.lat, position.lng);
 }
 
-function onUpdateStartMarker (marker) {
+function onUpdateStartMarker(marker) {
     var textBox = document.getElementById("tb_position");
-    var position = marker.getPosition();
-    textBox.value = Util.formatPosition(position.lat(), position.lng()); 
+    var position = marker.getLatLng();
+    textBox.value = Util.formatPosition(position.lat, position.lng);
 }
 
-function onSetStartPosition (event) {
+function onSetStartPosition(event) {
     var position = document.getElementById("tb_position").value;
     var latlon = parsePosition(position);
     if (latlon) {
-        var latLon = new google.maps.LatLng(latlon.lat, latlon.lon);
-        setRoutePoint('start', latLon);
+        setRoutePoint('start', L.latLng(latlon.lat, latlon.lon));
     }
 }
 
-function onSetResolution (event) {
-    let resolution= event.currentTarget.value;
+function onSetResolution(event) {
+    let resolution = event.currentTarget.value;
     settings.resolution = resolution;
     storeValue('resolution', resolution);
     redrawWindByOffset(ir_index.value);
 }
 
-function onSetPolars (event) {
+function onSetPolars(event) {
     let polarsId = event.currentTarget.value;
     loadPolars(polarsId);
 }
 
-function onSetDuration (event) {
-    let duration =  event.target.value;
+function onSetDuration(event) {
+    let duration = event.target.value;
     settings.duration = duration * 3600;
     storeValue('duration', duration);
 }
 
-function storeValue (name, value) {
+function storeValue(name, value) {
     try {
         let storage = window.localStorage;
         let query = new URL(document.URL).searchParams;
@@ -363,29 +339,23 @@ function storeValue (name, value) {
     }
 }
 
-function getValue (name) {
+function getValue(name) {
     let storage = window.localStorage;
     let query = new URL(document.URL).searchParams;
     let raceId = query.get('race');
     return storage.getItem(`${raceId}.${name}`);
 }
 
-
-function parsePosition (string) {
+function parsePosition(string) {
     try {
-        // Assume two comma separated DMS values
-        string = string.replace(`/`,`,`);
+        string = string.replace(`/`, `,`);
         var parts = string.split(',');
         if (parts.length != 2) {
-            // Alternatively try blank separated numbers.
-            // In this cas we don't support blanks inside the DMS values
             parts = string.split(' ');
         }
         if (parts.length != 2) {
-            throw new Error(`Invalid LatLng ${string}`)
+            throw new Error(`Invalid LatLng ${string}`);
         }
-
-        // We assume the first value to designate Lat, second Lon.
         var lat, lon;
         if (parts[0].match(/E|W/)) {
             lon = parts[0].trim();
@@ -397,25 +367,24 @@ function parsePosition (string) {
         return {
             "lat": parseDMS(lat),
             "lon": parseDMS(lon)
-        }
+        };
     } catch (e) {
         alert(e);
     }
 }
 
-function parseDMS (string) {
-    // nnn.nnnnn or nnn°nn.nnnnn' or nnn°nn'nn.nnnnn"
-    string = string.replace(`''`,`'`);
-    string = string.replace(`º`,`°`);
-    var sign = string.match(/W|S/)?-1:1;
+function parseDMS(string) {
+    string = string.replace(`''`, `'`);
+    string = string.replace(`º`, `°`);
+    var sign = string.match(/W|S/) ? -1 : 1;
     string = string.split(/[NESW]/)[0];
     var parts = string.split('°');
     var degrees = parseFloat(parts[0]);
     if (parts[1]) {
         parts = parts[1].split('\'');
-        degrees += parseFloat(parts[0])/60;
+        degrees += parseFloat(parts[0]) / 60;
         if (parts[1]) {
-            degrees += parseFloat(parts[1].split('"')[0])/3600;
+            degrees += parseFloat(parts[1].split('"')[0]) / 3600;
         }
     }
     if (isNaN(degrees)) {
@@ -425,40 +394,35 @@ function parseDMS (string) {
     }
 }
 
-function truncate (n, q) {
+function truncate(n, q) {
     return n - (n % q);
 }
 
-function pad0 (val, length=2, base=10) {
-    var result = val.toString(base)
+function pad0(val, length = 2, base = 10) {
+    var result = val.toString(base);
     while (result.length < length) result = '0' + result;
     return result;
 }
 
-
-function getManualCycle () {
-    var dateInput =  $("#tb_cycledate")[0];
-    var hourInput =  $("#sel_cyclehour")[0];
+function getManualCycle() {
+    var dateInput = $("#tb_cycledate")[0];
+    var hourInput = $("#sel_cyclehour")[0];
     return dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
 }
 
-function onManualCycle (event) {
-
+function onManualCycle(event) {
     var manualCycle = document.getElementById("cb_manualcycle");
-    var dateInput =  document.getElementById("tb_cycledate");
-    var hourInput =  document.getElementById("sel_cyclehour");
+    var dateInput = document.getElementById("tb_cycledate");
+    var hourInput = document.getElementById("sel_cyclehour");
     var cycle = availableForecastCycle();
 
-    // Whenever manual cycle is toggled, initialize date with available cycle.
-    dateInput.value = cycle.substring(0,10);
-    hourInput.value = Number.parseInt(cycle.substring(11,13));
+    dateInput.value = cycle.substring(0, 10);
+    hourInput.value = Number.parseInt(cycle.substring(11, 13));
 
-    // When it was switched off, value remains set to available cycle.
-    // When it was switched on, user may modify the cycle using date and hour controls.
-    var params = { "name": "cycle" }; 
+    var params = { "name": "cycle" };
     if (manualCycle.checked) {
-        cycle =  getManualCycle();
-        params.value = cycle
+        cycle = getManualCycle();
+        params.value = cycle;
     }
 
     Util.doGET(
@@ -474,50 +438,39 @@ function onManualCycle (event) {
     );
 }
 
-function onSetCycleTS (event) {
+function onSetCycleTS(event) {
     var manualCycle = document.getElementById("cb_manualcycle");
-    if ( manualCycle.checked ) {
-        var dateInput =  document.getElementById("tb_cycledate");
-        var hourInput =  document.getElementById("sel_cyclehour");
-        setttings.cycleTS = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
+    if (manualCycle.checked) {
+        var dateInput = document.getElementById("tb_cycledate");
+        var hourInput = document.getElementById("sel_cyclehour");
+        settings.cycleTS = dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
         redrawWindByOffset("0");
     }
 }
 
-function onSetGFSMode (event) {
+function onSetGFSMode(event) {
     settings.gfsMode = event.currentTarget.value;
 }
 
-function onMapMenuMouseLeave (event) {
-    var mapMenu=$("#mapMenu")[0];
+function onMapMenuMouseLeave(event) {
+    var mapMenu = $("#mapMenu")[0];
     mapMenu.style.display = "none";
 }
 
-function onMapRightClick (event) {
+function onMapRightClick(event) {
     mapEvent = event;
-    var windowEvent = window.event;
-    var mapMenu=$("#mapMenu")[0];
-    var pageY;
-    var pageX;
-    if (windowEvent != undefined) {
-        pageX = windowEvent.pageX;
-        pageY = windowEvent.pageY;
-    } else {
-        pageX = event.pixel.x;
-        pageY = event.pixel.y;
-    }
-    
+    var mapMenu = $("#mapMenu")[0];
     mapMenu.style.display = "block";
     mapMenu.style["z-index"] = 400;
-    mapMenu.style.top = pageY + "px";
-    mapMenu.style.left = pageX + "px";
+    mapMenu.style.top = event.originalEvent.pageY + "px";
+    mapMenu.style.left = event.originalEvent.pageX + "px";
     return false;
 }
 
-function onMarkerClicked (marker) {
+function onMarkerClicked(marker) {
     twaAnchor = marker;
-    
-    var time = marker.get('time');
+
+    var time = marker.time;
     var isochrone = getIsochroneByTime(time);
     var baseTime;
 
@@ -526,45 +479,43 @@ function onMarkerClicked (marker) {
     } else {
         baseTime = availableForecastCycle();
     }
-    
+
     redrawWindByTime(new Date(time));
 }
 
 //////////////////////////////////////////////////////////////////////
 /// Accessors
 
-function setResolution (resolution) {
+function setResolution(resolution) {
     settings.resolution = resolution;
     document.getElementById("sel_resolution").value = resolution;
 }
 
-function setDuration (duration) {
+function setDuration(duration) {
     settings.duration = duration * 3600;
     document.getElementById('sel_duration').value = duration;
 }
 
-
-function setPolars (data) {
+function setPolars(data) {
     polars = data;
 }
 
-function getPolars () {
+function getPolars() {
     return polars;
 }
 
-function setSailnames (sailnames) {
+function setSailnames(sailnames) {
     sailNames = sailnames;
 }
 
-function getSailnames () {
+function getSailnames() {
     return sailNames;
 }
-
 
 //////////////////////////////////////////////////////////////////////
 /// XHR requests
 
-function makeQuery (object) {
+function makeQuery(object) {
     var s = "";
     for (const m in object) {
         if (object[m]) {
@@ -573,22 +524,21 @@ function makeQuery (object) {
             } else {
                 s += "&";
             }
-            s += `${ m }=${ object[m]}`;
+            s += `${m}=${object[m]}`;
         }
     }
     return s;
 }
 
-function getRoute () {
+function getRoute() {
     setBusyCursor();
-    var bt_execute=$("#bt_getroute")[0];
+    var bt_execute = $("#bt_getroute")[0];
     bt_execute.disabled = true;
 
     let documentQuery = new URL(document.URL).searchParams;
     let raceId = documentQuery.get('race');
-    
-    var mapMenu=$("#mapMenu")[0];
-    var windowEvent = window.event;
+
+    var mapMenu = $("#mapMenu")[0];
     mapMenu.style.display = "none";
 
     var pgGetRoute = $("#pg_getroute")[0];
@@ -599,19 +549,19 @@ function getRoute () {
     var timer = window.setInterval(updateGetRouteProgress, 10 * duration);
 
     var startTime = getStartTime();
-    var startPos = startMarker.getPosition();
-    var destPos = destinationMarker.getPosition();
-    
+    var startPos = startMarker.getLatLng();
+    var destPos = destinationMarker.getLatLng();
+
     var query = makeQuery(settings);
     query += `&raceId=${raceId}`;
     query += `&startTime=${startTime}`;
-    query += `&slat=${startPos.lat()}&slon=${startPos.lng()}&dlat=${destPos.lat()}&dlon=${destPos.lng()}`;
+    query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
 
     var energyInput = document.getElementById('tb_currentenergy');
     if (energyInput) {
         query += `&energy=${energyInput.value}`;
     }
-    
+
     var tackInput = document.getElementById('sel_currenttack');
     if (tackInput) {
         query += `&tack=${tackInput.value}`;
@@ -625,24 +575,15 @@ function getRoute () {
     $.ajax({
         url: "/function/router.getRoute" + query,
         dataType: 'json'
-    }).done( function (data) {
-        // $('div, button, input').css('cursor', 'auto');
-
-        // Remember routing data
+    }).done(function (data) {
         routeInfo = data;
-
-        // Reset timer
         window.clearInterval(timer);
         pgGetRoute.value = pgGetRoute.max;
-
-        // Display new data
         clearRoute();
         displayRouting(data);
         bt_execute.disabled = false;
         restoreCursor();
-    }).fail( function (jqXHR, textStatus, errorThrown) {
-        // $('div, button, input').css('cursor', 'auto');
-
+    }).fail(function (jqXHR, textStatus, errorThrown) {
         bt_execute.disabled = false;
         restoreCursor();
         window.clearInterval(timer);
@@ -651,98 +592,81 @@ function getRoute () {
     });
 }
 
-
 function setRoutePoint(point, latLng) {
+    storeValue(point, `{"lat":${latLng.lat}, "lon": ${latLng.lng}}`);
 
-    storeValue(point, `{"lat":${latLng.lat()}, "lon": ${latLng.lng()}}`);
-
-    if ( point === 'start' ) {
-        startMarker.setPosition(latLng);
-    } else if ( point === 'dest' ) {
-        destinationMarker.setPosition(latLng);
+    if (point === 'start') {
+        startMarker.setLatLng(latLng);
+    } else if (point === 'dest') {
+        destinationMarker.setLatLng(latLng);
     }
-    
+
     if (courseGCLine) {
-        courseGCLine.setMap(null);
-    };
-    courseGCLine = new google.maps.Polyline({
-        geodesic: true,
-        strokeColor: '#d00000',
-        strokeOpacity: 1.0,
-        strokeWeight: 1
-    });
-    courseGCLine.setMap(googleMap);
-    courseGCLine.setPath([startMarker.getPosition(), destinationMarker.getPosition()]);
+        map.removeLayer(courseGCLine);
+    }
+    courseGCLine = L.polyline([startMarker.getLatLng(), destinationMarker.getLatLng()], {
+        color: '#d00000',
+        weight: 1,
+        opacity: 1.0
+    }).addTo(map);
 }
 
-
-function displayRouting (data) {
+function displayRouting(data) {
     var best = data.best;
 
     createIsochrones(data.isochrones);
 
-    // Sometimes the first track mark is covered by the startMarker.
-    startMarker.set('time', best[0].time);
+    startMarker.time = best[0].time;
 
-    var markerIcon = "img/marker_32x12.png";
-    var redMarkerIcon = "img/marker_red_32x12.png";
+    var markerIcon = L.icon({ iconUrl: "img/marker_32x12.png", iconAnchor: [16, 16] });
+    var redMarkerIcon = L.icon({ iconUrl: "img/marker_red_32x12.png", iconAnchor: [16, 16] });
 
     var isDisplayTracks = document.getElementById('cb_displaytracks').checked;
     if (isDisplayTracks) {
         var tracks = data.tracks;
-        for ( var i = 0; i < tracks.length; i++ ) {
-            var track = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: '#d00000',
-                strokeOpacity: 1.0,
-                strokeWeight: 1.5
-            });
-            track.setPath(tracks[i]);
-            track.setMap(googleMap);
+        for (var i = 0; i < tracks.length; i++) {
+            var track = L.polyline(tracks[i].map(p => [p.lat, p.lng]), {
+                color: '#d00000',
+                weight: 1.5,
+                opacity: 1.0
+            }).addTo(map);
             routeTracks[i] = track;
         }
     }
 
-    var bestPath = best.map(entry => entry.position);
-    var bestTrack = new google.maps.Polyline({
-        geodesic: true,
-        strokeColor: '#d00000',
-        strokeOpacity: 1.0,
-        strokeWeight: 3
-    });
-    bestTrack.setPath(bestPath);
-    bestTrack.setMap(googleMap);
+    var bestPath = best.map(entry => [entry.position.lat, entry.position.lng]);
+    var bestTrack = L.polyline(bestPath, {
+        color: '#d00000',
+        weight: 3,
+        opacity: 1.0
+    }).addTo(map);
     routeTracks[routeTracks.length] = bestTrack;
-    
-    for ( var i = 0; i < best.length; i++ ) {
-        if ( i==0
-             || best[i].penalty
-             || best[i].twa != best[i-1].twa
-             || best[i].sail != best[i-1].sail ) {
-            var trackMarker = new google.maps.Marker({
-                position: best[i].position,
-                map: googleMap,
-                icon: ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe")) ?redMarkerIcon:markerIcon,
+
+    for (var i = 0; i < best.length; i++) {
+        if (i == 0
+            || best[i].penalty
+            || best[i].twa != best[i - 1].twa
+            || best[i].sail != best[i - 1].sail) {
+            var trackMarker = L.marker([best[i].position.lat, best[i].position.lng], {
+                icon: ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe")) ? redMarkerIcon : markerIcon,
                 draggable: false
-            });
+            }).addTo(map);
             addMarkerListener(trackMarker);
             addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
             trackMarkers.unshift(trackMarker);
         }
     }
 
-    
     $("#lb_from").text(data.stats.start);
     $("#lb_duration").text(data.stats.duration);
     $("#lb_sails").text(formatSails(data));
-    $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed (1));
-    $("#lb_mintwa").text(data.stats["min-twa"] + " - " +  data.stats["max-twa"]);
+    $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed(1));
+    $("#lb_mintwa").text(data.stats["min-twa"] + " - " + data.stats["max-twa"]);
     $("#lb_polars").text(data.polars);
     $("#lb_options").text(data.options);
-    // $("#lb_maxspeed").text(data.maxspeed);
 }
 
-function getURLParams () {
+function getURLParams() {
     let query = new URL(document.URL).searchParams;
     let slat = query.get('slat');
     let slon = query.get('slon');
@@ -757,9 +681,9 @@ function getURLParams () {
     if (starttime) {
         res.startTime = new Date(starttime + 'Z');
     }
-    
+
     res.options = query.get('options') || '';
-    
+
     var sail = query.get('sail');
     if (sail) {
         res.sail = sail;
@@ -772,31 +696,31 @@ function getURLParams () {
     if (twa) {
         res.twa = twa;
     }
-    
+
     return res;
 }
 
-function loadPolars (id, callback) {
-    Util.doGET(`/polars/${ id }.json`,
-               function (request) {
-                   var data = JSON.parse(request.responseText);
-                   if (data) {
-                       console.log('Loaded ' + id);
-                       settings.polarsId = id;
-                       polars = data;
-                       if (callback) {
-                           callback(data);
-                       }
-                   } else {
-                       alert("No leg info for race");
-                   }
-               },
-               function (request) {
-                   alert(request.responseText);
-               });
+function loadPolars(id, callback) {
+    Util.doGET(`/polars/${id}.json`,
+        function (request) {
+            var data = JSON.parse(request.responseText);
+            if (data) {
+                console.log('Loaded ' + id);
+                settings.polarsId = id;
+                polars = data;
+                if (callback) {
+                    callback(data);
+                }
+            } else {
+                alert("No leg info for race");
+            }
+        },
+        function (request) {
+            alert(request.responseText);
+        });
 }
 
-function setupCanvas () {
+function setupCanvas() {
     var mapCanvas = document.getElementById('wind-canvas');
     var mapRect = mapCanvas.getBoundingClientRect();
     geometry.width = mapRect.width * 6;
@@ -806,24 +730,16 @@ function setupCanvas () {
     return mapCanvas;
 }
 
-function createIsochrones (isochrones) {
+function createIsochrones(isochrones) {
     var c = new Date(currentCycle);
-    for ( var i = 0; i < isochrones.length; i++ ) {
-        var startSymbol = {
-            path: google.maps.SymbolPath.CIRCLE,
-            title: i.offset
-        }
+    for (var i = 0; i < isochrones.length; i++) {
         var style = getIsoStyle(isochrones[i], 1, c);
-        var isochrone = new google.maps.Polyline({
-            geodesic: true,
-            strokeColor: style.color,
-            strokeOpacity: 0.8,
-            strokeWeight: style.weight,
-            icons: [{icon: startSymbol,  offset: '0%'}]
-        });
-        isochrone.setPath(isochrones[i].path);
-        isochrone.setMap(googleMap);
-        addInfo(isochrone, isochrones[i].time, isochrones[i].offset)
+        var isochrone = L.polyline(isochrones[i].path.map(p => [p.lat, p.lng]), {
+            color: style.color,
+            weight: style.weight,
+            opacity: 0.8
+        }).addTo(map);
+        addInfo(isochrone, isochrones[i].time, isochrones[i].offset);
         routeIsochrones[i] = isochrone;
     }
 }
@@ -834,94 +750,79 @@ function getIsochroneTime(isochrone) {
     return new Date(basetime - 0 + offset * 3600 * 1000);
 }
 
-function getIsoStyle (isochrone, selectedOffset, availableCycle) {
+function getIsoStyle(isochrone, selectedOffset, availableCycle) {
     var c = availableCycle;
     var d = new Date(isochrone.time);
     var i = getIsochroneTime(isochrone);
     var h = i.getUTCHours();
-    var weight =  (h%6)?1:3;
+    var weight = (h % 6) ? 1 : 3;
     var color;
     if (isochrone.offset === selectedOffset) {
         color = '#ffffff';
         weight = 3;
     } else {
         if (d < c) {
-            color = (h%12)?'#D0a0b0':'#D080a0';
+            color = (h % 12) ? '#D0a0b0' : '#D080a0';
         } else {
-            color = (h%12)?'#8080a0':'#000000';
+            color = (h % 12) ? '#8080a0' : '#000000';
         }
     }
-    return {"color": color, "weight": weight };
+    return { "color": color, "weight": weight };
 }
 
-function updateIsochrones () {
+function updateIsochrones() {
     var c = new Date(currentCycle);
-    for (const isochrone of routeIsochrones ) {
+    for (const isochrone of routeIsochrones) {
         var style = getIsoStyle(isochrone, ir_index.valueAsNumber, c);
-        isochrone.setOptions({strokeColor: style.color, strokeWeight: style.weight});
+        isochrone.setStyle({ color: style.color, weight: style.weight });
     }
 }
 
 function clearRoute() {
     clearPath(twaPath);
     clearPath(hdgPath);
-    
-    for ( var i = 0; i<trackMarkers.length; i++ ) {
-        trackMarkers[i].setMap(undefined);
+
+    for (var i = 0; i < trackMarkers.length; i++) {
+        map.removeLayer(trackMarkers[i]);
     }
     trackMarkers = [];
-    for ( var i = 0; i<routeTracks.length; i++ ) {
-        routeTracks[i].setMap(undefined);
+    for (var i = 0; i < routeTracks.length; i++) {
+        map.removeLayer(routeTracks[i]);
     }
     routeTracks = [];
-    for ( var i = 0; i<routeIsochrones.length; i++ ) {
-        routeIsochrones[i].setMap(undefined);
+    for (var i = 0; i < routeIsochrones.length; i++) {
+        map.removeLayer(routeIsochrones[i]);
     }
     routeIsochrones = [];
 }
 
-function updateGetRouteProgress () {
+function updateGetRouteProgress() {
     var pgGetRoute = $("#pg_getroute")[0];
-    if ( pgGetRoute.value < pgGetRoute.max ) {
+    if (pgGetRoute.value < pgGetRoute.max) {
         pgGetRoute.value = pgGetRoute.value + 10;
     }
 }
 
 function addWaypointInfo(trackMarker, startTime, point) {
-    var infoWindow = new google.maps.InfoWindow({
-        content: makeWaypointInfo(startTime, point)
-    });
-    trackMarker.set('time', point.time);
-    trackMarker.addListener('mouseover', function() {
-        infoWindow.open(googleMap, trackMarker);
-    });
-    trackMarker.addListener('mouseout', function() {
-        if (!this.noClose) {
-            infoWindow.close();
-        }
-    });
-    trackMarker.addListener('click', function() {
-        this.noClose = true;
-    });
-    infoWindow.addListener('closeclick', function() {
-        trackMarker.noClose = false;
-    });
+    var popupContent = makeWaypointInfo(startTime, point);
+    trackMarker.bindPopup(popupContent);
+    trackMarker.time = point.time;
 }
 
 function makeWaypointInfo(startTime, point) {
     var time = new Date(point.time);
-    var elapsed = Util.formatDHM((time - startTime)/1000);
-    var result =  "<div style='color:#000;'>";
-    result += "<p><b>T+" + elapsed + " - " + point.time + "</b></p>"
+    var elapsed = Util.formatDHM((time - startTime) / 1000);
+    var result = "<div style='color:#000;'>";
+    result += "<p><b>T+" + elapsed + " - " + point.time + "</b></p>";
     result += "<hr>";
 
     result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
 
     result += "<p><b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
     result += "<b> Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
-    
+
     result += "</p><hr>";
-    
+
     result += "<p><b>Wind</b>: " + Util.ms2knots(point.tws).toFixed(2) + "kts / " + point.twd.toFixed(0) + "°</p>";
 
     result += "<p>";
@@ -933,101 +834,80 @@ function makeWaypointInfo(startTime, point) {
     result += "<b> E</b>: " + point.energy.toFixed(0);
     result += "<b> T</b>: " + point.ptime.toFixed(0);
     result += "</p>";
-    
+
     result += "</div>";
-    
+
     return result;
 }
 
 function addMarkerListener(marker) {
-    marker.addListener('click', function () { onMarkerClicked(marker) });
+    marker.on('click', function () { onMarkerClicked(marker); });
 }
 
-function clearPath (path) {
-    for ( var i=0; i < path.length; i++ ) {
-        path[i].setMap(null);
+function clearPath(path) {
+    for (var i = 0; i < path.length; i++) {
+        map.removeLayer(path[i]);
     }
     path = [];
 }
 
 var ortho;
-function drawOrthodromic(data) {
+function drawOrthodromic(event) {
     if (ortho) {
-        ortho.setMap(null);
+        map.removeLayer(ortho);
     }
     var start;
     if (twaAnchor) {
-        start = twaAnchor.getPosition();
+        start = twaAnchor.getLatLng();
     } else {
-        start = startMarker.position;
+        start = startMarker.getLatLng();
     }
-    ortho = new google.maps.Polyline({
-        geodesic: true,
-        strokeColor: '#1f1f1f',
-        strokeOpacity: 1,
-        strokeWeight: 1,
-    });
-    ortho.setPath([start, data.latLng]);
-    ortho.setMap(googleMap);
+    ortho = L.polyline([start, event.latlng], {
+        color: '#1f1f1f',
+        weight: 1,
+        opacity: 1
+    }).addTo(map);
 }
 
-function drawTWAPath (data) {
+function drawTWAPath(data) {
     clearPath(twaPath);
     drawPath(twaPath, data, '#60B260');
 }
 
-function drawHDGPath (data) {
+function drawHDGPath(data) {
     clearPath(hdgPath);
     drawPath(hdgPath, data, '#00c2f8');
 }
 
-function drawPath (bPath, data, color) {
-    var lineSymbol = {
-        path: google.maps.SymbolPath.CIRCLE
-    }
-    for ( var i=1; i<data.length; i++ ) {
-        var twaPathSegment;
+function drawPath(bPath, data, color) {
+    for (var i = 1; i < data.length; i++) {
         var d = new Date(data[i][0]);
         let minutes = d.getMinutes();
-        if ( ( minutes % 10) == 0 ) {
-            twaPathSegment = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: color,
-                strokeOpacity: 1,
-                strokeWeight: (minutes == 0) ? 4 : 2,
-                icons: [{icon: lineSymbol,  offset: '100%'}]
-            });
-        } else {
-            twaPathSegment = new google.maps.Polyline({
-                geodesic: true,
-                strokeColor: color,
-                strokeOpacity: 1,
-                strokeWeight: 2
-            });
-        }
-        twaPathSegment.setPath([data[i-1][1], data[i][1]]);
-        twaPathSegment.setMap(googleMap);
-        bPath[i-1] = twaPathSegment;
+        var segment = L.polyline([data[i - 1][1], data[i][1]], {
+            color: color,
+            weight: (minutes == 0) ? 4 : 2,
+            opacity: 1.0
+        }).addTo(map);
+        bPath[i - 1] = segment;
     }
 }
 
-function addInfo (isochrone, time, offset) {
-    isochrone.set("time", time);
-    isochrone.set("offset", offset);
-    isochrone.addListener('click', function () {
+function addInfo(isochrone, time, offset) {
+    isochrone.time = time;
+    isochrone.offset = offset;
+    isochrone.on('click', function () {
         var iso = isochrone;
         onSelectIsochrone(iso);
     });
 }
 
-
-function isochroneTime (isochrone) {
+function isochroneTime(isochrone) {
     var millis = new Date(isochrone.time).getTime();
-    var date =  new Date(millis + isochrone.offset * 3600 * 1000);
+    var date = new Date(millis + isochrone.offset * 3600 * 1000);
     return date;
 }
 
-function getIsochroneByTime (time) {
+function getIsochroneByTime(time) {
     var refTime = new Date(time);
     var isochrones = routeInfo.isochrones;
     if (isochrones) {
@@ -1035,29 +915,29 @@ function getIsochroneByTime (time) {
     }
     for (const iso of isochrones) {
         var isoT = isochroneTime(iso);
-        if ( isoT >= refTime) {
+        if (isoT >= refTime) {
             return iso;
         }
     }
     return null;
 }
 
-function redrawWindByTime (time) {
+function redrawWindByTime(time) {
     getWind(currentCycle, time);
 }
 
-function getOffsetTime (offset, cycle=currentCycle) {
+function getOffsetTime(offset, cycle = currentCycle) {
     let d = new Date(cycle);
     let time = d.getTime();
     time = time + parseInt(offset) * 3600000;
     return new Date(time);
 }
 
-function redrawWindByOffset (offset) {
+function redrawWindByOffset(offset) {
     redrawWindByTime(getOffsetTime(offset));
 }
 
-async function getWind (cycle, time) {
+async function getWind(cycle, time) {
     let bounds = getMapBounds();
 
     let usedCycle = new Date(cycle);
@@ -1075,52 +955,51 @@ async function getWind (cycle, time) {
     }
     document.getElementById('lb_modelrun').innerHTML = usedCycle.toISOString().substring(11, 13) + 'Z';
     document.getElementById('lb_index').innerHTML = time.toISOString().substring(0, 16) + 'Z';
-    
+
     var offset = (new Date(time) - new Date(usedCycle)) / 3600000;
     ir_index.value = offset;
-
 }
 
-async function updateWindInfo (event, getVMG) {
+async function updateWindInfo(event, getVMG) {
     let label = document.getElementById('lb_position');
-    label.textContent = '[ ' + formatLatLngPosition(event.latLng) + ' ]';
-    label.__pos = event.latLng;
-    
+    label.textContent = '[ ' + formatLatLngPosition(event.latlng) + ' ]';
+    label.__pos = event.latlng;
+
     if (gribCache) {
-        var zoom = googleMap.getZoom();
-            
+        var zoom = map.getZoom();
+
         var bounds = getMapBounds();
 
-        var curLat = event.latLng.lat();
-        var curLng = event.latLng.lng();
+        var curLat = event.latlng.lat;
+        var curLng = event.latlng.lng;
 
-        var destLat = destinationMarker.getPosition().lat();
-        var destLng = destinationMarker.getPosition().lng();
+        var destLat = destinationMarker.getLatLng().lat;
+        var destLng = destinationMarker.getLatLng().lng;
 
-        var dtf = Util.gcDistance({"lat": curLat, "lon": curLng},
-                                  {"lat": destLat, "lon": destLng});
+        var dtf = Util.gcDistance({ "lat": curLat, "lon": curLng },
+            { "lat": destLat, "lon": destLng });
 
         var destBearing = Util.toDeg(Util.courseAngle(curLat, curLng, destLat, destLng));
 
         var lbDTF = document.getElementById("lb_dtf");
         lbDTF.innerText = `${dtf.toFixed(1)} | ${destBearing.toFixed(1)}°`;
 
-        var startLat = startMarker.getPosition().lat();
-        var startLng = startMarker.getPosition().lng();
+        var startLat = startMarker.getLatLng().lat;
+        var startLng = startMarker.getLatLng().lng;
 
-        var dfs = Util.gcDistance({"lat": curLat, "lon": curLng},
-                                  {"lat": startLat, "lon": startLng});
+        var dfs = Util.gcDistance({ "lat": curLat, "lon": curLng },
+            { "lat": startLat, "lon": startLng });
 
         var startBearing = Util.toDeg(Util.courseAngle(curLat, curLng, startLat, startLng));
 
         var lbDFS = document.getElementById("lb_dfs");
         lbDFS.innerText = `${dfs.toFixed(1)} | ${startBearing.toFixed(1)}°`;
-        
+
         var wind = await gribCache.getWind(curLat, curLng);
         if (wind) {
             var windDir = wind.direction.toFixed();
             var windSpeed = Util.ms2knots(wind.speed).toFixed(1);
-            $("#lb_windatposition").text(pad0(windDir,3) + "° | " + windSpeed + "kn");
+            $("#lb_windatposition").text(pad0(windDir, 3) + "° | " + windSpeed + "kn");
 
             var lbVMGUp = document.getElementById("lb_vmg_up");
             var lbVMGDown = document.getElementById("lb_vmg_down");
@@ -1128,44 +1007,43 @@ async function updateWindInfo (event, getVMG) {
 
             lbVMGUp.innerHTML = vmg.up;
             lbVMGDown.innerHTML = vmg.down;
-            
+
         } else {
-            console.log(`No wind data at ${iLat}, ${iLng}`);
+            console.log(`No wind data at ${curLat}, ${curLng}`);
         }
     } else {
         console.log(`No wind data loaded`);
     }
-
 }
 
-function getMapBounds () {
-    var bounds = googleMap.getBounds();
+function getMapBounds() {
+    var bounds = map.getBounds();
     var sw = bounds.getSouthWest();
     var ne = bounds.getNorthEast();
-    var mapProjection = googleMap.getProjection();
 
-    return { northEast: ne,
-             southWest: sw,
-             north: ne.lat(),
-             south: sw.lat(),
-             west: sw.lng(),
-             east: ne.lng(),
-             projection: mapProjection
-           };
+    return {
+        northEast: ne,
+        southWest: sw,
+        north: ne.lat,
+        south: sw.lat,
+        west: sw.lng,
+        east: ne.lng,
+        map: map
+    };
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Formatting
 
-function formatLatLngPosition (latlng) {
-    return Util.formatPosition(latlng.lat(), latlng.lng());
+function formatLatLngPosition(latlng) {
+    return Util.formatPosition(latlng.lat, latlng.lng);
 }
 
-function formatPointPosition (point) {
+function formatPointPosition(point) {
     return Util.formatPosition(point.lat, point.lng);
 }
 
-function formatSails (data) {
+function formatSails(data) {
     var best = data.best;
     var t0 = new Date(best[0].time);
     var start = t0;
@@ -1176,7 +1054,7 @@ function formatSails (data) {
         t1 = new Date(s.time);
         if (s.sail != sail) {
             var dt = t1 - t0;
-            if ( ! m[sail]) {
+            if (!m[sail]) {
                 m[sail] = dt;
             } else {
                 m[sail] += dt;
@@ -1187,7 +1065,7 @@ function formatSails (data) {
     }
 
     var dt = t1 - t0;
-    if ( ! m[sail]) {
+    if (!m[sail]) {
         m[sail] = dt;
     } else {
         m[sail] += dt;
@@ -1197,18 +1075,17 @@ function formatSails (data) {
 
     var result = "";
     for (const e in m) {
-        let sail  = sailNames[e];
+        let sail = sailNames[e];
         if (result) {
-            result = result + " - " + sail + ":" + (m[e]/dt*100).toFixed() + "%" ;
+            result = result + " - " + sail + ":" + (m[e] / dt * 100).toFixed() + "%";
         } else {
-            result = sail + ":" + (m[e]/dt*100).toFixed() + "%";
+            result = sail + ":" + (m[e] / dt * 100).toFixed() + "%";
         }
     }
     return result;
 }
 
 export {
-    // alphabetical
     courseGCLine,
     destinationMarker,
     drawTWAPath,
@@ -1219,7 +1096,8 @@ export {
     getRoute,
     getURLParams,
     getValue,
-    googleMap,
+    map,
+    initMap,
     loadPolars,
     makeQuery,
     mapEvent,

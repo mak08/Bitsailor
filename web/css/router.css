@@ -15,21 +15,15 @@
 	padding: 0px;
 }
 
-dummy {
-	color00: #ffffff
-	color01: #8080a0
-	color02: #464242;
-	color03: #1f1f1f;
-	color04: #000000
-	color05: #00c2f8;
-	color06: #308040;
-	color07: #d00000;
-	color08: #ff0000;
-}
+
 
 html, body {
-	margin: 0px;
-	padding: 0px;
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	overflow: hidden;
 }
 
 button, select, option {
@@ -53,15 +47,16 @@ button:active {
 .grid-container {
 	display: grid;
 	grid-template-areas: 'header menu'
-							 'controls main'
-							 'footer-left footer';
-	grid-template-rows: 48px 1fr 30px;
+						 'controls main'
+						 'footer-left footer';
+	grid-template-rows: 48px 1fr 48px;
 	grid-template-columns: 40vh 1fr;
 	grid-gap: 1px;
-	/* Make a full-screen grid inside html>body. Avoid jitter when drawing wind. */
-	height: calc(100vh - 8px);
+	height: 100vh;
+	width: 100vw;
 	background-color: white;
-	padding: 2px;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 
@@ -108,35 +103,65 @@ button:active {
     background-color: #464242;
 }
 .map {
-    grid-area: main;
-    z-index: 1;
-    background: none;
+	grid-area: main;
+	z-index: 1;
+	background: none;
+	height: 100%;
+	width: 100%;
+	position: relative;
 }
 .map-overlay {
-    grid-area: main;
-    z-index: 200;
-    background: none;
-    pointer-events:none;
+	grid-area: main;
+	z-index: 200;
+	background: none;
+	pointer-events:none;
+	height: 100%;
+	width: 100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+@media only screen and (max-width: 600px) {
+	.grid-container {
+		grid-template-columns: 1fr;
+		grid-template-rows: 48px auto 48px;
+		height: 100vh;
+		width: 100vw;
+	}
+	.menu, .controls, .footer, .footer-left {
+		font-size: 90%;
+		padding: 2px;
+	}
+    .footer, .footer-left {
+        height: 48px;
+        align-items: center;
+    }	
+	.map, .map-overlay {
+		height: 100%;
+		width: 100%;
+		min-height: 200px;
+	}
 }
 .controls {
-    grid-area: controls;
+	grid-area: controls;
 	display: grid;
-	max-content: 40px;
 	grid-template-columns: 100px 40px 40px 40px 40px 40px 40px;
 	grid-template-rows: repeat(20, minmax(25px, 36px));
 	color: #ededeb;
-    background-color: #464242;
+	background-color: #464242;
 	align-items: flex-start;
 }
 
 
 .footer-left {
     grid-area: footer-left;
+	height: 48px;
 	color: #ededeb;
     background-color: #464242; 
 }
 .footer {
     grid-area: footer;
+	height: 48px;
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -181,6 +206,7 @@ label {
 
 input[type=checkbox] {
 	-webkit-transform: scale(1.4); /* Safari and Chrome */
+	transform: scale(1.4);
 }
 
 /* Forecast slider*/

@@ -233,11 +233,11 @@ export default class GribCache {
             
             // Draw wind arrows are at evenly spaced map points
             // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
-            var projection = bounds.projection;
-            var nwLatLng =  new google.maps.LatLng(bounds.north, bounds.west);
-            var seLatLng =  new google.maps.LatLng(bounds.south, bounds.east);
-            var nwPoint = projection.fromLatLngToPoint(nwLatLng);
-            var sePoint = projection.fromLatLngToPoint(seLatLng);
+            var map = bounds.map;
+            var nwLatLng =  L.latLng(bounds.north, bounds.west);
+            var seLatLng =  L.latLng(bounds.south, bounds.east);
+            var nwPoint = map.project(nwLatLng);
+            var sePoint = map.project(seLatLng);
             var top = nwPoint.y;
             var bottom = sePoint.y;
             var left =  nwPoint.x;
@@ -247,15 +247,15 @@ export default class GribCache {
             
             if (left < right) {
                 var dx = (right - left) / STEPS_X;
-                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
+                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
             } else {
                 // left > right
                 var dx = (256 - left + right) / STEPS_X;
                 let mapWidthLeft = 256 - left;
                 let mapWidth = mapWidthLeft + right;
                 let canvasLeft = mapWidthLeft/mapWidth * ctx.canvas.width;
-                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
-                await this.drawMap(ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
+                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
+                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
             }
         }
     }
@@ -264,11 +264,11 @@ export default class GribCache {
         var mapHeight = bottom - top;
         for (var y = top; y < bottom; y += dy) {
             for (var x = left; x < right; x += dx) {
-                var mapPoint = new google.maps.Point(x, y);
-                var latLng = projection.fromPointToLatLng(mapPoint);
+                var mapPoint = L.point(x, y);
+                var latLng = projection.unproject(mapPoint);
                 var pointX = canvasLeft + ((x - left) /  mapWidth) * ctx.canvas.width;
                 var pointY = (y - top) / mapHeight * ctx.canvas.height;
-                let w = await this.windDataMagnitude(cycle, resolution, time, latLng.lat(), latLng.lng()); 
+                let w = await this.windDataMagnitude(cycle, resolution, time, latLng.lat, latLng.lng); 
                 this.drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
             }
         }
@@ -356,7 +356,7 @@ export default class GribCache {
         let cycleFileStr = this.formatCycle(cycle, '_gfs.t');
         let offsetStr = offset.toFixed().padStart(3, '0');
         // /weather/1p00/20250813/12/20250813_gfs.t12z.pgrb2.0p25.f291.grib2
-        return `/weather/${res}/${cycleDirStr}/${cycleFileStr}z.pgrb2.${res}.f${offsetStr}.grib2`;
+        return `/weather/noaa/${res}/${cycleDirStr}/${cycleFileStr}z.pgrb2.${res}.f${offsetStr}.grib2`;
     }
 
     formatCycle (d, sep = '-') {

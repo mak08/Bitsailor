@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-11 18:02:33>
+;;; Last Modified <michael 2025-09-14 16:29:31>
 
 (in-package :bitsailor)
 
@@ -257,8 +257,8 @@
     (log2:info "Loading ~a" filename)
     (cond ((joref json-object "scriptData")
            (translate-polars-vr filename json-object))
-          ;; ((joref json-object "id")
-          ;;  (translate-polars-vr filename json-object))
+          ((joref json-object "id")
+           (translate-polars-fw filename json-object))
           (t
            (error "Unknown polars format ~a~%" filename)))))
 

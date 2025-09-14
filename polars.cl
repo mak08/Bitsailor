@@ -1,13 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-14 16:29:31>
+;;; Last Modified <michael 2025-09-14 16:33:25>
 
 (in-package :bitsailor)
 
 (defstruct polars id label name tws twa sails)
 (defstruct (polars-vr (:include polars)) winch)
-(defstruct (polars-rs (:include polars)))
+(defstruct (polars-fw (:include polars)))
 (defstruct cpolars id label name maxspeed speed sailspeeds twa vmg)
 (defstruct sail name speed)
 
@@ -39,11 +39,13 @@
 ;;; API
 (declaim (inline get-max-speed))
 (defun get-max-speed (cpolars twa tws)
-  (aref (cpolars-maxspeed cpolars) (round (* twa 10)) (round (* tws 10))))
+  (declare (double-float twa tws))
+  (aref (cpolars-maxspeed cpolars) (round (* twa 10.0)) (round (* tws 10.0))))
 
 (declaim (inline get-sail-speed))
 (defun get-sail-speed (cpolars twa tws sail) 
-  (aref (aref (cpolars-speed cpolars) (round (* twa 10)) (round (* tws 10))) sail))
+  (declare (double-float twa tws))
+  (aref (aref (cpolars-speed cpolars) (round (* twa 10.0)) (round (* tws 10.0))) sail))
 
 (defun encode-options (option-list)
   (let ((options 3))
@@ -257,10 +259,10 @@
     (log2:info "Loading ~a" filename)
     (cond ((joref json-object "scriptData")
            (translate-polars-vr filename json-object))
-          ((joref json-object "id")
+          ((joref json-object "data_json")
            (translate-polars-fw filename json-object))
           (t
-           (error "Unknown polars format ~a~%" filename)))))
+           (error "Unknown polars format")))))
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

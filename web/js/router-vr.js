@@ -37,17 +37,17 @@ function initializeRouterVR() {
 // Set up UI controls and event handlers
 function setupEventHandlers() {
     // Map event handlers
-    map.on('contextmenu', onMapRightClick);
-    map.on('click', onMapClick);
-    map.on('click', computePath);
-    map.on('dblclick', getTWAPath);
+    Router.map.on('contextmenu', onMapRightClick);
+    Router.map.on('click', onMapClick);
+    Router.map.on('click', computePath);
+    Router.map.on('dblclick', getTWAPath);
     
     // Button handlers
     document.getElementById('bt_setstart').onclick = function() {
-        setRoutePoint('start', map.getCenter());
+        setRoutePoint('start', Router.map.getCenter());
     };
     document.getElementById('bt_setdest').onclick = function() {
-        setRoutePoint('dest', map.getCenter());
+        setRoutePoint('dest', Router.map.getCenter());
     };
     
     // Set up other UI elements
@@ -186,7 +186,7 @@ function createStartAndDestinationMarkers() {
             popupAnchor: [0, -16],
         }),
         draggable: true
-    }).addTo(map);
+    }).addTo(Router.map);
     
     // Start marker drag event
     startMarker.on('dragend', function(e) {
@@ -227,7 +227,7 @@ function createStartAndDestinationMarkers() {
             popupAnchor: [0, -16],
         }),
         draggable: true
-    }).addTo(map);
+    }).addTo(Router.map);
     
     // Destination marker drag event
     destinationMarker.on('dragend', function(e) {
@@ -241,7 +241,7 @@ function createStartAndDestinationMarkers() {
     drawRouteLine();
     
     // Center map on start position
-    map.panTo([start.lat, start.lon]);
+    Router.map.panTo([start.lat, start.lon]);
     
     // Handle additional query parameters
     let energy = queryParams.energy;
@@ -285,7 +285,7 @@ function createCheckpointMarkers() {
             }),
             title: c.group + "-" + c.id + " " + c.name,
             draggable: false
-        }).addTo(map);
+        }).addTo(Router.map);
         
         mark.on('click', function() { 
             Router.onMarkerClicked(mark);
@@ -303,7 +303,7 @@ function createRouteBoundaries() {
             color: '#ff0000',
             weight: 1,
             opacity: 1.0
-        }).addTo(map);
+        }).addTo(Router.map);
     }
     
     // Restricted zones
@@ -341,7 +341,7 @@ function drawRouteLine() {
     if (!startMarker || !destinationMarker) return;
     
     if (routeLine) {
-        map.removeLayer(routeLine);
+        Router.map.removeLayer(routeLine);
     }
     
     routeLine = L.polyline([
@@ -351,7 +351,7 @@ function drawRouteLine() {
         color: '#d00000',
         weight: 2,
         opacity: 1.0
-    }).addTo(map);
+    }).addTo(Router.map);
 }
 
 // Map right-click handler

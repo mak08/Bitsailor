@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-09-14 11:47:10>
+;;; Last Modified <michael 2025-09-15 21:35:04>
 
 (in-package :bitsailor)
 
@@ -64,11 +64,6 @@
         (get-all-polars))
        (load-polars-directory))
      :name "LOAD-POLARS")
-
-    (bt:make-thread
-     (lambda ()
-       (load-race-definitions :directory *races-dir*))
-     :name "LOAD-RACES")
 
     (multiple-value-bind
           (success error)

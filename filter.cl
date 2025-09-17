@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-02-15 21:07:52>
+;;; Last Modified <michael 2025-09-16 21:25:29>
 
 (in-package :bitsailor)
 
@@ -23,9 +23,6 @@
                               heading
                               speed
                               sail
-                              reason
-                              penalty-time
-                              energy
                               wind-dir
                               wind-speed)
   (declare (special next-isochrone max-dist min-angle)
@@ -57,9 +54,6 @@
                                  destination-distance
                                  speed
                                  sail
-                                 energy
-                                 reason
-                                 penalty-time
                                  wind-dir
                                  wind-speed
                                  origin-angle

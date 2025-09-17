@@ -95,6 +95,13 @@ function getPolarsList() {
         "/function/router.getPolarsList",
         function(xhr) {
             polarsList = JSON.parse(xhr.responseText);
+            let selPolars = document.getElementById('sel_polars');
+            polarsList.map(entry => {
+                let option = document.createElement('option');
+                option.value = entry.id;
+                option.innerHTML = entry.label;
+                selPolars.add(option);
+            });
         },
         function(xhr) {
             console.error('Could not load polars list');
@@ -386,8 +393,10 @@ function onOptionToggled(event) {
 
 // VMG calculation
 function getVMG(windSpeed) {
-    let polars = Router.getPolars().scriptData.polar;
-    if (polars) {
+    let polarsMessage = Router.getPolars();
+    let polars= polarsMessage.scriptData.polar;
+    if (polarsMessage.scriptData) {
+        let polars= polarsMessage.scriptData.polar;
         var vmg = bestVMG(windSpeed, polars, ["heavy", "light", "reach", "hull", "foil"])
         return {
             "up": vmg.vmgUp.toFixed(2) + '@' + vmg.twaUp.toFixed(0),

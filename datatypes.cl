@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-07-25 23:17:22>
+;;; Last Modified <michael 2025-09-16 18:41:09>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -104,7 +104,7 @@
 ;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
 
 (defstruct (routepoint
-             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail (energy 100d0) penalty penalty-time wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
+             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
   predecessor
   position
   time
@@ -113,16 +113,13 @@
   destination-distance
   speed
   sail
-  energy 
-  penalty
-  penalty-time
   wind-dir
   wind-speed
   origin-angle
   origin-distance)
 
 (defstruct trackpoint
-  time position heading dtf speed sail penalty ptime energy twd tws twa)
+  time position heading dtf speed sail twd tws twa)
 
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)
@@ -133,10 +130,7 @@
                    :sail (routepoint-sail successor)
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)
-                   :twa (routepoint-twa successor)
-                   :penalty (routepoint-penalty successor)
-                   :ptime (routepoint-penalty-time successor)
-                   :energy (routepoint-energy routepoint)))
+                   :twa (routepoint-twa successor)))
 
 (defmethod print-object ((thing routepoint) stream)
   (format stream "<~a@~a|~a|~a>"

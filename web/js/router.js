@@ -116,8 +116,8 @@ function setUp(getVMG) {
 
     ir_index = $("#ir_index")[0];
 
-    startMarker = initMarker('start', 'Start', 'img/start_45x32.png');
-    destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png');
+    startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 0, 45, 16, -10);
+    destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png', 0, 32, 10, -10);
 
     // Wind canvas
     let canvas = setupCanvas();
@@ -135,13 +135,13 @@ function setUp(getVMG) {
     });
 }
 
-function initMarker(type, title, url) {
+function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
     var marker = L.marker([0, 0], {
         title: title,
         icon: L.icon({
             iconUrl: url,
-            iconAnchor: [16, 16],
-            popupAnchor: [0, -16],
+            iconAnchor: [iconX, iconY],
+            popupAnchor: [popupX, popupY],
         }),
         draggable: true
     }).addTo(map);
@@ -557,11 +557,6 @@ function getRoute() {
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
 
-    var energyInput = document.getElementById('tb_currentenergy');
-    if (energyInput) {
-        query += `&energy=${energyInput.value}`;
-    }
-
     var tackInput = document.getElementById('sel_currenttack');
     if (tackInput) {
         query += `&tack=${tackInput.value}`;
@@ -618,8 +613,8 @@ function displayRouting(data) {
 
     startMarker.time = best[0].time;
 
-    var markerIcon = L.icon({ iconUrl: "img/marker_32x12.png", iconAnchor: [16, 16] });
-    var redMarkerIcon = L.icon({ iconUrl: "img/marker_red_32x12.png", iconAnchor: [16, 16] });
+    var markerIcon = L.icon({ iconUrl: "img/marker_32x12.png", iconAnchor: [6, 32], tooltipAnchor: [0, -36],  popupAnchor: [0, -36]});
+    var redMarkerIcon = L.icon({ iconUrl: "img/marker_red_32x12.png", iconAnchor: [6, 32], tooltipAnchor: [0, -36], popupAnchor: [0, -36]});
 
     var isDisplayTracks = document.getElementById('cb_displaytracks').checked;
     if (isDisplayTracks) {
@@ -688,10 +683,7 @@ function getURLParams() {
     if (sail) {
         res.sail = sail;
     }
-    var energy = query.get('energy');
-    if (energy) {
-        res.energy = energy;
-    }
+
     var twa = query.get('twa');
     if (twa) {
         res.twa = twa;
@@ -813,27 +805,24 @@ function makeWaypointInfo(startTime, point) {
     var time = new Date(point.time);
     var elapsed = Util.formatDHM((time - startTime) / 1000);
     var result = "<div style='color:#000;'>";
-    result += "<p><b>T+" + elapsed + " - " + point.time + "</b></p>";
+    result += "<b>T+" + elapsed + " - " + point.time + "</b><br>";
+
     result += "<hr>";
 
-    result += "<p><b>Pos</b>: " + formatPointPosition(point.position) + "</p>";
+    result += "<b>Pos</b>: " + formatPointPosition(point.position);
+    result += "<br>";
 
-    result += "<p><b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
-    result += "<b> Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
+    result += "<b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
+    result += "<b>Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
+    result += "<br>";
 
-    result += "</p><hr>";
-
-    result += "<p><b>Wind</b>: " + Util.ms2knots(point.tws).toFixed(2) + "kts / " + point.twd.toFixed(0) + "°</p>";
-
-    result += "<p>";
     result += "<b> TWA</b>: " + point.twa.toFixed(1);
     result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + sailNames[point.sail];
-    result += "</p>";
-    result += "<p>";
-    result += "<b> Penalty</b>: " + point.penalty;
-    result += "<b> E</b>: " + point.energy.toFixed(0);
-    result += "<b> T</b>: " + point.ptime.toFixed(0);
-    result += "</p>";
+    result += "<br>";
+
+    result += "<hr>";
+    result += "<b>Wind</b>: " + Util.ms2knots(point.tws).toFixed(2) + "kts / " + point.twd.toFixed(0) + "°<br>";
+
 
     result += "</div>";
 

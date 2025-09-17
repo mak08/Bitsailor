@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2024-11-01 18:46:27>
+;;; Last Modified <michael 2025-09-15 21:36:10>
 
 (in-package :bitsailor)
 
@@ -134,15 +134,7 @@
 ;;; getRoute
 
 (defun determine-minwind (presets race-id)
-  (cond
-    ((string= presets "VR")
-     (if (string=
-          (joref (race-info-data (race-info race-id)) "fineWinds")
-          "TRUE")
-         (knots-to-m/s 1d0)
-         (knots-to-m/s 2d0)))
-    (t
-     0d0)))
+  (knots-to-m/s 0d0))
 
 (defun get-routing-presets (presets
                             &key
@@ -163,11 +155,8 @@
                               (dlon))
   (let* ((race-info (race-info race-id))
          (vr-finewinds
-           (and (string= presets "VR")
-                (string= "TRUE"
-                         (joref (race-info-data race-info) "fineWinds"))))
-         (polars-id (format nil "~a" (or polars-id
-                                         (joref (joref (race-info-data race-info) "boat") "polar_id"))))
+           nil)
+         (polars-id (format nil "~a" polars-id))
          (options
            (or options
                '("hull" "foil" "winch" "heavy" "light" "reach")))
@@ -176,7 +165,7 @@
                (not resolution-provided-p))
       (setf resolution "0p25"))
     (make-routing
-     :race-info   (race-info race-id)
+     :race-info (race-info race-id)
      :fan *max-angle*
      :start (when (and slat slon) (make-latlng :lat slat :lng slon))
      :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
@@ -526,19 +515,7 @@
 (defun |getRaceList| (handler request response)
   ;; unauthenticated!
   (declare (ignore handler request response))
-  (get-race-list :force-reload nil))
-
-(defun get-race-list (&key (force-reload nil))
-  (let* ((races (list)))
-    (when force-reload
-      (load-race-definitions :directory *races-dir*))
-    (map-races 
-     (lambda (k v)
-       (declare (ignore k))
-       (push (get-raceinfo (race-info-data v)) races)))
-    (with-output-to-string (s)
-      (json s races)
-      )))
+  "[]")
 
 (defun get-raceinfo (race)
   (let* ((id (joref race "_id"))

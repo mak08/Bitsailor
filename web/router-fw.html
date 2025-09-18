@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="css/router.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="js/colors.js"></script>
     <script type="module" src="js/router-fw.js"></script>
     
@@ -70,12 +69,12 @@
 		</div>		
 	  </div>
 
-	<div class="map" id="map">
-	</div>
+	  <div class="map" id="map">
+	  </div>
 
-					<div class="map-overlay" id="canvas">
-						<canvas id="wind-canvas" style="width:100%; height:100%; display:block; pointer-events:none;"/>
-					</div>
+	  <div class="map-overlay" id="canvas">
+		<canvas id="wind-canvas" style="width:100%; height:100%; display:block; pointer-events:none;"/>
+	  </div>
 
       <div class="controls" id="controls">
 
@@ -94,26 +93,6 @@
           <button id="bt_position"> Set </button>
 		</div>
 
-		<div class="options-label">
-		  <label>Options</label>
-		</div>
-
-        <div class="vroptions-1">
-		  <label class="lbl_option" for="cb_winch">winch</label>
-		  <input id="cb_winch" name="winch" type="checkbox" checked="true"/>
-		  <label class="lbl_option" for="cb_hull">hull</label>
-		  <input id="cb_hull" name="hull" type="checkbox" checked="true"/>
-		  <label class="lbl_option" for="cb_foil">foil</label>
-		  <input id="cb_foil" name="foil" type="checkbox" checked="true"/>
-        </div>
-		<div class="vroptions-2">
-		  <label class="lbl_option" for="cb_heavy">heavy</label>
-		  <input id="cb_heavy" name="heavy" type="checkbox" checked="true"/>
-		  <label class="lbl_option" for="cb_light">light</label>
-		  <input id="cb_light" name="light" type="checkbox" checked="true"/>
-		  <label class="lbl_option" for="cb_reach">reach</label>
-		  <input id="cb_reach" name="reach" type="checkbox" checked="true"/>
-        </div>
 		
         <div class="delayed-label">
           <label>Start time:</label>
@@ -125,205 +104,154 @@
           <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
 
+
+		<div class="duration-label">
+		  <label>Duration</label>
+		</div>
+		<div class="duration-selector">
+		  <select id="sel_duration" name="duration">
+			<option value="12">12 hours</option>
+			<option value="24">1 day</option>
+			<option value="48">2 days</option>
+			<option value="72">3 days</option>
+			<option value="96" selected="true">4 days</option>
+			<option value="120">5 days</option>
+			<option value="144">6 days</option>
+			<option value="168">7 days</option>
+			<option value="192">8 days</option>
+			<option value="240">10 days</option>
+			<option value="288">12 days</option>
+			<!--
+				<option value="336">14 days</option>
+			<option value="360">15 days</option>
+			-->
+		  </select>
+		</div>	
+
+		<div class="polars-label">
+		  <label>Polars</label>
+		</div>
+		
+		<div class="polars-selector">
+		  <select id="sel_polars" name="polars">
+		  </select>
+		</div>	
+
+
+		<div class="resolution-label">
+		  <label>GFS resolution</label>
+		</div>
+		<div class="resolution-selector">
+		  <select id="sel_resolution" name="resolution">
+			<option value="1p00">1.00°</option>
+			<option value="0p25">0.25°</option>
+		  </select>
+		</div>	
+		
+		<div class="displaywind-label">
+		  <label>Display wind</label>
+		</div>
+		<div class="displaywind-checkbox">
+		  <input id="cb_displaywind" name="displaywind" type="checkbox" checked="true"/>
+		</div>
+
+		<div class="displaytracks-label">
+		  <label>Display tracks</label>
+		</div>
+		<div class="displaytracks-checkbox">
+		  <input id="cb_displaytracks" name="displaytracks" type="checkbox"/>
+		</div>
+
+		<div class="execute-button">
+		  <button id="bt_getroute" style="width:300px; text-align:center; font-size:100%; font-weight:bold;">Execute</button>
+		</div>
+		<div class="progress-bar">
+		  <progress id="pg_getroute" style="width:300px" max="300" value="0"></progress>
+		</div>
+
+		<div class="current-twa-label">
+		  <label>TWA</label>
+		</div>
+		<div class="current-twa">
+		  <nobr><label id="lb_twa">&lt;No route marker selected&gt;</label></nobr>
+		</div>
+
+		<div class="current-heading-label">
+		  <label>Heading</label>
+		</div>
+		<div class="current-heading">       
+		  <nobr><label id="lb_twa_heading">-.-.-.-</label></nobr>
+		</div>
+
+		<div class="statistics-label">
+		  <label>Route</label>
+		</div>
+		<div class="download-button">
+		  <button id="bt_downloadroute">Download</button>
+		  <label for="rb_gpx">GPX</label>
+		  <input type="radio" name="exportformat" id="rb_gpx" value="gpx" checked/>
+		  <label for="rb_csv">CSV</label>
+		  <input type="radio" name="exportformat" id="rb_csv" value="csv"/>
+		</div>
+
+		<div class="statistics-from-label">
+		  <label>Start</label>
+		</div>
+		<div class="statistics-from">
+		  <label id="lb_from">-.-.-.-</label>
+		</div>
+
+		<div class="statistics-duration-label">
+		  <label>Duration</label>
+		</div>
+		<div class="statistics-duration">
+		  <label id="lb_duration">-.-.-.-</label>
+		</div>
+
+		<div class="statistics-sails-label">
+		  <label>Sails</label>
+		</div>
+		<div class="statistics-sails">
+		  <label id="lb_sails" style="display:inline-block; overflow:auto;">-.-.-.-</label>
+		</div>
+
+		<div class="statistics-min-wind-label">
+		  <label>Wind</label>
+		</div>
+		<div class="statistics-min-wind">
+		  <label id="lb_minwind">-.-.-.-</label>
+		</div>
+
+		<div class="statistics-min-twa-label">
+		  <label>TWA</label>
+		</div>
+		<div class="statistics-min-twa">
+		  <label id="lb_mintwa">-.-.-.-</label>
+		</div>
+
+		<div class="statistics-polars-label">
+		  <label>Polars</label>
+		</div>
+		<div class="statistics-polars">
+		  <label id="lb_polars">---</label>
+		</div>
+
+		<div class="statistics-options-label">
+		  <label>Options</label>
+		</div>
+		<div class="statistics-options">
+		  <label id="lb_options">---</label>
+		</div>
+
 		<!--
-			<div class="cycle-label">
-			  <label>Cycle:</label>
+			<div class="statistics-maxspeed-label">
+			  <label>Max speed</label>
 			</div>
-			<div class="cycle-entry">
-			  <input id="cb_manualcycle" name="manualcycle" type="checkbox"/>
-			  <input id="tb_cycledate" name="cycledate" type="date"/>
-			  <select id="sel_cyclehour" name="cyclehour">
-				<option value="0">00</option>
-				<option value="6">06</option>
-				<option value="12">12</option>
-				<option value="18">18</option>
-			  </select>
-			</div>	
+			<div class="statistics-maxspeed">
+			  <label id="lb_maxspeed">---</label>
+			</div>
 			-->
 			
-
-			<div class="duration-label">
-			  <label>Duration</label>
-			</div>
-			<div class="duration-selector">
-			  <select id="sel_duration" name="duration">
-				<option value="3">3 hours (hi-res)</option>
-				<option value="6">6 hours (hi-res)</option>
-				<option value="12">12 hours</option>
-				<option value="24">1 day</option>
-				<option value="48">2 days</option>
-				<option value="72">3 days</option>
-				<option value="96" selected="true">4 days</option>
-				<option value="120">5 days</option>
-				<option value="144">6 days</option>
-				<option value="168">7 days</option>
-				<option value="192">8 days</option>
-				<option value="240">10 days</option>
-				<option value="288">12 days</option>
-				<!--
-					<option value="336">14 days</option>
-				<option value="360">15 days</option>
-				-->
-			  </select>
-			</div>	
-
-			<div class="polars-label">
-			  <label>Polars</label>
-			</div>
-			
-			<div class="polars-selector">
-			  <select id="sel_polars" name="polars">
-			  </select>
-			</div>	
-
-
-			<div class="resolution-label">
-			  <label>GFS resolution</label>
-			</div>
-			<div class="resolution-selector">
-			  <select id="sel_resolution" name="resolution">
-				<option value="1p00">1.00°</option>
-				<option value="0p25">0.25°</option>
-			  </select>
-			</div>	
-			
-			<div class="boatstate-label">
-			  <label for="currentsail">Sail</label>
-			  <select id="sel_currentsail" name="currentsail">
-				<option value="Jib">Jib</option>
-				<option value="Spi">Spi </option> 
-				<option value="Stay">Stay</option>
-				<option value="LJ">LJ</option>
-				<option value="C0">C0</option>
-				<option value="HG">HG</option>
-				<option value="LG">LG</option>
-			  </select>
-			</div>
-			
-			<div class="boatstate-group">
-			  <label for="currenttwa">Tack</label>
-			  <select id="sel_currenttack" name="currenttack">
-				<option value="port">Port</option>
-				<option value="stbd">Stbd</option>
-			  </select>
-			  <label for="currentenergy">Energy</label>
-			  <input id="tb_currentenergy" name="currentenergy" style="width:3em" value="100"/>
-			</div>
-
-			<div class="displaywind-label">
-			  <label>Display wind</label>
-			</div>
-			<div class="displaywind-checkbox">
-			  <input id="cb_displaywind" name="displaywind" type="checkbox" checked="true"/>
-			</div>
-
-			<div class="displaytracks-label">
-			  <label>Display tracks</label>
-			</div>
-			<div class="displaytracks-checkbox">
-			  <input id="cb_displaytracks" name="displaytracks" type="checkbox"/>
-			</div>
-
-			<div class="cursor-label">
-			  <label>Map cursor</label>
-			</div>
-			<div class="cursor-select" id="map_cursor">
-			  <input type="radio" id="rb_crosshair" name="cursor" value="crosshair" checked="true">
-			  <label for="corsshair">crosshair</label>
-			  <input type="radio" id="rb_default" name="cursor" value="default">
-			  <label for="female">default</label>
-			</div>
-
-			<div class="execute-button">
-			  <button id="bt_getroute" style="width:300px; text-align:center; font-size:100%; font-weight:bold;">Execute</button>
-			</div>
-			<div class="progress-bar">
-			  <progress id="pg_getroute" style="width:300px" max="300" value="0"></progress>
-			</div>
-
-			<div class="current-twa-label">
-			  <label>TWA</label>
-			</div>
-			<div class="current-twa">
-			  <nobr><label id="lb_twa">&lt;No route marker selected&gt;</label></nobr>
-			</div>
-
-			<div class="current-heading-label">
-			  <label>Heading</label>
-			</div>
-			<div class="current-heading">       
-			  <nobr><label id="lb_twa_heading">-.-.-.-</label></nobr>
-			</div>
-
-			<div class="statistics-label">
-			  <label>Route</label>
-			</div>
-			<div class="download-button">
-			  <button id="bt_downloadroute">Download</button>
-			  <label for="rb_gpx">GPX</label>
-			  <input type="radio" name="exportformat" id="rb_gpx" value="gpx" checked/>
-			  <label for="rb_csv">CSV</label>
-			  <input type="radio" name="exportformat" id="rb_csv" value="csv"/>
-			</div>
-
-			<div class="statistics-from-label">
-			  <label>Start</label>
-			</div>
-			<div class="statistics-from">
-			  <label id="lb_from">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-duration-label">
-			  <label>Duration</label>
-			</div>
-			<div class="statistics-duration">
-			  <label id="lb_duration">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-sails-label">
-			  <label>Sails</label>
-			</div>
-			<div class="statistics-sails">
-			  <label id="lb_sails" style="display:inline-block; overflow:auto;">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-min-wind-label">
-			  <label>Wind</label>
-			</div>
-			<div class="statistics-min-wind">
-			  <label id="lb_minwind">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-min-twa-label">
-			  <label>TWA</label>
-			</div>
-			<div class="statistics-min-twa">
-			  <label id="lb_mintwa">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-polars-label">
-			  <label>Polars</label>
-			</div>
-			<div class="statistics-polars">
-			  <label id="lb_polars">---</label>
-			</div>
-
-			<div class="statistics-options-label">
-			  <label>Options</label>
-			</div>
-			<div class="statistics-options">
-			  <label id="lb_options">---</label>
-			</div>
-
-			<!--
-				<div class="statistics-maxspeed-label">
-				  <label>Max speed</label>
-				</div>
-				<div class="statistics-maxspeed">
-				  <label id="lb_maxspeed">---</label>
-				</div>
-				-->
-				
       </div>
 
       <div class="footer-left">

@@ -38,9 +38,6 @@ function writePointCSV (stream, routePoint) {
     stream.s += ';' + routePoint.heading.toFixed(1);
     stream.s += ';' + Util.ms2knots(routePoint.tws).toFixed(2);
     stream.s += ';' + routePoint.twd.toFixed(1);
-    stream.s += ';' + routePoint.penalty;
-    stream.s += ';' + routePoint.ptime.toFixed();
-    stream.s += ';' + routePoint.energy.toFixed();
     stream.s += ';' + Util.m2nm(routePoint.dtf).toFixed(2);
     stream.s += '\n';
 }

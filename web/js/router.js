@@ -79,42 +79,35 @@ function setUp(getVMG) {
     map.on('click', drawOrthodromic);
 
     // Connect button events
-    $("#bt_getroute").click(getRoute);
-    $("#bt_downloadroute").click(onDownloadRoute);
+    document.getElementById("bt_getroute").addEventListener("click",getRoute);
+    document.getElementById("bt_downloadroute").addEventListener("click",onDownloadRoute);
 
-    $("#bt_inc").click(onAdjustIndex);
-    $("#bt_dec").click(onAdjustIndex);
-    $("#bt_inc6").click(onAdjustIndex);
-    $("#bt_dec6").click(onAdjustIndex);
-    $("#ir_index").change(onAdjustIndex);
+    document.getElementById("bt_inc").addEventListener("click",onAdjustIndex);
+    document.getElementById("bt_dec").addEventListener("click",onAdjustIndex);
+    document.getElementById("bt_inc6").addEventListener("click",onAdjustIndex);
+    document.getElementById("bt_dec6").addEventListener("click",onAdjustIndex);
+    document.getElementById("ir_index").addEventListener("change",onAdjustIndex);
 
-    $("#cb_startdelayed").click(onDelayedStart);
-
-    $("#cb_manualcycle").click(onManualCycle);
-    $("#tb_cycledate").change(onSetCycleTS);
-    $("#sel_cyclehour").change(onSetCycleTS);
+    document.getElementById("cb_startdelayed").addEventListener("click",onDelayedStart);
 
     // Connect option selectors
-    $("#sel_duration").change(onSetDuration);
-    $("#cb_displaywind").change(onDisplaywind);
-    $("#cb_displaytracks").change(onDisplayTracks);
-    $("#rb_crosshair").change(function (event) { onCursorSelect(event, 'crosshair'); });
-    $("#rb_default").change(function (event) { onCursorSelect(event, 'default'); });
+    document.getElementById("sel_duration").addEventListener("change",onSetDuration);
+    document.getElementById("cb_displaywind").addEventListener("change",onDisplaywind);
+    document.getElementById("cb_displaytracks").addEventListener("change",onDisplayTracks);
+
 
     // Disable default contextmenu
     window.oncontextmenu = function (event) { event.preventDefault(); };
 
     // Connect menu events
-    $("#bt_setstart").click(function () { onContextMenu('start'); });
-    $("#bt_setdest").click(function () { onContextMenu('dest'); });
-    $("#bt_copypos").click(onCopyPosition);
-    $("#bt_ltpmark").click(function () { onContextMenu('ltp'); });
-    $("#bt_ltsmark").click(function () { onContextMenu('lts'); });
+    document.getElementById("bt_setstart").addEventListener("click",function () { onContextMenu('start'); });
+    document.getElementById("bt_setdest").addEventListener("click",function () { onContextMenu('dest'); });
+    document.getElementById("bt_copypos").addEventListener("click",onCopyPosition);
 
-    var mapMenu = $("#mapMenu")[0];
+    var mapMenu = document.getElementById("mapMenu");
     mapMenu.onmouseleave = onMapMenuMouseLeave;
 
-    ir_index = $("#ir_index")[0];
+    ir_index = document.getElementById("ir_index");
 
     startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 0, 45, 16, -10);
     destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png', 0, 32, 10, -10);
@@ -187,8 +180,6 @@ function updateMap() {
         gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date());
     }
 
-    var label = "⌊" + formatLatLngPosition(bounds.southWest) + " \\ " + formatLatLngPosition(bounds.northEast) + "⌉";
-    $("#lb_map_bounds").text("Kartenausschnitt: " + label);
     redrawWindByOffset(ir_index.value);
 }
 
@@ -205,7 +196,7 @@ function getCurrentCycle(d = new Date()) {
 }
 
 function onContextMenu(point) {
-    var mapMenu = $("#mapMenu")[0];
+    var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
     setRoutePoint(point, mapEvent.latlng);
 }
@@ -219,17 +210,17 @@ function onCopyPosition(event) {
 function onSelectIsochrone(isochrone) {
     currentCycle = isochrone.time;
     var offset = isochrone.offset;
-    $("#ir_index")[0].value = offset;
+    document.getElementById("ir_index").value = offset;
     updateIsochrones();
     redrawWindByOffset(offset);
 }
 
 function onDisplaywind(event) {
-    var cbDisplaywind = $("#cb_displaywind")[0];
+    var cbDisplaywind = document.getElementById("cb_displaywind");
     if (cbDisplaywind.checked) {
-        $("#wind-canvas").show();
+        document.getElementById("wind-canvas").style.hidden = false;
     } else {
-        $("#wind-canvas").hide();
+        document.getElementById("wind-canvas").style.hidden = true;
     }
 }
 
@@ -270,7 +261,7 @@ function onAdjustIndex(event) {
 }
 
 function onDelayedStart(event) {
-    var dateInput = $("#tb_starttime")[0];
+    var dateInput = document.getElementById("tb_starttime");
     if (event.target.checked === true) {
         var d = new Date();
         var isoDate = d.toISOString().substring(0, 16);
@@ -281,9 +272,9 @@ function onDelayedStart(event) {
 }
 
 function getStartTime() {
-    var cbDelayed = $("#cb_startdelayed")[0];
+    var cbDelayed = document.getElementById("cb_startdelayed");
     if (cbDelayed.checked === true) {
-        var dateInput = $("#tb_starttime")[0];
+        var dateInput = document.getElementById("tb_starttime");
         return dateInput.value;
     } else {
         var d = new Date();
@@ -405,8 +396,8 @@ function pad0(val, length = 2, base = 10) {
 }
 
 function getManualCycle() {
-    var dateInput = $("#tb_cycledate")[0];
-    var hourInput = $("#sel_cyclehour")[0];
+    var dateInput = document.getElementById("tb_cycledate");
+    var hourInput = document.getElementById("sel_cyclehour");
     return dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
 }
 
@@ -453,13 +444,13 @@ function onSetGFSMode(event) {
 }
 
 function onMapMenuMouseLeave(event) {
-    var mapMenu = $("#mapMenu")[0];
+    var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
 }
 
 function onMapRightClick(event) {
     mapEvent = event;
-    var mapMenu = $("#mapMenu")[0];
+    var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "block";
     mapMenu.style["z-index"] = 400;
     mapMenu.style.top = event.originalEvent.pageY + "px";
@@ -532,16 +523,16 @@ function makeQuery(object) {
 
 function getRoute() {
     setBusyCursor();
-    var bt_execute = $("#bt_getroute")[0];
+    var bt_execute = document.getElementById("bt_getroute");
     bt_execute.disabled = true;
 
     let documentQuery = new URL(document.URL).searchParams;
     let raceId = documentQuery.get('race');
 
-    var mapMenu = $("#mapMenu")[0];
+    var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
 
-    var pgGetRoute = $("#pg_getroute")[0];
+    var pgGetRoute = document.getElementById("pg_getroute");
     pgGetRoute.value = 5;
 
     var selDuration = document.getElementById('sel_duration');
@@ -567,24 +558,24 @@ function getRoute() {
         query += `&sail=${sailInput.value}`;
     }
 
-    $.ajax({
-        url: "/function/router.getRoute" + query,
-        dataType: 'json'
-    }).done(function (data) {
-        routeInfo = data;
-        window.clearInterval(timer);
-        pgGetRoute.value = pgGetRoute.max;
-        clearRoute();
-        displayRouting(data);
-        bt_execute.disabled = false;
-        restoreCursor();
-    }).fail(function (jqXHR, textStatus, errorThrown) {
-        bt_execute.disabled = false;
-        restoreCursor();
-        window.clearInterval(timer);
-        pgGetRoute.value = pgGetRoute.max;
-        alert(textStatus + ' ' + errorThrown);
-    });
+    Util.doGET(
+        "/function/router.getRoute" + query,
+        function (data) {
+            routeInfo = JSON.parse(data.response);
+            window.clearInterval(timer);
+            pgGetRoute.value = pgGetRoute.max;
+            clearRoute();
+            displayRouting(routeInfo);
+            bt_execute.disabled = false;
+            restoreCursor();
+        },
+        function (jqXHR, textStatus, errorThrown) {
+            bt_execute.disabled = false;
+            restoreCursor();
+            window.clearInterval(timer);
+            pgGetRoute.value = pgGetRoute.max;
+            alert(textStatus + ' ' + errorThrown);
+        });
 }
 
 function setRoutePoint(point, latLng) {
@@ -652,13 +643,13 @@ function displayRouting(data) {
         }
     }
 
-    $("#lb_from").text(data.stats.start);
-    $("#lb_duration").text(data.stats.duration);
-    $("#lb_sails").text(formatSails(data));
-    $("#lb_minwind").text(data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed(1));
-    $("#lb_mintwa").text(data.stats["min-twa"] + " - " + data.stats["max-twa"]);
-    $("#lb_polars").text(data.polars);
-    $("#lb_options").text(data.options);
+    document.getElementById("lb_from").textContent = (data.stats.start);
+    document.getElementById("lb_duration").textContent = (data.stats.duration);
+    document.getElementById("lb_sails").textContent = (formatSails(data));
+    document.getElementById("lb_minwind").textContent = (data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed(1));
+    document.getElementById("lb_mintwa").textContent = (data.stats["min-twa"] + " - " + data.stats["max-twa"]);
+    document.getElementById("lb_polars").textContent = (data.polars);
+    document.getElementById("lb_options").textContent = (data.options);
 }
 
 function getURLParams() {
@@ -789,7 +780,7 @@ function clearRoute() {
 }
 
 function updateGetRouteProgress() {
-    var pgGetRoute = $("#pg_getroute")[0];
+    var pgGetRoute = document.getElementById("pg_getroute");
     if (pgGetRoute.value < pgGetRoute.max) {
         pgGetRoute.value = pgGetRoute.value + 10;
     }
@@ -988,7 +979,7 @@ async function updateWindInfo(event, getVMG) {
         if (wind) {
             var windDir = wind.direction.toFixed();
             var windSpeed = Util.ms2knots(wind.speed).toFixed(1);
-            $("#lb_windatposition").text(pad0(windDir, 3) + "° | " + windSpeed + "kn");
+            document.getElementById("lb_windatposition").textContent = (pad0(windDir, 3) + "° | " + windSpeed + "kn");
 
             var lbVMGUp = document.getElementById("lb_vmg_up");
             var lbVMGDown = document.getElementById("lb_vmg_down");

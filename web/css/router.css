@@ -249,20 +249,6 @@ input[type=checkbox] {
 }
 
 
-/* VR Options */
-.options-label {
-	grid-row: 2;
-	grid-column: 1;
-}
-.vroptions-1 {
-	grid-row: 2;
-	grid-column: 2/7;
-}
-.vroptions-2 {
-	grid-row: 3;
-	grid-column: 2/7;
-}
-
 /* NMEA */
 #tb_nmeaport {
 	width: 5em;
@@ -300,16 +286,6 @@ input[type=checkbox] {
 	grid-column: 3;
 
 }
-/* Override cycle
-.cycle-label {
-	grid-row: 4;
-	grid-column: 1;
-}
-.cycle-entry {
-	grid-row: 4;
-	grid-column: 2;
-}
-*/
 
 /* Routing duration */
 .duration-label {

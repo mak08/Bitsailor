@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2024-11-01 18:47:07>
+;;; Last Modified <michael 2025-09-18 19:35:04>
 
 (in-package :bitsailor)
 
@@ -30,8 +30,8 @@
 ;;; Start one server on port 8080. 
 (server :hostname "localhost" ;; "aguas-13" ;; Hostname binds to the WLAN/LAN interface! 
         :protocol :http
-        :mt-method :ondemand
-        ;; :mt-method :pooled
+        ;; :mt-method :ondemand
+        :mt-method :pooled
         :port "8080"
         :max-handlers 10)
           

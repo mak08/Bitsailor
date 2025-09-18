@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-16 22:07:53>
+;;; Last Modified <michael 2025-09-18 21:38:43>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -45,21 +45,10 @@
   (when (< b 0) (incf b 360)) 
   (>= (abs (- b a)) 180))
 
-(declaim (inline get-penalized-speed))
-(defun get-penalized-speed (routepoint tws twa step-size routing)
-  (declare (double-float tws twa))
-  (let ((race-info (routing-race-info routing)))
-    (ecase *penalty-mode-vr*
-      (:simple
-       (get-penalized-speed-vr-simple routepoint tws twa step-size routing))
-      (:dynamic
-       (get-penalized-speed-vr routepoint tws twa step-size routing)))))
-
 (declaim (inline get-origin-angle))
 (defun get-origin-angle (start-pos new-pos origin-distance)
   (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
          (angle (normalize-heading course-angle)))
-    
     angle))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -82,10 +71,6 @@
     (t
      (let* ((start-pos (routing-start routing))
             (twa-points (cpolars-twa polars))
-            (all-twa-points (make-array (length twa-points)
-                                        :initial-contents twa-points
-                                        :adjustable t
-                                        :fill-pointer t))
             (lat (latlng-lat (routepoint-position routepoint)))
             (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
@@ -94,13 +79,13 @@
          (setf wind-speed (max (routing-minwind routing) wind-speed))
          (multiple-value-bind (up-vmg down-vmg)
              (best-vmg polars wind-speed)
-           (vector-push-extend (vmg-twa up-vmg) all-twa-points)
-           (vector-push-extend (vmg-twa down-vmg) all-twa-points)
+           ;; (vector-push-extend (vmg-twa up-vmg) all-twa-points)
+           ;; (vector-push-extend (vmg-twa down-vmg) all-twa-points)
            (loop
               :with up-vmg-angle = (vmg-twa up-vmg)
               :with down-vmg-angle = (vmg-twa down-vmg)
               :with added = 0
-              :for twa :across all-twa-points
+              :for twa :across twa-points
               :for heading-port = (twa-heading wind-dir (- twa))
               :for heading-stbd = (twa-heading wind-dir twa)
               :when (valid-twa up-vmg-angle down-vmg-angle twa)
@@ -127,10 +112,8 @@
                                                      ;; (* 1.25d0 (routing-dist routing))
                                                      )) 
                                          (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
-                      (when (not (is-tack (routepoint-twa routepoint) (- twa)))
-                        (add-point heading-port (- twa)))
-                      (when (not (is-tack (routepoint-twa routepoint) twa))
-                        (add-point heading-stbd twa)))
+                      (add-point heading-port (- twa))
+                      (add-point heading-stbd twa))
               :finally (return added))))))))
 
 (defstruct box north south west east antimed-p)
@@ -190,8 +173,8 @@
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
-          (stepnum 1 (1+ stepnum))
           ;; Iteration stops when stepmax seconds have elapsed
+          (stepnum 1 (1+ stepnum))
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant

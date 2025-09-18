@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-14 16:33:25>
+;;; Last Modified <michael 2025-09-18 20:45:43>
 
 (in-package :bitsailor)
 
@@ -117,7 +117,8 @@
          (max-wind (ceiling (aref tws (1- (length tws)))))
          (twa-steps (if (null *twa-steps*)
                         twa
-                        (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
+                        (let ((content (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
+                          (make-array (length content) :initial-contents content))))
          (speed (interpolated-speeds polars options))
          (maxspeed (compute-max-speed speed options)))
 

@@ -57,7 +57,7 @@ function writeRouteGPX (stream, routeInfo) {
     stream.s += '     xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"\n';
     stream.s += '     xmlns:gpxsrx="http://bitsailor.net/xmlschemas/GpxSailRoute/v1">\n';
     writePathAsRoute(stream, routeInfo);
-    writePathAsTrack(stream, routeInfo);
+    // writePathAsTrack(stream, routeInfo);
     stream.s += '</gpx>';
 }
 

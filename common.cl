@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2024-06-24 22:20:08>
+;;; Last Modified <michael 2025-09-18 20:37:20>
 
 
 (in-package :bitsailor)
@@ -49,7 +49,7 @@
                    *source-root*)
   "A string designating the directory containing race definitions")
 
-(defparameter *twa-steps* nil
+(defparameter *twa-steps* 5d0
   "Set this to the desired TWA step width (eg. 5d0).
    NIL (default) mean use only points provided in polar file.
    Clear *combined-polars-ht* to force recomputation of cpolars.")

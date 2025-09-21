@@ -11,8 +11,9 @@
 
 * {
     font-family: Arial, sans-serif;
-	margin: 0px;
+	margin: 2px;
 	padding: 0px;
+	border-radius: 4px;
 }
 
 
@@ -77,7 +78,8 @@ button:active {
 .menu {
 	display: flex;
 	justify-content: space-between;
-	align-items: flex-end;
+	align-items: center; /* Change from flex-end to center */
+	padding: 8px 4px; /* Add more padding */
 }
 
 #donate {
@@ -92,8 +94,8 @@ button:active {
 
 .header {
     grid-area: header;
-	margin: 0px;
-	padding: 0px;
+	
+	
 	color: #ededeb;
     background-color: #464242;
 }

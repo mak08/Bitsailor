@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-15 21:36:10>
+;;; Last Modified <michael 2025-09-19 22:17:47>
 
 (in-package :bitsailor)
 
@@ -160,7 +160,7 @@
          (options
            (or options
                '("hull" "foil" "winch" "heavy" "light" "reach")))
-         (polars (get-combined-polars polars-id (encode-options options))))
+         (cpolars (get-combined-polars polars-id (encode-options options))))
     (when (and vr-finewinds
                (not resolution-provided-p))
       (setf resolution "0p25"))
@@ -194,7 +194,8 @@
                        :enorm)
                       (t
                        :vr))
-     :polars polars
+     :polars cpolars
+     :twa-angles (make-twa-angles-buffer cpolars)
      :cycle cycle
      :merge-start (if vr-finewinds
                       6d0
@@ -204,7 +205,18 @@
                      "pro"
                      "std")
      :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0)
-     :simplify-route t)))
+     :simplify-route nil)))
+
+(defun make-twa-angles-buffer (cpolars)
+  (let ((buffer
+          (make-array (length (cpolars-twa cpolars))
+                      :adjustable t
+                      :fill-pointer t
+                      :initial-contents (cpolars-twa cpolars))))
+    (vector-push-extend 0d0 buffer)
+    (vector-push-extend 0d0 buffer)
+    buffer))
+    
 
 (defun |getRoute| (handler request response &key
                                               (|presets| "VR")
@@ -240,7 +252,7 @@
              (routing
                (get-routing-presets |presets|
                                     :race-id |raceId|
-                                    :polars-id |polarsId|
+                                    :polars-id (decode-uri-component |polarsId|)
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :energy (read-arg |energy| 'double-float)

@@ -218,9 +218,9 @@ function onSelectIsochrone(isochrone) {
 function onDisplaywind(event) {
     var cbDisplaywind = document.getElementById("cb_displaywind");
     if (cbDisplaywind.checked) {
-        document.getElementById("wind-canvas").style.hidden = false;
+        document.getElementById("wind-canvas").style.display = "block";
     } else {
-        document.getElementById("wind-canvas").style.hidden = true;
+        document.getElementById("wind-canvas").style.display = "none";
     }
 }
 
@@ -515,7 +515,7 @@ function makeQuery(object) {
             } else {
                 s += "&";
             }
-            s += `${m}=${object[m]}`;
+            s += `${m}=${encodeURIComponent(object[m])}`;
         }
     }
     return s;
@@ -684,7 +684,7 @@ function getURLParams() {
 }
 
 function loadPolars(id, callback) {
-    Util.doGET(`/polars/${id}.json`,
+    Util.doGET(`/polars/${encodeURIComponent(id)}.json`,
         function (request) {
             var data = JSON.parse(request.responseText);
             if (data) {

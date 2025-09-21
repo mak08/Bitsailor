@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-18 21:38:43>
+;;; Last Modified <michael 2025-09-20 22:45:26>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -70,7 +70,6 @@
      (return-from expand-routepoint 0))
     (t
      (let* ((start-pos (routing-start routing))
-            (twa-points (cpolars-twa polars))
             (lat (latlng-lat (routepoint-position routepoint)))
             (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
@@ -79,42 +78,44 @@
          (setf wind-speed (max (routing-minwind routing) wind-speed))
          (multiple-value-bind (up-vmg down-vmg)
              (best-vmg polars wind-speed)
-           ;; (vector-push-extend (vmg-twa up-vmg) all-twa-points)
-           ;; (vector-push-extend (vmg-twa down-vmg) all-twa-points)
+           (let ((vmg-pos (length (routing-twa-angles routing))))
+             (setf (aref (routing-twa-angles routing) (- vmg-pos 1)) (vmg-twa up-vmg))
+             (setf (aref (routing-twa-angles routing) (- vmg-pos 2)) (vmg-twa down-vmg)))
            (loop
-              :with up-vmg-angle = (vmg-twa up-vmg)
-              :with down-vmg-angle = (vmg-twa down-vmg)
-              :with added = 0
-              :for twa :across twa-points
-              :for heading-port = (twa-heading wind-dir (- twa))
-              :for heading-stbd = (twa-heading wind-dir twa)
-              :when (valid-twa up-vmg-angle down-vmg-angle twa)
-                :do (flet ((add-point (heading twa)
-                             (progn
-                               (incf added)
-                               (multiple-value-bind (speed sail)
-                                   (twa-boatspeed polars wind-speed (normalize-angle twa))
-                                 (declare (double-float speed)
-                                          (integer step-size))
-                                 (let*
-                                     ((distance (* speed step-size))
-                                      (new-pos (add-distance-exact (routepoint-position routepoint)
-                                                                   distance
-                                                                   heading)))
-                                   (when t ;; (in-latlng-box box new-pos)
-                                     (let* ((origin-distance (course-distance start-pos new-pos))
-                                            (dest-distance (course-distance new-pos (routing-dest routing)))
-                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
-                                       (when (and (heading-between left right origin-angle)
-                                                  (< (+ (expt origin-distance 2) (expt  dest-distance 2))
-                                                     ;; (+  origin-distance  dest-distance)
-                                                     (* 1.1d0 (expt (routing-dist routing) 2))
-                                                     ;; (* 1.25d0 (routing-dist routing))
-                                                     )) 
-                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
-                      (add-point heading-port (- twa))
-                      (add-point heading-stbd twa))
-              :finally (return added))))))))
+             :with twa-points = (routing-twa-angles routing)
+             :with up-vmg-angle = (vmg-twa up-vmg)
+             :with down-vmg-angle = (vmg-twa down-vmg)
+             :with added = 0
+             :for twa :across twa-points
+             :when (valid-twa up-vmg-angle down-vmg-angle twa)
+               :do (flet ((add-point (twa)
+                            (log2:trace "checking TWA: ~a" twa)
+                            (progn
+                              (incf added)
+                              (multiple-value-bind (speed sail)
+                                  (twa-boatspeed polars wind-speed (normalize-angle twa))
+                                (declare (double-float speed)
+                                         (integer step-size))
+                                (let*
+                                    ((heading (twa-heading wind-dir twa))
+                                     (distance (* speed step-size))
+                                     (new-pos (add-distance-exact (routepoint-position routepoint)
+                                                                  distance
+                                                                  heading)))
+                                  (when t ;; (in-latlng-box box new-pos)
+                                    (let* ((origin-distance (course-distance start-pos new-pos))
+                                           (dest-distance (course-distance new-pos (routing-dest routing)))
+                                           (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
+                                      (when (and (heading-between left right origin-angle)
+                                                 (< (+ (expt origin-distance 2) (expt  dest-distance 2))
+                                                    ;; (+  origin-distance  dest-distance)
+                                                    (* 1.1d0 (expt (routing-dist routing) 2))
+                                                    ;; (* 1.25d0 (routing-dist routing))
+                                                    )) 
+                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
+                     (add-point (- twa))
+                     (add-point twa))
+             :finally (return added))))))))
 
 (defstruct box north south west east antimed-p)
 

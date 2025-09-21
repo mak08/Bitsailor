@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-09-16 18:41:09>
+;;; Last Modified <michael 2025-09-20 22:42:21>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -22,6 +22,8 @@
   resolution
   cycle
   polars
+  ;; buffer for TWA angles plus 2 best VMG angles
+  twa-angles
   winch-mode
   penalties
   simplify-route
@@ -46,15 +48,12 @@
                               (routing-dest routing)))))
 
 (defmethod print-object ((thing routing) stream)
-  (format stream "{D=~a T=~a M=~a+~a C=~a S=~a O=~a P=~a}"
+  (format stream "{D=~a T=~a M=~a C=~a TWA=~a"
           (routing-stepmax thing)
           (routing-starttime thing)
           (routing-merge-start thing)
-          (routing-merge-window thing)
           (routing-cycle thing)
-          (routing-grib-source thing)
-          (routing-options thing)
-          (routing-winch-mode thing)))
+          (routing-twa-angles thing)))
 
 (defstruct duration days hours minutes seconds)
 (defmethod print-object ((thing duration) stream)

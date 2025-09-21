@@ -11,14 +11,14 @@
 
 * {
     font-family: Arial, sans-serif;
-	margin: 2px;
+	margin: 2px; /* Restore the 2px margin */
 	padding: 0px;
 	border-radius: 4px;
 }
 
 
 
-html, body {
+html, body, .grid-container {
 	margin: 0;
 	padding: 0;
 	height: 100%;
@@ -50,16 +50,26 @@ button:active {
 	grid-template-areas: 'header menu'
 						 'controls main'
 						 'footer-left footer';
-	grid-template-rows: 48px 1fr 48px;
+	grid-template-rows: 48px minmax(0, 1fr) 48px; /* Add minmax to prevent overflow */
 	grid-template-columns: 40vh 1fr;
-	grid-gap: 1px;
+	grid-gap: 2px; /* Increase from 1px to 2px */
 	height: 100vh;
 	width: 100vw;
 	background-color: white;
-	padding: 0;
 	box-sizing: border-box;
 }
 
+/* Fix the map height to prevent overflow */
+.map {
+    grid-area: main;
+    z-index: 1;
+    background: none;
+    height: calc(100% - 4px); /* Subtract margin to prevent overflow */
+    width: calc(100% - 4px);  /* Subtract margin to prevent overflow */
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
 
 .header {
 	display: flex;
@@ -103,15 +113,6 @@ button:active {
     grid-area: menu;
 	color: #ededeb;
     background-color: #464242;
-}
-.map {
-	grid-area: main;
-	z-index: 1;
-	background: none;
-	height: 100%;
-	width: 100%;
-	position: relative; /* Creates positioning context */
-	overflow: hidden; /* Contains absolutely positioned children */
 }
 .map-overlay {
     position: absolute;
@@ -170,6 +171,7 @@ button:active {
 	justify-content: space-between;
 	color: #ededeb;
     background-color: #464242; 
+	margin: 0; /* Also override for footer elements to prevent gap */
 }
 
 #wind-canvas {
@@ -554,6 +556,11 @@ input[type=checkbox] {
 .leaflet-top, 
 .leaflet-bottom {
     z-index: 900 !important; /* Controls should still be clickable */
+}
+
+.leaflet-container {
+    padding: 0;
+    margin: 0;
 }
 
 

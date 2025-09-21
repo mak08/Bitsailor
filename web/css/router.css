@@ -108,18 +108,18 @@ button:active {
 	background: none;
 	height: 100%;
 	width: 100%;
-	position: relative;
+	position: relative; /* Creates positioning context */
+	overflow: hidden; /* Contains absolutely positioned children */
 }
 .map-overlay {
-	grid-area: main;
-	z-index: 200;
-	background: none;
-	pointer-events:none;
-	height: 100%;
-	width: 100%;
-	position: absolute;
-	top: 0;
-	left: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000; /* Increase to be higher than Leaflet's highest pane */
+    background: none;
+    pointer-events: none;
 }
 @media only screen and (max-width: 600px) {
 	.grid-container {
@@ -171,11 +171,11 @@ button:active {
 }
 
 #wind-canvas {
-    position: relative;
+    position: absolute;
     height: 100%;
-    width:  100%;
-	z-index: 10;
-    pointer-events:none;
+    width: 100%;
+    z-index: 100; /* Higher value relative to parent */
+    pointer-events: none;
 }
 
 /*******************************************************************************
@@ -543,6 +543,15 @@ input[type=checkbox] {
 	margin-right: 0px;
 	padding: 1px;
 	text-align: center;
+}
+
+.leaflet-pane {
+    z-index: 400 !important;
+}
+
+.leaflet-top, 
+.leaflet-bottom {
+    z-index: 900 !important; /* Controls should still be clickable */
 }
 
 

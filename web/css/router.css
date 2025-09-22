@@ -16,7 +16,10 @@
 	border-radius: 4px;
 }
 
-
+/* Ensure consistent box-sizing for all elements */
+* {
+    box-sizing: border-box;
+}
 
 html, body, .grid-container {
 	margin: 0;
@@ -171,7 +174,6 @@ button:active {
 	justify-content: space-between;
 	color: #ededeb;
     background-color: #464242; 
-	margin: 0; /* Also override for footer elements to prevent gap */
 }
 
 #wind-canvas {
@@ -559,8 +561,41 @@ input[type=checkbox] {
 }
 
 .leaflet-container {
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    overflow: hidden;
+}
+
+/* If map is added to a specific container */
+#map-container, .map-container {
     padding: 0;
     margin: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+/* For the map itself */
+#map, .map {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border-radius: 0; /* Remove any border radius */
+    overflow: hidden;
+}
+
+/* If the map is in the grid */
+.grid-container > #map-container,
+.grid-container > .map-container,
+.grid-container > #map,
+.grid-container > .map {
+    /* Ensure no margin within grid */
+    margin: 0;
+    /* Match grid cell exactly */
+    height: 100%;
+    width: 100%;
 }
 
 

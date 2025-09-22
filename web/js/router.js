@@ -788,7 +788,8 @@ function updateGetRouteProgress() {
 
 function addWaypointInfo(trackMarker, startTime, point) {
     var popupContent = makeWaypointInfo(startTime, point);
-    trackMarker.bindPopup(popupContent);
+    // trackMarker.bindPopup(popupContent);
+    trackMarker.bindTooltip(popupContent, {"permanent": false});
     trackMarker.time = point.time;
 }
 

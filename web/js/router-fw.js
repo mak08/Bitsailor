@@ -3,6 +3,7 @@
 
 import * as Util from './Util.js';
 import * as Router from './router.js';
+import PolarManager from './PolarManager.js';
 
 // Global variables
 let map = null;
@@ -211,7 +212,7 @@ function createStartAndDestinationMarkers() {
     if (queryParams.startTime) {
         let cbDelayed = document.getElementById('cb_startdelayed');
         let tbStartTime = document.getElementById('tb_starttime');
-        if (cbDelayed && tbStartTime) {
+        if (cbDelayed && tbDelayed) {
             cbDelayed.checked = true;
             tbStartTime.value = queryParams.startTime.toISOString().substring(0,16);
         }
@@ -393,134 +394,7 @@ function onOptionToggled(event) {
 
 // VMG calculation
 function getVMG(windSpeed) {
-    let polarsMessage = Router.getPolars();
-    let polars= polarsMessage.data_json;
-    if (polars) {
-        var vmg = bestVMG(windSpeed, polars);
-        return {
-            "up": vmg.vmgUp.toFixed(2) + '@' + vmg.twaUp.toFixed(0),
-            "down": Math.abs(vmg.vmgDown).toFixed(2) + '@' + vmg.twaDown.toFixed(0)
-        }
-    }
-}
-
-// Best VMG calculation
-function bestVMG(tws, polars, options) {
-    var best = {"vmgUp": 0, "twaUp": 0, "vmgDown": 0, "twaDown": 0};
-    var twaSteps = polars.twa;
-    for (var twa = twaSteps[0]; twa < twaSteps[twaSteps.length-1]; twa++) {
-        var speed = boatSpeed(tws, twa, options, polars).speed;
-        var vmg = speed * Math.cos(twa / 180 * Math.PI);
-        if (vmg > best.vmgUp) {
-            best.twaUp = twa;
-            best.vmgUp = vmg;
-        } else if (vmg < best.vmgDown) {
-            best.twaDown = twa;
-            best.vmgDown = vmg;
-        }
-    }
-    return best;
-}
-
-// Boat speed calculation
-function boatSpeed(tws, twa, options, polars) {
-    const sailNames = [0, "Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
-    var foil = foilingFactor(options, tws, twa, polars.foil);
-    var hull = options.includes("hull") ? 1.003 : 1.0;
-    var ratio = polars.globalSpeedRatio;
-    var twsLookup = fractionStep(tws, polars.tws);
-    var twaLookup = fractionStep(twa, polars.twa);
-    var speed = maxSpeed(options, twsLookup, twaLookup, polars.sail);
-    return {
-        "speed": Util.roundTo(speed.speed * foil * hull * ratio, 2),
-        "sail": sailNames[speed.sail]
-    };
-}
-
-// Max speed calculation
-function maxSpeed(options, iS, iA, sailDefs) {
-    var maxSpeed = 0;
-    var maxSail = "";
-    for (const sailDef of sailDefs) {
-        if (sailDef.id === 1
-            || sailDef.id === 2
-            || (sailDef.id === 3 && options.includes("heavy"))
-            || (sailDef.id === 4 && options.includes("light"))
-            || (sailDef.id === 5 && options.includes("reach"))
-            || (sailDef.id === 6 && options.includes("heavy"))
-            || (sailDef.id === 7 && options.includes("light"))) {
-            var speed = pSpeed(iA, iS, sailDef.speed);
-            if (speed > maxSpeed) {
-                maxSpeed = speed;
-                maxSail = sailDef.id;
-            }
-        }
-    }
-    return {
-        speed: maxSpeed,
-        sail: maxSail
-    }
-}
-
-// Speed calculation
-function pSpeed(iA, iS, speeds) {
-    return bilinear(iA.fraction, iS.fraction,
-                    speeds[iA.index - 1][iS.index - 1],
-                    speeds[iA.index][iS.index - 1],
-                    speeds[iA.index - 1][iS.index],
-                    speeds[iA.index][iS.index]);
-}
-
-// Foiling factor calculation
-function foilingFactor(options, tws, twa, foil) {
-    var speedSteps = [0, foil.twsMin - foil.twsMerge, foil.twsMin, foil.twsMax, foil.twsMax + foil.twsMerge, Infinity];
-    var twaSteps = [0, foil.twaMin - foil.twaMerge, foil.twaMin, foil.twaMax, foil.twaMax + foil.twaMerge, Infinity];
-    var foilMat = [[1, 1, 1, 1, 1, 1],
-                   [1, 1, 1, 1, 1, 1],
-                   [1, 1, foil.speedRatio, foil.speedRatio, 1, 1],
-                   [1, 1, foil.speedRatio, foil.speedRatio, 1, 1],
-                   [1, 1, 1, 1, 1, 1],
-                   [1, 1, 1, 1, 1, 1]];
-    
-    if (options.includes("foil")) {
-        var iS = fractionStep(tws, speedSteps);
-        var iA = fractionStep(twa, twaSteps);
-        return bilinear(iA.fraction, iS.fraction,
-                        foilMat[iA.index - 1][iS.index - 1],
-                        foilMat[iA.index][iS.index - 1],
-                        foilMat[iA.index - 1][iS.index],
-                        foilMat[iA.index][iS.index]);
-    } else {
-        return 1.0;
-    }
-}
-
-// Bilinear interpolation
-function bilinear(x, y, f00, f10, f01, f11) {
-    return f00 * (1 - x) * (1 - y)
-        + f10 * x * (1 - y)
-        + f01 * (1 - x) * y
-        + f11 * x * y;
-}
-
-// Fraction step calculation
-function fractionStep(value, steps) {
-    var absVal = Math.abs(value);
-    var index = 0;
-    while (index < steps.length && steps[index] <= absVal) {
-        index++;
-    }
-    if (index < steps.length) {
-        return {
-            index: index,
-            fraction: (absVal - steps[index - 1]) / (steps[index] - steps[index - 1])
-        }
-    } else {
-        return {
-            index: index - 1,
-            fraction: 1.0
-        }
-    }
+    return polarManager.getVMG(windSpeed, Router.settings.options);
 }
 
 // Compute path for constant TWA
@@ -565,7 +439,7 @@ function updateTWADisplay(twa, heading) {
 // Calculate and display TWA and HDG paths
 async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, targetDist) {
     let options = Router.settings.options;
-    let polars = Router.getPolars().scriptData.polar;
+    let polarsData = Router.getPolars();
     
     let newTWAPos = { "lat": slat, "lon": slon };
     let newHDGPos = { "lat": slat, "lon": slon };
@@ -586,8 +460,20 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
         let twaHeading = Util.toHeading(twa, windTWA.direction);
         let hdgTWA = Util.toTWA(heading, windHDG.direction);
 
-        let speedTWA = boatSpeed(Util.ms2knots(windTWA.speed), twa, options, polars).speed;
-        let speedHDG = boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA, options, polars).speed;
+        // Use the PolarManager instead of direct function calls
+        let speedTWA = polarManager.boatSpeed(
+            Util.ms2knots(windTWA.speed), 
+            twa, 
+            options, 
+            polarsData.data_json
+        ).speed;
+        
+        let speedHDG = polarManager.boatSpeed(
+            Util.ms2knots(windHDG.speed), 
+            hdgTWA, 
+            options, 
+            polarsData.data_json
+        ).speed;
 
         let distTWA = delta * (speedTWA/3600);
         let distHDG = delta * (speedHDG/3600);

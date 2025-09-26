@@ -4,7 +4,9 @@
 import * as Util from './Util.js';
 import GribCache from './GribCache.js';
 import * as GPX from './GPX.js';
+import PolarManager from './PolarManager.js';
 
+// Replace global variables
 var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 var settings = {
     "resolution": "1p00",
@@ -13,6 +15,9 @@ var settings = {
     "options": ["hull", "winch", "foil", "heavy", "light", "reach"],
     "polarsId": "1"
 };
+
+// Add a PolarManager instance
+var polarManager = null;
 
 let selectedCursor = 'crosshair';
 
@@ -59,7 +64,6 @@ var routeTracks = [];
 var routeIsochrones = [];
 var trackMarkers = [];
 
-var polars = null;
 var routeInfo = {};
 var twaPath = [];
 var hdgPath = [];
@@ -311,7 +315,7 @@ function onSetResolution(event) {
 
 function onSetPolars(event) {
     let polarsId = event.currentTarget.value;
-    loadPolars(polarsId);
+    polarManager = new PolarManager(polarsId);
 }
 
 function onSetDuration(event) {
@@ -489,18 +493,20 @@ function setDuration(duration) {
 
 function setPolars(data) {
     polars = data;
+    polarManager.polars = data;
 }
 
 function getPolars() {
-    return polars;
+    return polarManager.getPolars();
 }
 
 function setSailnames(sailnames) {
-    sailNames = sailnames;
+    polarManager.setSailNames(sailnames);
+    sailNames = sailnames; // Keep for compatibility
 }
 
 function getSailnames() {
-    return sailNames;
+    return polarManager.getSailNames();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -681,26 +687,6 @@ function getURLParams() {
     }
 
     return res;
-}
-
-function loadPolars(id, callback) {
-    Util.doGET(`/polars/${encodeURIComponent(id)}.json`,
-        function (request) {
-            var data = JSON.parse(request.responseText);
-            if (data) {
-                console.log('Loaded ' + id);
-                settings.polarsId = id;
-                polars = data;
-                if (callback) {
-                    callback(data);
-                }
-            } else {
-                alert("No leg info for race");
-            }
-        },
-        function (request) {
-            alert(request.responseText);
-        });
 }
 
 function setupCanvas() {
@@ -1067,41 +1053,22 @@ function formatSails(data) {
 }
 
 export {
-    courseGCLine,
+    // Keep only the exports used in router-fw.js
     destinationMarker,
     drawTWAPath,
     drawHDGPath,
-    formatLatLngPosition,
     getCurrentCycle,
-    getIsochroneByTime,
-    getRoute,
-    getURLParams,
-    getValue,
-    map,
-    initMap,
-    loadPolars,
-    makeQuery,
-    mapEvent,
-    onMarkerClicked,
-    onSetPolars,
-    onSetResolution,
-    onSetGFSMode,
-    setPolars,
     getPolars,
-    getSailnames,
-    restoreCursor,
-    setSailnames,
-    setBusyCursor,
+    gribCache,
+    initMap,
+    map,
+    onMarkerClicked,
     settings,
-    setResolution,
-    setDuration,
-    setRoutePoint,
     setUp,
     startMarker,
     storeValue,
     twaAnchor,
-    updateMap,
-    gribCache
+    updateMap
 }
 
 /// EOF

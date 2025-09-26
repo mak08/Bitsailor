@@ -38,7 +38,6 @@ function initializeRouterVR() {
 // Set up UI controls and event handlers
 function setupEventHandlers() {
     // Map event handlers
-    Router.map.on('contextmenu', onMapRightClick);
     Router.map.on('click', onMapClick);
     Router.map.on('click', computePath);
     Router.map.on('dblclick', getTWAPath);
@@ -360,19 +359,6 @@ function drawRouteLine() {
         weight: 2,
         opacity: 1.0
     }).addTo(Router.map);
-}
-
-// Map right-click handler
-function onMapRightClick(event) {
-    let mapMenu = document.getElementById('mapMenu');
-    if (!mapMenu) return false;
-    
-    mapMenu.style.display = 'block';
-    mapMenu.style.zIndex = 400;
-    mapMenu.style.top = event.originalEvent.pageY + 'px';
-    mapMenu.style.left = event.originalEvent.pageX + 'px';
-    window._lastMapEvent = event;
-    return false;
 }
 
 // Map click handler

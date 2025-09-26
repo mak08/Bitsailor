@@ -18,31 +18,9 @@ var settings = {
 
 // Add a PolarManager instance
 var polarManager = null;
-
 let selectedCursor = 'crosshair';
-
 var gribCache = undefined;
-
 var map = null;
-
-function initMap() {
-    if (!map) {
-        map = L.map('map', {
-            center: [49.187, 8.473],
-            zoom: 5,
-            minZoom: 3,
-            maxZoom: 14,
-            doubleClickZoom: false,
-            dragging: true,
-            zoomControl: true,
-        });
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-    }
-    return map;
-}
 
 var mapEvent;
 
@@ -130,6 +108,25 @@ function setUp(getVMG) {
     startMarker.on('dragend', function (e) {
         onUpdateStartMarker(startMarker);
     });
+}
+
+function initMap() {
+    if (!map) {
+        map = L.map('map', {
+            center: [49.187, 8.473],
+            zoom: 5,
+            minZoom: 3,
+            maxZoom: 14,
+            doubleClickZoom: false,
+            dragging: true,
+            zoomControl: true,
+        });
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+    }
+    return map;
 }
 
 function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
@@ -454,7 +451,7 @@ function onMapMenuMouseLeave(event) {
 
 function onMapRightClick(event) {
     mapEvent = event;
-    var mapMenu = document.getElementById("mapMenu");
+    let mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "block";
     mapMenu.style["z-index"] = 400;
     mapMenu.style.top = event.originalEvent.pageY + "px";
@@ -1059,10 +1056,12 @@ export {
     drawHDGPath,
     getCurrentCycle,
     getPolars,
+    getURLParams,
     gribCache,
     initMap,
     map,
     onMarkerClicked,
+    polarManager,
     settings,
     setUp,
     startMarker,

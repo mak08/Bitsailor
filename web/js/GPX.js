@@ -6,12 +6,12 @@
 import * as Util from './Util.js';
 import * as Router from './router.js';
 
-function exportRoute ( routeInfo, format='gpx' ) {
+function exportRoute ( routeInfo, format='gpx', sailNames) {
         let stream = {"s": ''};
         if (format=='gpx') {
-            writeRouteGPX(stream, routeInfo);
+            writeRouteGPX(stream, routeInfo, sailNames);
         } else if (format=='csv') {
-            writeRouteCSV(stream, routeInfo);
+            writeRouteCSV(stream, routeInfo, sailNames);
         } else {
             alert('Unsupported file format');
         }
@@ -24,16 +24,16 @@ function exportRoute ( routeInfo, format='gpx' ) {
 function writeRouteCSV (stream, routeInfo) {
     stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD;Penalty;P.Time;Energy;DTF(nm)\n';
     for (const routePoint of routeInfo.best) {
-        writePointCSV(stream, routePoint);
+        writePointCSV(stream, routePoint, sailNames);
     }
 }
 
-function writePointCSV (stream, routePoint) {
+function writePointCSV (stream, routePoint, sailNames) {
     let pos = routePoint.position;
     stream.s += routePoint.time;
     stream.s += ';' + Util.formatPosition(pos.lat, pos.lng);
     stream.s += ';' + routePoint.twa;
-    stream.s += ';' + Router.getSailnames()[routePoint.sail];
+    stream.s += ';' + sailnames()[routePoint.sail];
     stream.s += ';' + Util.ms2knots(routePoint.speed).toFixed(2);
     stream.s += ';' + routePoint.heading.toFixed(1);
     stream.s += ';' + Util.ms2knots(routePoint.tws).toFixed(2);
@@ -45,7 +45,7 @@ function writePointCSV (stream, routePoint) {
 ////////////////////////////////////////////////////////////////////////////////
 /// GPX export
 
-function writeRouteGPX (stream, routeInfo) {
+function writeRouteGPX (stream, routeInfo, sailNames) {
     stream.s += '<?xml version="1.0" encoding="UTF-8"?>\n';
     stream.s += '<gpx version="1.0"\n';
     stream.s += '     creator="BitSailor"\n';

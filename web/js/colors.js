@@ -48,3 +48,8 @@ function ms2bf ( windspeed ) {
 }
 
 setupColors();
+
+export {
+    colors,
+    ms2bf
+}

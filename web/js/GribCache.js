@@ -4,6 +4,7 @@
 `use strict`;
 
 import {decodeGRIB2ArrayBuffer} from './JSGrib/JSGrib.js';
+import {colors, ms2bf} from './colors.js'; 
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Aux math functions

@@ -4,7 +4,6 @@
 `use strict`;
 
 import * as Util from './Util.js';
-import * as Router from './router.js';
 
 function exportRoute ( routeInfo, format='gpx', sailNames) {
         let stream = {"s": ''};

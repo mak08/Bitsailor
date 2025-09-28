@@ -63,11 +63,12 @@ function initializeRouterVR() {
     // Initialize map first
     initMap();
     
+    // Then load data (which will add markers once map is ready)
+    loadPolarsAndRaceInfo();
+ 
     // Set up event handlers
     setupEventHandlers();
     
-    // Then load data (which will add markers once map is ready)
-    loadPolarsAndRaceInfo();
 }
 
 
@@ -116,6 +117,8 @@ function loadPolarsAndRaceInfo() {
     
     // Get polars list
     getPolarsList();
+    let selPolars = document.getElementById('sel_polars');
+    polarManager = new PolarManager(selPolars.value);
     
 }
 
@@ -973,10 +976,8 @@ function getRoute() {
 // Set route point (start or destination)
 function setRoutePoint(type, latlng) {
     if (type === 'start' && startMarker) {
-        startMarker.setLatLng(latlng);
         setRoutePointCore('start', latlng);
     } else if (type === 'dest' && destinationMarker) {
-        destinationMarker.setLatLng(latlng);
         setRoutePointCore('dest', latlng);
     }
     drawRouteLine();

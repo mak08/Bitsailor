@@ -32,7 +32,7 @@ var settings = {
 };
 
 // Add a PolarManager instance
-var polarManager = null;
+var polarManager = new PolarManager();
 let selectedCursor = 'crosshair';
 var gribCache = undefined;
 
@@ -117,8 +117,6 @@ function loadPolarsAndRaceInfo() {
     
     // Get polars list
     getPolarsList();
-    let selPolars = document.getElementById('sel_polars');
-    polarManager = new PolarManager(selPolars.value);
     
 }
 
@@ -340,17 +338,17 @@ function onOptionToggled(event) {
 }
 
 // VMG calculation
-function getVMG(windSpeed) {
-    return polarManager.getVMG(windSpeed, settings.options);
+async function getVMG(windSpeed) {
+    let selPolars = document.getElementById('sel_polars');
+    let analyzer = await polarManager.getAnalyzer(selPolars.value);
+    return analyzer.getVMG(windSpeed, settings.options);
 }
 
 // Compute path for constant TWA
 async function computePath(event) {
     if (!twaAnchor) return;
     
-    let twaAnchor = twaAnchor;
-
-    // Start time
+       // Start time
     let time = twaAnchor.time;
     let startTime = new Date(time);
 
@@ -386,7 +384,6 @@ function updateTWADisplay(twa, heading) {
 // Calculate and display TWA and HDG paths
 async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, targetDist) {
     let options = settings.options;
-    let polarsData = getPolars();
     
     let newTWAPos = { "lat": slat, "lon": slon };
     let newHDGPos = { "lat": slat, "lon": slon };
@@ -398,6 +395,8 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
     let step0 = 600 - startTime.getSeconds() - 60 * (startTime.getMinutes() % 10);
     let delta = step0;
     let pathDist = 0;
+
+    let selPolars = document.getElementById('sel_polars');
     
     for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
         // Calculate TWA and HDG step
@@ -408,19 +407,13 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
         let hdgTWA = Util.toTWA(heading, windHDG.direction);
 
         // Use the PolarManager instead of direct function calls
-        let speedTWA = polarManager.boatSpeed(
+        let analyzer = await polarManager.getAnalyzer(selPolars.value);
+        let speedTWA = await analyzer.boatSpeed(
             Util.ms2knots(windTWA.speed), 
             twa, 
-            options, 
-            polarsData.data_json
         ).speed;
-        
-        let speedHDG = polarManager.boatSpeed(
-            Util.ms2knots(windHDG.speed), 
-            hdgTWA, 
-            options, 
-            polarsData.data_json
-        ).speed;
+
+        let speedHDG = await analyzer.boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA).speed;
 
         let distTWA = delta * (speedTWA/3600);
         let distHDG = delta * (speedHDG/3600);
@@ -443,9 +436,8 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
 
 // Get TWA path from server
 function getTWAPath(event) {
-    if (!twaAnchor || !vrData || !vrData._id) return;
+    if (!twaAnchor ) return;
     
-    let twaAnchor = twaAnchor;
     let time = twaAnchor.time;
     let slat = twaAnchor.getLatLng().lat;
     let slon = twaAnchor.getLatLng().lng;
@@ -545,9 +537,6 @@ function setUp(getVMG) {
     document.getElementById("bt_position").addEventListener("click", onSetStartPosition);
     document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
 
-    startMarker.on('dragend', function (e) {
-        onUpdateStartMarker(startMarker);
-    });
 }
 
 function initMap() {
@@ -1370,7 +1359,7 @@ async function updateWindInfo(event, getVMG) {
 
             var lbVMGUp = document.getElementById("lb_vmg_up");
             var lbVMGDown = document.getElementById("lb_vmg_down");
-            var vmg = getVMG(windSpeed);
+            var vmg = await getVMG(windSpeed);
 
             lbVMGUp.innerHTML = vmg.up;
             lbVMGDown.innerHTML = vmg.down;

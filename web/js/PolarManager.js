@@ -3,152 +3,77 @@
 /// Handles loading and format detection for polar data
 
 import * as Util from './Util.js';
-import StandardPolarAnalyzer from './StandardPolarAnalyzer.js';
+import VRPolarAnalyzer from './VRPolarAnalyzer.js';
+import FWPolarAnalyzer from './FWPolarAnalyzer.js';
 
 /**
- * PolarManager class for loading and managing boat performance data
+ * PolarManager acts as a factory and cache for PolarAnalyzers.
  */
 export default class PolarManager {
+    constructor() {
+        // Cache for analyzers and load promises
+        this._analyzerCache = new Map();
+        this._loadPromises = new Map();
+    }
+
     /**
-     * Constructor - loads polar data immediately
-     * @param {string} polarId - Required ID/name of polar file to load
+     * Get the analyzer for a given polarId.
+     * Loads and caches the analyzer if not already available.
+     * @param {string} polarId
+     * @returns {Promise<PolarAnalyzer>}
      */
-    constructor(polarId) {
+    async getAnalyzer(polarId) {
         if (!polarId) {
-            throw new Error("PolarManager requires a polar ID");
+            throw new Error("getAnalyzer requires a polarId");
         }
-        
-        this.polars = null;
-        this.analyzer = null;
-        this.formatParsers = {};
-        this.ready = false;
-        
-        // Register default parser
-        this.registerFormat('standard', (data) => data);
-        
-        // Start loading the polars (returns promise)
-        this.initialLoadPromise = this.loadPolars(polarId);
-    }
-
-    /**
-     * Wait for the polar data to be loaded and ready
-     * @returns {Promise} - Promise that resolves when data is ready
-     */
-    whenReady() {
-        return this.initialLoadPromise;
-    }
-
-    /**
-     * Load polar data from a URL
-     * @param {string} id - Polar ID/name
-     * @returns {Promise} - Promise that resolves with the loaded polar data
-     */
-    loadPolars(id) {
-        return new Promise((resolve, reject) => {
-            Util.doGET(`/polars/${encodeURIComponent(id)}.json`,
+        // Return cached analyzer if available
+        if (this._analyzerCache.has(polarId)) {
+            return this._analyzerCache.get(polarId);
+        }
+        // If loading is already in progress, return the same promise
+        if (this._loadPromises.has(polarId)) {
+            return this._loadPromises.get(polarId);
+        }
+        // Otherwise, load and cache
+        const loadPromise = new Promise((resolve, reject) => {
+            Util.doGET(`/polars/${encodeURIComponent(polarId)}.json`,
                 (request) => {
                     try {
                         const data = JSON.parse(request.responseText);
                         if (data) {
-                            console.log('Loaded polars: ' + id);
-                            this.polars = data;
-                            
-                            // Create appropriate analyzer based on format
-                            const format = this.detectFormat(data);
-                            const parsedData = this.parsePolars(data, format);
-                            this.analyzer = this.createAnalyzer(format, parsedData);
-                            
-                            this.ready = true;
-                            resolve(this.analyzer);
+                            let analyzer = this._createAnalyzer(data);
+                            this._analyzerCache.set(polarId, analyzer);
+                            resolve(analyzer);
                         } else {
                             reject(new Error("Invalid polar data format"));
                         }
                     } catch (e) {
                         reject(e);
+                    } finally {
+                        this._loadPromises.delete(polarId);
                     }
                 },
                 (request) => {
-                    const error = new Error(request.responseText || "Failed to load polars");
-                    reject(error);
-                });
+                    this._loadPromises.delete(polarId);
+                    reject(new Error(request.responseText || "Failed to load polars"));
+                }
+            );
         });
+        this._loadPromises.set(polarId, loadPromise);
+        return loadPromise;
     }
 
     /**
-     * Create the appropriate analyzer for the polar format
-     * @param {string} format - Format name
+     * Internal: Create the appropriate analyzer for the polar format
      * @param {Object} data - Parsed polar data
-     * @returns {PolarAnalyzer} The created analyzer
+     * @returns {PolarAnalyzer}
      */
-    createAnalyzer(format, data) {
-        // Currently only supporting standard format
-        // In the future, we could have VRPolarAnalyzer, OrcPolarAnalyzer, etc.
-        return new StandardPolarAnalyzer(data);
-    }
-    
-    /**
-     * Get the currently loaded polar data
-     * @returns {Object} - Current polar data
-     */
-    getPolars() {
-        return this.polars;
-    }
-
-    /**
-     * Get the current analyzer
-     * @returns {PolarAnalyzer} - Current analyzer
-     * @throws {Error} - If no analyzer is available yet
-     */
-    getAnalyzer() {
-        if (!this.ready || !this.analyzer) {
-            throw new Error("Polar data not yet loaded. Use whenReady() before accessing the analyzer.");
-        }
-        return this.analyzer;
-    }
-    
-    /**
-     * Register a new polar format parser
-     * @param {string} formatName - Name of the format
-     * @param {function} parserFunction - Function to parse this format
-     */
-    registerFormat(formatName, parserFunction) {
-        this.formatParsers[formatName] = parserFunction;
-    }
-    
-    /**
-     * Parse polar data in a specific format
-     * @param {Object} data - Raw polar data
-     * @param {string} format - Format name (optional, auto-detected if missing)
-     * @returns {Object} - Normalized polar data
-     */
-    parsePolars(data, format) {
-        // Auto-detect format if not specified
-        if (!format) {
-            format = this.detectFormat(data);
-        }
-        
-        // Use registered parser or default
-        if (this.formatParsers && this.formatParsers[format]) {
-            return this.formatParsers[format](data);
-        } else {
-            // Default parser assumes data is already in correct format
-            return data;
-        }
-    }
-    
-    /**
-     * Attempt to detect the format of polar data
-     * @param {Object} data - Raw polar data
-     * @returns {string} - Detected format name
-     */
-    detectFormat(data) {
-        // Simple format detection logic
-        if (data.scriptData && data.scriptData.polar) {
-            return 'vr';
+    _createAnalyzer(data) {
+        if (data.scriptData) {
+            return new VRPolarAnalyzer(data);
         } else if (data.data_json) {
-            return 'standard';
-        } else {
-            return 'unknown';
+            return new FWPolarAnalyzer(data);
         }
+        throw new Error("Unknown polar data format");
     }
 }

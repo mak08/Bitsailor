@@ -5,7 +5,7 @@
 import * as Util from './Util.js';
 import PolarAnalyzer from './PolarAnalyzer.js';
 
-export default class StandardPolarAnalyzer extends PolarAnalyzer {
+export default class VRPolarAnalyzer extends PolarAnalyzer {
     constructor(polarData, sailNames) {
         super(polarData, sailNames);
     }

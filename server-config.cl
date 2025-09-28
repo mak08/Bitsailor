@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2025-09-18 19:35:04>
+;;; Last Modified <michael 2025-09-28 21:24:19>
 
 (in-package :bitsailor)
 
@@ -76,19 +76,19 @@
  :handler (:query-function t :authentication nil :realm "admin"))
 
 (register-function "router.signUp" :authorizer (constantly t))
-(register-function "router.getSession" :authorizer #'vh-function-authorizer)
-(register-function "router.removeSession" :authorizer #'vh-function-authorizer)
-(register-function "router.getRaceInfo" :authorizer #'vh-function-authorizer)
-(register-function "router.getWind" :authorizer #'vh-function-authorizer)
-(register-function "router.getTWAPath" :authorizer #'vh-function-authorizer)
-(register-function "router.setParameter" :authorizer #'vh-function-authorizer)
+(register-function "router.getSession" :authorizer (constantly t))
+(register-function "router.removeSession" :authorizer (constantly t))
+(register-function "router.getRaceInfo" :authorizer (constantly t))
+(register-function "router.getWind" :authorizer (constantly t))
+(register-function "router.getTWAPath" :authorizer (constantly t))
+(register-function "router.setParameter" :authorizer (constantly t))
 (register-function "router.getRaceList" :authorizer (constantly t))
-(register-function "router.getPolarsList" :authorizer  #'vh-admin-authorizer)
+(register-function "router.getPolarsList" :authorizer (constantly t))
 (register-function "router.getRaceListAdmin" :authorizer #'vh-admin-authorizer)
-(register-function "router.setRoute" :authorizer #'vh-function-authorizer)
-(register-function "router.getRoute" :authorizer #'vh-function-authorizer)
+(register-function "router.setRoute" :authorizer (constantly t))
+(register-function "router.getRoute" :authorizer (constantly t))
 (register-function "router.getStatistics" :authorizer (constantly t))
-(register-function "router.checkWindow" :authorizer #'vh-function-authorizer)
+(register-function "router.checkWindow" :authorizer (constantly t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
@@ -112,7 +112,7 @@
            :prefix "/weather")
  :handler (:directory "/home/michael/Wetter"
            :realm "bitsailor"
-           :authorizer #'vh-authorizer))
+           :authorizer (constantly t)))
 #|
 (handle
  :request (:method :get
@@ -166,7 +166,7 @@
            :path "/router")
  :handler (:dynamic 'router
            :realm "bitsailor"
-           :authorizer #'vh-authorizer))
+           :authorizer (constantly t)))
 (handle 
  :request (:method :get
            :prefix "/activate-account")

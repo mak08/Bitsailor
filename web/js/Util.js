@@ -50,19 +50,34 @@ function makeQuery (object) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Geo math
 
-var radius = 3437.74683;
+var radius = 6371.009/1.85221; // nm
 
-function addDistance (pos, distnm, angle, radiusnm=radius) {
-    var posR = {
-        "lat": toRad(pos.lat),
-        "lon": toRad(pos.lon)
+// Add distance (in nm) to a position at a given angle (degrees)
+// Default is earth radius in nm
+
+function addDistance (pos, distnm, angle, radiusnm = radius) {
+    // Convert to radians
+    const lat1 = toRad(pos.lat);
+    const lon1 = toRad(pos.lon);
+    const theta = toRad(angle);
+    const d = distnm / radiusnm;
+
+    // Compute new latitude
+    const lat2 = Math.asin(
+        Math.sin(lat1) * Math.cos(d) +
+        Math.cos(lat1) * Math.sin(d) * Math.cos(theta)
+    );
+
+    // Compute new longitude
+    const lon2 = lon1 + Math.atan2(
+        Math.sin(theta) * Math.sin(d) * Math.cos(lat1),
+        Math.cos(d) - Math.sin(lat1) * Math.sin(lat2)
+    );
+
+    return {
+        lat: toDeg(lat2),
+        lon: toDeg(lon2)
     };
-    var d = distnm / radiusnm;
-    var angleR = toRad(angle);
-    var dLatR = d * Math.cos(angleR);
-    var dLonR = d * (Math.sin(angleR) / Math.cos(posR.lat + dLatR));
-    return { "lat": toDeg(posR.lat + dLatR),
-             "lon": toDeg(posR.lon + dLonR) };
 }
 
 function gcAngle (rlat0, rlon0, rlat1, rlon1) {

@@ -79,15 +79,7 @@ function setupEventHandlers() {
     map.on('click', computePath);
     map.on('dblclick', getTWAPath);
     
-    // Button handlers
-    document.getElementById('bt_setstart').onclick = function() {
-        setRoutePoint('start', map.getCenter());
-    };
-    document.getElementById('bt_setdest').onclick = function() {
-        setRoutePoint('dest', map.getCenter());
-    };
-    
-    // Checkbox handlers
+     // Checkbox handlers
     const options = ["hull", "winch", "foil", "heavy", "light", "reach"];
     options.forEach(option => {
         const checkbox = document.getElementById(`cb_${option}`);
@@ -348,9 +340,8 @@ async function getVMG(windSpeed) {
 async function computePath(event) {
     if (!twaAnchor) return;
     
-       // Start time
-    let time = twaAnchor.time;
-    let startTime = new Date(time);
+    // Start time
+    let startTime = new Date(twaAnchor.time);
 
     // Start and target position
     let slat = twaAnchor.getLatLng().lat;
@@ -362,7 +353,7 @@ async function computePath(event) {
     
     // Heading and TWA
     let heading = Util.toDeg(Util.courseAngle(slat, slon, dlat, dlon));
-    let wind = await gribCache.getWindVR(slat, slon, startTime);
+    let wind = await gribCache.getWind(slat, slon, startTime);
     let twa = Math.round(Util.toTWA(heading, wind.direction));
 
     if (twa != curTWA) {
@@ -400,19 +391,15 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
     
     for (var step = step0; step < 86400 && pathDist < targetDist; step += 600) {
         // Calculate TWA and HDG step
-        let windTWA = await gribCache.getWindVR(newTWAPos.lat, newTWAPos.lon, stepTime);
-        let windHDG = await gribCache.getWindVR(newHDGPos.lat, newHDGPos.lon, stepTime);
+        let windTWA = await gribCache.getWind(newTWAPos.lat, newTWAPos.lon, stepTime);
+        let windHDG = await gribCache.getWind(newHDGPos.lat, newHDGPos.lon, stepTime);
 
         let twaHeading = Util.toHeading(twa, windTWA.direction);
         let hdgTWA = Util.toTWA(heading, windHDG.direction);
 
         // Use the PolarManager instead of direct function calls
         let analyzer = await polarManager.getAnalyzer(selPolars.value);
-        let speedTWA = await analyzer.boatSpeed(
-            Util.ms2knots(windTWA.speed), 
-            twa, 
-        ).speed;
-
+        let speedTWA = await analyzer.boatSpeed(Util.ms2knots(windTWA.speed), twa).speed;
         let speedHDG = await analyzer.boatSpeed(Util.ms2knots(windHDG.speed), hdgTWA).speed;
 
         let distTWA = delta * (speedTWA/3600);
@@ -423,8 +410,24 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
 
         stepTime = new Date(startTime.getTime() + step * 1000);
 
-        twaPath.push([stepTime, {"lat": newTWAPos.lat, "lng": newTWAPos.lon}]);
-        hdgPath.push([stepTime, {"lat": newHDGPos.lat, "lng": newHDGPos.lon}]);
+        twaPath.push([
+            stepTime,
+            { lat: newTWAPos.lat, lng: newTWAPos.lon },
+            {
+                windSpeed: Util.ms2knots(windTWA.speed),
+                windDir: windTWA.direction,
+                boatSpeed: speedTWA
+            }
+        ]);
+        hdgPath.push([
+            stepTime,
+            { lat: newHDGPos.lat, lng: newHDGPos.lon },
+            {
+                windSpeed: Util.ms2knots(windHDG.speed),
+                windDir: windHDG.direction,
+                boatSpeed: speedHDG
+            }
+        ]);
 
         pathDist += distTWA;
         delta = 600;
@@ -535,8 +538,7 @@ function setUp(getVMG) {
         }
     });
     document.getElementById("bt_position").addEventListener("click", onSetStartPosition);
-    document.getElementById("bt_setstart").addEventListener("click", onContextMenuSetStart);
-
+    
 }
 
 function initMap() {
@@ -628,7 +630,7 @@ function getCurrentCycle(d = new Date()) {
 function onContextMenu(point) {
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
-    setRoutePoint(point, mapEvent.latlng);
+    setRoutePoint(point, map.mouseEventToLatLng(mapEvent.originalEvent));
 }
 
 function onCopyPosition(event) {
@@ -712,18 +714,6 @@ function getStartTime() {
     }
 }
 
-function onContextMenuSetStart(event) {
-    var textBox = document.getElementById("tb_position");
-    var position = mapEvent.latlng;
-    textBox.value = Util.formatPosition(position.lat, position.lng);
-}
-
-function onUpdateStartMarker(marker) {
-    var textBox = document.getElementById("tb_position");
-    var position = marker.getLatLng();
-    textBox.value = Util.formatPosition(position.lat, position.lng);
-}
-
 function onSetStartPosition(event) {
     var position = document.getElementById("tb_position").value;
     var latlon = parsePosition(position);
@@ -741,7 +731,10 @@ function onSetResolution(event) {
 
 function onSetPolars(event) {
     let polarsId = event.currentTarget.value;
-    polarManager = new PolarManager(polarsId);
+    settings.polarsId = polarsId; // <-- Update settings
+    storeValue('polarsId', polarsId); // (optional: persist selection)
+    // No need to create a new PolarManager instance!
+    // The new analyzer will be loaded as needed via polarManager.getAnalyzer(polarsId)
 }
 
 function onSetDuration(event) {
@@ -1176,7 +1169,7 @@ function makeWaypointInfo(startTime, point) {
 
     result += "<hr>";
 
-    result += "<b>Pos</b>: " + formatPointPosition(point.position);
+    result += "<b>Pos</b>: " + formatPointPosition(point);
     result += "<br>";
 
     result += "<b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
@@ -1204,7 +1197,7 @@ function clearPath(path) {
     for (var i = 0; i < path.length; i++) {
         map.removeLayer(path[i]);
     }
-    path = [];
+    path.length = 0; // <-- This clears the array in-place!
 }
 
 var ortho;
@@ -1236,15 +1229,43 @@ function drawHDGPath(data) {
 }
 
 function drawPath(bPath, data, color) {
-    for (var i = 1; i < data.length; i++) {
-        var d = new Date(data[i][0]);
-        let minutes = d.getMinutes();
-        var segment = L.polyline([data[i - 1][1], data[i][1]], {
+    const weight = 2;
+    for (let i = 1; i < data.length; i++) {
+        const d = new Date(data[i][0]);
+        const minutes = d.getMinutes();
+        const from = data[i - 1][1];
+        const to = data[i][1];
+        const info = data[i][2]; // {windSpeed, windDir, boatSpeed}
+
+        // Draw the segment (always thin)
+        const segment = L.polyline([from, to], {
             color: color,
-            weight: (minutes == 0) ? 4 : 2,
+            weight: weight,
             opacity: 1.0
         }).addTo(map);
-        bPath[i - 1] = segment;
+        bPath.push(segment);
+
+        // If endpoint is a full hour, draw a thick dot at the endpoint
+        if (minutes === 0) {
+            const dot = L.circleMarker(to, {
+                radius: weight * 2,
+                color: color,
+                fillColor: color,
+                fillOpacity: 1.0,
+                weight: 0
+            }).addTo(map);
+
+            // Use precomputed info for the popup
+            if (info) {
+                const popupContent = `
+                    <b>Time:</b> ${d.toISOString().substring(0,16)}<br>
+                    <b>Wind:</b> ${info.windSpeed.toFixed(1)} kn @ ${info.windDir.toFixed(0)}°<br>
+                    <b>Boat speed:</b> ${info.boatSpeed.toFixed(2)} kn
+                `;
+                dot.bindPopup(popupContent);
+            }
+            bPath.push(dot);
+        }
     }
 }
 

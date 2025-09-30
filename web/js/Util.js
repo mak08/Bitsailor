@@ -50,7 +50,7 @@ function makeQuery (object) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Geo math
 
-var radius = 6371.009/1.85221; // nm
+var radius = 6371.009/1.852216; // nm
 
 // Add distance (in nm) to a position at a given angle (degrees)
 // Default is earth radius in nm

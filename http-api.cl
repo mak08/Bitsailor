@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-19 22:17:47>
+;;; Last Modified <michael 2025-09-30 21:04:22>
 
 (in-package :bitsailor)
 
@@ -133,11 +133,10 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
-(defun determine-minwind (presets race-id)
+(defun determine-minwind (race-id)
   (knots-to-m/s 0d0))
 
-(defun get-routing-presets (presets
-                            &key
+(defun get-routing-presets (&key
                               (race-id)
                               (polars-id)
                               (starttime nil)
@@ -183,7 +182,7 @@
              nil))
      :sail sail
      :resolution resolution
-     :minwind (determine-minwind presets race-id)
+     :minwind (determine-minwind race-id)
      :gfs-mode gfs-mode
      :grib-source (if (and (string= resolution "0p25")
                            vr-finewinds)
@@ -219,7 +218,6 @@
     
 
 (defun |getRoute| (handler request response &key
-                                              (|presets| "VR")
                                               (|raceId| nil)
                                               (|options| nil)
                                               (|energy| "100")
@@ -250,8 +248,7 @@
                         (make-cycle :timestamp (parse-datetime |cycleTS|))
                         (available-cycle (now))))
              (routing
-               (get-routing-presets |presets|
-                                    :race-id |raceId|
+               (get-routing-presets :race-id |raceId|
                                     :polars-id (decode-uri-component |polarsId|)
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
@@ -270,9 +267,8 @@
                                     :dlon (read-arg |dlon| 'double-float)))
              (routeinfo
                (get-route routing)))
-        (log2:info "User:~a Race:(~a) Status ~a ~a"
+        (log2:info "User:~a Status ~a ~a"
                    user-id
-                   |presets|
                    (routeinfo-status routeinfo)
                    (routeinfo-stats routeinfo))
         (values
@@ -377,7 +373,7 @@
 
 (defun get-wind-data (presets cycle resolution time north south west east ddx ddy)
   (let* ((routing
-           (get-routing-presets presets))
+           (get-routing-presets))
          (iparams
            (interpolation-parameters time
                                      :method (routing-interpolation routing)
@@ -425,8 +421,7 @@
              (race-id (get-routing-request-race-id request))
              (cycle (when |cycle| (make-cycle :timestamp (parse-timestring |cycle|))))
              (routing
-               (get-routing-presets |presets|
-                                    :race-id |raceId|
+               (get-routing-presets :race-id |raceId|
                                     :polars-id |polarsId|
                                     :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)

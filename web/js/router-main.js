@@ -6,7 +6,6 @@ import * as GPX from './GPX.js';
 import GribCache from './GribCache.js';
 import PolarManager from './PolarManager.js';
 
-
 // Global variables
 let map = null;
 let startMarker = null;
@@ -15,46 +14,35 @@ let routeLine = null;
 let trackMarkers = [];
 let routeTracks = [];
 let polarsList = [];
-let raceInfo = {};
-let vrData = null;
 let curTWA;
 
-
-
 // Replace global variables
-var sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
-var settings = {
+let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
+let settings = {
     "resolution": "1p00",
     "gfsMode": "06h",
-    "presets": "VR",
-    "options": ["hull", "winch", "foil", "heavy", "light", "reach"],
-    "polarsId": "1"
+    "polarsId": undefined
 };
 
 // Add a PolarManager instance
-var polarManager = new PolarManager();
+let polarManager = new PolarManager();
 let selectedCursor = 'crosshair';
-var gribCache = undefined;
+let gribCache = undefined;
 
-var mapEvent;
+let mapEvent;
 
 // Bounds and width from the map are kept here for convenience
-var geometry = {};
+let geometry = {};
 
 // Time index
-var ir_index;
-
-var currentCycle = undefined;
-
-var twaAnchor = undefined;
-
-var courseGCLine = null;
-
-var routeIsochrones = [];
-
-var routeInfo = {};
-var twaPath = [];
-var hdgPath = [];
+let ir_index;
+let currentCycle = undefined;
+let twaAnchor = undefined;
+let courseGCLine = null;
+let routeIsochrones = [];
+let routeInfo = {};
+let twaPath = [];
+let hdgPath = [];
 
 // Main initialization function
 function initializeRouterVR() {
@@ -63,9 +51,11 @@ function initializeRouterVR() {
     // Initialize map first
     initMap();
     
-    // Then load data (which will add markers once map is ready)
-    loadPolarsAndRaceInfo();
- 
+    setUp(getVMG);
+    
+    // Get polars list
+    getPolarsList();
+    
     // Set up event handlers
     setupEventHandlers();
     
@@ -77,7 +67,6 @@ function setupEventHandlers() {
     // Map event handlers
     map.on('click', onMapClick);
     map.on('click', computePath);
-    map.on('dblclick', getTWAPath);
     
      // Checkbox handlers
     const options = ["hull", "winch", "foil", "heavy", "light", "reach"];
@@ -88,28 +77,6 @@ function setupEventHandlers() {
             checkbox.addEventListener("click", onOptionToggled);
         }
     });
-}
-
-// Load polars and race info
-function loadPolarsAndRaceInfo() {
-    // Set up Router
-    setUp(getVMG);
-    settings.presets = "VR";
-    
-    // Load options from URL if available
-    const queryParams = getURLParams();
-    if (queryParams.options) {
-        try {
-            settings.options = JSON.parse(queryParams.options);
-        } catch (e) {
-            console.warn(e);
-            settings.options = ["hull", "winch", "foil", "heavy", "light", "reach"];
-        }
-    }
-    
-    // Get polars list
-    getPolarsList();
-    
 }
 
 // Get polars list
@@ -125,6 +92,7 @@ function getPolarsList() {
                 option.innerHTML = entry.label;
                 selPolars.add(option);
             });
+            settings.polarsId = selPolars.value;
         },
         function(xhr) {
             console.error('Could not load polars list');
@@ -132,167 +100,6 @@ function getPolarsList() {
     );
 }
 
-// Create start and destination markers
-function createStartAndDestinationMarkers() {
-    const queryParams = getURLParams();
-    
-    // Start marker
-    let start = queryParams.startPos;
-    if (!start) {
-        start = getValue('start');
-        if (start) {
-            start = JSON.parse(start);
-        } else {
-            start = vrData.start;
-        }
-    }
-    
-    // Create start marker
-    startMarker = L.marker([start.lat, start.lon], {
-        title: 'Start',
-        icon: L.icon({
-            iconUrl: 'img/start_45x32.png',
-            iconAnchor: [16, 16],
-            popupAnchor: [0, -16],
-        }),
-        draggable: true
-    }).addTo(map);
-    
-    // Start marker drag event
-    startMarker.on('dragend', function(e) {
-        setRoutePoint('start', startMarker.getLatLng());
-    });
-    
-    // Update position display
-    setRoutePoint('start', L.latLng(start.lat, start.lon));
-    let textBox = document.getElementById("tb_position");
-    if (textBox) {
-        textBox.value = Util.formatPosition(start.lat, start.lon);
-    }
-    
-    // Handle start time if specified
-    if (queryParams.startTime) {
-        let cbDelayed = document.getElementById('cb_startdelayed');
-        let tbStartTime = document.getElementById('tb_starttime');
-        if (cbDelayed && tbDelayed) {
-            cbDelayed.checked = true;
-            tbStartTime.value = queryParams.startTime.toISOString().substring(0,16);
-        }
-    }
-
-    // Destination marker
-    let dest = getValue('dest');
-    if (dest) {
-        dest = JSON.parse(dest);
-    } else {
-        dest = {"lat": vrData.end.lat, "lon": vrData.end.lon};
-    }
-    
-    // Create destination marker
-    destinationMarker = L.marker([dest.lat, dest.lon], {
-        title: 'Destination',
-        icon: L.icon({
-            iconUrl: 'img/finish_32x20.png',
-            iconAnchor: [16, 16],
-            popupAnchor: [0, -16],
-        }),
-        draggable: true
-    }).addTo(map);
-    
-    // Destination marker drag event
-    destinationMarker.on('dragend', function(e) {
-        setRoutePoint('dest', destinationMarker.getLatLng());
-    });
-    
-    // Update router destination
-    setRoutePoint('dest', L.latLng(dest.lat, dest.lon));
-    
-    // Draw route line between markers
-    drawRouteLine();
-    
-    // Center map on start position
-    map.panTo([start.lat, start.lon]);
-    
-    // Handle additional query parameters
-    let energy = queryParams.energy;
-    if (energy) {
-        let energyField = document.getElementById('tb_currentenergy');
-        if (energyField) {
-            energyField.value = (energy*1).toFixed();
-        }
-    }
-    
-    let twa = queryParams.twa;
-    if (twa) {
-        let tackSelect = document.getElementById('sel_currenttack');
-        if (tackSelect) {
-            tackSelect.value = twa < 0 ? 'port' : 'stbd';
-        }
-    }
-
-    let sail = queryParams.sail;
-    if (sail) {
-        let sailSelect = document.getElementById('sel_currentsail');
-        if (sailSelect) {
-            sailSelect.value = sail;
-        }
-    }
-}
-
-// Create checkpoint markers
-function createCheckpointMarkers() {
-    if (!vrData.checkpoints) return;
-    
-    const markStbd = 'img/mark_green.png';
-    const markPort = 'img/mark_red.png';
-    
-    for (const c of vrData.checkpoints) {
-        const mark = L.marker([c.start.lat, c.start.lon], {
-            icon: L.icon({
-                iconUrl: (c.side == 'port') ? markPort : markStbd,
-                iconAnchor: [16, 16],
-                popupAnchor: [0, -16],
-            }),
-            title: c.group + "-" + c.id + " " + c.name,
-            draggable: false
-        }).addTo(map);
-        
-        mark.on('click', function() { 
-            onMarkerClicked(mark);
-        });
-    }
-}
-
-// Create ice limits and restricted zones
-function createRouteBoundaries() {
-    // Ice limits
-    if (vrData.ice_limits) {
-        const iceLimit = vrData.ice_limits.south.map(p => [p.lat, p.lon]);
-        
-        L.polyline(iceLimit, {
-            color: '#ff0000',
-            weight: 1,
-            opacity: 1.0
-        }).addTo(map);
-    }
-    
-    // Restricted zones
-    if (vrData.restrictedZones) {
-        for (const zone of vrData.restrictedZones) {
-            if (!zone.vertices || zone.vertices.length === 0) continue;
-            
-            const path = zone.vertices.map(p => [p.lat, p.lon]);
-            // Close the polygon by adding the first point again
-            path.push([zone.vertices[0].lat, zone.vertices[0].lon]);
-            
-            L.polyline(path, {
-                color: '#ff0000',
-                weight: 1,
-                opacity: 1.0
-            }).addTo(map);
-        }
-    }
-}
 
 // Draw route line between start and destination
 function drawRouteLine() {
@@ -310,23 +117,6 @@ function drawRouteLine() {
         weight: 2,
         opacity: 1.0
     }).addTo(map);
-}
-
-// Map click handler
-function onMapClick(event) {
-    let mapMenu = document.getElementById('mapMenu');
-    if (mapMenu) {
-        mapMenu.style.display = 'none';
-    }
-}
-
-// Option toggled handler
-function onOptionToggled(event) {
-    settings.options = settings.options.filter(e => e !== event.currentTarget.name);
-    if (event.currentTarget.checked) {
-        settings.options.unshift(event.currentTarget.name);
-    }
-    storeValue('options', JSON.stringify(settings.options));
 }
 
 // VMG calculation
@@ -437,44 +227,6 @@ async function calculateAndDisplayPaths(slat, slon, startTime, twa, heading, tar
     drawHDGPath(hdgPath);
 }
 
-// Get TWA path from server
-function getTWAPath(event) {
-    if (!twaAnchor ) return;
-    
-    let time = twaAnchor.time;
-    let slat = twaAnchor.getLatLng().lat;
-    let slon = twaAnchor.getLatLng().lng;
-    let dlat = event.latlng.lat;
-    let dlon = event.latlng.lng;
-
-    Util.doGET(
-        "/function/router.getTWAPath",
-        function(request) {
-            let data = JSON.parse(request.responseText);
-            updateTWADisplay(data.twa, data.heading);
-            drawTWAPath(data.twapath);
-            drawHDGPath(data.hdgpath);
-        },
-        function(request) {
-            console.error(request.responseText);
-        },
-        {
-            "presets": "VR",
-            "gfsMode": "06h",
-            "raceId": vrData._id.race_id + '.' + vrData._id.leg_num,
-            "cycle": getCurrentCycle(),
-            "resolution": settings.resolution,
-            "options": settings.options,
-            "time": time,
-            "latA": slat,
-            "lngA": slon,
-            "lat": dlat,
-            "lng": dlon
-        }
-    );
-
-
-}
 ////////////////////////////////////////////////////////////////////////////////
 /// Bitsailor Router UI Stateless (Leaflet/OpenStreetMap version)
 
@@ -583,6 +335,23 @@ function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Event handlers
 
+// Map click handler
+function onMapClick(event) {
+    let mapMenu = document.getElementById('mapMenu');
+    if (mapMenu) {
+        mapMenu.style.display = 'none';
+    }
+}
+
+// Option toggled handler
+function onOptionToggled(event) {
+    settings.options = settings.options.filter(e => e !== event.currentTarget.name);
+    if (event.currentTarget.checked) {
+        settings.options.unshift(event.currentTarget.name);
+    }
+    storeValue('options', JSON.stringify(settings.options));
+}
+
 function onWindowResize(event) {
     map.invalidateSize();
 }
@@ -603,29 +372,6 @@ function onDownloadRoute(event) {
     }
 }
 
-function updateMap() {
-    var bounds = getMapBounds();
-
-    // Load wind
-    if (!gribCache) {
-        let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date());
-    }
-
-    redrawWindByOffset(ir_index.value);
-}
-
-function availableForecastCycle(d = new Date()) {
-    var availDate = d - 300 * 60 * 1000;
-    var fc = truncate(availDate, 6 * 3600 * 1000);
-    return new Date(fc).toISOString();
-}
-
-function getCurrentCycle(d = new Date()) {
-    var availDate = d - 210 * 60 * 1000;
-    var fc = truncate(availDate, 6 * 3600 * 1000);
-    return new Date(fc).toISOString();
-}
 
 function onContextMenu(point) {
     var mapMenu = document.getElementById("mapMenu");
@@ -661,23 +407,6 @@ function onDisplayTracks(event) {
     displayRouting(routeInfo);
 }
 
-function onCursorSelect(event, type) {
-    selectedCursor = type;
-    map.getContainer().style.cursor = type;
-}
-
-function setBusyCursor() {
-    document.getElementById('bt_getroute').style.cursor = "wait";
-    document.getElementById("body").style.cursor = "wait";
-    map.getContainer().style.cursor = "wait";
-}
-
-function restoreCursor() {
-    document.getElementById("body").style.cursor = "pointer";
-    document.getElementById('bt_getroute').style.cursor = "pointer";
-    map.getContainer().style.cursor = selectedCursor;
-}
-
 function onAdjustIndex(event) {
     var source = event.target.id;
     if (source == "bt_dec6")
@@ -700,17 +429,6 @@ function onDelayedStart(event) {
         dateInput.value = isoDate;
     } else {
         dateInput.value = null;
-    }
-}
-
-function getStartTime() {
-    var cbDelayed = document.getElementById("cb_startdelayed");
-    if (cbDelayed.checked === true) {
-        var dateInput = document.getElementById("tb_starttime");
-        return dateInput.value;
-    } else {
-        var d = new Date();
-        return d.toISOString().substring(0, 16);
     }
 }
 
@@ -742,6 +460,88 @@ function onSetDuration(event) {
     settings.duration = duration * 3600;
     storeValue('duration', duration);
 }
+
+
+function onMapMenuMouseLeave(event) {
+    var mapMenu = document.getElementById("mapMenu");
+    mapMenu.style.display = "none";
+}
+
+function onMapRightClick(event) {
+    mapEvent = event;
+    let mapMenu = document.getElementById("mapMenu");
+    mapMenu.style.display = "block";
+    mapMenu.style["z-index"] = 400;
+    mapMenu.style.top = event.originalEvent.pageY + "px";
+    mapMenu.style.left = event.originalEvent.pageX + "px";
+    return false;
+}
+
+function onMarkerClicked(marker) {
+    twaAnchor = marker;
+
+    var time = marker.time;
+    var isochrone = getIsochroneByTime(time);
+    var baseTime;
+
+    if (isochrone) {
+        baseTime = isochrone.time;
+    } else {
+        baseTime = availableForecastCycle();
+    }
+
+    redrawWindByTime(new Date(time));
+}
+
+
+function setBusyCursor() {
+    document.getElementById('bt_getroute').style.cursor = "wait";
+    document.getElementById("body").style.cursor = "wait";
+    map.getContainer().style.cursor = "wait";
+}
+
+function restoreCursor() {
+    document.getElementById("body").style.cursor = "pointer";
+    document.getElementById('bt_getroute').style.cursor = "pointer";
+    map.getContainer().style.cursor = selectedCursor;
+}
+
+
+function updateMap() {
+    var bounds = getMapBounds();
+
+    // Load wind
+    if (!gribCache) {
+        let canvas = document.getElementById('wind-canvas');
+        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date());
+    }
+
+    redrawWindByOffset(ir_index.value);
+}
+
+function getStartTime() {
+    var cbDelayed = document.getElementById("cb_startdelayed");
+    if (cbDelayed.checked === true) {
+        var dateInput = document.getElementById("tb_starttime");
+        return dateInput.value;
+    } else {
+        var d = new Date();
+        return d.toISOString().substring(0, 16);
+    }
+}
+
+function availableForecastCycle(d = new Date()) {
+    var availDate = d - 300 * 60 * 1000;
+    var fc = truncate(availDate, 6 * 3600 * 1000);
+    return new Date(fc).toISOString();
+}
+
+function getCurrentCycle(d = new Date()) {
+    var availDate = d - 210 * 60 * 1000;
+    var fc = truncate(availDate, 6 * 3600 * 1000);
+    return new Date(fc).toISOString();
+}
+
 
 function storeValue(name, value) {
     try {
@@ -818,43 +618,6 @@ function pad0(val, length = 2, base = 10) {
     return result;
 }
 
-function getManualCycle() {
-    var dateInput = document.getElementById("tb_cycledate");
-    var hourInput = document.getElementById("sel_cyclehour");
-    return dateInput.value + "T" + pad0(hourInput.value) + ":00:00Z";
-}
-
-
-function onMapMenuMouseLeave(event) {
-    var mapMenu = document.getElementById("mapMenu");
-    mapMenu.style.display = "none";
-}
-
-function onMapRightClick(event) {
-    mapEvent = event;
-    let mapMenu = document.getElementById("mapMenu");
-    mapMenu.style.display = "block";
-    mapMenu.style["z-index"] = 400;
-    mapMenu.style.top = event.originalEvent.pageY + "px";
-    mapMenu.style.left = event.originalEvent.pageX + "px";
-    return false;
-}
-
-function onMarkerClicked(marker) {
-    twaAnchor = marker;
-
-    var time = marker.time;
-    var isochrone = getIsochroneByTime(time);
-    var baseTime;
-
-    if (isochrone) {
-        baseTime = isochrone.time;
-    } else {
-        baseTime = availableForecastCycle();
-    }
-
-    redrawWindByTime(new Date(time));
-}
 
 //////////////////////////////////////////////////////////////////////
 /// Accessors
@@ -1038,37 +801,6 @@ function displayRouting(data) {
     document.getElementById("lb_mintwa").textContent = (data.stats["min-twa"] + " - " + data.stats["max-twa"]);
     document.getElementById("lb_polars").textContent = (data.polars);
     document.getElementById("lb_options").textContent = (data.options);
-}
-
-function getURLParams() {
-    let query = new URL(document.URL).searchParams;
-    let slat = query.get('slat');
-    let slon = query.get('slon');
-    let starttime = query.get('starttime');
-    let res = {};
-    if (slat) {
-        res.startPos = {
-            "lat": Number(slat),
-            "lon": Number(slon)
-        };
-    }
-    if (starttime) {
-        res.startTime = new Date(starttime + 'Z');
-    }
-
-    res.options = query.get('options') || '';
-
-    var sail = query.get('sail');
-    if (sail) {
-        res.sail = sail;
-    }
-
-    var twa = query.get('twa');
-    if (twa) {
-        res.twa = twa;
-    }
-
-    return res;
 }
 
 function setupCanvas() {

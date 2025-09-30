@@ -11,12 +11,22 @@ let map = null;
 let startMarker = null;
 let destinationMarker = null;
 let routeLine = null;
+let courseGCLine = null;
+
 let trackMarkers = [];
 let routeTracks = [];
+let routeIsochrones = [];
+let twaPath = [];
+let hdgPath = [];
 let polarsList = [];
-let curTWA;
 
-// Replace global variables
+let curTWA = null;
+let twaAnchor = null;
+let mapEvent = null;
+let ir_index = null;
+let currentCycle = null;
+let gribCache = null;
+
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
     "resolution": "1p00",
@@ -24,41 +34,23 @@ let settings = {
     "polarsId": undefined
 };
 
-// Add a PolarManager instance
 let polarManager = new PolarManager();
 let selectedCursor = 'crosshair';
-let gribCache = undefined;
-
-let mapEvent;
-
-// Bounds and width from the map are kept here for convenience
 let geometry = {};
-
-// Time index
-let ir_index;
-let currentCycle = undefined;
-let twaAnchor = undefined;
-let courseGCLine = null;
-let routeIsochrones = [];
 let routeInfo = {};
-let twaPath = [];
-let hdgPath = [];
 
 // Main initialization function
-function initializeRouterVR() {
-
+function setupPage() {
     currentCycle = getCurrentCycle();
     // Initialize map first
     initMap();
-    
     setUp(getVMG);
-    
-    // Get polars list
     getPolarsList();
-    
-    // Set up event handlers
     setupEventHandlers();
-    
+
+    // Ensure ir_index is set up before calling updateMap
+    // (setUp assigns ir_index = document.getElementById("ir_index");)
+    updateMap(); 
 }
 
 
@@ -397,6 +389,7 @@ function onDisplaywind(event) {
     var cbDisplaywind = document.getElementById("cb_displaywind");
     if (cbDisplaywind.checked) {
         document.getElementById("wind-canvas").style.display = "block";
+        updateMap()
     } else {
         document.getElementById("wind-canvas").style.display = "none";
     }
@@ -492,6 +485,7 @@ function onMarkerClicked(marker) {
 
     redrawWindByTime(new Date(time));
 }
+
 
 
 function setBusyCursor() {
@@ -1196,5 +1190,5 @@ function formatSails(data) {
 
 // Initialize everything when the page loads
 window.addEventListener("load", function() {
-    initializeRouterVR();
+    setupPage();
 });

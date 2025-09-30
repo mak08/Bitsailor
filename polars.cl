@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-18 20:45:43>
+;;; Last Modified <michael 2025-10-01 01:00:25>
 
 (in-package :bitsailor)
 
@@ -40,7 +40,11 @@
 (declaim (inline get-max-speed))
 (defun get-max-speed (cpolars twa tws)
   (declare (double-float twa tws))
-  (aref (cpolars-maxspeed cpolars) (round (* twa 10.0)) (round (* tws 10.0))))
+  (let* ((speed (cpolars-maxspeed cpolars))
+         (dim (array-dimensions speed))
+         (twa-index (min (round (* twa 10.0)) (1- (first dim))))
+         (tws-index (min (round (* tws 10.0)) (1- (second dim)))))
+  (aref (cpolars-maxspeed cpolars) twa-index tws-index)))
 
 (declaim (inline get-sail-speed))
 (defun get-sail-speed (cpolars twa tws sail) 

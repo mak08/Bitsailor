@@ -701,12 +701,12 @@ function getRoute() {
             bt_execute.disabled = false;
             restoreCursor();
         },
-        function (jqXHR, textStatus, errorThrown) {
+        function (response) {
             bt_execute.disabled = false;
             restoreCursor();
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
-            alert(textStatus + ' ' + errorThrown);
+            alert(`Request ${response.responseURL} returned ${response.status} ${response.statusText}`);
         });
 }
 

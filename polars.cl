@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-01 01:00:25>
+;;; Last Modified <michael 2025-10-02 20:48:06>
 
 (in-package :bitsailor)
 
@@ -100,7 +100,7 @@
         (setf (gethash options polars-ht)
               (preprocess-polars id options)))))
 
-(declaim (notinline best-vmg))
+(declaim (inline best-vmg))
 (defun best-vmg (cpolars windspeed)
   (let ((index (round (* windspeed 10d0)))
         (vmg (cpolars-vmg cpolars)))

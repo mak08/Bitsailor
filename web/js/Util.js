@@ -62,17 +62,25 @@ function addDistance (pos, distnm, angle, radiusnm = radius) {
     const theta = toRad(angle);
     const d = distnm / radiusnm;
 
+    // Precompute trigonometric values
+    const sinLat1 = Math.sin(lat1);
+    const cosLat1 = Math.cos(lat1);
+    const sinD = Math.sin(d);
+    const cosD = Math.cos(d);
+    const cosTheta = Math.cos(theta);
+    const sinTheta = Math.sin(theta);
+
     // Compute new latitude
     const lat2 = Math.asin(
-        Math.sin(lat1) * Math.cos(d) +
-        Math.cos(lat1) * Math.sin(d) * Math.cos(theta)
+        sinLat1 * cosD + cosLat1 * sinD * cosTheta
     );
 
+    // Precompute for longitude
+    const y = sinTheta * sinD * cosLat1;
+    const x = cosD - sinLat1 * Math.sin(lat2);
+
     // Compute new longitude
-    const lon2 = lon1 + Math.atan2(
-        Math.sin(theta) * Math.sin(d) * Math.cos(lat1),
-        Math.cos(d) - Math.sin(lat1) * Math.sin(lat2)
-    );
+    const lon2 = lon1 + Math.atan2(y, x);
 
     return {
         lat: toDeg(lat2),

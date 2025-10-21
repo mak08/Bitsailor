@@ -21,6 +21,7 @@ let hdgPath = [];
 let polarsList = [];
 
 let curTWA = null;
+let orthodromicLine = null;
 let twaAnchor = null;
 let mapEvent = null;
 let ir_index = null;
@@ -547,13 +548,6 @@ function storeValue(name, value) {
     }
 }
 
-function getValue(name) {
-    let storage = window.localStorage;
-    let query = new URL(document.URL).searchParams;
-    let raceId = query.get('race');
-    return storage.getItem(`${raceId}.${name}`);
-}
-
 function parsePosition(string) {
     try {
         string = string.replace(`/`, `,`);
@@ -926,10 +920,9 @@ function clearPath(path) {
     path.length = 0; // <-- This clears the array in-place!
 }
 
-var ortho;
 function drawOrthodromic(event) {
-    if (ortho) {
-        map.removeLayer(ortho);
+    if (orthodromicLine) {
+        map.removeLayer(orthodromicLine);
     }
     var start;
     if (twaAnchor) {
@@ -937,7 +930,7 @@ function drawOrthodromic(event) {
     } else {
         start = startMarker.getLatLng();
     }
-    ortho = L.polyline([start, event.latlng], {
+    orthodromicLine = L.polyline([start, event.latlng], {
         color: '#1f1f1f',
         weight: 1,
         opacity: 1
@@ -972,9 +965,9 @@ function drawPath(bPath, data, color) {
         bPath.push(segment);
 
         // If endpoint is a full hour, draw a thick dot at the endpoint
-        if (minutes === 0) {
+        if (minutes % 10 === 0) {
             const dot = L.circleMarker(to, {
-                radius: weight * 2,
+                radius: (minutes === 0 ? weight * 4 : weight * 2.5),
                 color: color,
                 fillColor: color,
                 fillOpacity: 1.0,
@@ -1043,20 +1036,20 @@ function redrawWindByOffset(offset) {
 async function getWind(cycle, time) {
     let bounds = getMapBounds();
 
-    let usedCycle = new Date(cycle);
+    let usedCycle = cycle;
 
     try {
-        await gribCache.update(bounds, usedCycle, time, settings.resolution);
+        await gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
     } catch (e1) {
         console.log(e1);
         try {
             usedCycle = availableForecastCycle();
-            gribCache.update(bounds, usedCycle, time, settings.resolution);
+            gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
         } catch (e2) {
             console.log(e2);
         }
     }
-    document.getElementById('lb_modelrun').innerHTML = usedCycle.toISOString().substring(11, 13) + 'Z';
+    document.getElementById('lb_modelrun').innerHTML = usedCycle.substring(11, 13) + 'Z';
     document.getElementById('lb_index').innerHTML = time.toISOString().substring(0, 16) + 'Z';
 
     var offset = (new Date(time) - new Date(usedCycle)) / 3600000;

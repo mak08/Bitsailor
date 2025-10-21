@@ -64,7 +64,8 @@ function getValue(grib, offset, lat, lon) {
     let resLat = (nLat-1)/180;
 
     let iLon = lon * resLon;
-    let iLat = lat * resLon;
+    // BUGFIX: use resLat for latitude, not resLon
+    let iLat = lat * resLat;
 
     let idx = iLat * nLon + iLon;
     
@@ -119,6 +120,11 @@ function interpolateTemporal (grib0, grib1, offset0, offset1, timeFraction, lat0
     }
 }
 
+// Add a tiny helper to wrap longitude into [0, 360)
+function wrapLonDeg(lon) {
+    return ((lon % 360) + 360) % 360;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// Class GribCache 
 
@@ -147,10 +153,27 @@ export default class GribCache {
         let grib0 = await this.getGribCached(cycle, resolution, offset);
         let grib1 = await this.getGribCached(cycle, resolution, offset + 3);
         if (grib0 && grib1) {
-            let lat0 = floor(lat), lat1 = ceil(lat)
-            let lon0 = floor(lon), lon1 = ceil(lon);
-            let lambdaU = lat-lat0, lambdaV = lon-lon0;
-            let timeFraction = ((time - cycle) / 3600000 - offset) / 3;
+            // Determine grid step from GRIB metadata
+            const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
+            const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
+            const stepLon = 360 / nLon;           // degrees per column
+            const stepLat = 180 / (nLat - 1);     // degrees per row (GFS includes both poles)
+
+            // Normalize lon to [0, 360)
+            const wLon = wrapLonDeg(lon);
+
+            // Quantize to surrounding grid nodes using the true grid step
+            const lat0 = floor(lat, stepLat), lat1 = ceil(lat, stepLat);
+            let   lon0 = floor(wLon, stepLon), lon1 = lon0 + stepLon;
+            if (lon1 >= 360) lon1 -= 360;
+
+            // Fractions in cell coordinates
+            const lambdaU = (lat - lat0) / stepLat;
+            const lambdaV = (wLon - lon0) / stepLon;
+
+            const timeFraction = ((curTime - baseTime) / 3600000 - offset) / 3;
+
+            // Temporal interpolation at the four corners, then spatial bilinear
             let w_t = interpolateTemporal(grib0, grib1, offset, offset+3, timeFraction, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
@@ -195,12 +218,23 @@ export default class GribCache {
         let grib0 = await this.getGribCached(baseTime0, resolution, offset0);
         let grib1 = await this.getGribCached(baseTime1, resolution, offset1);
         if (grib0 && grib1) {
-            let lat0 = floor(lat), lat1 = ceil(lat)
-            let lon0 = floor(lon), lon1 = ceil(lon);
-            let lambdaU = lat-lat0, lambdaV = lon-lon0;
-            let timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
-            // console.log(`Fraction: ${timeFraction}`);
-            // console.log('^^^^^^^^^^^^^^^^^^^^^^^^^^^^');
+            // Determine grid step from GRIB metadata
+            const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
+            const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
+            const stepLon = 360 / nLon;
+            const stepLat = 180 / (nLat - 1);
+
+            const wLon = wrapLonDeg(lon);
+
+            const lat0 = floor(lat, stepLat), lat1 = ceil(lat, stepLat);
+            let   lon0 = floor(wLon, stepLon), lon1 = lon0 + stepLon;
+            if (lon1 >= 360) lon1 -= 360;
+
+            const lambdaU = (lat - lat0) / stepLat;
+            const lambdaV = (wLon - lon0) / stepLon;
+
+            const timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
+
             let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
@@ -302,6 +336,8 @@ export default class GribCache {
     /// Grib Cache 
 
     #gribCache = new Map();
+    // Track in-flight fetch/decode promises to dedupe concurrent requests
+    #gribInflight = new Map();
 
     cacheGetGrib (cycle, res, offset) {
         let cycleStr = this.formatCycle(cycle);
@@ -383,11 +419,29 @@ export default class GribCache {
     }
 
     async getGribCached (cycle, res, offset) {
+        // Fast path: decoded object already cached
         let cached = this.cacheGetGrib(cycle, res, offset);
-        if (! cached) {
-            cached = await this.getGrib(cycle, res, offset);
-        }
-        return cached;
+        if (cached) return cached;
+
+        // Key for in-flight dedup
+        const key = `${this.formatCycle(cycle)}+${res}+${offset}`;
+
+        // Share in-flight fetch if present
+        let inflight = this.#gribInflight.get(key);
+        if (inflight) return await inflight;
+
+        // Start and register new in-flight fetch
+        inflight = (async () => {
+            try {
+                return await this.getGrib(cycle, res, offset);
+            } finally {
+                // Ensure cleanup regardless of success/failure
+                this.#gribInflight.delete(key);
+            }
+        })();
+
+        this.#gribInflight.set(key, inflight);
+        return await inflight;
     }
         
 }

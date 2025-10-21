@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-20 22:45:26>
+;;; Last Modified <michael 2025-10-17 00:18:16>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -14,7 +14,7 @@
 
 (defparameter *sailnames* #("Jib" "Spi" "Stay" "LJ" "C0" "HG" "LG"))
 
-(declaim (inline twa-boatspeed))
+(declaim (notinline twa-boatspeed))
 (defun-t twa-boatspeed double-float ((polars cpolars) (wind-speed double-float) (twa double-float))
   (destructuring-bind (speed sail)
       (get-max-speed polars (abs twa) wind-speed)
@@ -104,15 +104,16 @@
                                                                   heading)))
                                   (when t ;; (in-latlng-box box new-pos)
                                     (let* ((origin-distance (course-distance start-pos new-pos))
-                                           (dest-distance (course-distance new-pos (routing-dest routing)))
+                                           ;; (dest-distance (course-distance new-pos (routing-dest routing)))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle)
-                                                 (< (+ (expt origin-distance 2) (expt  dest-distance 2))
+                                                 ;; (< (+ (expt origin-distance 2) (expt  dest-distance 2))
                                                     ;; (+  origin-distance  dest-distance)
-                                                    (* 1.1d0 (expt (routing-dist routing) 2))
+                                                 ;;    (* 1.1d0 (expt (routing-dist routing) 2))
                                                     ;; (* 1.25d0 (routing-dist routing))
-                                                    )) 
-                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left dest-distance step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
+                                                    )
+                                                  
+                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
                      (add-point (- twa))
                      (add-point twa))
              :finally (return added))))))))
@@ -289,7 +290,7 @@
 (defun reached (candidate start angle distance)
   (some (lambda (p)
           (let ((a  (routepoint-origin-angle p))
-                (d  (course-distance (routepoint-position p) start)))
+                (d  (routepoint-origin-distance p)))
             (and p
                  (<= (abs (- angle a)) 1.5d0)
                  (>= d distance))))
@@ -480,8 +481,8 @@
      :with min-dtf = nil :and min-point = nil
      :for point :across isochrone
      :do (progn
-           ;; (setf (routepoint-destination-distance point)
-           ;;      (course-distance (routepoint-position point) destination))
+           (setf (routepoint-destination-distance point)
+                 (course-distance (routepoint-position point) destination))
            (when (or (null min-point)
                      (< (routepoint-destination-distance point) min-dtf))
              (setf min-dtf (routepoint-destination-distance point)

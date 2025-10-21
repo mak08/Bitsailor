@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-02 20:48:06>
+;;; Last Modified <michael 2025-10-19 18:46:12>
 
 (in-package :bitsailor)
 
@@ -219,6 +219,7 @@
                      (aref sailspeeds angle-index (1+ speed-index))
                      (aref sailspeeds (1+ angle-index) speed-index)
                      (aref sailspeeds (1+ angle-index) (1+ speed-index))))))
+;; (declaim (notinline get-boat-speed))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from file
@@ -268,6 +269,55 @@
            (translate-polars-fw filename json-object))
           (t
            (error "Unknown polars format")))))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Reading polars from CSV
+
+(defun csv-to-json-directory  (&key (directory *polars-dir*))
+  (loop
+    :for name :in (directory (merge-pathnames (make-pathname :name :wild :type "csv") directory))
+    :do
+       ;; Side-effects are performed by the RS/VR functions
+       (let ((filename-csv (merge-pathnames (merge-pathnames (make-pathname :type "csv")
+                                                             (pathname *polars-dir*))
+                                            name))
+             (filename-json (merge-pathnames (merge-pathnames (make-pathname :type "json")
+                                                              (pathname *polars-dir*))
+                                             name)))
+         (with-open-file (json-file filename-json
+                                    :direction :output
+                                    :if-does-not-exist :create
+                                    :if-exists :supersede)
+           (log2:info "~a --> ~a~%" filename-csv filename-json)
+           (json json-file (csv-to-json-object filename-csv))))))
+
+(defun csv-to-json-object (csv-file)
+  "Convert a simple CSV polar file to a json-object."
+  (with-open-file (in csv-file :direction :input)
+    (let* ((header (read-line in))
+           (tws (mapcar #'read-arg
+                        (rest (split-sequence:split-sequence #\; header))))
+           (twa '())
+           (table '()))
+      (loop for line = (read-line in nil)
+            while line do
+              (let* ((fields (split-sequence:split-sequence #\; line))
+                     (twa-val (read-arg (first fields)))
+                     (speeds (mapcar #'read-arg (rest fields))))
+                (push twa-val twa)
+                (push speeds table)))
+      (make-json-object
+       :fields (list
+                (make-json-field :name "id" :value (pathname-name csv-file))
+                (make-json-field :name "name" :value (pathname-name csv-file))
+                (make-json-field :name "data_json"
+                                 :value (make-json-object
+                                         :fields (list
+                                                  (make-json-field :name "twa" :value (reverse twa))
+                                                  (make-json-field :name "tws" :value tws)
+                                                  (make-json-field :name "table" :value (reverse table))))))))))
+
 
 ;;; EOF
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

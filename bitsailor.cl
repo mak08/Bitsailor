@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-09-19 18:50:01>
+;;; Last Modified <michael 2025-10-16 23:43:55>
 
 (in-package :bitsailor)
 
@@ -62,6 +62,8 @@
      (lambda ()
        (ignore-errors
         (get-all-polars))
+       (ignore-errors
+        (csv-to-json-directory))
        (load-polars-directory))
      :name "LOAD-POLARS")
 

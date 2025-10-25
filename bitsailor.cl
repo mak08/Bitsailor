@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-10-16 23:43:55>
+;;; Last Modified <michael 2025-10-25 14:35:03>
 
 (in-package :bitsailor)
 
@@ -98,7 +98,7 @@
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Downloading forecasts and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
-                                    (start-cycle-updates :resolution *resolutions* :max-offset 240))
+                                    (start-cycle-updates :resolution *resolutions* :max-offset 384))
                                   :name "GFS-DOWNLOAD")
     
     ;; Start web server

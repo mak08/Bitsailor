@@ -94,22 +94,46 @@ function getPolarsList() {
 }
 
 
-// Draw route line between start and destination
+// Build shortest longitudinal connection, split at ±180, and triplicate into adjacent worlds
+function buildShortestSegments(startLatLng, destLatLng) {
+    const sLat = startLatLng.lat, sLon = wrapLon180(startLatLng.lng);
+    const dLat = destLatLng.lat, dLonRaw = wrapLon180(destLatLng.lng);
+
+    // Choose destination longitude adjusted by ±360 for minimal |Δlon|
+    const candidates = [dLonRaw, dLonRaw + 360, dLonRaw - 360];
+    let dLonAdj = candidates.reduce((best, cur) =>
+        (Math.abs(cur - sLon) < Math.abs(best - sLon)) ? cur : best, candidates[0]);
+
+    const points = [[sLat, sLon], [dLat, dLonAdj]];
+    let segments = splitPathAtAntimeridian(points);
+    segments = segmentsWithWorldTriplicate(segments);
+    return segments;
+}
+
+// Draw route line between start and destination (shortest great-circle segment)
 function drawRouteLine() {
     if (!startMarker || !destinationMarker) return;
-    
+
     if (routeLine) {
         map.removeLayer(routeLine);
+        routeLine = null;
     }
-    
-    routeLine = L.polyline([
-        startMarker.getLatLng(),
-        destinationMarker.getLatLng()
-    ], {
-        color: '#d00000',
-        weight: 2,
-        opacity: 1.0
-    }).addTo(map);
+
+    const start = startMarker.getLatLng();
+    const dest = destinationMarker.getLatLng();
+
+    const segments = buildShortestSegments(start, dest);
+
+    const fg = L.featureGroup();
+    for (const seg of segments) {
+        L.polyline(seg, {
+            color: '#d00000',
+            weight: 2,
+            opacity: 1.0
+        }).addTo(fg);
+    }
+    fg.addTo(map);
+    routeLine = fg;
 }
 
 // VMG calculation
@@ -274,6 +298,10 @@ function setUp(getVMG) {
     startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 0, 45, 16, -10);
     destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png', 0, 32, 10, -10);
 
+    // Ensure world copies exist initially
+    updateRouteMarkerCopies(startMarker);
+    updateRouteMarkerCopies(destinationMarker);
+
     // Wind canvas
     let canvas = setupCanvas();
 
@@ -306,7 +334,7 @@ function initMap() {
 }
 
 function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
-    var marker = L.marker([0, 0], {
+    const marker = L.marker([0, 0], {
         title: title,
         icon: L.icon({
             iconUrl: url,
@@ -317,10 +345,7 @@ function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
     }).addTo(map);
 
     marker.on('click', function () { onMarkerClicked(marker); });
-
-    marker.on('dragend', function (e) {
-        setRoutePoint(type, marker.getLatLng());
-    });
+    marker.on('dragend', function () { setRoutePoint(type, marker.getLatLng()); });
 
     return marker;
 }
@@ -668,6 +693,8 @@ function getRoute() {
     var startTime = getStartTime();
     var startPos = startMarker.getLatLng();
     var destPos = destinationMarker.getLatLng();
+    startPos.lng = wrapLon180(startPos.lng);
+    destPos.lng = wrapLon180(destPos.lng);
 
     var query = makeQuery(settings);
     query += `&raceId=${raceId}`;
@@ -722,18 +749,65 @@ function setRoutePointCore(point, latLng) {
 
     if (point === 'start') {
         startMarker.setLatLng(latLng);
+        updateRouteMarkerCopies(startMarker);
     } else if (point === 'dest') {
         destinationMarker.setLatLng(latLng);
+        updateRouteMarkerCopies(destinationMarker);
     }
 
+    // Draw a short-segment great-circle line between start and destination
     if (courseGCLine) {
         map.removeLayer(courseGCLine);
+        courseGCLine = null;
     }
-    courseGCLine = L.polyline([startMarker.getLatLng(), destinationMarker.getLatLng()], {
-        color: '#d00000',
-        weight: 1,
-        opacity: 1.0
+    const s = startMarker.getLatLng();
+    const d = destinationMarker.getLatLng();
+    const gcSegments = buildShortestSegments(s, d);
+    const gcGroup = L.featureGroup();
+    for (const seg of gcSegments) {
+        L.polyline(seg, {
+            color: '#d00000',
+            weight: 1,
+            opacity: 1.0
+        }).addTo(gcGroup);
+    }
+    gcGroup.addTo(map);
+    courseGCLine = gcGroup;
+}
+
+function createBestRouteMarkerAndCopies(entry, icon, startTime) {
+    const lat = entry.position.lat;
+    const baseLng = wrapLon180(entry.position.lng);
+
+    // Build tooltip once
+    const tooltipHtml = makeWaypointInfo(startTime, entry);
+
+    // Base marker (interactive)
+    const baseMarker = L.marker([lat, baseLng], {
+        icon: icon,
+        draggable: false
     }).addTo(map);
+    addMarkerListener(baseMarker);
+    addWaypointInfo(baseMarker, startTime, entry);
+    trackMarkers.unshift(baseMarker);
+
+    // Left world copy (-360)
+    const leftMarker = L.marker([lat, baseLng - 360], {
+        icon: icon,
+        draggable: false
+    }).addTo(map);
+    addMarkerListener(leftMarker);
+    leftMarker.bindTooltip(tooltipHtml, { permanent: false });
+    trackMarkers.unshift(leftMarker);
+
+    // Right world copy (+360)
+    const rightMarker = L.marker([lat, baseLng + 360], {
+        icon: icon,
+        draggable: false
+    }).addTo(map);
+    addMarkerListener(rightMarker);
+    rightMarker.bindTooltip(tooltipHtml, { permanent: false });
+    trackMarkers.unshift(rightMarker);
 }
 
 function displayRouting(data) {
@@ -750,35 +824,44 @@ function displayRouting(data) {
     if (isDisplayTracks) {
         var tracks = data.tracks;
         for (var i = 0; i < tracks.length; i++) {
-            var track = L.polyline(tracks[i].map(p => [p.lat, p.lng]), {
-                color: '#d00000',
-                weight: 1.5,
-                opacity: 1.0
-            }).addTo(map);
-            routeTracks[i] = track;
+            const points = tracks[i].map(p => [p.lat, wrapLon180(p.lng)]);
+            let segments = splitPathAtAntimeridian(points);
+            segments = segmentsWithWorldCopies(segments);
+            for (const seg of segments) {
+                const track = L.polyline(seg, {
+                    color: '#d00000',
+                    weight: 1.5,
+                    opacity: 1.0
+                }).addTo(map);
+                routeTracks.push(track);
+            }
         }
     }
 
-    var bestPath = best.map(entry => [entry.position.lat, entry.position.lng]);
-    var bestTrack = L.polyline(bestPath, {
-        color: '#d00000',
-        weight: 3,
-        opacity: 1.0
-    }).addTo(map);
-    routeTracks[routeTracks.length] = bestTrack;
+    const bestPoints = best.map(entry => [entry.position.lat, wrapLon180(entry.position.lng)]);
+    let bestSegments = splitPathAtAntimeridian(bestPoints);
+    bestSegments = segmentsWithWorldCopies(bestSegments);
+    for (const seg of bestSegments) {
+        const bestTrack = L.polyline(seg, {
+            color: '#d00000',
+            weight: 3,
+            opacity: 1.0
+        }).addTo(map);
+        routeTracks.push(bestTrack);
+    }
 
+    // Duplicate best-route markers across world copies
+    const baseTime = new Date(best[0].time);
     for (var i = 0; i < best.length; i++) {
         if (i == 0
             || best[i].penalty
             || best[i].twa != best[i - 1].twa
             || best[i].sail != best[i - 1].sail) {
-            var trackMarker = L.marker([best[i].position.lat, best[i].position.lng], {
-                icon: ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe")) ? redMarkerIcon : markerIcon,
-                draggable: false
-            }).addTo(map);
-            addMarkerListener(trackMarker);
-            addWaypointInfo(trackMarker, new Date(best[0].time), best[i]);
-            trackMarkers.unshift(trackMarker);
+
+            const icon = ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe"))
+                ? redMarkerIcon : markerIcon;
+
+            createBestRouteMarkerAndCopies(best[i], icon, baseTime);
         }
     }
 
@@ -804,14 +887,24 @@ function setupCanvas() {
 function createIsochrones(isochrones) {
     var c = new Date(currentCycle);
     for (var i = 0; i < isochrones.length; i++) {
-        var style = getIsoStyle(isochrones[i], 1, c);
-        var isochrone = L.polyline(isochrones[i].path.map(p => [p.lat, p.lng]), {
-            color: style.color,
-            weight: style.weight,
-            opacity: 0.8
-        }).addTo(map);
-        addInfo(isochrone, isochrones[i].time, isochrones[i].offset);
-        routeIsochrones[i] = isochrone;
+        const isoData = isochrones[i];
+        const style = getIsoStyle(isoData, 1, c);
+
+        const points = isoData.path.map(p => [p.lat, wrapLon180(p.lng)]);
+        let segments = splitPathAtAntimeridian(points);
+        // Previously: segments = segmentsWithWorldCopies(segments);
+        // Now: always provide ±360 copies so fully-east (or west) isochrones render on adjacent worlds
+        segments = segmentsWithWorldTriplicate(segments);
+
+        for (const seg of segments) {
+            const isoLayer = L.polyline(seg, {
+                color: style.color,
+                weight: style.weight,
+                opacity: 0.8
+            }).addTo(map);
+            addInfo(isoLayer, isoData.time, isoData.offset);
+            routeIsochrones.push(isoLayer);
+        }
     }
 }
 
@@ -1180,6 +1273,106 @@ function formatSails(data) {
     }
     return result;
 }
+
+// Split a path into segments that do not cross the antimeridian.
+// points: Array of [lat, lng]
+function wrapLon180(lon) {
+    return ((lon + 180) % 360 + 360) % 360 - 180;
+}
+
+function splitPathAtAntimeridian(points) {
+    if (!points || points.length < 2) return [points];
+    const segments = [];
+    let current = [[points[0][0], wrapLon180(points[0][1])]];
+
+    for (let i = 1; i < points.length; i++) {
+        let lat0 = current[current.length - 1][0];
+        let lon0 = current[current.length - 1][1];
+        let lat1 = points[i][0];
+        let lon1 = wrapLon180(points[i][1]);
+
+        let d = lon1 - lon0;
+        let lon1Adj = lon1;
+        if (d > 180) lon1Adj = lon1 - 360;
+        else if (d < -180) lon1Adj = lon1 + 360;
+
+        if (lon1Adj > 180 || lon1Adj < -180) {
+            const boundary = (lon1Adj > 180) ? 180 : -180;
+            const t = (boundary - lon0) / (lon1Adj - lon0);
+            const latX = lat0 + t * (lat1 - lat0);
+
+            current.push([latX, boundary]);
+            segments.push(current);
+
+            const boundaryOpp = (boundary === 180) ? -180 : 180;
+            current = [[latX, boundaryOpp], [lat1, wrapLon180(lon1Adj)]];
+        } else {
+            current.push([lat1, lon1]);
+        }
+    }
+    if (current.length > 1) segments.push(current);
+    return segments;
+}
+
+// Duplicate segments that touch the antimeridian into adjacent world copies
+function hasBoundary(seg, boundary) {
+    // boundary is +180 or -180
+    return seg.some(p => p[1] === boundary);
+}
+
+function shiftSegment(seg, delta) {
+    // delta = ±360
+    return seg.map(p => [p[0], p[1] + delta]);
+}
+
+function segmentsWithWorldCopies(segments) {
+    const out = [];
+    for (const seg of segments) {
+        out.push(seg);
+        // If a segment ends on +180, add a copy shifted -360 (left world)
+        if (hasBoundary(seg, 180)) out.push(shiftSegment(seg, -360));
+        // If a segment ends on -180, add a copy shifted +360 (right world)
+        if (hasBoundary(seg, -180)) out.push(shiftSegment(seg, +360));
+    }
+    return out;
+}
+
+// Duplicate segments into all adjacent worlds to ensure visibility regardless of pan
+function segmentsWithWorldTriplicate(segments) {
+    const out = [];
+    for (const seg of segments) {
+        out.push(seg);
+        out.push(seg.map(p => [p[0], p[1] - 360])); // left world
+        out.push(seg.map(p => [p[0], p[1] + 360])); // right world
+    }
+    return out;
+}
+
+function updateRouteMarkerCopies(marker) {
+    if (!marker) return;
+    const base = marker.getLatLng();
+    const baseLng = wrapLon180(base.lng);
+    const baseLatLng = L.latLng(base.lat, baseLng);
+
+    // Keep the base marker normalized to [-180, 180]
+    if (base.lng !== baseLng) marker.setLatLng(baseLatLng);
+
+    const icon = marker.options.icon;
+    const opts = { icon, interactive: false, draggable: false };
+
+    // Create or update left/right world copies
+    if (!marker.__leftCopy) {
+        marker.__leftCopy = L.marker([baseLatLng.lat, baseLng - 360], opts).addTo(map);
+    } else {
+        marker.__leftCopy.setLatLng([baseLatLng.lat, baseLng - 360]);
+    }
+    if (!marker.__rightCopy) {
+        marker.__rightCopy = L.marker([baseLatLng.lat, baseLng + 360], opts).addTo(map);
+    } else {
+        marker.__rightCopy.setLatLng([baseLatLng.lat, baseLng + 360]);
+    }
+}
+
 
 // Initialize everything when the page loads
 window.addEventListener("load", function() {

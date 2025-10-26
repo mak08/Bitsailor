@@ -40,6 +40,8 @@ let selectedCursor = 'crosshair';
 let geometry = {};
 let routeInfo = {};
 
+let courseGateLayers = []; // layers created by GPX import (markers + polylines)
+
 // Main initialization function
 function setupPage() {
     currentCycle = getCurrentCycle();
@@ -263,6 +265,11 @@ function setUp(getVMG) {
     // Connect button events
     document.getElementById("bt_getroute").addEventListener("click",getRoute);
     document.getElementById("bt_downloadroute").addEventListener("click",onDownloadRoute);
+    // GPX import button
+    const btSetCourse = document.getElementById("bt_setcourse");
+    if (btSetCourse) {
+        btSetCourse.addEventListener("click", onImportGPX);
+    }
 
     document.getElementById("bt_inc").addEventListener("click",onAdjustIndex);
     document.getElementById("bt_dec").addEventListener("click",onAdjustIndex);
@@ -1372,6 +1379,182 @@ function updateRouteMarkerCopies(marker) {
         marker.__rightCopy.setLatLng([baseLatLng.lat, baseLng + 360]);
     }
 }
+
+function onImportGPX() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.gpx,application/gpx+xml,.xml,text/xml';
+    input.onchange = async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            importGPXFromString(text);
+        } catch (err) {
+            console.error('Failed to read GPX file', err);
+            alert('Failed to read GPX file.');
+        }
+    };
+    input.click();
+}
+
+function importGPXFromString(xmlString) {
+    // Clear any previous GPX course overlays
+    clearCourseOverlays();
+
+    let doc;
+    try {
+        const parser = new DOMParser();
+        doc = parser.parseFromString(xmlString, 'application/xml');
+        const parserErr = doc.getElementsByTagName('parsererror')[0];
+        if (parserErr) {
+            console.error(parserErr.textContent);
+            throw new Error('Invalid GPX XML');
+        }
+    } catch (err) {
+        console.error('Invalid GPX', err);
+        alert('Invalid GPX file.');
+        return;
+    }
+
+    const wpts = Array.from(doc.getElementsByTagName('wpt'));
+    if (!wpts.length) {
+        alert('No waypoints found in GPX.');
+        return;
+    }
+
+    // Group waypoints by gate token: S, F, G1, G2, ...
+    // Names like: "FW 2290 - S-A", "FW 2290 - G1-Mid", "FW 2290 - F-B"
+    const groups = new Map(); // key -> array of {lat, lon, name}
+    for (const wpt of wpts) {
+        const lat = parseFloat(wpt.getAttribute('lat'));
+        const lon = parseFloat(wpt.getAttribute('lon'));
+        const nameEl = wpt.getElementsByTagName('name')[0];
+        const rawName = nameEl ? nameEl.textContent.trim() : '';
+
+        const groupKey = extractGateGroupKey(rawName);
+        if (!groupKey) continue;
+
+        const arr = groups.get(groupKey) || [];
+        arr.push({ lat, lon, name: rawName, key: groupKey });
+        groups.set(groupKey, arr);
+    }
+
+    // Draw each group with its color
+    for (const [key, pts] of groups.entries()) {
+        const color = gateColor(key);
+        drawGateGroup(pts, color);
+    }
+}
+
+function extractGateGroupKey(name) {
+    // Expect format "<race> - <group>-<rest>"
+    // Fallback: find first token after '-' that looks like S, F or G<number>
+    // Examples:
+    //  "FW 2290 - S-A"     -> "S"
+    //  "FW 2290 - F-Mid"   -> "F"
+    //  "FW 2290 - G2-A"    -> "G2"
+    //  "G3-B"              -> "G3" (handles minimal format too)
+    if (!name) return null;
+    const parts = name.split('-').map(s => s.trim()).filter(Boolean);
+    // Try to find a token matching S, F, or G\d+
+    for (const token of parts) {
+        if (token === 'S' || token === 'F' || /^G\d+$/i.test(token)) {
+            return token.toUpperCase();
+        }
+    }
+    // As a fallback, if we have at least 2 parts, the second may be the group
+    if (parts.length >= 2) {
+        const t = parts[1].toUpperCase();
+        if (t === 'S' || t === 'F' || /^G\d+$/i.test(t)) return t;
+    }
+    return null;
+}
+
+function gateColor(key) {
+    if (key === 'S') return '#60B260';    // green
+    if (key === 'F') return '#d00000';    // red
+    if (/^G\d+$/i.test(key)) return '#00c2f8'; // blue
+    return '#808080';
+}
+
+function drawGateGroup(points, color) {
+    // Draw markers (with world copies) and connect with a polyline
+    // Keep original order as in the GPX file
+    const latlngs = points.map(p => [p.lat, wrapLon180(p.lon)]);
+
+    // Markers for each waypoint
+    for (const p of points) {
+        const baseLng = wrapLon180(p.lon);
+        const markers = createCircleMarkerWithWorldCopies([p.lat, baseLng], color, 5, p.name);
+        for (const m of markers) {
+            courseGateLayers.push(m);
+        }
+    }
+
+    // Connect the group with a colored line, splitting at antimeridian and triplicating
+    let segments = splitPathAtAntimeridian(latlngs);
+    segments = segmentsWithWorldTriplicate(segments);
+
+    for (const seg of segments) {
+        const line = L.polyline(seg, {
+            color,
+            weight: 2,
+            opacity: 1.0
+        }).addTo(map);
+        courseGateLayers.push(line);
+    }
+}
+
+function createCircleMarkerWithWorldCopies(latlng, color, radius = 5, tooltipText) {
+    const [lat, lng] = latlng;
+
+    const mk = (L.marker ? L.circleMarker([lat, lng], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 1.0,
+        weight: 1
+    }) : null);
+
+    const base = L.circleMarker([lat, lng], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 1.0,
+        weight: 1
+    }).addTo(map);
+    if (tooltipText) base.bindTooltip(tooltipText, { permanent: false });
+
+    const left = L.circleMarker([lat, lng - 360], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 1.0,
+        weight: 1
+    }).addTo(map);
+    if (tooltipText) left.bindTooltip(tooltipText, { permanent: false });
+
+    const right = L.circleMarker([lat, lng + 360], {
+        radius,
+        color,
+        fillColor: color,
+        fillOpacity: 1.0,
+        weight: 1
+    }).addTo(map);
+    if (tooltipText) right.bindTooltip(tooltipText, { permanent: false });
+
+    return [base, left, right];
+}
+
+function clearCourseOverlays() {
+    for (const layer of courseGateLayers) {
+        map.removeLayer(layer);
+    }
+    courseGateLayers.length = 0;
+}
+
+
 
 
 // Initialize everything when the page loads

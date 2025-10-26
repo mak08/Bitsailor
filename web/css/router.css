@@ -255,42 +255,53 @@ input[type=checkbox] {
 }
 
 
+
+/* Start delayed */
+.delayed-label {
+	grid-row: 2;
+	grid-column: 1;
+}
+.delayed-cb {
+	grid-row: 2;
+	grid-column: 7;
+
+}
+.delayed-entry {
+	grid-row: 2;
+	grid-column: 2;
+
+}
+
+/* Course import */
+.course-label {
+	grid-row: 3;
+	grid-column: 1;
+}
+.course-bt {
+	grid-row: 3;
+	grid-column: 2/7;
+}
+
 /* NMEA */
 #tb_nmeaport {
 	width: 5em;
 }
 
 .nmea-label {
-	grid-row: 2;
+	grid-row: 4;
 	grid-column: 1;
 }
 .nmea-port {
-	grid-row: 2;
+	grid-row: 4;
 	grid-column: 2;
 }
 .nmea-update {
-	grid-row: 2;
+	grid-row: 4;
 	grid-column: 4;
 }
 .nmea-reset {
-	grid-row: 2;
+	grid-row: 4;
 	grid-column: 6;
-}
-
-/* Start delayed */
-.delayed-label {
-	grid-row: 4;
-	grid-column: 1;
-}
-.delayed-cb {
-	grid-row: 4;
-	grid-column: 2;
-
-}
-.delayed-entry {
-	grid-row: 4;
-	grid-column: 3;
-
 }
 
 /* Routing duration */
@@ -302,19 +313,19 @@ input[type=checkbox] {
 
 .duration-selector {
 	grid-row: 5;
-	grid-column: 2;
+	grid-column: 5/7;
 }
 
 
 /* Resolution */
 .resolution-label {
 	grid-row: 6;
-	grid-column: 1;
+	grid-column: 1/3;
 
 }
 .resolution-selector {
 	grid-row: 6;
-	grid-column: 2;
+	grid-column: 5/7;
 }
 
 /* GFS mode */

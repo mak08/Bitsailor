@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-09-30 21:04:22>
+;;; Last Modified <michael 2025-10-26 18:35:54>
 
 (in-package :bitsailor)
 
@@ -153,15 +153,12 @@
                               (dlat)
                               (dlon))
   (let* ((race-info (race-info race-id))
-         (vr-finewinds
-           nil)
          (polars-id (format nil "~a" polars-id))
          (options
            (or options
                '("hull" "foil" "winch" "heavy" "light" "reach")))
          (cpolars (get-combined-polars polars-id (encode-options options))))
-    (when (and vr-finewinds
-               (not resolution-provided-p))
+    (when (not resolution-provided-p)
       (setf resolution "0p25"))
     (make-routing
      :race-info (race-info race-id)
@@ -184,26 +181,13 @@
      :resolution resolution
      :minwind (determine-minwind race-id)
      :gfs-mode gfs-mode
-     :grib-source (if (and (string= resolution "0p25")
-                           vr-finewinds)
-                      :vr
-                      :noaa)
-     :interpolation (cond
-                      (vr-finewinds
-                       :enorm)
-                      (t
-                       :vr))
+     :grib-source  :noaa
+     :interpolation :enorm
      :polars cpolars
      :twa-angles (make-twa-angles-buffer cpolars)
      :cycle cycle
-     :merge-start (if vr-finewinds
-                      6d0
-                      4d0)
-     :merge-window (if vr-finewinds 3d0 2d0)
-     :winch-mode (if (member "winch" options :test #'string=)
-                     "pro"
-                     "std")
-     :penalties  (make-penalty :sail 0.9375d0 :tack 0.9375d0 :gybe 0.85d0)
+     :merge-start 6d0
+     :merge-window 0d0
      :simplify-route nil)))
 
 (defun make-twa-angles-buffer (cpolars)

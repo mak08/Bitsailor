@@ -63,7 +63,7 @@ function setupEventHandlers() {
     map.on('click', onMapClick);
     map.on('click', computePath);
     
-     // Checkbox handlers
+    // Checkbox handlers
     const options = ["hull", "winch", "foil", "heavy", "light", "reach"];
     options.forEach(option => {
         const checkbox = document.getElementById(`cb_${option}`);
@@ -265,6 +265,10 @@ function setUp(getVMG) {
     // Connect button events
     document.getElementById("bt_getroute").addEventListener("click",getRoute);
     document.getElementById("bt_downloadroute").addEventListener("click",onDownloadRoute);
+
+    document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
+    document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
+
     // GPX import button
     const btSetCourse = document.getElementById("bt_setcourse");
     if (btSetCourse) {
@@ -517,6 +521,46 @@ function onMarkerClicked(marker) {
     }
 
     redrawWindByTime(new Date(time));
+}
+
+function getBoatPosition (event) {
+    var port= document.getElementById("tb_nmeaport").value
+    $.ajax({
+        url: "/function/vh:getBoatPosition?port=" + port,
+        dataType: 'json'
+    }).done( function (data) {
+        console.log(data);
+        if (data) {
+            var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
+            setRoutePoint('start', startPos);
+            alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
+            var curTime = new Date(data.time);
+            var isoDate = curTime.toISOString().substring(0,16);
+            var dateInput = document.getElementById("tb_starttime");
+            dateInput.value = isoDate;
+
+        } else {
+            alert('No position update');
+        }
+
+    }).fail( function (request, textStatus, errorThrown) {
+        console.log(errorThrown);
+        alert('Could not get boat position: ' + request.responseText);
+    });
+}
+
+function resetNMEAConnection (event) {
+    var port= document.getElementById("tb_nmeaport").value
+    $.ajax({
+        url: "/function/vh:resetNMEAConnection?port=" + port,
+        dataType: 'json'
+    }).done( function (data) {
+        console.log(data);
+        alert("Connected to " + data.peer);
+    }).fail( function (request, textStatus, errorThrown) {
+        console.log(errorThrown);
+        alert(request.responseText);
+    });
 }
 
 
@@ -866,7 +910,7 @@ function displayRouting(data) {
             || best[i].sail != best[i - 1].sail) {
 
             const icon = ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe"))
-                ? redMarkerIcon : markerIcon;
+                  ? redMarkerIcon : markerIcon;
 
             createBestRouteMarkerAndCopies(best[i], icon, baseTime);
         }

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-09-20 22:42:21>
+;;; Last Modified <michael 2025-10-26 18:36:14>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -24,8 +24,6 @@
   polars
   ;; buffer for TWA angles plus 2 best VMG angles
   twa-angles
-  winch-mode
-  penalties
   simplify-route
   (minwind 0d0)
   stepmax

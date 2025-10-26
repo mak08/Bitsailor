@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-17 00:18:16>
+;;; Last Modified <michael 2025-10-25 23:07:53>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -180,7 +180,7 @@
           (pointnum 0)
           (elapsed0 (now))
           ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
-          (max-points 360 (min *max-iso-points* (+ max-points 10)))
+          (max-points *max-iso-points* (min *max-iso-points* (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
           (max-dist (make-array *max-iso-points* :initial-element 0d0))
           (min-angle (/ 360d0 *max-iso-points*))

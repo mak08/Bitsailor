@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-26 18:35:54>
+;;; Last Modified <michael 2025-10-26 21:34:21>
 
 (in-package :bitsailor)
 
@@ -482,6 +482,20 @@
   (with-output-to-string (s)
     (json s (get-polars-list))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; NMEA
+
+;;; The web page can't fetch the position from the Telnet port itself.
+(defun |getBoatPosition| (handler request response &key (|host| "nmea.fairwinds.world") (|port| ""))
+  (let* ((host |host|)
+         (port |port|))
+    (unless (ignore-errors
+             (numberp (parse-integer port)))
+      (error "Invalid NMEA port ~a" port))
+    (with-output-to-string (s)
+      (json s
+            (get-gprmc host port)))))
+           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Race list  & race info
 

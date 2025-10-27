@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2025-09-28 21:24:19>
+;;; Last Modified <michael 2025-10-26 20:38:38>
 
 (in-package :bitsailor)
 
@@ -75,19 +75,16 @@
  :request (:prefix "/admin")
  :handler (:query-function t :authentication nil :realm "admin"))
 
-(register-function "router.signUp" :authorizer (constantly t))
-(register-function "router.getSession" :authorizer (constantly t))
-(register-function "router.removeSession" :authorizer (constantly t))
 (register-function "router.getRaceInfo" :authorizer (constantly t))
 (register-function "router.getWind" :authorizer (constantly t))
-(register-function "router.getTWAPath" :authorizer (constantly t))
 (register-function "router.setParameter" :authorizer (constantly t))
 (register-function "router.getRaceList" :authorizer (constantly t))
 (register-function "router.getPolarsList" :authorizer (constantly t))
-(register-function "router.getRaceListAdmin" :authorizer #'vh-admin-authorizer)
 (register-function "router.setRoute" :authorizer (constantly t))
 (register-function "router.getRoute" :authorizer (constantly t))
 (register-function "router.getStatistics" :authorizer (constantly t))
+(register-function "router.resetNMEAConnection" :authorizer (constantly t))
+(register-function "router.getBoatPosition" :authorizer (constantly t))
 (register-function "router.checkWindow" :authorizer (constantly t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

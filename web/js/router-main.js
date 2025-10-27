@@ -267,7 +267,6 @@ function setUp(getVMG) {
     document.getElementById("bt_downloadroute").addEventListener("click",onDownloadRoute);
 
     document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
-    document.getElementById("bt_nmeareset").addEventListener("click", resetNMEAConnection);
 
     // GPX import button
     const btSetCourse = document.getElementById("bt_setcourse");
@@ -525,45 +524,31 @@ function onMarkerClicked(marker) {
 
 function getBoatPosition (event) {
     var port= document.getElementById("tb_nmeaport").value
-    $.ajax({
-        url: "/function/vh:getBoatPosition?port=" + port,
-        dataType: 'json'
-    }).done( function (data) {
-        console.log(data);
-        if (data) {
-            var startPos = new google.maps.LatLng(data.position.lat, data.position.lng);
-            setRoutePoint('start', startPos);
-            alert('Position ' + JSON.stringify(startPos) + ' at ' + data.time);
-            var curTime = new Date(data.time);
-            var isoDate = curTime.toISOString().substring(0,16);
-            var dateInput = document.getElementById("tb_starttime");
-            dateInput.value = isoDate;
-
-        } else {
-            alert('No position update');
-        }
-
-    }).fail( function (request, textStatus, errorThrown) {
-        console.log(errorThrown);
-        alert('Could not get boat position: ' + request.responseText);
-    });
+    Util.doGET(
+        "/function/router.getBoatPosition?port=" + port,
+        function (data) {
+            console.log(data);
+            if (data) {
+                let gprmc = JSON.parse(data.response);
+                var startPos = {
+                    "lat": gprmc.position.lat,
+                    "lng": gprmc.position.lng
+                };
+                setRoutePoint('start', startPos);
+                alert('Position ' + JSON.stringify(startPos) + ' at ' + gprmc.time);
+                var curTime = new Date(gprmc.time);
+                var isoDate = curTime.toISOString().substring(0,16);
+                var dateInput = document.getElementById("tb_starttime");
+                dateInput.value = isoDate;
+            } else {
+                alert('No position update');
+            }
+        },
+        function (response) {
+            console.log(response.statusText);
+            alert('Could not get boat position: ' + response.statusText);
+        });
 }
-
-function resetNMEAConnection (event) {
-    var port= document.getElementById("tb_nmeaport").value
-    $.ajax({
-        url: "/function/vh:resetNMEAConnection?port=" + port,
-        dataType: 'json'
-    }).done( function (data) {
-        console.log(data);
-        alert("Connected to " + data.peer);
-    }).fail( function (request, textStatus, errorThrown) {
-        console.log(errorThrown);
-        alert(request.responseText);
-    });
-}
-
-
 
 function setBusyCursor() {
     document.getElementById('bt_getroute').style.cursor = "wait";

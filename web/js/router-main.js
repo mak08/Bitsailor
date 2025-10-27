@@ -466,6 +466,7 @@ function onSetStartPosition(event) {
     var latlon = parsePosition(position);
     if (latlon) {
         setRoutePoint('start', L.latLng(latlon.lat, latlon.lon));
+        // setRoutePointCore updates the input; no extra action needed here
     }
 }
 
@@ -534,7 +535,7 @@ function getBoatPosition (event) {
                     "lat": gprmc.position.lat,
                     "lng": gprmc.position.lng
                 };
-                setRoutePoint('start', startPos);
+                setRoutePoint('start', startPos); // will also update the “Start position” field
                 alert('Position ' + JSON.stringify(startPos) + ' at ' + gprmc.time);
                 var curTime = new Date(gprmc.time);
                 var isoDate = curTime.toISOString().substring(0,16);
@@ -779,13 +780,14 @@ function setRoutePoint(type, latlng) {
     drawRouteLine();
 }
 
-
 function setRoutePointCore(point, latLng) {
     storeValue(point, `{"lat":${latLng.lat}, "lon": ${latLng.lng}}`);
 
     if (point === 'start') {
         startMarker.setLatLng(latLng);
         updateRouteMarkerCopies(startMarker);
+        // Keep the Start position input in sync (DMS if needed)
+        updateStartPositionDisplay(startMarker.getLatLng());
     } else if (point === 'dest') {
         destinationMarker.setLatLng(latLng);
         updateRouteMarkerCopies(destinationMarker);
@@ -809,6 +811,15 @@ function setRoutePointCore(point, latLng) {
     }
     gcGroup.addTo(map);
     courseGCLine = gcGroup;
+}
+
+// Keep the “Start position” input up to date in DMS format
+function updateStartPositionDisplay(latlng) {
+    const input = document.getElementById('tb_position');
+    if (!input || !latlng) return;
+    // Always show normalized longitude in display
+    const dispLng = wrapLon180(latlng.lng);
+    input.value = Util.formatPosition(latlng.lat, dispLng);
 }
 
 function createBestRouteMarkerAndCopies(entry, icon, startTime) {

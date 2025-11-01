@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
 
-    <title>BitSailor Router</title>
+    <title>Bitsailor Router</title>
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
 
@@ -21,8 +21,7 @@
 
       <div class="header">
 		<div id="appname">
-		  <a href="start" style="color:white">BitSailor</a> Router
-		  <span style="font-size:70%"><em>/ VirtualRegatta</em><span>
+		  <a href="start" style="color:white">Bitsailor</a> Router
 		</div>	 
 	  </div>
 
@@ -99,7 +98,14 @@
           <input id="tb_starttime" name="starttime" type="datetime-local"/>
         </div>
 
-		        <div class="nmea-label">
+		<div class="nmea-label-host">
+          <label>NMEA host</label>
+        </div>
+        <div class="nmea-host">
+          <input id="tb_nmeahost" name="nmeahost" type="text"  maxlength="40" value="nmea.fairwinds.world"/>
+        </div>
+
+		<div class="nmea-label-port">
           <label>NMEA port</label>
         </div>
         <div class="nmea-port">

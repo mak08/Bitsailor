@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-25 23:07:53>
+;;; Last Modified <michael 2025-11-01 17:23:24>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -102,16 +102,10 @@
                                      (new-pos (add-distance-exact (routepoint-position routepoint)
                                                                   distance
                                                                   heading)))
-                                  (when t ;; (in-latlng-box box new-pos)
+                                  (when (in-latlng-box (routing-box routing) new-pos)
                                     (let* ((origin-distance (course-distance start-pos new-pos))
-                                           ;; (dest-distance (course-distance new-pos (routing-dest routing)))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
-                                      (when (and (heading-between left right origin-angle)
-                                                 ;; (< (+ (expt origin-distance 2) (expt  dest-distance 2))
-                                                    ;; (+  origin-distance  dest-distance)
-                                                 ;;    (* 1.1d0 (expt (routing-dist routing) 2))
-                                                    ;; (* 1.25d0 (routing-dist routing))
-                                                    )
+                                      (when (and (heading-between left right origin-angle))
                                                   
                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
                      (add-point (- twa))
@@ -120,16 +114,16 @@
 
 (defstruct box north south west east antimed-p)
 
-(defun make-routing-box (start dest)
+(defun make-routing-box (start dest &key (lat-margin 10d0) (lon-margin 10d0))
   (let* ((lat-min (min (latlng-lat start) (latlng-lat dest)))
          (lat-max (max (latlng-lat start) (latlng-lat dest)))
-         (lng-min (min (latlng-lng start) (latlng-lng dest)))
-         (lng-max (max (latlng-lng start) (latlng-lng dest)))
-         (antimed-p (antimed-p lng-max lng-min)))
-    (make-box :north (min 90 (+ lat-max 5d0))
-              :south (max -90 (- lat-min 5d0))
-              :west (if antimed-p (+ lng-min 5d0) (- lng-min 5d0))
-              :east (if antimed-p (- lng-max 5d0) (+ lng-max 5d0))
+         (lon-min (min (latlng-lng start) (latlng-lng dest)))
+         (lon-max (max (latlng-lng start) (latlng-lng dest)))
+         (antimed-p (antimed-p lon-max lon-min)))
+    (make-box :north (min 90 (+ lat-max lat-margin))
+              :south (max -90 (- lat-min lat-margin))
+              :west (if antimed-p (+ lon-min lon-margin) (- lon-min lon-margin))
+              :east (if antimed-p (- lon-max lon-margin) (+ lon-max lon-margin))
               :antimed-p antimed-p)))
 
 (defun antimed-p (lon0 lon1)
@@ -189,7 +183,6 @@
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (params (interpolation-parameters start-time
-                                            :gfs-mode (routing-gfs-mode routing)
                                             :source (routing-grib-source routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)
@@ -197,7 +190,6 @@
                                             :cycle cycle
                                             :resolution resolution)
                   (interpolation-parameters step-time
-                                            :gfs-mode (routing-gfs-mode routing)
                                             :source (routing-grib-source routing)
                                             :method (routing-interpolation routing)
                                             :merge-start (routing-merge-start routing)

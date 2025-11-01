@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2025-09-18 20:37:20>
+;;; Last Modified <michael 2025-11-01 10:37:20>
 
 
 (in-package :bitsailor)
@@ -34,6 +34,9 @@
 (defvar *use-bitmap* nil)
 (defvar *tracks* nil)
 (defvar *resolutions* '("1p00" "0p25"))
+(defvar *merge-start* 6d0)
+(defvar *merge-duration* 0d0)
+
 
 (defvar *web-root-directory*
   (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)

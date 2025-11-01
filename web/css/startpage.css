@@ -216,6 +216,10 @@ div.fixed {
 	right: 2px;
 }
 
+#area_news {
+	width: 100em;
+}
+
 #race_list {
 	width: 100%;
 }

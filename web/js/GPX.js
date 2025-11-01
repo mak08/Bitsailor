@@ -20,7 +20,7 @@ function exportRoute ( routeInfo, format='gpx', sailNames) {
 ////////////////////////////////////////////////////////////////////////////////
 /// CSV export
 
-function writeRouteCSV (stream, routeInfo) {
+function writeRouteCSV (stream, routeInfo, sailNames) {
     stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD;Penalty;P.Time;Energy;DTF(nm)\n';
     for (const routePoint of routeInfo.best) {
         writePointCSV(stream, routePoint, sailNames);
@@ -32,7 +32,7 @@ function writePointCSV (stream, routePoint, sailNames) {
     stream.s += routePoint.time;
     stream.s += ';' + Util.formatPosition(pos.lat, pos.lng);
     stream.s += ';' + routePoint.twa;
-    stream.s += ';' + sailnames()[routePoint.sail];
+    stream.s += ';' + sailNames[routePoint.sail];
     stream.s += ';' + Util.ms2knots(routePoint.speed).toFixed(2);
     stream.s += ';' + routePoint.heading.toFixed(1);
     stream.s += ';' + Util.ms2knots(routePoint.tws).toFixed(2);

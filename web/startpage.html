@@ -2,7 +2,7 @@
 <html lang="de">
   <head>
     <meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Welcome - BitSailor Router</title>
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
@@ -14,350 +14,174 @@
   
   <body>
 
-	<div class="container">
+    <div class="container">
 
-	  <div class="fixed">
+      <div class="fixed">
 
-		<form action="https://www.paypal.com/donate" method="post" target="_top">
-		  <input type="hidden" name="hosted_button_id" value="DSTYB5K3BEQHJ" />
-		  <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-		</form>
-	  </div>
-	  
-	  <div class="tabbed">	
+        <form action="https://www.paypal.com/donate" method="post" target="_top">
+          <input type="hidden" name="hosted_button_id" value="DSTYB5K3BEQHJ">
+          <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button">
+        </form>
+      </div>
+      
+      <div class="tabbed">	
 
-		<input checked="checked" id="tab1" type="radio" name="tabs" />
-		<input id="tab2" type="radio" name="tabs" />
-		<input id="tab4" type="radio" name="tabs" />
-		<input id="tab5" type="radio" name="tabs" />
-		<input id="tab6" type="radio" name="tabs" />
-		<nav>
-		  <label for="tab1">Home</label>
-		  <label for="tab2">Usage</label>
-		  <label for="tab4">Races</label>
-		  <label for="tab5">Issues</label>
-		  <label for="tab6">Status</label>
-		</nav>
+        <input checked="checked" id="tab1" type="radio" name="tabs">
+        <input id="tab2" type="radio" name="tabs">
 
-		<figure>
-		  
-		  <div class="tab1">
+        <!-- Keep placeholder radios to preserve nth-of-type mapping used by CSS tabs -->
+        <input id="tab3" type="radio" name="tabs">
+        <input id="tab4" type="radio" name="tabs">
 
-			<div class="home">
-			  <div class="welcome">
-				<h2>Welcome</h2>
-				<p>
-				  This is the BitSailor router start page.
-				  <br>
-				</p>
-				<p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
+        <input id="tab5" type="radio" name="tabs">
+        <input id="tab6" type="radio" name="tabs">
+        <nav>
+          <label for="tab1">Home</label>
+          <label for="tab2">Usage</label>
+          <!-- No label for tab3/tab4 (Races removed) -->
+          <label for="tab5">Issues</label>
+          <label for="tab6">Status</label>
+        </nav>
 
-				<h3>
-				  As of 2024-09-23 the router is defunct. </h3>
-				  <ul>
-					<li> On 2024-06-30 Realsail support was discontinued, because Realsail went out of business.
-					<li> On 2024-09-23 VirtualRegatta support was disontinued.
-				  </ul>
-				  The user database was deleted. Bitsailor discord will remain available.<br><br>
-				  <em>Hope to see you again sometime, when a better online sailing game comes along!</em>
+        <figure>
+          
+          <div class="tab1">
 
-			  </div>
-			  <div class="content-pane"  style="font-size:90%">
-				<h3>News</h3>
-				<ul>
-				  <li><b>2024-06-30</b><br>
-					Removed RealSail support<br>
-					Display VSR category and price level 
-				  </li>
-				  <li><b>2024-06-19</b><br>
-					Replaced grib22json with <a href="https://github.com/mak08/JSGrib">JSGrib</a>
-				  </li>
-				  <li><b>2024-05-20</b><br>
-					Transfer &amp; decode GRIB2/JPEG2000 data in the Browser <br>
-					using <a href="https://github.com/runk/jpeg2000">jpeg2000</a> and <a href="https://github.com/BlueNetCat/grib22json">grib22json</a>
-				  </li>
-				  <li><b>2024-02-15</b><br>
-					VR version: support exclusion zones
-				  </li>
-				  <li><b>2024-02-03</b><br>
-					Realsail version: fix sail names in popups, tweak penalties, disable energy computation
-				  </li>
-				  <li><b>2024-02-01</b><br>
-					Added São Jorge to the map
-				  </li>
-				  <li><b>2024-02-01</b><br>
-					Fixed RealSail sail id to name mapping<br>
-				  </li>
-				  <li><b>2024-01-10</b><br>
-					Fixed wind data caching<br>
-					Fixed polars preprocessing, was no longer respecting boat options after adding tolerance support
-				  </li>
-				  <li><b>2024-01-05</b><br>
-					Support VR penalties/stamina/sail tolerance
-				  </li>
-				  <li><b>2023-04-09</b><br>
-					Add Realsail multi class support
-				  </li>
-				  <li><b>2023-03-04</b><br>
-					Fixed interpolation bug in cycle merge (VR), was introduced with fineWinds support 
-				  </li>
-				  <li><b>2023-02-15</b><br>
-					Add VR 'fineWinds' support: GFS 0.25 + 1kn min wind speed
-				  </li>
-				  <li><b>2023-02-01</b><br>
-					Enlarge search area to avoid missing routes
-				  </li>
-				  <li><b>2023-01-23</b><br>
-					Enable GFS 0.25 selection in VR version 
-				  </li>
-				  <li><b>2023-01-15</b><br>
-					Added GPX &amp; CSV download
-				  </li>
-				  <li><b>2022-12-04</b><br>
-					Client-side wind interpolation
-				  </li>
-				  <li><b>2022-11-28</b><br>
-					12h cycle support: Use only 06z and 18z (RS version)
-				  </li>
-				  <li><b>2022-11-06</b><br>
-					Remember boat options (VR version)<br>
-					Remember destination position (VR & RS)<br>
-					Limit min zoom to avoid error message when loading wind
-				  </li>
-				  <li><b>2022-10-23</b><br>
-					Added option selection (VR version)<br>
-					Improved route display
-				  </li>
-				  <li><b>2022-06-12</b><br>
-					Store current forecasts by resolution, date and cycle<br>
-					Store archived forecasts by year, month and day.
-				  </li>
-				  <li><b>2022-05-26</b><br>
-					Moved to a (mostly) stateless service model. No more session held in backend.
-				  </li>
-				  <li><b>2022-04-24</b><br>
-					Inverted TWA convention: Starboard is now positive, port is negative
-				  </li>
-				  <li><b>2022-03-14</b> PI DAY!<br>
-					Bugfix:	Normalize latlng on underflow too, this was causing wrong results near the antimeridian 
-				  </li>
-				  <li><b>2022-01-08</b><br>
-					Provide <a href="/weather">GRIB files</a> for download
-				  </li>
-				  <li><b>2022-01-03</b><br>
-					Automatically revert to previous cycle if requested forecast is not available<br>
-					Increase step size to 1h after first 48 hours of route
-				  </li>
-				  <li><b>2021-12-10</b><br>
-					Improved 'reached' check reliability and performance<br>
-					Experimental GFS 0.25° support (Realsail version only)  
-				  </li>
-				  <li><b>2021-11-27</b><br>
-					Realsail now uses the wind speed preserving interpolation <br>
-				  </li>
-				  <li><b>2021-11-20</b><br>
-					Added VR support <br>
-					Temporarily removed cycle selection as it may have caused server crashes
-				  </li>
-				  <li><b>2021-07-23</b><br>
-					Fix 'reached' check<br>
-					Exclude region above 89°54"N due to numerical instability of distance arithmetic
-				  </li>
-				  <li><b>2021-07-04</b><br>
-					Display 'old' isochrones in red
-				  </li>
-				  <li><b>2021-07-04</b><br>
-					Bugfix: Properly reset to automatic cycle determination when disabling manual cycle
-				  </li>
-				  <li><b>2021-06-06</b><br>
-					Improved search algorithm
-				  </li>
-				  <li><b>2021-05-22</b><br>
-					Added short (6 or 3hrs) routing using 2min steps
-				  </li>
-				  <li><b>2021-05-16</b><br>
-					Moved to bitsailor.net
-				  </li>
+            <div class="home">
+              <div class="welcome">
+                <h2>Bitsailor is back!</h2>
+                <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
+                <p><b>Please find the <a href="router-fw.html">Router</a> page</b> <a href="router-fw.html" target=_blank><b>here</b></a></p>
+              </div>
+              <div class="content-pane"  id="area_news" style="font-size:90%">
+                <h3>News</h3>
+                <ul>
+                  <li><b>2025-11-01</b><br>
+                    Restart<br>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            <div class="content-pane" style="font-size:67%;">
+              <b>Disclaimer:</b> All content and services on this site are provided without warranty, implied or otherwise, of fitness for any particular purpose. Use entirely at your own risk.
+              You shall be liable for any damages, losses or expenses of a third party caused by attempts to misuse the functions provided by this site.
+              <address>
+                &copy; 2021,2021-2025 <a href="mailto:michael.kappert@gmx.net" style="background-color:grey;">Michael Kappert</a>
+              </address>
+
+            </div>
+
+          </div>
+
+          <div class="tab2">
+
+            <div class="content-pane"  style="font-size:90%">
+              <h3>Usage</h3>
+              Usage should be more or less self-explanatory.
+                <ul>
+                <li>Select the correct boat polars from the dropdown list</li>
+                <li>Select the GFS resolution</li>
+                <li>
+                  Set start and destination by dragging the <img src="img/start_32x20.png" alt="start flag">start and <img src="img/finish_32x20.png" alt="finish flag">finish flags<br>
+                  or right-click on the map to position them.<br>
+                  The start position can also be set using NMEA, see below.
+                </li>
+                <li>
+                  Tick the 'Start time' box to specify a start time, or leave it unchecked to use the current time.
+                  Check if the start time is set correctly.
+                </li>
+                <li>
+                  Select the maximum duration.
+                  <p>
+                    Long routing may take several minutes. <em><b>Please avoid frequent long routings.</b></em><br>
+                    Short routings (up to 4 days) should only take a few seconds.
+                  </p>
+                </li>
+                <li>
+                  Press 'Execute'.<br>
+                </li>
 				</ul>
-			  </div>
-			</div>
-			<div class="content-pane" style="font-size:67%;">
-			  <b>Disclaimer:</b> All content and services on this site are provided without warranty, implied or otherwise, of fitness for any particular purpose. Use entirely at your own risk.
-			  You shall be liable for any damages, losses or expenses of a third party caused by attempts to misuse the functions provided by this site.
-			  <address>
-				&copy; 2021,2022 <a href="mailto:michael.kappert@gmx.net" style="background-color:grey;">Michael Kappert</a>
-			  </address>
 
-			</div>
-
-	      </div>
-
-		  <div class="tab2">
-
-			<div class="content-pane"  style="font-size:90%">
-			  <h3>Basic usage</h3>
-			  Select the desired race from the Realsail or VR race lists.
-	  		  <ol>
-				<li>
-				  Drag&amp;drop the <img src="img/start_32x20.png">start and <img src="img/finish_32x20.png">finish flags or right-click on the map to position them.
-				</li>
-				<li>
-				  Select the maximum duration.
-				</li>
-				<li>
-				  Tick the 'Start time' box to specify a start time, or leave it unchecked to use the current time.
-				</li>
-				<li>
-				  Press 'Execute'.<br>
-				  <p>
-					Routing may take several minutes. <em>Please avoid frequent long routings.</em><br>
-					Short routings (up to 4 days) only take a few seconds.
-				  </p>
-				</li>
-			  </ol>
-			  <h3>Options (VR only)</h3>
-			  <p>
-				Select the equipped options of your boat.<br>
-				<b><em>Winch</em></b> currently cannot be de-selected. The router uses a hard-coded default penalty.
-			  </p>
-			  <p style="font-size:80%">
-				It is planned to add variable penalties. Unsuitable penalty values may affect the quality of the route however.
-			  </p>
-			  
-			  
-			  <h3>NMEA  (Realsail only)</h3>
-			  <ol>
-				<li>
-				  Enter your NMEA port in the input field and press 'Reconnect'.
+				<h3> GPX import</h3>
+				Use this function to import a fairwinds.world race course. 
+              
+              <h3>NMEA</h3>
+              <ol>
+                <li>
+                  Enter the NMEA host and port
+                </li>
+                <li>
+                  Press 'Update' to acquire your boat position.
+                  <p>
+                    A popup is shown if a GPRMC message was successfully received. Click 'ok'.
+                    The start flag will be moved to your boat position and the start time is set to the timestamp of the NMEA message.<br>
+                    Observe the timestamp. <b>You may need to press 'Update' repeatedly</b> to receive the latest message.
+                  </p>
+                </li>
+              </ol>
+              <h3>TWA tool</h3>
+              <ul>
+                <li>
+                  <p>
+                    When routing is complete and the route is displayed, click on any waypoint to anchor the TWA tool on the waypoint.<br>
+                    Click on the map to set a direction. The blue path represents a fixed heading.
+                  </p>
+                  <p style="font-size:80%">
+                    Please note, during wind updates the TWA tool may attempt to use a forecast that is not yet available.
+                    In this case, retry later or select the cycle manually using the 'Cycle' checkbox.
+                  </p>
+                </li>
+              </ul>
+              <h3>Isochrones and Waypoints</h3>
+			  <ul><li>
+              Clicking on an isochrone highlights it and sets the wind interpolation to the corresponding time.<br>
+              Similarly clicking on a waypoint set the wind interpolation to the corresponding time,
 				</li>
 				<li>
-				  Press 'Update' to acquire your boat position from realsail.net.
-				  <p>
-					The start flag is moved to your boat position and the NMEA timestamp is entered as the start time.
-				  </p>
-				  <p>
-					It may take up to a minute until a position is available.<br>
-					If another client connects to the NMEA port, your connection may be terminated. 
-				  </p>
-				</li>
-			  </ol>
-			  <h3>TWA tool</h3>
-			  <ul>
-				<li>
-				  <p>
-					When routing is complete and the route is displayed, click on any waypoint to anchor the TWA tool on the waypoint.<br>
-					Click on the map to set a direction. The blue path represents a fixed heading.
-				  </p>
-				  <p style="font-size:80%">
-					Please note, during wind updates the TWA tool may attempt to use a forecast that is not yet available.
-					In this case, retry later or select the cycle manually using the 'Cycle' checkbox.
-				  </p>
-				</li>
-			  </ul>
-			  <h3>Waypoints and Isochrones</h3>
-			  <ul>
-				<li>
-				  Clicking on a waypoint or an isochrone sets the wind interpolation to the corresponding time.
-				</li>
-			  </ul>
+			  <b style="color:red">Red</b> isochrones signal that the previous cycle was used - either because the current cycle is only used later, or because the forecast was not yet available.
+			  </li></ul>
 
-			  <h3>Download route information</h3>
-			  <ul>
-				<li>
-				  Select the format (GPX or CSV) and press 'Download'.<br>
-				  The GPX output is optimized for <a href='http://gpxsee.org'>GPXSee</a> (available on Windows, Mac and Linux).
-				</li>
-			  </ul>
-			  
-			</div>
-		  </div>
+              <h3>Downloading route information</h3>
+              Select the format (GPX or CSV) and press 'Download'.
+              
+            </div>
+          </div>
 
-		  <div class="tab4">
-			<div class="content-pane"  style="font-size:90%">
-			  <div class="table-header"><h3><a href="https://virtualregatta.com">VirtualRegatta</a> races</h3></div>
-			  <div class="table">
-				<table id="race_list_vr">
-				  <thead>
-					<tr>
-					  <th>Race</th>
-					  <th>VSR</th>
-					  <th>PriceLvl</th>
-					  <th>Class</th>
-					  <th>Record</th>
-					  <th>GFS 0.25</th>
-					  <th>Start (UTC)</th>
-					  <th>Router link</th>
-					</tr>
-				  </thead>
-				  <tbody id="tbody_VR">
-				  </tbody>
-				</table>	
-			  </div>
-			</div>
-		  </div>
+          <!-- No .tab3/.tab4 content (Races removed) -->
 
- 		  <div class="tab5">
-			<div class="content-pane" style="font-size:90%;">
-	  		  <ul>
+          <div class="tab5">
+            <div class="content-pane" style="font-size:90%;">
+                <ul>
 
-				<li><b>Activation e-mail not received</b>
-				  <p>Some e-mail providers may classify the sender domain as spam. Please check your spam folder.</p>
-				  <p>Some providers seem to have technical difficulties accepting e-mail from bitsailor.net, notably <b>orange.fr</b>.</p>
-				  <p>If you are affected, please try a different e-mail address. For example, GMail is known to work and it is easy to register an e-mail address there.</p> 
-				</li>
+                <li><b>Route does not reach destination / seems wrong</b>
+                  <p>
+                    This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.<br>
+                    You can usually work around this by moving the target behind or sideways from your actual destination.<br>
+                  </p>
+                </li>
 
-				<li><b>Route does not reach destination / seems wrong</b>
-				  <p>
-					This may happen when wind conditions are unfavourable and the boat's tacking angle is large, or when there are too many obstructions in the area.<br>
-					You can usually work around this by moving the target behind or sideways from your actual destination.<br>
-				  </p>
-				</li>
+                <li><b>Errors</b>
+                  <p>
+                    Error handling urgently needs to be improved.
+                  </p>
+                </li>
 
-				<li><b>Routing fails with an error message similar to</b>
-				  <pre><code>error The value NIL is not of type VIRTUALHELM::POLARS</code></pre>
-				  <p>
-					The router stores some of your race-related settings when you load a race, among the the polars used for this race.
-					If the server crashed and restarted while, the settings are lost.
-				  </p>
-				  <p>
-					Reloading the page should get rid of this error. 
-				  </p>
-				</li>
+              </ul>
+            </div>
+          </div>
 
-				<li><b>Routing fails with an error message</b> similar to
-				  <pre><code> error Missing forecast /root/Router/Wetter/20210529_gfs.t06z.pgrb2.1p00.f072.grib2 not found</code></pre>
-				  <p>
-					This is usually due to missing and/or delayed forecasts at NOAA.
-					The router first tries to fall back to the previous cycle and issues an error message if required forecast is missing in the previous cycle as well.
-				  </p>
-				  <p>
-					Retry later or select a shorter duration.
-				  </p>
-				</li>
-				<li><b>UI wind differs from wind displayed in waypoint info.</b>
-				  <p>The router delays the switch to the latest GFS cycle (Realsail) and interpolates (VR) to match the update policy of the game. The used cycles a reflected in the isochrones.<br>
-					 The UI uses the current cycle by default, but switches to the cycle of the (previous) isochrone when the wind index is set by clicking an isochrone (or route point).
-				</li>
-			  </ul>
-			</div>
-		  </div>
+          <div class="tab6">
+            <div>
+              <label>Routing requests (last 10min)</label>
+              <input id="tb_requests" style="width:3em;" disabled><br>
+              <label>Data source</label>
+              <input id="tb_datasource" style="width:8em;" disabled>
+            </div>
+          </div>
 
-		  <div class="tab6">
-			<div>
-			  <label>Routing requests (last 10min)</label>
-			  <input id="tb_requests" style="width:3em;" disabled></input><br>
-			  <label>Data source</label>
-			  <input id="tb_datasource" style="width:8em;" disabled></input>
-			</div>
-			<div style="text-align:right;">
-			  <button id="bt_racelist_reload">Reload race list</button>
-			</div>
-		  </div>
-
-		  
-		</figure>	
-		
-	  </div>
-	</div>
+        </figure>	
+        
+      </div>
+    </div>
   </body>
 </html>

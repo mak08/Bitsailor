@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-26 21:34:21>
+;;; Last Modified <michael 2025-11-01 16:13:16>
 
 (in-package :bitsailor)
 
@@ -140,10 +140,8 @@
                               (race-id)
                               (polars-id)
                               (starttime nil)
-                              (resolution "1p00" resolution-provided-p)
-                              (gfs-mode "06h")
+                              (resolution "0p25" resolution-provided-p)
                               (options)
-                              (energy 100)
                               (tack)
                               (sail nil)
                               (stepmax (* 24 60 60))
@@ -153,6 +151,8 @@
                               (dlat)
                               (dlon))
   (let* ((race-info (race-info race-id))
+         (start (when (and slat slon) (make-latlng :lat slat :lng slon)))
+         (dest (when (and dlat dlon) (make-latlng :lat dlat :lng dlon)))
          (polars-id (format nil "~a" polars-id))
          (options
            (or options
@@ -163,12 +163,12 @@
     (make-routing
      :race-info (race-info race-id)
      :fan *max-angle*
-     :start (when (and slat slon) (make-latlng :lat slat :lng slon))
-     :dest  (when (and dlat dlon) (make-latlng :lat dlat :lng dlon))
+     :start start
+     :dest dest 
+     :box (make-routing-box start dest)
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :options options
-     :energy energy
      :tack (cond
              ((string= tack "port")
               90d0)
@@ -180,14 +180,13 @@
      :sail sail
      :resolution resolution
      :minwind (determine-minwind race-id)
-     :gfs-mode gfs-mode
      :grib-source  :noaa
-     :interpolation :enorm
+     :interpolation :bilinear
      :polars cpolars
      :twa-angles (make-twa-angles-buffer cpolars)
      :cycle cycle
-     :merge-start 6d0
-     :merge-window 0d0
+     :merge-start *merge-start*
+     :merge-window *merge-duration*
      :simplify-route nil)))
 
 (defun make-twa-angles-buffer (cpolars)
@@ -204,7 +203,6 @@
 (defun |getRoute| (handler request response &key
                                               (|raceId| nil)
                                               (|options| nil)
-                                              (|energy| "100")
                                               (|tack| nil)
                                               (|sail| nil)
                                               (|resolution| "1p00")
@@ -234,9 +232,7 @@
              (routing
                (get-routing-presets :race-id |raceId|
                                     :polars-id (decode-uri-component |polarsId|)
-                                    :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
-                                    :energy (read-arg |energy| 'double-float)
                                     :tack |tack|
                                     :sail |sail|
                                     :resolution |resolution|
@@ -407,7 +403,6 @@
              (routing
                (get-routing-presets :race-id |raceId|
                                     :polars-id |polarsId|
-                                    :gfs-mode |gfsMode|
                                     :options (cl-utilities:split-sequence #\, |options|)
                                     :resolution |resolution|
                                     :starttime |time|

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-10-26 18:36:14>
+;;; Last Modified <michael 2025-11-01 16:13:46>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -17,7 +17,6 @@
 (defstruct routing
   race-info
   interpolation
-  gfs-mode
   grib-source
   resolution
   cycle
@@ -31,12 +30,12 @@
   merge-start
   merge-window
   options
-  energy
   tack
   sail
   starttime
   start
   dest
+  box
   %dist)
 
 (defmethod routing-dist (routing)

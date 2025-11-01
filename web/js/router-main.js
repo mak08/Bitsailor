@@ -524,9 +524,10 @@ function onMarkerClicked(marker) {
 }
 
 function getBoatPosition (event) {
-    var port= document.getElementById("tb_nmeaport").value
+    let host = document.getElementById("tb_nmeahost").value
+    let port = document.getElementById("tb_nmeaport").value
     Util.doGET(
-        "/function/router.getBoatPosition?port=" + port,
+        `/function/router.getBoatPosition?host=${host}&port=${port}`,
         function (data) {
             console.log(data);
             if (data) {
@@ -1485,6 +1486,9 @@ function importGPXFromString(xmlString) {
         const color = gateColor(key);
         drawGateGroup(pts, color);
     }
+
+    // After drawing, pan & zoom so both Start and Finish are visible
+    fitMapToStartFinish(groups);
 }
 
 function extractGateGroupKey(name) {
@@ -1509,6 +1513,31 @@ function extractGateGroupKey(name) {
         if (t === 'S' || t === 'F' || /^G\d+$/i.test(t)) return t;
     }
     return null;
+}
+
+// Choose the nearest wrapped longitude to a reference (handles ±360 copies)
+function nearestWrapped(refLon, lon) {
+    const l = wrapLon180(lon);
+    const candidates = [l, l + 360, l - 360];
+    return candidates.reduce((best, cur) =>
+        Math.abs(cur - refLon) < Math.abs(best - refLon) ? cur : best, candidates[0]);
+}
+
+// Fit map to include both Start (S) and Finish (F) groups with minimal longitudinal span
+function fitMapToStartFinish(groups) {
+    const s = groups.get('S');
+    const f = groups.get('F');
+    if (!map || !s || !s.length || !f || !f.length) return;
+
+    // Use first start point as reference for longitudinal adjustment
+    const refLon = wrapLon180(s[0].lon);
+
+    const pts = [];
+    for (const p of s) pts.push(L.latLng(p.lat, nearestWrapped(refLon, p.lon)));
+    for (const p of f) pts.push(L.latLng(p.lat, nearestWrapped(refLon, p.lon)));
+
+    const bounds = L.latLngBounds(pts);
+    map.fitBounds(bounds, { padding: [24, 24] });
 }
 
 function gateColor(key) {

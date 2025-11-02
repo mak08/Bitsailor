@@ -31,7 +31,7 @@ let gribCache = null;
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
     "resolution": "1p00",
-    "gfsMode": "06h",
+    "duration": 345600,
     "polarsId": undefined
 };
 
@@ -605,8 +605,7 @@ function storeValue(name, value) {
     try {
         let storage = window.localStorage;
         let query = new URL(document.URL).searchParams;
-        let raceId = query.get('race');
-        storage.setItem(`${raceId}.${name}`, value);
+        storage.setItem(`xx.${name}`, value);
     } catch (e) {
     }
 }
@@ -716,7 +715,6 @@ function getRoute() {
     bt_execute.disabled = true;
 
     let documentQuery = new URL(document.URL).searchParams;
-    let raceId = documentQuery.get('race');
 
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
@@ -735,7 +733,6 @@ function getRoute() {
     destPos.lng = wrapLon180(destPos.lng);
 
     var query = makeQuery(settings);
-    query += `&raceId=${raceId}`;
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
 

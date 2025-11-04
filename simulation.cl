@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-01 17:23:24>
+;;; Last Modified <michael 2025-11-04 00:50:02>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -519,18 +519,22 @@
             (min (abs (or (trackpoint-twa point) 180)) min-twa))
       (setf max-twa
             (max (abs (or (trackpoint-twa point) 0)) max-twa)))
-    (make-routestats :start (trackpoint-time (first track))
-                     :duration (encode-duration
-                                (timestamp-difference (trackpoint-time (car (last track)))
-                                                      (trackpoint-time (first track))))
-                     :sails sails
-                     :min-wind min-wind
-                     :max-wind max-wind
-                     :min-twa min-twa
-                     :max-twa max-twa
-                     :calctime elapsed
-                     :steps stepnum
-                     :points pointnum)))
+    (let ((routestats
+            (make-routestats :start (trackpoint-time (first track))
+                             :duration (encode-duration
+                                        (timestamp-difference (trackpoint-time (car (last track)))
+                                                              (trackpoint-time (first track))))
+                             :sails sails
+                             :min-wind min-wind
+                             :max-wind max-wind
+                             :min-twa min-twa
+                             :max-twa max-twa
+                             :calctime elapsed
+                             :steps stepnum
+                             :points pointnum)))
+      (bt:with-lock-held (+last-routestats-lock+)
+        (setf *last-routestats* routestats))
+      (values routestats))))
 
 (defun encode-duration (seconds)
   (multiple-value-bind (days rest-hours)

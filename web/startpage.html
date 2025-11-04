@@ -7,7 +7,6 @@
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
     <link rel="stylesheet" href="css/startpage.css">
-    <script src="js/colors.js"></script>
     <script type="module" src="js/startpage.js"></script>
     
   </head>
@@ -170,14 +169,31 @@
             </div>
           </div>
 
+          <!-- Tab 6 (Status) - keep visibility controlled by tab CSS -->
           <div class="tab6">
-            <div>
-              <label>Routing requests (last 10min)</label>
-              <input id="tb_requests" style="width:3em;" disabled><br>
-              <label>Data source</label>
-              <input id="tb_datasource" style="width:8em;" disabled>
-            </div>
-          </div>
+  <div class="status-grid" style="display:grid; grid-template-columns:auto 1fr; align-items:start; column-gap:16px; row-gap:8px; width:100%;">
+    <div class="status-label" style="display:flex; flex-direction:column; gap:8px; justify-content:flex-start;">
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Server start</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Last forecast downloaded</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Cached forecasts</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Routing requests last 10min</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Last routing stats</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Data source</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Max isochrone points</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">TWA step size</label>
+    </div>
+    <div class="status-data" style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
+      <label id="tb_serverstart" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
+      <label id="tb_forecasts" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
+      <label id="tb_fc_cache" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
+      <label id="tb_requests" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
+      <label id="tb_last_routestats" style="background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:block; white-space:normal; max-width:100%;">-</label>
+      <label id="tb_datasource" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
+      <label id="tb_max_iso_points" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
+      <label id="tb_twa_steps" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
+    </div>
+  </div>
+</div>
 
         </figure>	
         

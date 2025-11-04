@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-10-25 14:35:03>
+;;; Last Modified <michael 2025-11-04 00:46:18>
 
 (in-package :bitsailor)
 
@@ -25,6 +25,8 @@
 ;;; Stopping the router main function
 
 (defvar *run* nil)
+
+(defvar *server-start-time* (now))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router main function
@@ -60,8 +62,8 @@
 
     (bt:make-thread
      (lambda ()
-       (ignore-errors
-        (get-all-polars))
+       ;; (ignore-errors
+       ;;  (get-all-polars))
        (ignore-errors
         (csv-to-json-directory))
        (load-polars-directory))
@@ -104,6 +106,9 @@
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)
     (polarcl:load-configuration *server-config*)
+
+    ;; Record server start time
+    (setf *server-start-time* (now))
 
     ;; Prevent function from exiting, this is our toplevel
     (when start-sentinel

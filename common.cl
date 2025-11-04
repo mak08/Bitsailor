@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2025-11-01 10:37:20>
+;;; Last Modified <michael 2025-11-03 20:03:58>
 
 
 (in-package :bitsailor)
@@ -75,7 +75,8 @@
 (defvar *statistics-timer* nil)
 (defvar *last-request* (list))
 (defvar +last-request-lock+ (bordeaux-threads:make-lock "LAST-REQUEST-LOCK"))
-
+(defvar *last-routestats* nil)
+(defvar +last-routestats-lock+ (bordeaux-threads:make-lock "LAST-ROUTESTATS"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Preventing eval injection

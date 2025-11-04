@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-01 16:13:16>
+;;; Last Modified <michael 2025-11-04 21:18:44>
 
 (in-package :bitsailor)
 
@@ -539,7 +539,23 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router status & stats
 
-(defstruct (routerstatus (:constructor routerstatus (requestcount datasource))) requestcount datasource)
+(defstruct (routerstatus (:constructor routerstatus
+                             (server-start
+                              latest-forecast 
+                              fc-cache-size 
+                              requestcount
+                              datasource
+                              max_iso_points
+                              twa_steps
+                              last_routestats)))
+  server-start
+  latest-forecast
+  fc-cache-size
+  requestcount
+  datasource
+  max_iso_points
+  twa_steps
+  last_routestats)
 
 (defun |getStatistics| (handler request response)
   (let ((datasource
@@ -552,8 +568,14 @@
              cl-weather:*noaa-gfs-path*))))
     (with-output-to-string (s)
       (json s
-            (routerstatus (length *last-request*)
-                          datasource)))))
+            (routerstatus *server-start-time*
+                          cl-weather::*latest-forecast*
+                          (hash-table-size cl-weather::*forecast-ht*)
+                          (length *last-request*)
+                          datasource
+                          *max-iso-points*
+                          *twa-steps*
+                          *last-routestats*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

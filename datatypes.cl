@@ -1,12 +1,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-01 16:13:46>
+;;; Last Modified <michael 2025-11-04 23:11:08>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; A routing stores the start and destination of the route
 ;;; and other routing parameters.
+
+(define-condition request-error (error)
+  ((request :initarg :request :reader request)
+   (message :initarg :message :reader message))
+  (:report
+   (lambda (c s)
+     (format s "~a" (message c)))))
+
 
 (defstruct race-info data)
 (defstruct (race-info-vr (:include race-info)) (mode "vr"))

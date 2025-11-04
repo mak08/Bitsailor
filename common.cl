@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2025-11-03 20:03:58>
+;;; Last Modified <michael 2025-11-04 22:52:25>
 
 
 (in-package :bitsailor)
@@ -24,7 +24,7 @@
 ;;; Parameters and configuration
 
 (defparameter *disable-nmea*  nil)
-(defparameter *max-angle* 110)
+(defparameter *max-angle* 120)
 (defparameter *max-iso-points* 1500)
 (defparameter *max-route-hours* (* 24 12))
 (defparameter *valid-vmg-angles* t)

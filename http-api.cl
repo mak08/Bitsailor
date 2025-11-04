@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-04 21:18:44>
+;;; Last Modified <michael 2025-11-04 23:21:19>
 
 (in-package :bitsailor)
 
@@ -198,7 +198,6 @@
     (vector-push-extend 0d0 buffer)
     (vector-push-extend 0d0 buffer)
     buffer))
-    
 
 (defun |getRoute| (handler request response &key
                                               (|raceId| nil)
@@ -217,43 +216,50 @@
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
   (handler-bind
-      ((error (lambda (e)
-                    (log2:error "~a" e)
-                    (sb-debug:print-backtrace)
-                    (setf (status-code response) 500)
-                    (setf (status-text response) (format nil "~a" e))
-                    (return-from |getRoute| (format nil "~a" e)))))
+      ((request-error
+         (lambda (c)
+           (log2:warning "~a" c)
+           (setf (status-code response) 400)
+           (setf (status-text response) (message c))
+           (return-from |getRoute| (format nil "~a" (message c)))))
+       (error
+         (lambda (e)
+           (log2:error "~a" e)
+           (sb-debug:print-backtrace)
+           (setf (status-code response) 500)
+           (setf (status-text response) (format nil "~a" e))
+           (return-from |getRoute| (format nil "~a" e)))))
+
     (let* ((*read-default-float-format* 'double-float)
-             (user-id
-               (http-authenticated-user handler request))
-             (cycle (if cycle-supplied-p
-                        (make-cycle :timestamp (parse-datetime |cycleTS|))
-                        (available-cycle (now))))
-             (routing
-               (get-routing-presets :race-id |raceId|
-                                    :polars-id (decode-uri-component |polarsId|)
-                                    :options (cl-utilities:split-sequence #\, |options|)
-                                    :tack |tack|
-                                    :sail |sail|
-                                    :resolution |resolution|
-                                    :starttime |startTime|
-                                    :cycle cycle
-                                    :stepmax (if duration-supplied-p
-                                                 (read-arg |duration|)
-                                                 |duration|)
-                                    :slat (read-arg |slat| 'double-float)
-                                    :slon (read-arg |slon| 'double-float)
-                                    :dlat (read-arg |dlat| 'double-float)
-                                    :dlon (read-arg |dlon| 'double-float)))
-             (routeinfo
-               (get-route routing)))
-        (log2:info "User:~a Status ~a ~a"
-                   user-id
+           (cycle (if cycle-supplied-p
+                      (make-cycle :timestamp (parse-datetime |cycleTS|))
+                      (available-cycle (now))))
+           (routing
+             (get-routing-presets :race-id |raceId|
+                                  :polars-id (decode-uri-component |polarsId|)
+                                  :options (cl-utilities:split-sequence #\, |options|)
+                                  :tack |tack|
+                                  :sail |sail|
+                                  :resolution |resolution|
+                                  :starttime |startTime|
+                                  :cycle cycle
+                                  :stepmax (if duration-supplied-p
+                                               (read-arg |duration|)
+                                               |duration|)
+                                  :slat (read-arg |slat| 'double-float)
+                                  :slon (read-arg |slon| 'double-float)
+                                  :dlat (read-arg |dlat| 'double-float)
+                                  :dlon (read-arg |dlon| 'double-float))))
+      (when (cl-map:point-on-land-p (routing-start routing))
+        (error 'request-error :message "Start point is on land"))
+      (let ((routeinfo
+              (get-route routing)))
+        (log2:info "Status ~a ~a"
                    (routeinfo-status routeinfo)
                    (routeinfo-stats routeinfo))
         (values
          (with-output-to-string (s)
-           (json s routeinfo))))))
+           (json s routeinfo)))))))
 
 (defun get-request-app (request)
   (let ((query-pairs (parameters request)))

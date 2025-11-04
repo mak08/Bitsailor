@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-04 00:46:18>
+;;; Last Modified <michael 2025-11-04 23:07:08>
 
 (in-package :bitsailor)
 
@@ -168,99 +168,6 @@
 (defun request-timestamp ()
   (let* ((r 641356040007290000))
     (+ r (* 10000 (timestamp-to-unix (now))))))
-
-(defun get-leg-descriptions ()
-  (let* ((response
-          (device-authentication-request))
-         (body (parse-json (curl::http-response-body response)))
-         (token (joref body "authToken"))
-         (user-id (joref body "userId"))
-         (d (request-timestamp)))
-    (let* ((response
-             (event-request :|authToken| token
-                            :|playerId| user-id
-                            :|requestId|  (format nil "~a_1" d)
-                            :|eventKey| "Leg_GetList"))
-           (leglist (joref
-                     (joref (parse-json (curl::http-response-body response))
-                            "scriptData")
-                     "res"))
-           (legids (loop
-                     :for legdef :across leglist
-                     :collect (list (joref legdef "raceId")
-                                    (joref legdef "legNum")
-                                    (joref legdef "raceName")))))
-      (loop
-        :for (race-id leg-num &rest _) :in legids
-        :for k :from 2
-        :collect (curl::http-response-body
-                  (event-request :|authToken| token
-                                 :|playerId| user-id
-                                 :|requestId|  (format nil "~a_~a" d k)
-                                 :|eventKey| "Leg_GetInfo"
-                                 :|race_id| race-id
-                                 :|leg_num| leg-num))))))
-
-(defun get-all-polars (&key (directory *polars-dir*) (min-id 1) (max-id 21))
-  (let* ((response
-           (device-authentication-request))
-         (body (parse-json (curl::http-response-body response)))
-         (token (joref body "authToken"))
-         (user-id (joref body "userId")))
-    (loop
-      :for id :from min-id :to max-id
-      :for k :from 2
-      :do (let* ((response
-                   (event-request :|authToken| token
-                                  :|playerId| user-id
-                                  :|requestId|  (format nil "~a_1" k)
-                                  :|eventKey| "Meta_GetPolar"
-                                  :|polar_id| id))
-                 (status (curl:http-response-status response)))
-            (handler-case
-                (if (eql (curl:http-status-code status) 200)
-                    (let* ((body
-                             (parse-json (curl:http-response-body response)))
-                           (label
-                             (joref (joref (joref body "scriptData") "polar") "label"))
-                           (pos
-                             (position #\/ label))
-                           (name
-                             (subseq label (if pos (1+ pos)  0)))
-                           (path (make-pathname :name (format nil"~a" id)
-                                                :directory (pathname-directory directory)
-                                                :type "json")))
-                      (ensure-directories-exist path)
-                      (log2:info "Saving ~a~%" path)
-                      (with-open-file (f path
-                                         :direction :output
-                                         :if-does-not-exist :create
-                                         :if-exists :supersede)
-                        (json f body)))
-                    (format t "~a~%" status))
-              (error (e)
-                (log2:error "~a ~a" e status)))))))
-
-(defun device-authentication-request (&key (|deviceId| "3d87c3bb-8bf9-4d79-a0b3-4ed178287a35") (|device| "Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt"))
-  (let ((url
-          (format nil "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/DeviceAuthenticationRequest" |device|))
-        (body
-          (format nil "{\"@class\":\"DeviceAuthenticationRequest\",\"deviceId\":\"~a\",\"deviceOS\":\"WEBGL\"}" |deviceId|)))
-    (curl:http url :method :post :body body)))
-
-(defun authentication-request (&key (|@class| "AuthenticationRequest") |password| |userName|)
-  (let ((body
-          (format nil "{~{\"~a\": \"~a\"~^, ~}}" (list :|@class| |@class| :|password| |password| :|userName| |userName|))))
-    (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/AuthenticationRequest"
-               :method :post
-               :body body)))
-
-(defun event-request (&rest key-pairs &key (|@class| "LogEventRequest") |authToken| |playerId| |requestId| |eventKey| &allow-other-keys)
-  (let ((body
-          (format nil "{~{\"~a\": \"~a\"~^, ~}}" (list* :|@class| |@class| :|authToken| |authToken| :|playerId| |playerId| :|requestId| |requestId| :|eventKey| |eventKey| key-pairs))))
-    (curl:http "https://prod.vro.sparks.virtualregatta.com/rs/device/Xcl3WbCUmfcu5pWCktUoC0slGT4xkbEt/LogEventRequest"
-               :method :post
-               :body body)))
 
 
 (defun update-statistics ()

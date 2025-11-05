@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-04 23:21:19>
+;;; Last Modified <michael 2025-11-05 20:04:00>
 
 (in-package :bitsailor)
 
@@ -252,6 +252,8 @@
                                   :dlon (read-arg |dlon| 'double-float))))
       (when (cl-map:point-on-land-p (routing-start routing))
         (error 'request-error :message "Start point is on land"))
+      (when (equalp (routing-start routing) (routing-dest routing))
+        (error 'request-error :message "Start and destination are the same"))
       (let ((routeinfo
               (get-route routing)))
         (log2:info "Status ~a ~a"
@@ -576,12 +578,17 @@
       (json s
             (routerstatus *server-start-time*
                           cl-weather::*latest-forecast*
-                          (hash-table-size cl-weather::*forecast-ht*)
+                          (number-of-entries cl-weather::*forecast-ht*)
                           (length *last-request*)
                           datasource
                           *max-iso-points*
                           *twa-steps*
                           *last-routestats*)))))
+
+(defun number-of-entries (hashtable)
+  (let ((count 0))
+    (maphash (lambda (k v) (declare (ignore k v)) (incf count)) hashtable)
+    count))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions

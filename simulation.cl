@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-04 00:50:02>
+;;; Last Modified <michael 2025-11-05 19:58:47>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -56,8 +56,7 @@
 
 (declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
-  (or (not *valid-vmg-angles*)
-      (and (> twa 0) (<= up twa down))))
+  (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
 (defun expand-routepoint (routing routepoint left right step-size step-time params polars delta-angle)
@@ -522,8 +521,8 @@
     (let ((routestats
             (make-routestats :start (trackpoint-time (first track))
                              :duration (encode-duration
-                                        (timestamp-difference (trackpoint-time (car (last track)))
-                                                              (trackpoint-time (first track))))
+                                       (timestamp-difference (trackpoint-time (car (last track)))
+                                                             (trackpoint-time (first track))))
                              :sails sails
                              :min-wind min-wind
                              :max-wind max-wind

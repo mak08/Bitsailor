@@ -30,7 +30,7 @@ let gribCache = null;
 
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
-    "resolution": "1p00",
+    "resolution": "0p25",
     "duration": 345600,
     "polarsId": undefined
 };
@@ -762,7 +762,7 @@ function getRoute() {
             restoreCursor();
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
-            alert(`Request ${response.responseURL} returned ${response.status} ${response.statusText}`);
+            alert(`Request\n${response.responseURL}\n\nreturned\n\n ${response.status} - ${response.statusText}`);
         });
 }
 

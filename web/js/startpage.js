@@ -52,15 +52,16 @@ import * as Util from './Util.js';
         if (tbLastStats) {
             const rs = routerstatus.last_routestats;
             if (rs && Number.isFinite(rs.calctime) && Number.isFinite(rs.steps) && Number.isFinite(rs.points)) {
-                const elapsed = `${rs.calctime.toFixed(1)}s`;
+                const duration = rs.duration;
+                const elapsed = `${rs.calctime.toFixed(2)}s`;
                 const points  = Number(rs.points).toFixed(0);
                 const steps   = Number(rs.steps);
-                const pps     = rs.calctime > 0 ? (points / rs.calctime).toFixed(1) : '∞';
+                const pps     = rs.calctime > 0 ? (points / rs.calctime).toFixed() : '∞';
                 const sPerI   = steps > 0 ? (rs.calctime / steps).toFixed(2) : '—';
-                const pPerI   = steps > 0 ? Math.round(points / steps).toLocaleString() : '—';
+                const pPerI   = steps > 0 ? Math.round(points / steps).toFixed() : '—';
 
                 tbLastStats.textContent =
-                    `Elapsed ${elapsed} | Positions ${points.toLocaleString()} | ` +
+                    `Duration ${duration} | Elapsed ${elapsed} | Positions ${points.toLocaleString()} | ` +
                     `Isochrones ${steps} | p/s=${pps} | s/i=${sPerI} | p/i=${pPerI}`;
             } else {
                 tbLastStats.textContent = '-';

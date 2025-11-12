@@ -414,7 +414,7 @@ function onCopyPosition(event) {
 }
 
 function onSelectIsochrone(isochrone) {
-    currentCycle = isochrone.time;
+    currentCycle = isochrone.cycle;
     var offset = isochrone.offset;
     document.getElementById("ir_index").value = offset;
     updateIsochrones();
@@ -515,7 +515,7 @@ function onMarkerClicked(marker) {
     var baseTime;
 
     if (isochrone) {
-        baseTime = isochrone.time;
+        baseTime = isochrone.cycle;
     } else {
         baseTime = availableForecastCycle();
     }
@@ -947,21 +947,21 @@ function createIsochrones(isochrones) {
                 weight: style.weight,
                 opacity: 0.8
             }).addTo(map);
-            addInfo(isoLayer, isoData.time, isoData.offset);
+            addInfo(isoLayer, isoData.cycle, isoData.offset);
             routeIsochrones.push(isoLayer);
         }
     }
 }
 
 function getIsochroneTime(isochrone) {
-    var basetime = new Date(isochrone.time);
+    var basetime = new Date(isochrone.cycle);
     var offset = isochrone.offset;
     return new Date(basetime - 0 + offset * 3600 * 1000);
 }
 
 function getIsoStyle(isochrone, selectedOffset, availableCycle) {
     var c = availableCycle;
-    var d = new Date(isochrone.time);
+    var d = new Date(isochrone.cycle);
     var i = getIsochroneTime(isochrone);
     var h = i.getUTCHours();
     var weight = (h % 6) ? 1 : 3;
@@ -1126,8 +1126,8 @@ function drawPath(bPath, data, color) {
     }
 }
 
-function addInfo(isochrone, time, offset) {
-    isochrone.time = time;
+function addInfo(isochrone, cycle, offset) {
+    isochrone.cycle = cycle;
     isochrone.offset = offset;
     isochrone.on('click', function () {
         var iso = isochrone;
@@ -1136,7 +1136,7 @@ function addInfo(isochrone, time, offset) {
 }
 
 function isochroneTime(isochrone) {
-    var millis = new Date(isochrone.time).getTime();
+    var millis = new Date(isochrone.cycle).getTime();
     var date = new Date(millis + isochrone.offset * 3600 * 1000);
     return date;
 }
@@ -1274,7 +1274,7 @@ function formatLatLngPosition(latlng) {
 }
 
 function formatPointPosition(point) {
-    return Util.formatPosition(point.lat, point.lng);
+    return Util.formatPosition(point.position.lat, point.position.lng);
 }
 
 function formatSails(data) {

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-05 19:58:47>
+;;; Last Modified <michael 2025-11-12 21:41:05>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -59,7 +59,7 @@
   (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint left right step-size step-time params polars delta-angle)
+(defun expand-routepoint (routing routepoint left right step-size step-time fc-0 fc-1 fraction polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -73,7 +73,7 @@
             (lng (latlng-lng (routepoint-position routepoint))))
        (multiple-value-bind
              (wind-dir wind-speed)
-           (interpolate lat lng params)
+           (cl-weather::interpolate-fw lat lng fc-0 fc-1 fraction)
          (setf wind-speed (max (routing-minwind routing) wind-speed))
          (multiple-value-bind (up-vmg down-vmg)
              (best-vmg polars wind-speed)
@@ -181,22 +181,7 @@
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (params (interpolation-parameters start-time
-                                            :source (routing-grib-source routing)
-                                            :method (routing-interpolation routing)
-                                            :merge-start (routing-merge-start routing)
-                                            :merge-duration (routing-merge-window routing)
-                                            :cycle cycle
-                                            :resolution resolution)
-                  (interpolation-parameters step-time
-                                            :source (routing-grib-source routing)
-                                            :method (routing-interpolation routing)
-                                            :merge-start (routing-merge-start routing)
-                                            :merge-duration (routing-merge-window routing)
-                                            :cycle cycle
-                                            :resolution resolution))
-          (base-time (iparams-effective-cycle params)
-                     (iparams-effective-cycle params))
+          (params-fw (get-params start-time) (get-params step-time))
           (step-size (funcall stepper)
                      (funcall stepper))
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
@@ -205,11 +190,14 @@
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (interpolate (latlng-lat start-pos) (latlng-lng start-pos) params)
-             (let ((sail (position (routing-sail routing) *sailnames* :test #'string=)))
-               (make-array 1 :initial-contents
-                           (list
-                            (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil sail wind-dir wind-speed))))))
+               (interpolate-fw (latlng-lat start-pos)
+                               (latlng-lng start-pos)
+                               (params-fw-fc0 params-fw)
+                               (params-fw-fc1 params-fw)
+                               (params-fw-fraction params-fw))
+             (make-array 1 :initial-contents
+                         (list
+                          (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil "JIB" wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
@@ -246,7 +234,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (let ((new-point-num
-                         (expand-routepoint routing rp left right step-size step-time params polars delta-angle)))
+                         (expand-routepoint routing rp left right step-size step-time (params-fw-fc0 params-fw) (params-fw-fc1 params-fw) (params-fw-fraction params-fw) polars delta-angle)))
                    (declare (fixnum new-point-num))
                    (incf pointnum new-point-num)))
            isochrone)
@@ -271,8 +259,13 @@
            ;; Collect hourly isochrones
            (when (zerop (timestamp-minute step-time))
              (let* ((iso (make-isochrone :center start-pos
-                                         :time base-time
-                                         :offset (truncate (timestamp-difference step-time base-time) 3600)
+                                         :cycle (cl-weather::uv-cycle
+                                                (params-fw-fc1 params-fw))
+                                         :offset (truncate
+                                                  (timestamp-difference step-time
+                                                                        (cl-weather::uv-cycle
+                                                                         (params-fw-fc1 params-fw)))
+                                                  3600)
                                          :path (extract-points isochrone))))
                (push iso isochrones)))))
         (when reached
@@ -343,17 +336,16 @@
                 (t
                  (let ((delta-t
                          (- (timestamp-to-unix step-time) start)))
-                   (cond ((and (<= step-max 21600) ;; 6*3600s
-                               (< delta-t (+ hour-fill (* 120 60))))
+                   (cond ((< delta-t (+ hour-fill-2 (* 6 600)))
                           120)
-                         ((< delta-t (+ hour-fill-2 (* 36 600)))
+                         ((< delta-t (+ hour-fill-2 (* 72 600)))
                           600)
                          ((< delta-t (+ hour-fill-2 (* 144 600)))
                           900)
                          ((< delta-t (+ hour-fill-2 (* 288 600)))
                           1800)
                          (t
-                          3600)))))))
+                          1800)))))))
         (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
         (values step-size
                 step-time)))))
@@ -400,7 +392,7 @@
   (loop
      :for i :in (construct-isochrones isochrones)
      :collect (make-isochrone :center (isochrone-center i)
-                              :time (isochrone-time i)
+                              :cycle (isochrone-cycle i)
                               :offset (isochrone-offset i)
                               :path (loop
                                        :for r :in (isochrone-path i)
@@ -421,7 +413,7 @@
         (isochrones nil))
        ((>= index (1- (length path)))
         (cons (make-isochrone :center (isochrone-center isochrone)
-                              :time (isochrone-time isochrone)
+                              :cycle (isochrone-cycle isochrone)
                               :offset (isochrone-offset isochrone)
                               :path current-path)
               isochrones))
@@ -432,7 +424,7 @@
                (or (< angle 1d0) (> angle 355d0))))
          (push point current-path))
         (t
-         (push (make-isochrone :time (isochrone-time isochrone)
+         (push (make-isochrone :cycle (isochrone-cycle isochrone)
                                :offset (isochrone-offset isochrone)
                                :path current-path)
                isochrones)
@@ -546,83 +538,6 @@
                        :hours hours
                        :minutes minutes
                        :seconds rest-seconds)))))
-
-(defun get-twa-path (routing &key cycle time lat-a lng-a lat lng
-                               (total-time +24h+)
-                               (step-num (truncate total-time +10min+)))
-  (let* ((time (or time (now)))
-         (time-increment +10min+)
-         (first-increment
-          (let* ((utime (timestamp-to-unix time)))
-            (- (* 600 (truncate (+ utime 600) 600))
-               utime)))
-         (startpos (make-latlng :latr% (rad lat-a) :lngr% (rad lng-a)))
-         (targetpos (make-latlng :latr% (rad lat) :lngr% (rad lng)))
-         (heading (course-angle startpos targetpos))
-         (curpos-twa (copy-latlng startpos))
-         (curpos-hdg (copy-latlng startpos))
-         (wind-dir (interpolate (latlng-lat startpos)
-                                (latlng-lng startpos)
-                                (interpolation-parameters time
-                                                          :gfs-mode (routing-gfs-mode routing)
-                                                          :source (routing-grib-source routing)
-                                                          :method (routing-interpolation routing)
-                                                          :merge-start (routing-merge-start routing)
-                                                          :merge-duration (routing-merge-window routing)
-                                                          :resolution (routing-resolution routing)
-                                                          :cycle cycle)))
-         (twa (coerce (round (heading-twa wind-dir heading)) 'double-float))
-         (twa-path nil)
-         (hdg-path nil))
-    (dotimes (k
-              step-num
-              (make-twainfo :twa twa
-                            :heading (normalize-heading heading)
-                            :twapath (reverse (push (list time (copy-latlng curpos-twa)) twa-path))
-                            :hdgpath (reverse (push (list time (copy-latlng curpos-hdg)) hdg-path))))
-      ;; Save previous position
-      (push (list time (copy-latlng curpos-twa)) twa-path)
-      (push (list time (copy-latlng curpos-hdg)) hdg-path)
-      ;; Create new timestamp, Increment time
-      ;; Determine next position - TWA
-      (multiple-value-bind (wind-dir wind-speed)
-          (interpolate (latlng-lat curpos-twa)
-                       (latlng-lng curpos-twa)
-                       (interpolation-parameters time
-                                                 :gfs-mode (routing-gfs-mode routing)
-                                                 :source (routing-grib-source routing)
-                                                 :method (routing-interpolation routing)
-                                                 :merge-start (routing-merge-start routing)
-                                                 :merge-duration (routing-merge-window routing)
-                                                 :resolution (routing-resolution routing)
-                                                 :cycle cycle))
-        (declare (double-float wind-dir wind-speed))
-        (multiple-value-bind (speed)
-            (twa-boatspeed (routing-polars routing) wind-speed twa)
-          (declare (double-float speed))
-          (let ((twa-heading (twa-heading wind-dir twa)))
-            (setf curpos-twa
-                  (add-distance-exact curpos-twa (* speed  (if (= k 0) first-increment time-increment)) twa-heading)))))
-      ;; Determine next position - HDG
-      (multiple-value-bind (wind-dir wind-speed)
-          (interpolate (latlng-lat curpos-hdg)
-                       (latlng-lng curpos-hdg)
-                       (interpolation-parameters time
-                                                 :gfs-mode (routing-gfs-mode routing)
-                                                 :source (routing-grib-source routing)
-                                                 :method (routing-interpolation routing)
-                                                 :merge-start (routing-merge-start routing)
-                                                 :merge-duration (routing-merge-window routing)
-                                                 :resolution (routing-resolution routing)
-                                                 :cycle cycle))
-        (declare (double-float wind-dir wind-speed))
-        (let ((heading-twa (heading-twa wind-dir heading)))
-          (multiple-value-bind (speed)
-              (twa-boatspeed polars wind-speed heading-twa)
-            (setf curpos-hdg
-                  (add-distance-exact curpos-hdg (* speed  (if (= k 0) first-increment time-increment)) heading)))))
-      (setf time (adjust-timestamp time (:offset :sec (if (= k 0) first-increment time-increment)))))))
-
 
 (defvar *boat-speed-ht* (make-hash-table :test #'equal))
 

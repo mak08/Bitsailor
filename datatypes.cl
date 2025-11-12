@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-04 23:11:08>
+;;; Last Modified <michael 2025-11-12 21:40:06>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -93,7 +93,7 @@
             (length (routeinfo-isochrones thing)))))
 
 
-(defstruct isochrone center time offset path)
+(defstruct isochrone center cycle offset path)
 
 (defstruct twainfo twa heading twapath hdgpath)
 

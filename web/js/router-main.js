@@ -1196,7 +1196,7 @@ async function getWind(cycle, time) {
 
 async function updateWindInfo(event, getVMG) {
     let label = document.getElementById('lb_position');
-    label.textContent = '[ ' + formatLatLngPosition(event.latlng) + ' ]';
+    label.textContent = `[${formatLatLngPosition(event.latlng)}] - [${event.latlng.lat.toFixed(3)},${event.latlng.lng.toFixed(3)}]`;
     label.__pos = event.latlng;
 
     if (gribCache) {

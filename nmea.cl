@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2021
-;;; Last Modified <michael 2025-10-28 23:02:55>
+;;; Last Modified <michael 2025-11-08 14:57:00>
 
 (in-package :router)
 
@@ -22,7 +22,7 @@
                    :collect line)))
           (loop
             :for m :in messages 
-            :when (search "$GPRMC" m)
+            :when (search "$GPRMC" m :from-end t)
               :do (progn
                     (log2:info "Closing socket ~a" socket)
                     (mbedtls:close-socket socket)

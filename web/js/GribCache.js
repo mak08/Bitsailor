@@ -153,40 +153,25 @@ export default class GribCache {
         let grib0 = await this.getGribCached(cycle, resolution, offset);
         let grib1 = await this.getGribCached(cycle, resolution, offset + 3);
         if (grib0 && grib1) {
-            // Determine grid step from GRIB metadata
             const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
             const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
-            const stepLon = 360 / nLon;           // degrees per column
-            const stepLat = 180 / (nLat - 1);     // degrees per row (GFS includes both poles)
-
-            // Normalize lon to [0, 360)
+            const stepLon = 360 / nLon;
+            const stepLat = 180 / (nLat - 1);
             const wLon = wrapLonDeg(lon);
-
-            // Quantize to surrounding grid nodes using the true grid step
             const lat0 = floor(lat, stepLat), lat1 = ceil(lat, stepLat);
             let   lon0 = floor(wLon, stepLon), lon1 = lon0 + stepLon;
             if (lon1 >= 360) lon1 -= 360;
-
-            // Fractions in cell coordinates
             const lambdaU = (lat - lat0) / stepLat;
             const lambdaV = (wLon - lon0) / stepLon;
-
             const timeFraction = ((curTime - baseTime) / 3600000 - offset) / 3;
-
-            // Temporal interpolation at the four corners, then spatial bilinear
-            let w_t = interpolateTemporal(grib0, grib1, offset, offset+3, timeFraction, lat0, lon0, lat1, lon1)
+            let w_t = interpolateTemporal(grib0, grib1, offset, offset+3, timeFraction, lat0, lon0, lat1, lon1);
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
-            let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
-            return {
-                "direction": direction,
-                "speed": speed
-            }
+            // Exact magnitude from bilinear u,v (not bilinear of corner magnitudes)
+            let speed = abs(w_s.u, w_s.v);
+            return { "direction": direction, "speed": speed };
         } else {
-            return {
-                "direction": 315.0,
-                "speed": 11.5
-            }
+            return { "direction": 315.0, "speed": 11.5 };
         }
     }
 
@@ -196,58 +181,36 @@ export default class GribCache {
         let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
         let baseTime0 = new Date(baseTime1 - (6 *  3600000));
         let offset0 = floor((curTime - baseTime0) / 3600000, 3);
-        
         if (offset1 <= 9) {
-            // use previous forecast only
             baseTime1 = baseTime0;
             offset1 = offset0 + 3;
         } else if (offset1 == 12) {
             // merge with previous
         } else {
-            // use current forecast only
             baseTime0 = baseTime1;
             offset0 = offset1 - 3;
         }
-
-        // console.log('____________________________');
-        // console.log(`Time : ${time.toISOString()}`);
-        // console.log(`Cycle: ${cycle.toISOString()}`);
-        // console.log(`baseTime0: ${baseTime0.toISOString()} + ${offset0}`);
-        // console.log(`baseTime1: ${baseTime1.toISOString()} + ${offset1}`);
-
         let grib0 = await this.getGribCached(baseTime0, resolution, offset0);
         let grib1 = await this.getGribCached(baseTime1, resolution, offset1);
         if (grib0 && grib1) {
-            // Determine grid step from GRIB metadata
             const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
             const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
             const stepLon = 360 / nLon;
             const stepLat = 180 / (nLat - 1);
-
             const wLon = wrapLonDeg(lon);
-
             const lat0 = floor(lat, stepLat), lat1 = ceil(lat, stepLat);
             let   lon0 = floor(wLon, stepLon), lon1 = lon0 + stepLon;
             if (lon1 >= 360) lon1 -= 360;
-
             const lambdaU = (lat - lat0) / stepLat;
             const lambdaV = (wLon - lon0) / stepLon;
-
             const timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
-
-            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1)
+            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1);
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
-            let speed = bilinear(lambdaU, lambdaV, w_t.w00.s, w_t.w10.s, w_t.w01.s, w_t.w11.s);
-            return {
-                "direction": direction,
-                "speed": speed
-            }
+            let speed = abs(w_s.u, w_s.v);
+            return { "direction": direction, "speed": speed };
         } else {
-            return {
-                "direction": 315.0,
-                "speed": 11.5
-            }
+            return { "direction": 315.0, "speed": 11.5 };
         }
     }
 

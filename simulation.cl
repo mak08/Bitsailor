@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-16 22:31:00>
+;;; Last Modified <michael 2025-11-17 00:57:53>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -14,7 +14,7 @@
 
 (defparameter *sailnames* #("Jib" "Spi" "Stay" "LJ" "C0" "HG" "LG"))
 
-(declaim (notinline twa-boatspeed))
+(declaim (inline twa-boatspeed))
 (defun-t twa-boatspeed double-float ((polars cpolars) (wind-speed double-float) (twa double-float))
   (destructuring-bind (speed sail)
       (get-max-speed polars (abs twa) wind-speed)

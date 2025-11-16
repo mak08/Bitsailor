@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-12 21:41:05>
+;;; Last Modified <michael 2025-11-16 22:31:00>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -252,7 +252,8 @@
            (setf error t))
           (t
            (setf reached (reached candidate start-pos dest-heading distance))
-           (setf isochrone candidate)
+           (unless reached
+             (setf isochrone candidate))
 
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
@@ -270,6 +271,40 @@
                (push iso isochrones)))))
         (when reached
           (log2:trace "Reached destination at ~a" step-time))))))
+
+
+(defun get-route-multi (routing)
+  (let* ((start (routing-start routing))
+         (dest (routing-dest routing))
+         (result (get-route routing))
+         (success (string= (routeinfo-status result) "reached"))
+         (point (car (last (routeinfo-best result))))
+         (point-pos (trackpoint-position point)))
+    (format t "Result:       ~a~%" success)
+    (format t "Start:        ~a~%" (format-latlng nil start))
+    (format t "Dest:         ~a~%" (format-latlng nil dest))
+    (format t "Course dist:  ~a~%" (course-distance start dest))
+    (format t "Course angle: ~a~%" (course-angle start dest))
+    (format t "Point:        ~a~%" (format-latlng nil point-pos))
+    (format t "Dest dist:    ~a~%" (course-distance point-pos dest))
+    (format t "Dest angle:   ~a~%" (course-angle point-pos dest))
+    (format t "Time to dest: ~a~%" (calculate-time routing point dest))
+    point))
+
+(defun calculate-time (routing trackpoint dest)
+  (let* ((polars (routing-polars routing))
+         (pos (trackpoint-position trackpoint))
+         (twd (trackpoint-twa trackpoint))
+         (tws (trackpoint-tws trackpoint))
+         (hdg (course-angle pos dest))
+         (dist (course-distance pos dest)) 
+         (twa (heading-twa twd hdg))
+         (vmg (multiple-value-list (best-vmg polars tws)))
+         (speed (car (get-max-speed polars twa tws))))
+    (format t "VMG:          ~a~%" vmg)
+    (format t "TWA to dest:  ~a~%" twa)
+    (format t "Dist to dest: ~a~%" dist)
+    (/ dist speed)))
 
 (defun reached (candidate start angle distance)
   (some (lambda (p)

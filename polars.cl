@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-10-19 18:46:12>
+;;; Last Modified <michael 2025-11-16 23:59:44>
 
 (in-package :bitsailor)
 
@@ -270,6 +270,10 @@
           (t
            (error "Unknown polars format")))))
 
+(defun list-polars ()
+  (let ((polar-ids nil))
+    (maphash (lambda (k v) (push k polar-ids)) *polars-id-ht*)
+    polar-ids))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from CSV

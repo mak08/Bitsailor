@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-04 23:07:08>
+;;; Last Modified <michael 2025-11-20 00:13:09>
 
 (in-package :bitsailor)
 
@@ -42,23 +42,30 @@
 ;;; 9 - Configure and start web server from *server-config*   
 
 (defun start-router (&key
-                       (rcfile *rcfile*)
+                       (rcfile (pathname *rcfile*))
                        (start-sentinel t))
   (log2:info "Path: ~a " #.*compile-file-truename*)
-  (let ((local-rcfile
-          (make-pathname :name rcfile))
-        (home-rcfile
-          (merge-pathnames (make-pathname :name rcfile)
-                           (user-homedir-pathname))))
+  (let ((home-rcfile
+          (merge-pathnames (make-pathname :name (pathname-name rcfile) :type (pathname-type rcfile))
+                           (user-homedir-pathname)))
+        (specified-rcfile
+          rcfile)
+        (source-rcfile
+          (merge-pathnames (make-pathname :name (pathname-name rcfile) :type (pathname-type rcfile))
+                           (make-pathname :directory (pathname-directory #.*compile-file-truename*)))))
+    (log2:info "Trying rcfiles: HOME: ~a SPECIFIED: ~a SOURCE: ~a" home-rcfile specified-rcfile source-rcfile)
     (cond
-      ((probe-file local-rcfile)
-       (log2:info "Loading ~a " local-rcfile)        
-       (load local-rcfile :verbose t :print t))
       ((probe-file home-rcfile)
        (log2:info "Loading ~a " home-rcfile)        
        (load home-rcfile :verbose t :print t))
+      ((probe-file specified-rcfile)
+       (log2:info "Loading ~a " specified-rcfile)        
+       (load specified-rcfile :verbose t :print t))
+      ((probe-file source-rcfile)
+       (log2:info "Loading ~a " source-rcfile)        
+       (load source-rcfile :verbose t :print t))
       (t
-       (log2:warning "Found neither ~a nor ~a" local-rcfile home-rcfile)))
+       (log2:warning "Found neither ~a nor ~a nor ~a" home-rcfile specified-rcfile source-rcfile)))
 
     (bt:make-thread
      (lambda ()

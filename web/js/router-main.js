@@ -898,18 +898,16 @@ function displayRouting(data) {
     // Duplicate best-route markers across world copies
     const baseTime = new Date(best[0].time);
     for (var i = 0; i < best.length; i++) {
-        if (i == 0
+        if (i == 0 || i == best.length - 1
             || best[i].penalty
             || best[i].twa != best[i - 1].twa
             || best[i].sail != best[i - 1].sail) {
-
             const icon = ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe"))
                   ? redMarkerIcon : markerIcon;
-
+            
             createBestRouteMarkerAndCopies(best[i], icon, baseTime);
         }
     }
-
     document.getElementById("lb_from").textContent = (data.stats.start);
     document.getElementById("lb_duration").textContent = (data.stats.duration);
     document.getElementById("lb_sails").textContent = (formatSails(data));

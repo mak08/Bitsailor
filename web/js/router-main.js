@@ -150,6 +150,37 @@ function captureRaceSettings(name, value) {
   saveRaces();
 }
 
+// Capture a complete snapshot of current UI/routing settings for the active race
+function captureAllRaceSettings() {
+    if (!currentRaceName) return;
+    const race = races.find(r => r.name === currentRaceName);
+    if (!race) return;
+    const startPos = startMarker ? startMarker.getLatLng() : null;
+    const destPos  = destinationMarker ? destinationMarker.getLatLng() : null;
+    const nmeaHost = document.getElementById('tb_nmeahost')?.value;
+    const nmeaPort = document.getElementById('tb_nmeaport')?.value;
+    const polarsSel = document.getElementById('sel_polars');
+    const polarsId = settings.polarsId || (polarsSel ? polarsSel.value : undefined);
+    const resolution = settings.resolution;
+    const duration = settings.duration; // stored in seconds already
+    const options = Array.isArray(settings.options) ? settings.options.slice() : (settings.options ? JSON.parse(JSON.stringify(settings.options)) : []);
+    // Preserve existing gates if already captured via GPX import
+    const gates = race.settings.gates || undefined;
+
+    race.settings = {
+        start: startPos ? { lat: startPos.lat, lng: startPos.lng } : undefined,
+        dest: destPos ? { lat: destPos.lat, lng: destPos.lng } : undefined,
+        nmeaHost,
+        nmeaPort,
+        polarsId,
+        resolution,
+        duration,
+        options,
+        gates
+    };
+    saveRaces();
+}
+
 function applyRaceSettings(race) {
   if (!race || !race.settings) return;
   const s = race.settings.start; if (s) setRoutePointCore('start', L.latLng(s.lat, s.lng));
@@ -169,7 +200,8 @@ function addRace(name) {
   let r = races.find(x => x.name === name);
   if (!r) { r = { name, settings:{} }; races.push(r); }
   currentRaceName = name;
-  captureRaceSettings();
+    // Capture full snapshot of current settings at creation
+    captureAllRaceSettings();
   saveRaces();
   fillRaceDropdown();
 }

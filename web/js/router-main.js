@@ -1661,22 +1661,21 @@ function importGPXFromString(xmlString) {
         drawGateGroup(pts, color);
     }
 
-    // Compute midpoints for S and F gate groups to auto-place start/destination markers later
-    const midpoint = (arr) => {
-        if (!arr || !arr.length) return null;
-        const refLon = wrapLon180(arr[0].lon);
-        let sumLat = 0, sumLon = 0;
+    // Determine explicit midpoints for S and F gates.
+    // Midpoint waypoints have names ending in "S-Mid" or "F-Mid" respectively.
+    const findExplicitMidpoint = (arr, gateLetter) => {
+        if (!arr) return null;
+        const suffix = gateLetter.toUpperCase() + '-MID';
         for (const p of arr) {
-            sumLat += p.lat;
-            // Normalize each lon near reference then accumulate
-            sumLon += nearestWrapped(refLon, p.lon);
+            const nameUpper = (p.name || '').trim().toUpperCase();
+            if (nameUpper.endsWith(suffix)) {
+                return { lat: p.lat, lon: p.lon };
+            }
         }
-        const lat = sumLat / arr.length;
-        const lon = wrapLon180(sumLon / arr.length);
-        return { lat, lon };
+        return null;
     };
-    const startMidpoint = midpoint(groups.get('S'));
-    const finishMidpoint = midpoint(groups.get('F'));
+    const startMidpoint = findExplicitMidpoint(groups.get('S'), 'S');
+    const finishMidpoint = findExplicitMidpoint(groups.get('F'), 'F');
 
     // After drawing, pan & zoom to show all gates
     fitMapToGates(groups);

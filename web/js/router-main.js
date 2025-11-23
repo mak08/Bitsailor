@@ -19,7 +19,9 @@ let routeIsochrones = [];
 let twaPath = [];
 let hdgPath = [];
 let polarsList = [];
+let races = [];
 
+let currentRaceName = null;
 let curTWA = null;
 let orthodromicLine = null;
 let twaAnchor = null;
@@ -50,12 +52,23 @@ function setupPage() {
     setUp(getVMG);
     getPolarsList();
     setupEventHandlers();
+    setupRaces();
 
     // Ensure ir_index is set up before calling updateMap
     // (setUp assigns ir_index = document.getElementById("ir_index");)
     updateMap(); 
 }
 
+// Hook dropdown
+function setupRaces () {
+  loadRaces();
+  const sel = document.getElementById('sel_race');
+  if (sel) sel.addEventListener('change', () => {
+    currentRaceName = sel.value || null;
+    const r = races.find(x => x.name === currentRaceName);
+    applyRaceSettings(r);
+  });
+}
 
 // Set up UI controls and event handlers
 function setupEventHandlers() {
@@ -93,6 +106,66 @@ function getPolarsList() {
             console.error('Could not load polars list');
         }
     );
+}
+
+function loadRaces() {
+  try { 
+    races = JSON.parse(localStorage.getItem('xx.races') || '[]'); 
+  } catch(e) { 
+    races = []; 
+    console.error('Could not load races from localStorage', e);
+}
+  fillRaceDropdown();
+}
+
+function saveRaces() {
+  try { 
+    localStorage.setItem('xx.races', JSON.stringify(races)); 
+  } catch(e) {
+    console.error('Could not save races to localStorage', e);
+  }
+}
+
+function fillRaceDropdown() {
+  const sel = document.getElementById('sel_race');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">--</option>';
+  races.forEach(r => {
+    const o = document.createElement('option');
+    o.value = r.name; o.textContent = r.name;
+    sel.appendChild(o);
+  });
+  sel.value = currentRaceName || '';
+}
+
+function captureRaceSettings(name, value) {
+  if (!currentRaceName) return;
+  const race = races.find(r => r.name === currentRaceName);
+  if (!race) return;
+  race.settings[name] = value;
+  saveRaces();
+}
+
+function applyRaceSettings(race) {
+  if (!race || !race.settings) return;
+  const s = race.settings.start; if (s) setRoutePointCore('start', L.latLng(s.lat, s.lng));
+  const d = race.settings.dest;  if (d) setRoutePointCore('dest', L.latLng(d.lat, d.lng));
+  if (race.settings.nmeaHost) { const h = document.getElementById('tb_nmeahost'); if (h) h.value = race.settings.nmeaHost; }
+  if (race.settings.nmeaPort) { const p = document.getElementById('tb_nmeaport'); if (p) p.value = race.settings.nmeaPort; }
+  if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
+  if (race.settings.resolution) setResolution(race.settings.resolution);
+  if (race.settings.duration)   setDuration(race.settings.duration / 3600);
+  drawRouteLine();
+}
+
+function addRace(name) {
+  if (!name) return;
+  let r = races.find(x => x.name === name);
+  if (!r) { r = { name, settings:{} }; races.push(r); }
+  currentRaceName = name;
+  captureRaceSettings();
+  saveRaces();
+  fillRaceDropdown();
 }
 
 
@@ -268,6 +341,8 @@ function setUp(getVMG) {
 
     document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
 
+    document.getElementById("tb_nmeaport").addEventListener("change", onSetNMEAPort);
+    document.getElementById("tb_nmeahost").addEventListener("blur", onSetNMEAPort);
     // GPX import button
     const btSetCourse = document.getElementById("bt_setcourse");
     if (btSetCourse) {
@@ -371,6 +446,7 @@ function onMapClick(event) {
     }
 }
 
+
 // Option toggled handler
 function onOptionToggled(event) {
     settings.options = settings.options.filter(e => e !== event.currentTarget.name);
@@ -382,6 +458,12 @@ function onOptionToggled(event) {
 
 function onWindowResize(event) {
     map.invalidateSize();
+}
+
+function onSetNMEAPort(event) {
+    const port = event.currentTarget.value;
+    storeValue('nmeaport', port);
+    captureRaceSettings('nmeaPort', port);
 }
 
 function onDownloadRoute(event) {
@@ -475,20 +557,21 @@ function onSetResolution(event) {
     settings.resolution = resolution;
     storeValue('resolution', resolution);
     redrawWindByOffset(ir_index.value);
+    captureRaceSettings('resolution', resolution);
 }
 
 function onSetPolars(event) {
     let polarsId = event.currentTarget.value;
     settings.polarsId = polarsId; // <-- Update settings
     storeValue('polarsId', polarsId); // (optional: persist selection)
-    // No need to create a new PolarManager instance!
-    // The new analyzer will be loaded as needed via polarManager.getAnalyzer(polarsId)
+    captureRaceSettings('polarsId', polarsId);
 }
 
 function onSetDuration(event) {
     let duration = event.target.value;
     settings.duration = duration * 3600;
     storeValue('duration', duration);
+    captureRaceSettings('duration', duration);
 }
 
 
@@ -809,6 +892,7 @@ function setRoutePointCore(point, latLng) {
     }
     gcGroup.addTo(map);
     courseGCLine = gcGroup;
+    captureRaceSettings(point, latLng);
 }
 
 // Keep the “Start position” input up to date in DMS format
@@ -1425,7 +1509,8 @@ function onImportGPX() {
         if (!file) return;
         try {
             const text = await file.text();
-            importGPXFromString(text);
+            let raceName = importGPXFromString(text);
+            addRace(raceName);
         } catch (err) {
             console.error('Failed to read GPX file', err);
             alert('Failed to read GPX file.');
@@ -1439,6 +1524,7 @@ function importGPXFromString(xmlString) {
     clearCourseOverlays();
 
     let doc;
+    let raceName;
     try {
         const parser = new DOMParser();
         doc = parser.parseFromString(xmlString, 'application/xml');
@@ -1447,6 +1533,7 @@ function importGPXFromString(xmlString) {
             console.error(parserErr.textContent);
             throw new Error('Invalid GPX XML');
         }
+        raceName = doc.getElementsByTagName('metadata')[0]?.getElementsByTagName('name')[0].textContent;
     } catch (err) {
         console.error('Invalid GPX', err);
         alert('Invalid GPX file.');
@@ -1484,6 +1571,8 @@ function importGPXFromString(xmlString) {
 
     // After drawing, pan & zoom so both Start and Finish are visible
     fitMapToStartFinish(groups);
+
+    return raceName;
 }
 
 function extractGateGroupKey(name) {

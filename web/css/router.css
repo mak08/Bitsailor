@@ -279,7 +279,7 @@ input[type=checkbox] {
 }
 .race-selector {
 	grid-row: 3;
-	grid-column: 2/8;
+	grid-column: 2/7;
 }
 
 .course-label {
@@ -288,7 +288,7 @@ input[type=checkbox] {
 }
 .course-bt {
 	grid-row: 4;
-	grid-column: 2/8;
+	grid-column: 2/7;
 }
 
 /* NMEA */

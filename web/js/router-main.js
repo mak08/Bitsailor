@@ -1557,6 +1557,13 @@ function onImportGPX() {
                 if (result.gates) {
                     captureRaceSettings('gates', result.gates);
                 }
+                // Set start/destination markers to gate midpoints (after race added so settings persist)
+                if (result.startMidpoint) {
+                    setRoutePointCore('start', L.latLng(result.startMidpoint.lat, result.startMidpoint.lon));
+                }
+                if (result.finishMidpoint) {
+                    setRoutePointCore('dest', L.latLng(result.finishMidpoint.lat, result.finishMidpoint.lon));
+                }
             }
         } catch (err) {
             console.error('Failed to read GPX file', err);
@@ -1622,10 +1629,27 @@ function importGPXFromString(xmlString) {
         drawGateGroup(pts, color);
     }
 
-    // After drawing, pan & zoom so both Start and Finish are visible
+    // Compute midpoints for S and F gate groups to auto-place start/destination markers later
+    const midpoint = (arr) => {
+        if (!arr || !arr.length) return null;
+        const refLon = wrapLon180(arr[0].lon);
+        let sumLat = 0, sumLon = 0;
+        for (const p of arr) {
+            sumLat += p.lat;
+            // Normalize each lon near reference then accumulate
+            sumLon += nearestWrapped(refLon, p.lon);
+        }
+        const lat = sumLat / arr.length;
+        const lon = wrapLon180(sumLon / arr.length);
+        return { lat, lon };
+    };
+    const startMidpoint = midpoint(groups.get('S'));
+    const finishMidpoint = midpoint(groups.get('F'));
+
+    // After drawing, pan & zoom to show all gates
     fitMapToGates(groups);
 
-    return { raceName, gates };
+    return { raceName, gates, startMidpoint, finishMidpoint };
 }
 
 function extractGateGroupKey(name) {

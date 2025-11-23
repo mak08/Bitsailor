@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-16 23:59:44>
+;;; Last Modified <michael 2025-11-17 21:50:01>
 
 (in-package :bitsailor)
 
@@ -110,6 +110,12 @@
       (T
        (log2:trace "Windpseed ~a exceeds interpolation range 0..~a" windspeed (/ (length vmg) 10d0))
        (values-list (aref vmg (1- (length vmg))))))))
+
+
+(defun vmc (cpolars twa tws course-angle)
+  (destructuring-bind (speed sail)
+      (get-max-speed cpolars twa tws)
+    (* speed (cos (rad (- twa course-angle)))))) 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Implementation

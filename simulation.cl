@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-17 00:57:53>
+;;; Last Modified <michael 2025-11-18 01:29:09>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -253,7 +253,8 @@
           (t
            (setf reached (reached candidate start-pos dest-heading distance))
            (unless reached
-             (setf isochrone candidate))
+             (setf isochrone candidate)
+             )
 
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
 
@@ -288,23 +289,37 @@
     (format t "Point:        ~a~%" (format-latlng nil point-pos))
     (format t "Dest dist:    ~a~%" (course-distance point-pos dest))
     (format t "Dest angle:   ~a~%" (course-angle point-pos dest))
-    (format t "Time to dest: ~a~%" (calculate-time routing point dest))
+    (format t "Time to dest: ~a~%" (calculate-time-to-dest routing point dest))
     point))
 
-(defun calculate-time (routing trackpoint dest)
+(defun calculate-time-to-dest (routing trackpoint dest)
+  ;; Calculate time sailing VMC/VMG, assuming constant TWA & TWD
   (let* ((polars (routing-polars routing))
          (pos (trackpoint-position trackpoint))
-         (twd (trackpoint-twa trackpoint))
+         (twd (trackpoint-twd trackpoint))
          (tws (trackpoint-tws trackpoint))
          (hdg (course-angle pos dest))
          (dist (course-distance pos dest)) 
-         (twa (heading-twa twd hdg))
-         (vmg (multiple-value-list (best-vmg polars tws)))
+         (twa (abs (heading-twa twd hdg)))
          (speed (car (get-max-speed polars twa tws))))
-    (format t "VMG:          ~a~%" vmg)
-    (format t "TWA to dest:  ~a~%" twa)
-    (format t "Dist to dest: ~a~%" dist)
-    (/ dist speed)))
+    (multiple-value-bind (vmg-up vmg-down) (best-vmg polars tws)
+      (format t "VMG up:   ~a~%" vmg-up)
+      (format t "VMG down: ~a~%" vmg-down)
+      (format t "HDG:      ~a~%" hdg)
+      (format t "TWD:      ~a~%" twd)
+      (format t "TWA:      ~a~%" twa)
+      (cond
+        ((<= (vmg-twa vmg-up) twa (vmg-twa vmg-down))
+         (format t "Dest reachable at twa~%")
+         (/ dist speed))
+        (t
+         ;; must sail upwind or downwind at best-vmg
+         ;; calculating dist is the upwind/downwind dist!
+         (let ((dist-vmg (* dist (abs (cos (rad twa))))))
+           (format t "VMG dist: ~a~%" dist-vmg)
+           (if (< twa (vmg-twa vmg-up))
+               (/ dist-vmg (vmg-vmg vmg-up))
+               (/ dist-vmg (vmg-vmg vmg-down)))))))))
 
 (defun reached (candidate start angle distance)
   (some (lambda (p)

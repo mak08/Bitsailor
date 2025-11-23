@@ -85,6 +85,10 @@ function setupEventHandlers() {
             checkbox.addEventListener("click", onOptionToggled);
         }
     });
+
+    // Race removal button
+    const btRemoveRace = document.getElementById('bt_removerace');
+    if (btRemoveRace) btRemoveRace.addEventListener('click', removeRace);
 }
 
 // Get polars list
@@ -155,6 +159,8 @@ function applyRaceSettings(race) {
   if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
   if (race.settings.resolution) setResolution(race.settings.resolution);
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
+    // Restore persisted gates (clear existing overlays first)
+    restoreRaceGates(race);
   drawRouteLine();
 }
 
@@ -166,6 +172,42 @@ function addRace(name) {
   captureRaceSettings();
   saveRaces();
   fillRaceDropdown();
+}
+
+function removeRace() {
+    const idx = races.findIndex(r => r.name === currentRaceName);
+    if (idx === -1) {
+        // No current race or not found: ask to remove ALL
+        if (!races.length) return; // nothing to remove
+        const okAll = window.confirm(`No race selected. Remove ALL (${races.length}) races? This cannot be undone.`);
+        if (!okAll) return;
+        races.length = 0;
+        currentRaceName = null;
+        saveRaces();
+        fillRaceDropdown();
+        clearCourseOverlays();
+        return;
+    }
+    // Confirm removal of the selected race only
+    const raceName = races[idx].name;
+    const ok = window.confirm(`Remove race "${raceName}"? This will delete its stored settings and gates.`);
+    if (!ok) return;
+    races.splice(idx, 1);
+    currentRaceName = null;
+    saveRaces();
+    fillRaceDropdown();
+    clearCourseOverlays();
+}
+
+function restoreRaceGates(race) {
+    clearCourseOverlays();
+    if (!race || !race.settings || !race.settings.gates) return;
+    for (const g of race.settings.gates) {
+        const color = gateColor(g.key);
+        const pts = g.points.map(p => ({ lat: p.lat, lon: p.lon, name: p.name, key: g.key }));
+        drawGateGroup(pts, color);
+    }
+    fitMapToGates(race.settings.gates);
 }
 
 
@@ -1509,8 +1551,13 @@ function onImportGPX() {
         if (!file) return;
         try {
             const text = await file.text();
-            let raceName = importGPXFromString(text);
-            addRace(raceName);
+            const result = importGPXFromString(text);
+            if (result && result.raceName) {
+                addRace(result.raceName);
+                if (result.gates) {
+                    captureRaceSettings('gates', result.gates);
+                }
+            }
         } catch (err) {
             console.error('Failed to read GPX file', err);
             alert('Failed to read GPX file.');
@@ -1563,16 +1610,22 @@ function importGPXFromString(xmlString) {
         groups.set(groupKey, arr);
     }
 
-    // Draw each group with its color
+    // Prepare serialized gates structure before drawing
+    const gates = [];
     for (const [key, pts] of groups.entries()) {
+        gates.push({
+            key,
+            points: pts.map(p => ({ lat: p.lat, lon: p.lon, name: p.name }))
+        });
+        // Draw each group with its color
         const color = gateColor(key);
         drawGateGroup(pts, color);
     }
 
     // After drawing, pan & zoom so both Start and Finish are visible
-    fitMapToStartFinish(groups);
+    fitMapToGates(groups);
 
-    return raceName;
+    return { raceName, gates };
 }
 
 function extractGateGroupKey(name) {
@@ -1608,18 +1661,40 @@ function nearestWrapped(refLon, lon) {
 }
 
 // Fit map to include both Start (S) and Finish (F) groups with minimal longitudinal span
-function fitMapToStartFinish(groups) {
-    const s = groups.get('S');
-    const f = groups.get('F');
-    if (!map || !s || !s.length || !f || !f.length) return;
+function fitMapToGates(groups) {
+    // Accept either a Map(key -> array of point objects) OR an array of gate objects
+    if (!map || !groups) return;
 
-    // Use first start point as reference for longitudinal adjustment
-    const refLon = wrapLon180(s[0].lon);
+    if (Array.isArray(groups)) {
+        // Convert array [{key, points:[...]}, ...] to Map format used originally
+        const m = new Map();
+        for (const g of groups) {
+            if (!g || !g.key || !g.points) continue;
+            // Normalize to objects with lat/lon/name/key like original import
+            const arr = g.points.map(p => ({ lat: p.lat, lon: p.lon, name: p.name, key: g.key }));
+            m.set(g.key, arr);
+        }
+        groups = m;
+    }
 
+    if (!(groups instanceof Map) || groups.size === 0) return;
+
+    // Choose reference group for longitudinal wrapping: prefer 'S', else first available
+    let refGroup = groups.get('S');
+    if (!refGroup || !refGroup.length) {
+        for (const [, arr] of groups.entries()) { if (arr && arr.length) { refGroup = arr; break; } }
+    }
+    if (!refGroup || !refGroup.length) return;
+
+    const refLon = wrapLon180(refGroup[0].lon);
     const pts = [];
-    for (const p of s) pts.push(L.latLng(p.lat, nearestWrapped(refLon, p.lon)));
-    for (const p of f) pts.push(L.latLng(p.lat, nearestWrapped(refLon, p.lon)));
-
+    for (const [, arr] of groups.entries()) {
+        if (!arr || !arr.length) continue;
+        for (const p of arr) {
+            pts.push(L.latLng(p.lat, nearestWrapped(refLon, p.lon)));
+        }
+    }
+    if (!pts.length) return;
     const bounds = L.latLngBounds(pts);
     map.fitBounds(bounds, { padding: [24, 24] });
 }

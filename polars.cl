@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-17 21:50:01>
+;;; Last Modified <michael 2025-11-28 22:33:30>
 
 (in-package :bitsailor)
 
@@ -308,15 +308,29 @@
     (let* ((header (read-line in))
            (tws (mapcar #'read-arg
                         (rest (split-sequence:split-sequence #\; header))))
+           (lines (loop
+                    :for line = (read-line in nil)
+                    :while line
+                    :collect (mapcar #'read-arg
+                                     (split-sequence:split-sequence #\; line))))
+           (have-tws-zero (zerop (first tws)))
+           (have-twa-zero (zerop (first (first lines))))
            (twa '())
            (table '()))
-      (loop for line = (read-line in nil)
-            while line do
-              (let* ((fields (split-sequence:split-sequence #\; line))
-                     (twa-val (read-arg (first fields)))
-                     (speeds (mapcar #'read-arg (rest fields))))
-                (push twa-val twa)
-                (push speeds table)))
+      (unless have-twa-zero
+        (log2:info "Adding TWA=0 for ~a" csv-file)
+        (push (loop :for k :below (length (first lines)) :collect 0d0) lines))
+      (unless have-tws-zero
+        (log2:info "Adding TWS=0 for ~a" csv-file)
+        (push 0d0 tws)
+        (loop :for line :in lines :do (push 0d0 (cdr line))))
+      (loop 
+        :for line :in lines
+        :do
+          (let* ((twa-val (car line))
+                 (speeds (rest line)))
+            (push twa-val twa)
+            (push speeds table)))
       (make-json-object
        :fields (list
                 (make-json-field :name "id" :value (pathname-name csv-file))

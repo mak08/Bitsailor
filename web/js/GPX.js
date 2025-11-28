@@ -92,5 +92,37 @@ function writePoint (stream, routePoint, type='trkpt') {
 }
 
 export {
-    exportRoute
+    exportRoute,
+    exportSchedule
+}
+
+////////////////////////////////////////////////////////////////////////////////
+/// Schedule CSV export (timestamp,TWA,<twa> only, on TWA changes)
+
+function exportSchedule(routeInfo) {
+    const stream = { s: '' };
+    if (!routeInfo || !Array.isArray(routeInfo.best) || routeInfo.best.length === 0) {
+        return stream.s;
+    }
+    let lastTWA = undefined;
+    for (const rp of routeInfo.best) {
+        const curTWA = rp.twa;
+        if (lastTWA === undefined || curTWA !== lastTWA) {
+            let fwTWA = - curTWA;
+            stream.s += formatTimestampCSV(rp.time) + ',TWA,' + fwTWA + '\n';
+            lastTWA = curTWA;
+        }
+    }
+    return stream.s;
+}
+
+function formatTimestampCSV(isoOrDate) {
+    const d = (isoOrDate instanceof Date) ? isoOrDate : new Date(isoOrDate);
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(d.getUTCDate()).padStart(2, '0');
+    const hh = String(d.getUTCHours()).padStart(2, '0');
+    const min = String(d.getUTCMinutes()).padStart(2, '0');
+    const ss = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
 }

@@ -152,7 +152,7 @@ button:active {
 	grid-area: controls;
 	display: grid;
 	grid-template-columns: 100px 40px 40px 40px 40px 40px 40px;
-	grid-template-rows: repeat(20, minmax(25px, 36px));
+	grid-template-rows: repeat(26, minmax(25px, 36px));
 	color: #ededeb;
 	background-color: #464242;
 	align-items: flex-start;
@@ -472,52 +472,35 @@ input[type=checkbox] {
 
 /* Statistics */
 .statistics-label {
-	grid-row: 17;
+	grid-row: 18;
 	grid-column: 1;
 	font-style: italic;
 	font-weight: bold;
 }
 
-/* Download */
-.download-button {
-	grid-row: 17;
-	grid-column: 2/7;
-}
-
 .statistics-from-label {
-	grid-row: 18;
+	grid-row: 19;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-from {
-	grid-row: 18;
+	grid-row: 19;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
 
 .statistics-duration-label {
-	grid-row: 19;
+	grid-row: 20;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-duration {
-	grid-row: 19;
+	grid-row: 20;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
 
-.statistics-sails-label {
-	grid-row: 20;
-	grid-column: 1;
-	align-self: flex-start;
-	overflow: auto;
-}
-.statistics-sails {
-	grid-row: 20;
-	grid-column: 2/7;
-	align-self: flex-start;
-	overflow: auto;
-}
+/* Removed sails summary to reduce clutter */
 
 .statistics-min-wind-label {
 	grid-row: 21;
@@ -552,16 +535,28 @@ input[type=checkbox] {
 	align-self: flex-start;
 }
 
-.statistics-options-label {
-	grid-row: 24;
+/* Download */
+/* Separate row for schedule download */
+.route-label {
+	grid-row: 25; /* Final row label */
 	grid-column: 1;
-	align-self: flex-start;
-}
-.statistics-options {
-	grid-row: 24;
+}.download-button {
+	grid-row: 25; /* Move near end of controls */
 	grid-column: 2/7;
-	align-self: flex-start;
 }
+
+/* Separate row for schedule download */
+.schedule-label {
+	grid-row: 26; /* Final row label */
+	grid-column: 1;
+}
+.download-schedule {
+	grid-row: 26; /* Final row button */
+	grid-column: 2/7;
+}
+
+
+/* Removed options summary to reduce clutter */
 
 
 /* Legend */

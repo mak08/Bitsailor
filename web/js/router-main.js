@@ -412,6 +412,8 @@ function setUp(getVMG) {
     // Connect button events
     document.getElementById("bt_getroute").addEventListener("click",getRoute);
     document.getElementById("bt_downloadroute").addEventListener("click",onDownloadRoute);
+    const btDownloadSchedule = document.getElementById("bt_downloadschedule");
+    if (btDownloadSchedule) btDownloadSchedule.addEventListener("click", onDownloadSchedule);
 
     document.getElementById("bt_nmeaupdate").addEventListener("click", getBoatPosition);
 
@@ -549,6 +551,20 @@ function onDownloadRoute(event) {
         let link = document.createElement("a");
         link.href = URL.createObjectURL(file);
         link.download = `route.${format}`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+    } else {
+        alert('No route information');
+    }
+}
+
+function onDownloadSchedule(event) {
+    if (routeInfo && routeInfo.best) {
+        const content = GPX.exportSchedule(routeInfo);
+        const file = new Blob([content], { type: 'text/csv' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(file);
+        link.download = 'schedule.csv';
         link.click();
         URL.revokeObjectURL(link.href);
     } else {
@@ -1068,12 +1084,10 @@ function displayRouting(data) {
     }
     document.getElementById("lb_from").textContent = (data.stats.start);
     document.getElementById("lb_duration").textContent = (data.stats.duration);
-    document.getElementById("lb_sails").textContent = (formatSails(data));
     document.getElementById("lb_minwind").textContent = (data.stats["min-wind"].toFixed(1) + " - " + data.stats["max-wind"].toFixed(1));
     document.getElementById("lb_mintwa").textContent = (data.stats["min-twa"] + " - " + data.stats["max-twa"]);
     document.getElementById("lb_polars").textContent = (data.polars);
-    document.getElementById("lb_options").textContent = (data.options);
-}
+   }
 
 function setupCanvas() {
     var mapCanvas = document.getElementById('wind-canvas');

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-28 22:33:30>
+;;; Last Modified <michael 2025-12-13 16:33:23>
 
 (in-package :bitsailor)
 
@@ -302,14 +302,20 @@
            (log2:info "~a --> ~a~%" filename-csv filename-json)
            (json json-file (csv-to-json-object filename-csv))))))
 
+(defun read-noncomment-line (stream &optional (eof-error-p t))
+  (loop
+    :for line = (read-line stream eof-error-p)
+    :while (and line (stringp line) (eql (aref line 0) #\#))
+    :finally (return line)))
+                 
 (defun csv-to-json-object (csv-file)
   "Convert a simple CSV polar file to a json-object."
   (with-open-file (in csv-file :direction :input)
-    (let* ((header (read-line in))
+    (let* ((header (read-noncomment-line in))
            (tws (mapcar #'read-arg
                         (rest (split-sequence:split-sequence #\; header))))
            (lines (loop
-                    :for line = (read-line in nil)
+                    :for line = (read-noncomment-line in nil)
                     :while line
                     :collect (mapcar #'read-arg
                                      (split-sequence:split-sequence #\; line))))

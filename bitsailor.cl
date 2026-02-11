@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-11-20 00:13:09>
+;;; Last Modified <michael 2026-01-11 00:41:07>
 
 (in-package :bitsailor)
 
@@ -27,6 +27,13 @@
 (defvar *run* nil)
 
 (defvar *server-start-time* (now))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Race metadata
+(defvar *races-ht* (make-hash-table :test #'equalp))
+
+(defvar +races-ht-lock+
+  (bordeaux-threads:make-lock "races-ht"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router main function
@@ -87,9 +94,7 @@
 
     ;; The GSHHS coastline is abysmally slow
     ;; (ensure-map :filename "/home/michael/Maps/GSHHS/GSHHS_shp/h/GSHHS_h_L1.shp")
-    (if *use-bitmap*
-        (ensure-bitmap)
-        (ensure-map))
+    (if *use-bitmap* (ensure-bitmap) (ensure-map))
 
     ;; Start timers
     (timers:start-timer-loop)
@@ -107,8 +112,8 @@
     ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
     (log2:info "Downloading forecasts and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
-                                    (start-cycle-updates :resolution *resolutions* :max-offset 384))
-                                  :name "GFS-DOWNLOAD")
+                                    (start-cycle-updates))
+                                  :name "CYCLE-DOWNLOADS")
     
     ;; Start web server
     (log2:info "Starting web server ~a" *server-config*)
@@ -138,44 +143,17 @@
         (setf *run* t)
         (sentinel)))))
 
-(defvar *races-ht* (make-hash-table :test #'equalp))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Server settings
 
-(defvar +races-ht-lock+
-  (bordeaux-threads:make-lock "races-ht"))
+(defstruct server-settings datasources)
 
-(defun race-info-is-gfs025 (race-info)
-  (string= (joref (race-info-data race-info) "gfs025") "TRUE"))
+(defun get-server-settings ()
+  (make-server-settings
+   :datasources (cl-weather::datasource-info)))
 
-(defun race-info-resolution (race-info)
-  (if (race-info-is-gfs025 race-info)
-                   "0p25"
-                   "1p00"))
-
-(defun race-info (race-id)
-  (bordeaux-threads:with-lock-held (+races-ht-lock+)
-    (gethash race-id *races-ht*)))
-
-(defsetf race-info set-race-info)
-
-(defun set-race-info (race-id info)
-  (bordeaux-threads:with-lock-held (+races-ht-lock+)
-    (setf (gethash race-id *races-ht*) info)))
-
-(defun map-races (function)
-  (bordeaux-threads:with-lock-held (+races-ht-lock+)
-    (maphash function *races-ht*)))
-
-(defun load-race-definitions (&key (directory *races-dir*))
-  (log2:info "Loading races from URL")
-  (let ((races (get-leg-descriptions)))
-    (bordeaux-threads:with-lock-held (+races-ht-lock+)
-      (clrhash *races-ht*)
-      (store-race-data-vr races))))
-
-(defun request-timestamp ()
-  (let* ((r 641356040007290000))
-    (+ r (* 10000 (timestamp-to-unix (now))))))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;
 
 (defun update-statistics ()
   (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))

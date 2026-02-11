@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2025-09-16 21:25:29>
+;;; Last Modified <michael 2026-01-09 00:35:16>
 
 (in-package :bitsailor)
 
@@ -68,7 +68,7 @@
             :for new-pos = (when p (routepoint-position p))
             :when (and p
                        ;; (meets-all constraints new-pos old-pos)
-                       (check-limits old-pos new-pos limits)
+                       ;; (check-limits old-pos new-pos limits)
                        (notany (lambda (zone) (point-in-poly-p new-pos zone)) zones)  
                        (cond (use-bitmap
                               (not (bm-is-land new-pos)))

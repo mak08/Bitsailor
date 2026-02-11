@@ -3,8 +3,10 @@
 
 `use strict`;
 
+import * as Util from './Util.js';
 import {decodeGRIB2ArrayBuffer} from './JSGrib/JSGrib.js';
 import {colors, ms2bf} from './colors.js'; 
+import { ensureServerSettings, getServerSettings, loadServerSettings } from './ServerSettings.js';
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Aux math functions
@@ -138,11 +140,16 @@ export default class GribCache {
     #curOffset = undefined;
     #curTime = undefined;
     #curRes = undefined; 
+    // Server settings are handled by shared ServerSettings module
 
     constructor (canvas, bounds, resolution, time) {
+        // Prefetch server settings via shared module
+        loadServerSettings();
         this.#canvas = canvas;
     }
-
+    
+    
+    
     ////////////////////////////////////////////////////////////////////////////////
     /// Interpolation
     
@@ -352,11 +359,20 @@ export default class GribCache {
     };
 
     gribPath (cycle, res, offset) {
-        let cycleDirStr = this.formatCycle(cycle, '/');
-        let cycleFileStr = this.formatCycle(cycle, '_gfs.t');
-        let offsetStr = offset.toFixed().padStart(3, '0');
-        // /weather/1p00/20250813/12/20250813_gfs.t12z.pgrb2.0p25.f291.grib2
-        return `/weather/noaa/${res}/${cycleDirStr}/${cycleFileStr}z.pgrb2.${res}.f${offsetStr}.grib2`;
+        // Assumes settings are loaded; caller should gate via ensureServerSettings()
+        const ss = getServerSettings();
+        const dataSource = ss && ss.datasources
+            ? ss.datasources.find((entry) => entry.name === 'NOAA-GFS-WIND')
+            : undefined;
+        if (!dataSource) {
+            throw new Error('Server settings missing datasource NOAA-GFS-WIND');
+        }
+        let run = cycle.getUTCHours().toFixed();
+        let entry = dataSource.gribpaths.find((p) => p.step == offset && p.run == run);
+        if (!entry) {
+            throw new Error(`No GRIB path for run ${run} step ${offset}`);
+        }
+        return `/weather/${entry.path}`;
     }
 
     formatCycle (d, sep = '-') {
@@ -368,6 +384,8 @@ export default class GribCache {
     
     async getGrib (cycle, res, offset) {
         try {
+            // Ensure server settings are available before building the path
+            await ensureServerSettings();
             let response = await fetch(this.gribPath(cycle, res, offset));
             if (!response.ok) {
                 throw new Error(`${response.statusText}`);

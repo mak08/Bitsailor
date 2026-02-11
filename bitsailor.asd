@@ -2,7 +2,7 @@
 ;;; Description
 ;;; Author         Michael Kappert
 ;;; Created        22/03/2000 11:15:16
-;;; Last Modified  <michael 2025-10-26 20:50:58>
+;;; Last Modified  <michael 2026-01-11 00:38:59>
 
 (defsystem "bitsailor"
   :description "Sailing route optimization using isochrones search"
@@ -16,17 +16,13 @@
                (:file "database")
                (:file "datatypes")
                (:file "polars")
-               (:file "polars-vr")
                (:file "polars-fw")
-               (:file "races-vr")
-               (:file "penalties")
                (:file "constraints")
                (:file "filter")
                (:file "simulation")
                (:file "json")
                (:file "http-api")
                (:file "signup")
-               (:file "commands")
                (:file "bitsailor")
                (:file "race-constraints")
                (:file "test")

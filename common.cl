@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2019
-;;; Last Modified <michael 2025-11-05 19:59:00>
+;;; Last Modified <michael 2026-02-05 23:33:00>
 
 
 (in-package :bitsailor)
@@ -24,6 +24,7 @@
 ;;; Parameters and configuration
 
 (defparameter *disable-nmea*  nil)
+(defparameter *max-wind* 384)
 (defparameter *max-angle* 120)
 (defparameter *max-iso-points* 1500)
 (defparameter *max-route-hours* (* 24 12))
@@ -79,10 +80,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Preventing eval injection
 
-(defun read-arg (s &optional type)
+(defun read-arg (s &optional type (package *package*))
   (let ((*read-eval* nil))
     (ignore-errors
-     (let ((arg (read-from-string s)))
+     (let* ((*package* (find-package package))
+            (arg (read-from-string s)))
        (if type
            (coerce arg type)
            arg)))))

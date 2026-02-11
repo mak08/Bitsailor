@@ -5,6 +5,7 @@ import * as Util from './Util.js';
 import * as GPX from './GPX.js';
 import GribCache from './GribCache.js';
 import PolarManager from './PolarManager.js';
+import { loadServerSettings, getServerSettings } from './ServerSettings.js';
 
 // Global variables
 let map = null;
@@ -47,6 +48,13 @@ let courseGateLayers = []; // layers created by GPX import (markers + polylines)
 // Main initialization function
 function setupPage() {
     currentCycle = getCurrentCycle();
+    // Prefetch server settings for use across modules
+    loadServerSettings().then(() => {
+        fillCurrentsDropdown();
+    }).catch(() => {
+        // Still show NONE even if server settings fail
+        fillCurrentsDropdown();
+    });
     // Initialize map first
     initMap();
     setUp(getVMG);
@@ -57,6 +65,36 @@ function setupPage() {
     // Ensure ir_index is set up before calling updateMap
     // (setUp assigns ir_index = document.getElementById("ir_index");)
     updateMap(); 
+}
+
+// Prefill the Currents selector from server settings
+function fillCurrentsDropdown() {
+    const sel = document.getElementById('sel_currents');
+    if (!sel) return;
+    // Reset and add default NONE option
+    sel.innerHTML = '';
+    const none = document.createElement('option');
+    none.value = 'NONE';
+    none.textContent = 'NONE';
+    sel.appendChild(none);
+
+    const ss = getServerSettings();
+    const sources = ss && Array.isArray(ss.datasources)
+        ? ss.datasources.filter(ds => ds.datakind === 'current')
+        : [];
+    for (const ds of sources) {
+        const o = document.createElement('option');
+        o.value = ds.name;
+        o.textContent = ds.name;
+        sel.appendChild(o);
+    }
+    try {
+        const saved = localStorage.getItem('xx.current');
+        const hasSaved = saved && Array.from(sel.options).some(o => o.value === saved);
+        sel.value = hasSaved ? saved : 'NONE';
+    } catch (e) {
+        sel.value = 'NONE';
+    }
 }
 
 // Hook dropdown
@@ -90,6 +128,7 @@ function setupEventHandlers() {
     const btRemoveRace = document.getElementById('bt_removerace');
     if (btRemoveRace) btRemoveRace.addEventListener('click', removeRace);
 }
+
 
 // Get polars list
 function getPolarsList() {
@@ -166,6 +205,8 @@ function captureAllRaceSettings() {
     const options = Array.isArray(settings.options) ? settings.options.slice() : (settings.options ? JSON.parse(JSON.stringify(settings.options)) : []);
     // Preserve existing gates if already captured via GPX import
     const gates = race.settings.gates || undefined;
+    const currentSel = document.getElementById('sel_currents');
+    const current = currentSel ? currentSel.value : 'NONE';
 
     race.settings = {
         start: startPos ? { lat: startPos.lat, lng: startPos.lng } : undefined,
@@ -176,7 +217,8 @@ function captureAllRaceSettings() {
         resolution,
         duration,
         options,
-        gates
+        gates,
+        current
     };
     saveRaces();
 }
@@ -188,6 +230,7 @@ function applyRaceSettings(race) {
   if (race.settings.nmeaHost) { const h = document.getElementById('tb_nmeahost'); if (h) h.value = race.settings.nmeaHost; }
   if (race.settings.nmeaPort) { const p = document.getElementById('tb_nmeaport'); if (p) p.value = race.settings.nmeaPort; }
   if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
+    if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
   if (race.settings.resolution) setResolution(race.settings.resolution);
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
     // Restore persisted gates (clear existing overlays first)
@@ -450,6 +493,8 @@ function setUp(getVMG) {
     // Set up other UI elements
     document.getElementById("sel_resolution").addEventListener("change", onSetResolution);
     document.getElementById("sel_polars").addEventListener("change", onSetPolars);
+    const selCurrents = document.getElementById("sel_currents");
+    if (selCurrents) selCurrents.addEventListener("change", onSetCurrents);
     
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.onmouseleave = onMapMenuMouseLeave;
@@ -655,6 +700,13 @@ function onSetPolars(event) {
     settings.polarsId = polarsId; // <-- Update settings
     storeValue('polarsId', polarsId); // (optional: persist selection)
     captureRaceSettings('polarsId', polarsId);
+}
+
+function onSetCurrents(event) {
+    const current = event.currentTarget.value || 'NONE';
+    // Persist globally as a fallback and per-race for specificity
+    storeValue('current', current);
+    captureRaceSettings('current', current);
 }
 
 function onSetDuration(event) {
@@ -917,6 +969,12 @@ function getRoute() {
     var sailInput = document.getElementById('sel_currentsail');
     if (sailInput) {
         query += `&sail=${sailInput.value}`;
+    }
+
+    // Add selected currents datasource (or NONE) to query
+    var currentInput = document.getElementById('sel_currents');
+    if (currentInput && currentInput.value != 'NONE') {
+        query += `&currents=${encodeURIComponent(currentInput.value)}`;
     }
 
     Util.doGET(

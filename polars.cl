@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-12-13 16:33:23>
+;;; Last Modified <michael 2026-01-11 00:45:15>
 
 (in-package :bitsailor)
 
@@ -250,7 +250,7 @@
                                   :label (polars-label v))
                      polars-list))
              *polars-id-ht*)
-    polars-list))
+    (reverse polars-list)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from JSON
@@ -269,9 +269,7 @@
 (defun load-polars-file (filename)
   (let* ((json-object  (parse-json-file filename)))
     (log2:info "Loading ~a" filename)
-    (cond ((joref json-object "scriptData")
-           (translate-polars-vr filename json-object))
-          ((joref json-object "data_json")
+    (cond ((joref json-object "data_json")
            (translate-polars-fw filename json-object))
           (t
            (error "Unknown polars format")))))

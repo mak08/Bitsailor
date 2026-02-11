@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-18 01:29:09>
+;;; Last Modified <michael 2026-02-10 23:54:44>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -59,7 +59,7 @@
   (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint left right step-size step-time fc-0 fc-1 fraction polars delta-angle)
+(defun expand-routepoint (routing routepoint left right step-size step-time params current polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -69,47 +69,64 @@
      (return-from expand-routepoint 0))
     (t
      (let* ((start-pos (routing-start routing))
-            (lat (latlng-lat (routepoint-position routepoint)))
-            (lng (latlng-lng (routepoint-position routepoint))))
-       (multiple-value-bind
-             (wind-dir wind-speed)
-           (cl-weather::interpolate-fw lat lng fc-0 fc-1 fraction)
-         (setf wind-speed (max (routing-minwind routing) wind-speed))
-         (multiple-value-bind (up-vmg down-vmg)
-             (best-vmg polars wind-speed)
-           (let ((vmg-pos (length (routing-twa-angles routing))))
-             (setf (aref (routing-twa-angles routing) (- vmg-pos 1)) (vmg-twa up-vmg))
-             (setf (aref (routing-twa-angles routing) (- vmg-pos 2)) (vmg-twa down-vmg)))
-           (loop
-             :with twa-points = (routing-twa-angles routing)
-             :with up-vmg-angle = (vmg-twa up-vmg)
-             :with down-vmg-angle = (vmg-twa down-vmg)
-             :with added = 0
-             :for twa :across twa-points
-             :when (valid-twa up-vmg-angle down-vmg-angle twa)
-               :do (flet ((add-point (twa)
-                            (log2:trace "checking TWA: ~a" twa)
-                            (progn
-                              (incf added)
-                              (multiple-value-bind (speed sail)
-                                  (twa-boatspeed polars wind-speed (normalize-angle twa))
-                                (declare (double-float speed)
-                                         (integer step-size))
-                                (let*
-                                    ((heading (twa-heading wind-dir twa))
-                                     (distance (* speed step-size))
-                                     (new-pos (add-distance-exact (routepoint-position routepoint)
-                                                                  distance
-                                                                  heading)))
+            (current-pos (routepoint-position routepoint))
+            (lat (latlng-lat current-pos))
+            (lng (latlng-lng current-pos)))
+       (with-bindings
+           (((wind-dir wind-speed)
+             (cl-weather::interpolate-fw lat lng params))
+            ((curnt-dir curnt-speed curnt-u curnt-v)
+             (if current
+                 (interpolate-fw lat lng current)
+                 (values 0d0 0d0 0d0 0d0)))
+            ((up-vmg down-vmg)
+             (best-vmg polars wind-speed)))
+         (let ((vmg-pos (length (routing-twa-angles routing))))
+           (setf (aref (routing-twa-angles routing) (- vmg-pos 1)) (vmg-twa up-vmg))
+           (setf (aref (routing-twa-angles routing) (- vmg-pos 2)) (vmg-twa down-vmg)))
+         (loop
+           :with up-vmg-angle = (vmg-twa up-vmg)
+           :with down-vmg-angle = (vmg-twa down-vmg)
+           :with added = 0
+           :for twa :across (routing-twa-angles routing)
+           :when (valid-twa up-vmg-angle down-vmg-angle twa)
+             :do (flet ((add-point (twa)
+                          ;; (log2:trace "checking TWA: ~a" twa)
+                          (progn
+                            (incf added)
+                            (multiple-value-bind (speed sail)
+                                (twa-boatspeed polars wind-speed (normalize-angle twa))
+                              (declare (double-float speed)
+                                       (integer step-size))
+                              (let* ((heading (twa-heading wind-dir twa))
+                                     (distance))
+                                (cond
+                                  (current
+                                   ;; (spd hdg) == (let* ((u (* spd (sin (rad hdg))))
+                                   ;;                     (v (* spd (cos (rad hdg)))))
+                                   ;;                (list (enorm u v)
+                                   ;;                      (angle (- u) (- v))))
+                                   (let* ((heading-rad (rad heading))
+                                          (speed-u (* speed (sin heading-rad)))
+                                          (speed-v (* speed (cos heading-rad)))
+                                          (sog-u (- (+ curnt-u speed-u)))
+                                          (sog-v (- (+ curnt-v speed-v)))
+                                          (sog (enorm sog-u sog-v))
+                                          (cog (angle sog-u sog-v)))
+                                     (when (< cog 0d0) (incf cog 360d0))
+                                     (setf distance (* sog step-size))
+                                     (setf heading cog)))
+                                  (t
+                                   (setf distance (* speed step-size))))
+                                (let* ((new-pos (add-distance-estimate current-pos distance heading)))
                                   (when (in-latlng-box (routing-box routing) new-pos)
                                     (let* ((origin-distance (course-distance start-pos new-pos))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle))
-                                                  
-                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed)))))))))
-                     (add-point (- twa))
-                     (add-point twa))
-             :finally (return added))))))))
+                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed))))))))))
+                   (add-point (- twa))
+                   (add-point twa))
+           :finally (return added)))))))
 
 (defstruct box north south west east antimed-p)
 
@@ -143,11 +160,7 @@
          (destination (normalized-destination routing))
          (distance (course-distance start-pos destination))
          (polars (routing-polars routing))
-         (race-info (routing-race-info routing))
-         (limits (when (race-info-vr-p race-info)
-                   (get-race-limits race-info)))
-         (zones (when (race-info-vr-p race-info)
-                  (get-exclusion-zones race-info)))
+         (currents (routing-currents routing))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -165,6 +178,7 @@
                 left
                 right
                 cycle)
+    (log2:info "Using currents ~a" currents)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -181,7 +195,10 @@
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (params-fw (get-params start-time) (get-params step-time))
+          (params-fw (get-params 'cl-weather::noaa-gfs-wind start-time)
+                     (get-params 'cl-weather::noaa-gfs-wind step-time))
+          (params-curnt (when currents (get-params currents start-time))
+                        (when currents (get-params currents step-time)))
           (step-size (funcall stepper)
                      (funcall stepper))
           (step-time (adjust-timestamp start-time (:offset :sec step-size))
@@ -190,11 +207,7 @@
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (interpolate-fw (latlng-lat start-pos)
-                               (latlng-lng start-pos)
-                               (params-fw-fc0 params-fw)
-                               (params-fw-fc1 params-fw)
-                               (params-fw-fraction params-fw))
+               (interpolate-fw (latlng-lat start-pos) (latlng-lng start-pos) params-fw)
              (make-array 1 :initial-contents
                          (list
                           (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil "JIB" wind-dir wind-speed)))))
@@ -233,14 +246,12 @@
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
-                 (let ((new-point-num
-                         (expand-routepoint routing rp left right step-size step-time (params-fw-fc0 params-fw) (params-fw-fc1 params-fw) (params-fw-fraction params-fw) polars delta-angle)))
-                   (declare (fixnum new-point-num))
-                   (incf pointnum new-point-num)))
+                 (incf pointnum
+                       (expand-routepoint routing rp left right step-size step-time params-fw params-curnt polars delta-angle)))
            isochrone)
       
       ;; Step 2 - Filter isochrone.
-      (let ((candidate (filter-isochrone next-isochrone :limits limits :zones zones)))
+      (let ((candidate (filter-isochrone next-isochrone :limits nil :zones nil)))
         (cond
           ((or (null candidate)
                (= (length candidate) 0)
@@ -253,11 +264,8 @@
           (t
            (setf reached (reached candidate start-pos dest-heading distance))
            (unless reached
-             (setf isochrone candidate)
-             )
-
+             (setf isochrone candidate))
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
-
            ;; Collect hourly isochrones
            (when (zerop (timestamp-minute step-time))
              (let* ((iso (make-isochrone :center start-pos
@@ -330,37 +338,6 @@
                  (>= d distance))))
         candidate))
 
-(defun get-exclusion-zones (leg-info)
-  (let* ((zones (joref (race-info-data leg-info) "restrictedZones"))
-         (result (make-array (length zones))))
-    (map-into result
-              (lambda (z)
-                (get-exclusion-zone z))
-              zones)))
-
-(defun get-exclusion-zone (zone-def)
-  (loop :with vertices = (joref zone-def "vertices")
-        :with result = (make-array (1+ (length vertices)) :fill-pointer 0)
-        :for vertice :across vertices
-        :for latlng = (make-latlng :lat (coerce (joref vertice "lat") 'double-float)
-                                   :lng (coerce (joref vertice "lon") 'double-float))
-        :do (vector-push latlng result)
-        :finally (progn (unless (equalp (aref result 0) (aref result (1- (length result))))
-                          (vector-push  (aref result 0) result))
-                        (return result))))
-
-(defun get-race-limits (leg-info)
-  (let* ((south (joref (joref (race-info-data leg-info) "ice_limits") "south"))
-         (result (make-array (+ (length south) 1))))
-    (map-into result
-              (lambda (p)
-                (make-latlng :lat (coerce (joref p "lat") 'double-float)
-                             :lng (coerce (joref p "lon") 'double-float)))
-              south)
-    ;; Wrap around
-    (setf (aref result (1- (length result))) (aref result 1))
-    result))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
@@ -386,7 +363,7 @@
                 (t
                  (let ((delta-t
                          (- (timestamp-to-unix step-time) start)))
-                   (cond ((< delta-t (+ hour-fill-2 (* 6 600)))
+                   (cond ((< delta-t (+ hour-fill-2 (* 12 600)))
                           120)
                          ((< delta-t (+ hour-fill-2 (* 72 600)))
                           600)

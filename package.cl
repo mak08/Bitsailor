@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2024-06-24 22:20:50>
+;;; Last Modified <michael 2026-01-09 13:47:45>
 
 (defpackage BITSAILOR
   (:nicknames "ROUTER")
@@ -29,6 +29,7 @@
    "*POLARS-DIR*"
    "*RACES-DIR*"
    "*TWA-STEPS*"
+   "*MAX-WIND*"
    "*MAX-ANGLE*"
    "*MAX-ROUTE-HOURS*"
    "*MAX-ISO-POINTS*"
@@ -40,6 +41,7 @@
    "ACTIVATE-ACCOUNT"
    "signUp"
    "getSession"
+   "getServerSettings"
    "removeSession"
    "getRaceInfo"
    "getWind"

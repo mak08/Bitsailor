@@ -349,17 +349,6 @@ input[type=checkbox] {
 	grid-column: 4/7;
 }
 
-/* GFS mode */
-.gfsmode-label {
-	grid-row: 8;
-	grid-column: 4/7;
-
-}
-.gfsmode-selector {
-	grid-row: 8;
-	grid-column: 7;
-}
-
 
 .polars-label {
 	grid-row: 9;
@@ -371,26 +360,37 @@ input[type=checkbox] {
 	grid-column: 2/7;
 }
 
+.currents-label {
+	grid-row: 10;
+	grid-column: 1;
+}
+
+.currents-selector {
+	grid-row: 10;
+	grid-column: 2/7;
+}
+
+
 /* Boat state */
 .boatstate-label {
-	grid-row: 10;
+	grid-row: 11;
 	grid-column: 1;
 
 }
 .boatstate-group {
-	grid-row: 10;
+	grid-row: 11;
 	grid-column: 2/7;
 }
 
 
 /* Hide wind */
 .displaywind-label {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 1;
 
 }
 .displaywind-checkbox {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 2;
 
 }
@@ -398,33 +398,23 @@ input[type=checkbox] {
 /* Display tracks */
 .displaytracks-label {
 	grid-row: 13;
-	grid-column: 1;
+	grid-column: 3/6;
 }
 .displaytracks-checkbox {
 	grid-row: 13;
-	grid-column: 2;
-}
-
-/* Display tracks */
-.cursor-label {
-	grid-row: 14;
-	grid-column: 1;
-}
-.cursor-select {
-	grid-row: 14;
-	grid-column: 2/7;
+	grid-column: 6;
 }
 
 /* Execute */
 .execute-button {
-	grid-row: 10;
+	grid-row: 11;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 1;
 }
 

@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2025-11-05 20:04:00>
+;;; Last Modified <michael 2026-02-07 21:36:09>
 
 (in-package :bitsailor)
 
@@ -133,80 +133,15 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
-(defun determine-minwind (race-id)
-  (knots-to-m/s 0d0))
-
-(defun get-routing-presets (&key
-                              (race-id)
-                              (polars-id)
-                              (starttime nil)
-                              (resolution "0p25" resolution-provided-p)
-                              (options)
-                              (tack)
-                              (sail nil)
-                              (stepmax (* 24 60 60))
-                              (cycle (current-cycle))
-                              (slat)
-                              (slon)
-                              (dlat)
-                              (dlon))
-  (let* ((race-info (race-info race-id))
-         (start (when (and slat slon) (make-latlng :lat slat :lng slon)))
-         (dest (when (and dlat dlon) (make-latlng :lat dlat :lng dlon)))
-         (polars-id (format nil "~a" polars-id))
-         (options
-           (or options
-               '("hull" "foil" "winch" "heavy" "light" "reach")))
-         (cpolars (get-combined-polars polars-id (encode-options options))))
-    (when (not resolution-provided-p)
-      (setf resolution "0p25"))
-    (make-routing
-     :race-info (race-info race-id)
-     :fan *max-angle*
-     :start start
-     :dest dest 
-     :box (make-routing-box start dest)
-     :starttime starttime
-     :stepmax (min (* *max-route-hours* 3600) stepmax)
-     :options options
-     :tack (cond
-             ((string= tack "port")
-              90d0)
-             ((string= tack "stbd")
-              -90d0)
-            (t
-             (log2:warning "No valid initial tack ~a" tack)
-             nil))
-     :sail sail
-     :resolution resolution
-     :minwind (determine-minwind race-id)
-     :grib-source  :noaa
-     :interpolation :bilinear
-     :polars cpolars
-     :twa-angles (make-twa-angles-buffer cpolars)
-     :cycle cycle
-     :merge-start *merge-start*
-     :merge-window *merge-duration*
-     :simplify-route nil)))
-
-(defun make-twa-angles-buffer (cpolars)
-  (let ((buffer
-          (make-array (length (cpolars-twa cpolars))
-                      :adjustable t
-                      :fill-pointer t
-                      :initial-contents (cpolars-twa cpolars))))
-    (vector-push-extend 0d0 buffer)
-    (vector-push-extend 0d0 buffer)
-    buffer))
-
 (defun |getRoute| (handler request response &key
                                               (|raceId| nil)
                                               (|options| nil)
                                               (|tack| nil)
                                               (|sail| nil)
-                                              (|resolution| "1p00")
-                                              (|gfsMode| "06h")
+                                              (|resolution| "0p25")
                                               |polarsId|
+                                              (|useECMWF| nil)
+                                              (|currents| nil)
                                               |slat|
                                               |slon|
                                               |dlat|
@@ -233,10 +168,13 @@
     (let* ((*read-default-float-format* 'double-float)
            (cycle (if cycle-supplied-p
                       (make-cycle :timestamp (parse-datetime |cycleTS|))
-                      (available-cycle (now))))
+                      (cl-weather::timestamp-cycle 'cl-weather::noaa-gfs-wind (now))))
+           (currents (read-arg |currents| 'symbol 'cl-weather))
            (routing
              (get-routing-presets :race-id |raceId|
                                   :polars-id (decode-uri-component |polarsId|)
+                                  :use-ecmwf (string-equal (read-arg |useECMWF|) "true")
+                                  :currents currents
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :tack |tack|
                                   :sail |sail|
@@ -276,115 +214,11 @@
         (or (cadr (assoc "race" query-pairs :test #'string=))
             "default"))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; getWind
-
-(defstruct forecast-data
-  basetime                              ; Indicates the cycle
-  maxoffset                             ; Max offset available in forecast data (384 for NOAA)
-  cycle                                 ; Cycle in a nice format
-  time                                  ; Forecast time
-  data                                  ; Wind forecast values 
-  )
-
-;;; Get wind data in indicated (Google Maps) coordinates : [-90, 90], (-180,180].
-;;; $|basetime|
-;;;        Mandatory. Indcates the cycle that should be used.
-;;; $|offset|
-;;;        Optinonal. Requested time as an offset to  $|basetime|,
-;;; $|time|
-;;;        Optional. The requested time.
-;;; Returns an error if the requested time is in the past or in the future of the requested cycle, or if $|offset| is too large.
-;;; Returns (0d0, -1d0) for unavailable values.  Does not work if date line is in longitude range.
-(defun |getWind| (handler request response &key (|presets|) (|cycle|) (|time|) (|resolution|) |north| |east| |west| |south| (|ddx| "0.5") (|ddy| "0.5") (|ySteps|) (|xSteps|))
-  (declare (ignore |ySteps| |xSteps|))
-  (log2:info "Cycle:~a Time:~a Res:~a N:~a S:~a W:~a E:~a" |cycle| |time| |resolution| |north| |south| |west| |east|)
-  (assert (and |cycle| |time|))
-  (handler-case
-      (let* ((*read-default-float-format*
-               'double-float)
-             (cycle
-               (make-cycle :timestamp (local-time:parse-rfc3339-timestring |cycle|)))
-             (resolution
-               |resolution|)
-             (requested-time
-               (local-time:parse-rfc3339-timestring |time|))
-             (user-id
-               (http-authenticated-user handler request))
-             (race-id
-               (get-routing-request-race-id request))
-             (cycle-start-time (cycle-timestamp cycle))
-             (ddx (read-arg |ddx|))
-             (ddy (read-arg |ddy|))
-             (north (read-arg |north|))
-             (south (read-arg |south|))
-             (east (read-arg |east|))
-             (west (read-arg |west|)))
-        (log2:info "DX: ~a DDX: ~a  DY: ~a DDY: ~a" (arc-length west east) ddx (- north south) ddy)
-        (log2:info "Requested time: ~a Using cycle: ~a" requested-time cycle)
-        (when (< west 0d0) (incf west 360d0))
-        (when (< east 0d0) (incf east 360d0))
-        (when (< east west) (incf east 360d0))
-            
-        (assert (and (plusp ddx)
-                     (plusp ddy)
-                     (< south north)))
-        (let* ((wind-data
-                 (get-wind-data |presets| cycle resolution requested-time north south west east ddx ddy))
-               (body
-                 (with-output-to-string (s)
-                   (json s
-                         (let ((time cycle-start-time))
-                           (make-forecast-data
-                            :basetime (format-datetime nil cycle-start-time)
-                            :time (format-datetime nil requested-time)
-                            :maxoffset 384 ;; (dataset-max-offset dataset)
-                            :cycle (format-timestring nil
-                                                      time
-                                                      :format '((:year 4) "-" (:month 2) "-" (:day 2) "  " (:hour 2) "Z") :timezone local-time:+utc-zone+)
-                            :data wind-data))))))
-          (values body)))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))
-    #+ccl(ccl::invalid-memory-access (e)
-           (log2:error "(|getWind| :north ~a :east ~a :west ~a :south ~a): ~a"  |north| |east| |west| |south| e)
-           (setf (status-code response) 500)
-           (setf (status-text response) (format nil "~a" e)))))
-
 (defun arc-length (a b)
   (when (< a 0) (incf a 360))
   (when (< b 0) (incf b 360))
   (when (< b a) (incf b 360))
   (- b a))
-
-(defun get-wind-data (presets cycle resolution time north south west east ddx ddy)
-  (let* ((routing
-           (get-routing-presets))
-         (iparams
-           (interpolation-parameters time
-                                     :method (routing-interpolation routing)
-                                     :merge-start (routing-merge-start routing)
-                                     :merge-duration (routing-merge-window routing)
-                                     :cycle cycle
-                                     :resolution resolution))
-         (result (make-array (list (1+ (truncate (- north south) ddy))
-                                   (1+ (truncate (- east west) ddx))
-                                   2))))
-    (loop
-      :for lat :from north :downto south :by ddy
-      :for ilat :from 0
-      :do (loop
-            :for lon :from west :to east :by ddx
-            :for ilon :from 0
-            :do (multiple-value-bind (dir speed)
-                    (let ((nlon
-                            (if (> lon 0) (- lon 360) lon)))
-                      (interpolate lat nlon iparams))
-                  (setf (aref result ilat ilon 0) (round-to-digits dir 2))
-                  (setf (aref result ilat ilon 1) (round-to-digits speed 2)))))
-    result))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Wind Tiles
@@ -477,6 +311,13 @@
             (curl:http url :method :post :body (with-output-to-string (s) (json s body  :preserve-slotname-case t)))))
       (setf (http-body response) (curl:http-response-body reply)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Server Settings
+
+(defun |getServerSettings| (handler request response)
+  ;; Provide datasource path templates etc.
+  (with-output-to-string (s)
+    (json s (get-server-settings))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars
@@ -566,24 +407,16 @@
   last_routestats)
 
 (defun |getStatistics| (handler request response)
-  (let ((datasource
-          (cond
-            ((string= cl-weather:*noaa-gfs-path* cl-weather::+NCEP-NOMADS+)
-             "NOMADS")
-            ((string= cl-weather:*noaa-gfs-path* cl-weather::+NCEP-FTPPRD+)
-             "FTPPRD")
-            (t
-             cl-weather:*noaa-gfs-path*))))
-    (with-output-to-string (s)
-      (json s
-            (routerstatus *server-start-time*
-                          cl-weather::*latest-forecast*
-                          (number-of-entries cl-weather::*forecast-ht*)
-                          (length *last-request*)
-                          datasource
-                          *max-iso-points*
-                          *twa-steps*
-                          *last-routestats*)))))
+  (with-output-to-string (s)
+    (json s
+          (routerstatus *server-start-time*
+                        cl-weather::*latest-forecast*
+                        (number-of-entries cl-weather::*forecast-ht*)
+                        (length *last-request*)
+                        "NOAA"
+                        *max-iso-points*
+                        *twa-steps*
+                        *last-routestats*))))
 
 (defun number-of-entries (hashtable)
   (let ((count 0))
@@ -622,6 +455,74 @@
       (setf (http-body response) buffer)))
   (setf (http-header response :|Content-Type|)
         (get-mime-for-extension (pathname-type path))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Helper functions
+
+(defun get-routing-presets (&key
+                              (race-id)
+                              (polars-id)
+                              (use-ecmwf t)
+                              (currents nil)
+                              (starttime nil)
+                              (resolution "0p25" resolution-provided-p)
+                              (options)
+                              (tack)
+                              (sail nil)
+                              (stepmax (* 24 60 60))
+                              (cycle (current-cycle 'noaa-gfs-wind))
+                              (slat)
+                              (slon)
+                              (dlat)
+                              (dlon))
+  (let* ((start (when (and slat slon) (make-latlng :lat slat :lng slon)))
+         (dest (when (and dlat dlon) (make-latlng :lat dlat :lng dlon)))
+         (polars-id (format nil "~a" polars-id))
+         (options
+           (or options
+               '("hull" "foil" "winch" "heavy" "light" "reach")))
+         (cpolars (get-combined-polars polars-id (encode-options options))))
+    (when (not resolution-provided-p)
+      (setf resolution "0p25"))
+    (make-routing
+     :fan *max-angle*
+     :start start
+     :dest dest 
+     :box (make-routing-box start dest)
+     :starttime starttime
+     :stepmax (min (* *max-route-hours* 3600) stepmax)
+     :options options
+     :tack (cond
+             ((string= tack "port")
+              90d0)
+             ((string= tack "stbd")
+              -90d0)
+            (t
+             (log2:warning "No valid initial tack ~a" tack)
+             nil))
+     :sail sail
+     :resolution resolution
+     :minwind 0d0
+     :grib-source  :noaa
+     :interpolation :bilinear
+     :polars cpolars
+     :use-ecmwf use-ecmwf
+     :currents currents
+     :twa-angles (make-twa-angles-buffer cpolars)
+     :cycle cycle
+     :merge-start *merge-start*
+     :merge-window *merge-duration*
+     :simplify-route nil)))
+
+(defun make-twa-angles-buffer (cpolars)
+  (let ((buffer
+          (make-array (length (cpolars-twa cpolars))
+                      :adjustable t
+                      :fill-pointer t
+                      :initial-contents (cpolars-twa cpolars))))
+    (vector-push-extend 0d0 buffer)
+    (vector-push-extend 0d0 buffer)
+    buffer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races

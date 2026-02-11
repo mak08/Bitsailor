@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2016
-;;; Last Modified <michael 2025-10-26 20:38:38>
+;;; Last Modified <michael 2026-01-09 18:28:57>
 
 (in-package :bitsailor)
 
@@ -79,6 +79,7 @@
 (register-function "router.getWind" :authorizer (constantly t))
 (register-function "router.setParameter" :authorizer (constantly t))
 (register-function "router.getRaceList" :authorizer (constantly t))
+(register-function "router.getServerSettings" :authorizer (constantly t))
 (register-function "router.getPolarsList" :authorizer (constantly t))
 (register-function "router.setRoute" :authorizer (constantly t))
 (register-function "router.getRoute" :authorizer (constantly t))
@@ -98,7 +99,7 @@
 (handle
  :request ( :method :get
             :path "/polars")
- :handler ( :directory  "/home/michael/Polars"
+ :handler ( :directory  *polars-dir*
             :authentication nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -107,7 +108,7 @@
 (handle
  :request (:method :get
            :prefix "/weather")
- :handler (:directory "/home/michael/Wetter"
+ :handler (:directory *grib-directory*
            :realm "bitsailor"
            :authorizer (constantly t)))
 #|

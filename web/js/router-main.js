@@ -939,8 +939,7 @@ function getRoute() {
     var bt_execute = document.getElementById("bt_getroute");
     bt_execute.disabled = true;
 
-    let documentQuery = new URL(document.URL).searchParams;
-
+   
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
 
@@ -960,11 +959,6 @@ function getRoute() {
     var query = makeQuery(settings);
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
-
-    var tackInput = document.getElementById('sel_currenttack');
-    if (tackInput) {
-        query += `&tack=${tackInput.value}`;
-    }
 
     var sailInput = document.getElementById('sel_currentsail');
     if (sailInput) {
@@ -993,7 +987,7 @@ function getRoute() {
             restoreCursor();
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
-            alert(`Request\n${response.responseURL}\n\nreturned\n\n ${response.status} - ${response.statusText}`);
+            alert(`Request\n${response.responseURL}\n\nreturned\n\n ${response.status} - ${response.responseText || response.statusText}`);
         });
 }
 

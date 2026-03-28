@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2026-02-10 23:54:44>
+;;; Last Modified <michael 2026-03-28 19:10:09>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -102,10 +102,6 @@
                                      (distance))
                                 (cond
                                   (current
-                                   ;; (spd hdg) == (let* ((u (* spd (sin (rad hdg))))
-                                   ;;                     (v (* spd (cos (rad hdg)))))
-                                   ;;                (list (enorm u v)
-                                   ;;                      (angle (- u) (- v))))
                                    (let* ((heading-rad (rad heading))
                                           (speed-u (* speed (sin heading-rad)))
                                           (speed-v (* speed (cos heading-rad)))

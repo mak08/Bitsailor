@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2026-02-05 22:22:47>
+;;; Last Modified <michael 2026-04-03 22:51:52>
 
 (in-package :bitsailor)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -30,6 +30,7 @@
   cycle
   polars
   use-ecmwf
+  use-waves
   currents
   ;; buffer for TWA angles plus 2 best VMG angles
   twa-angles
@@ -110,7 +111,7 @@
 ;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
 
 (defstruct (routepoint
-             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail wind-dir wind-speed (origin-angle 0) (origin-distance 0))))
+             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail wind-dir wind-speed curnt-dir curnt-speed (origin-angle 0) (origin-distance 0))))
   predecessor
   position
   time
@@ -121,11 +122,13 @@
   sail
   wind-dir
   wind-speed
+  curnt-dir
+  curnt-speed
   origin-angle
   origin-distance)
 
 (defstruct trackpoint
-  time position heading dtf speed sail twd tws twa)
+  time position heading dtf speed sail crntdir crntspd twd tws twa)
 
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)
@@ -134,6 +137,8 @@
                    :dtf (routepoint-destination-distance routepoint)
                    :speed (routepoint-speed successor)
                    :sail (routepoint-sail successor)
+                   :crntdir (routepoint-curnt-dir routepoint)
+                   :crntspd (routepoint-curnt-speed routepoint)
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)
                    :twa (routepoint-twa successor)))
@@ -143,7 +148,7 @@
           (routepoint-position thing)
           (routepoint-time thing)
           (routepoint-twa thing)
-          (routepoint-sail thing)))
+          (routepoint-curnt-dir thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Time

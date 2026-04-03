@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2026-03-28 19:10:09>
+;;; Last Modified <michael 2026-04-04 00:19:29>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -54,12 +54,35 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; get-route
 
+(declaim (inline wave-factor))
+(defun wave-factor (wave lat lng twa)
+  (let* ((wave-height (interpolate-simple lat lng wave))
+         (factor
+           (cond ((> twa 90d0)
+                  (cond ((>= wave-height 5d0)
+                         1.1d0)
+                        ((>= wave-height 4d0)
+                         1.08d0)
+                        ((>= wave-height 3d0)
+                         1.06d0)
+                        (t
+                         1d0)))
+                 (t
+                  (cond ((>= wave-height 5d0)
+                         0.9d0)
+                        ((>= wave-height 4d0)
+                         0.92d0)
+                        ((>= wave-height 3d0)
+                         0.94d0)
+                        (t 1d0))))))
+    factor))
+
 (declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
   (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint left right step-size step-time params current polars delta-angle)
+(defun expand-routepoint (routing routepoint left right step-size step-time params current wave polars delta-angle)
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -74,10 +97,10 @@
             (lng (latlng-lng current-pos)))
        (with-bindings
            (((wind-dir wind-speed)
-             (cl-weather::interpolate-fw lat lng params))
+             (cl-weather::interpolate-uv lat lng params))
             ((curnt-dir curnt-speed curnt-u curnt-v)
              (if current
-                 (interpolate-fw lat lng current)
+                 (interpolate-uv lat lng current)
                  (values 0d0 0d0 0d0 0d0)))
             ((up-vmg down-vmg)
              (best-vmg polars wind-speed)))
@@ -99,7 +122,10 @@
                               (declare (double-float speed)
                                        (integer step-size))
                               (let* ((heading (twa-heading wind-dir twa))
+                                     (wave-factor
+                                       (if wave (wave-factor wave lat lng twa) 1d0))
                                      (distance))
+                                (setf speed (* speed wave-factor))
                                 (cond
                                   (current
                                    (let* ((heading-rad (rad heading))
@@ -119,7 +145,7 @@
                                     (let* ((origin-distance (course-distance start-pos new-pos))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle))
-                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed))))))))))
+                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed))))))))))
                    (add-point (- twa))
                    (add-point twa))
            :finally (return added)))))))
@@ -157,6 +183,7 @@
          (distance (course-distance start-pos destination))
          (polars (routing-polars routing))
          (currents (routing-currents routing))
+         (waves (routing-use-waves routing))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -191,8 +218,10 @@
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (params-fw (get-params 'cl-weather::noaa-gfs-wind start-time)
-                     (get-params 'cl-weather::noaa-gfs-wind step-time))
+          (params-wind (get-params 'cl-weather::noaa-gfs-wind start-time)
+                       (get-params 'cl-weather::noaa-gfs-wind step-time))
+          (params-wave (when waves (get-params 'cl-weather::gfswave-combined start-time))
+                       (when waves (get-params 'cl-weather::gfswave-combined step-time)))
           (params-curnt (when currents (get-params currents start-time))
                         (when currents (get-params currents step-time)))
           (step-size (funcall stepper)
@@ -203,7 +232,7 @@
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
            (multiple-value-bind (wind-dir wind-speed) 
-               (interpolate-fw (latlng-lat start-pos) (latlng-lng start-pos) params-fw)
+               (interpolate-uv (latlng-lat start-pos) (latlng-lng start-pos) params-wind)
              (make-array 1 :initial-contents
                          (list
                           (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil "JIB" wind-dir wind-speed)))))
@@ -243,7 +272,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (incf pointnum
-                       (expand-routepoint routing rp left right step-size step-time params-fw params-curnt polars delta-angle)))
+                       (expand-routepoint routing rp left right step-size step-time params-wind params-curnt params-wave polars delta-angle)))
            isochrone)
       
       ;; Step 2 - Filter isochrone.
@@ -266,11 +295,11 @@
            (when (zerop (timestamp-minute step-time))
              (let* ((iso (make-isochrone :center start-pos
                                          :cycle (cl-weather::uv-cycle
-                                                (params-fw-fc1 params-fw))
+                                                (params-fc1 params-wind))
                                          :offset (truncate
                                                   (timestamp-difference step-time
                                                                         (cl-weather::uv-cycle
-                                                                         (params-fw-fc1 params-fw)))
+                                                                         (params-fc1 params-wind)))
                                                   3600)
                                          :path (extract-points isochrone))))
                (push iso isochrones)))))
@@ -452,7 +481,6 @@
                                :path current-path)
                isochrones)
          (setf current-path (list point))))))
-
 
 (defun extract-points (isochrone)
   (let ((points (loop

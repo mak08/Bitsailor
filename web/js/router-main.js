@@ -35,7 +35,8 @@ let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
     "resolution": "0p25",
     "duration": 345600,
-    "polarsId": undefined
+    "polarsId": undefined,
+    "useWaves": true
 };
 
 let polarManager = new PolarManager();
@@ -207,6 +208,8 @@ function captureAllRaceSettings() {
     const gates = race.settings.gates || undefined;
     const currentSel = document.getElementById('sel_currents');
     const current = currentSel ? currentSel.value : 'NONE';
+    const wavesSel = document.getElementById('cb_waves');
+    const useWaves = wavesSel ? wavesSel.checked : true;
 
     race.settings = {
         start: startPos ? { lat: startPos.lat, lng: startPos.lng } : undefined,
@@ -218,7 +221,8 @@ function captureAllRaceSettings() {
         duration,
         options,
         gates,
-        current
+        current,
+        useWaves
     };
     saveRaces();
 }
@@ -231,6 +235,7 @@ function applyRaceSettings(race) {
   if (race.settings.nmeaPort) { const p = document.getElementById('tb_nmeaport'); if (p) p.value = race.settings.nmeaPort; }
   if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
+    if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
   if (race.settings.resolution) setResolution(race.settings.resolution);
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
     // Restore persisted gates (clear existing overlays first)
@@ -495,6 +500,8 @@ function setUp(getVMG) {
     document.getElementById("sel_polars").addEventListener("change", onSetPolars);
     const selCurrents = document.getElementById("sel_currents");
     if (selCurrents) selCurrents.addEventListener("change", onSetCurrents);
+    const cbWaves = document.getElementById("cb_waves");
+    if (cbWaves) cbWaves.addEventListener("change", onSetWaves);
     
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.onmouseleave = onMapMenuMouseLeave;
@@ -707,6 +714,13 @@ function onSetCurrents(event) {
     // Persist globally as a fallback and per-race for specificity
     storeValue('current', current);
     captureRaceSettings('current', current);
+}
+
+function onSetWaves(event) {
+    const enabled = event.currentTarget.checked;
+    settings.useWaves = enabled;
+    storeValue('useWaves', enabled ? 'true' : 'false');
+    captureRaceSettings('useWaves', enabled);
 }
 
 function onSetDuration(event) {
@@ -969,6 +983,10 @@ function getRoute() {
     var currentInput = document.getElementById('sel_currents');
     if (currentInput && currentInput.value != 'NONE') {
         query += `&currents=${encodeURIComponent(currentInput.value)}`;
+    }
+    var wavesInput = document.getElementById('cb_waves');
+    if (wavesInput) {
+        query += `&useWaves=${wavesInput.checked ? 'true' : 'false'}`;
     }
 
     Util.doGET(
@@ -1254,6 +1272,10 @@ function makeWaypointInfo(startTime, point) {
 
     result += "<b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
     result += "<b>Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
+    result += "<br>";
+
+    result += "<b>Set</b>:" + (((point.crntdir||0.0)+180) % 360).toFixed(1) + "°  ";
+    result += "<b>Drift</b>: " + Util.ms2knots((point.crntspd||0.0)).toFixed(1) + "kts";
     result += "<br>";
 
     result += "<b> TWA</b>: " + point.twa.toFixed(1);

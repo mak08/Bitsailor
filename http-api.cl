@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2026-02-07 21:36:09>
+;;; Last Modified <michael 2026-04-03 22:54:01>
 
 (in-package :bitsailor)
 
@@ -141,6 +141,7 @@
                                               (|resolution| "0p25")
                                               |polarsId|
                                               (|useECMWF| nil)
+                                              (|useWaves| nil)
                                               (|currents| nil)
                                               |slat|
                                               |slon|
@@ -174,6 +175,7 @@
              (get-routing-presets :race-id |raceId|
                                   :polars-id (decode-uri-component |polarsId|)
                                   :use-ecmwf (string-equal (read-arg |useECMWF|) "true")
+                                  :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :currents currents
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :tack |tack|
@@ -463,6 +465,7 @@
                               (race-id)
                               (polars-id)
                               (use-ecmwf t)
+                              (use-waves nil)
                               (currents nil)
                               (starttime nil)
                               (resolution "0p25" resolution-provided-p)
@@ -507,6 +510,7 @@
      :interpolation :bilinear
      :polars cpolars
      :use-ecmwf use-ecmwf
+     :use-waves use-waves
      :currents currents
      :twa-angles (make-twa-angles-buffer cpolars)
      :cycle cycle

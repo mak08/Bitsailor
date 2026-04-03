@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2017
-;;; Last Modified <michael 2026-01-09 00:35:16>
+;;; Last Modified <michael 2026-03-29 21:49:40>
 
 (in-package :bitsailor)
 
@@ -24,10 +24,10 @@
                               speed
                               sail
                               wind-dir
-                              wind-speed)
-  (declare (special next-isochrone max-dist min-angle)
-           (simple-vector next-isochrone)
-           (type (array (double-float) *) max-dist))
+                              wind-speed
+                              curnt-dir
+                              curnt-speed)
+  (declare (special next-isochrone max-dist min-angle))
   (let*
       ((maxpoints (length next-isochrone))
        (offset (bucket left delta-angle))
@@ -56,6 +56,8 @@
                                  sail
                                  wind-dir
                                  wind-speed
+                                 curnt-dir
+                                 curnt-speed
                                  origin-angle
                                  origin-distance)))))
   (values))

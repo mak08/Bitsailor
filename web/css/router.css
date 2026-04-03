@@ -370,51 +370,61 @@ input[type=checkbox] {
 	grid-column: 2/7;
 }
 
+.waves-label {
+	grid-row: 11;
+	grid-column: 1;
+}
+
+.waves-checkbox {
+	grid-row: 11;
+	grid-column: 2;
+}
+
 
 /* Boat state */
 .boatstate-label {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 1;
 
 }
 .boatstate-group {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 2/7;
 }
 
 
 /* Hide wind */
 .displaywind-label {
-	grid-row: 13;
+	grid-row: 14;
 	grid-column: 1;
 
 }
 .displaywind-checkbox {
-	grid-row: 13;
+	grid-row: 14;
 	grid-column: 2;
 
 }
 
 /* Display tracks */
 .displaytracks-label {
-	grid-row: 13;
+	grid-row: 14;
 	grid-column: 3/6;
 }
 .displaytracks-checkbox {
-	grid-row: 13;
+	grid-row: 14;
 	grid-column: 6;
 }
 
 /* Execute */
 .execute-button {
-	grid-row: 11;
+	grid-row: 12;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 1;
 }
 

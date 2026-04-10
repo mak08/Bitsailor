@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2026-04-04 00:19:29>
+;;; Last Modified <michael 2026-04-10 21:06:04>
 
 ;; -- marks
 ;; -- atan/acos may return #C() => see CLTL
@@ -58,7 +58,7 @@
 (defun wave-factor (wave lat lng twa)
   (let* ((wave-height (interpolate-simple lat lng wave))
          (factor
-           (cond ((> twa 90d0)
+           (cond ((> (abs twa) 90d0)
                   (cond ((>= wave-height 5d0)
                          1.1d0)
                         ((>= wave-height 4d0)

@@ -5,7 +5,7 @@ import * as Util from './Util.js';
 import * as GPX from './GPX.js';
 import GribCache from './GribCache.js';
 import PolarManager from './PolarManager.js';
-import { loadServerSettings, getServerSettings } from './ServerSettings.js';
+import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js';
 
 // Global variables
 let map = null;
@@ -48,13 +48,24 @@ let courseGateLayers = []; // layers created by GPX import (markers + polylines)
 
 // Main initialization function
 function setupPage() {
-    currentCycle = getCurrentCycle();
     // Prefetch server settings for use across modules
     loadServerSettings().then(() => {
+        currentCycle = getLatestCycleFromSettings() || getCurrentCycle();
         fillCurrentsDropdown();
+        // Ensure ir_index is set up before calling updateMap
+        // (setUp assigns ir_index = document.getElementById("ir_index");)
+        updateMap(); 
+        // Start periodic check for wind data updates
+        startWindDataUpdateCheck();
     }).catch(() => {
+        currentCycle = getCurrentCycle();
         // Still show NONE even if server settings fail
         fillCurrentsDropdown();
+        // Ensure ir_index is set up before calling updateMap
+        // (setUp assigns ir_index = document.getElementById("ir_index");)
+        updateMap(); 
+        // Start periodic check for wind data updates
+        startWindDataUpdateCheck();
     });
     // Initialize map first
     initMap();
@@ -62,10 +73,63 @@ function setupPage() {
     getPolarsList();
     setupEventHandlers();
     setupRaces();
+}
 
-    // Ensure ir_index is set up before calling updateMap
-    // (setUp assigns ir_index = document.getElementById("ir_index");)
-    updateMap(); 
+// Start periodic checking for wind data updates
+function startWindDataUpdateCheck() {
+    // Check every 10 minutes (600000 ms)
+    setInterval(async () => {
+        await checkForWindDataUpdates();
+    }, 600000);
+}
+
+function updateCycleDisplay(cycle, time) {
+    const lbModelrun = document.getElementById('lb_modelrun');
+    const lbIndex = document.getElementById('lb_index');
+    let cycleString = null;
+    if (cycle instanceof Date) {
+        cycleString = cycle.toISOString();
+    } else if (typeof cycle === 'string') {
+        cycleString = cycle;
+    }
+    if (lbModelrun && cycleString) {
+        lbModelrun.innerHTML = cycleString.substring(11, 13) + 'Z';
+    }
+    let timeObj = null;
+    if (time instanceof Date) {
+        timeObj = time;
+    } else if (typeof time === 'string') {
+        timeObj = new Date(time);
+    }
+    if (lbIndex && timeObj && !Number.isNaN(timeObj.getTime())) {
+        lbIndex.innerHTML = timeObj.toISOString().substring(0, 16) + 'Z';
+    }
+}
+
+// Check for updated wind data from server
+async function checkForWindDataUpdates() {
+    try {
+        // Reload server settings
+        await reloadServerSettings();
+        
+        // Get the latest cycle from server settings
+        const latestCycle = getLatestCycleFromSettings();
+        if (!latestCycle) return;
+        
+        // If the latest cycle is different from current, update
+        if (latestCycle !== currentCycle) {
+            console.log(`Wind data updated: ${currentCycle} -> ${latestCycle}`);
+            currentCycle = latestCycle;
+            if (gribCache && typeof gribCache.clearCache === 'function') {
+                gribCache.clearCache();
+            }
+            if (ir_index) {
+                await redrawWindByOffset(ir_index.value);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for wind data updates:', error);
+    }
 }
 
 // Prefill the Currents selector from server settings
@@ -839,6 +903,26 @@ function getCurrentCycle(d = new Date()) {
     return new Date(fc).toISOString();
 }
 
+function getLatestCycleFromSettings() {
+    const ss = getServerSettings();
+    if (!ss || !ss.datasources) return null;
+    const dataSource = ss.datasources.find(ds => ds.name === 'NOAA-GFS-WIND');
+    if (!dataSource || !dataSource.gribpaths || dataSource.gribpaths.length === 0) return null;
+    
+    // Find the most recent gribpath
+    const latest = dataSource.gribpaths.reduce((prev, curr) => {
+        const prevDate = new Date(`${prev.date.substring(0,4)}-${prev.date.substring(4,6)}-${prev.date.substring(6,8)}T${prev.run.toString().padStart(2,'0')}:00:00Z`);
+        const currDate = new Date(`${curr.date.substring(0,4)}-${curr.date.substring(4,6)}-${curr.date.substring(6,8)}T${curr.run.toString().padStart(2,'0')}:00:00Z`);
+        return currDate > prevDate ? curr : prev;
+    });
+    
+    const year = latest.date.substring(0,4);
+    const month = latest.date.substring(4,6);
+    const day = latest.date.substring(6,8);
+    const hour = latest.run.toString().padStart(2,'0');
+    return `${year}-${month}-${day}T${hour}:00:00.000Z`;
+}
+
 
 function storeValue(name, value) {
     try {
@@ -1400,8 +1484,8 @@ function getIsochroneByTime(time) {
     return null;
 }
 
-function redrawWindByTime(time) {
-    getWind(currentCycle, time);
+async function redrawWindByTime(time) {
+    await getWind(currentCycle, time);
 }
 
 function getOffsetTime(offset, cycle = currentCycle) {
@@ -1411,8 +1495,8 @@ function getOffsetTime(offset, cycle = currentCycle) {
     return new Date(time);
 }
 
-function redrawWindByOffset(offset) {
-    redrawWindByTime(getOffsetTime(offset));
+async function redrawWindByOffset(offset) {
+    await redrawWindByTime(getOffsetTime(offset));
 }
 
 async function getWind(cycle, time) {
@@ -1426,16 +1510,18 @@ async function getWind(cycle, time) {
         console.log(e1);
         try {
             usedCycle = availableForecastCycle();
-            gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
+            await gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
         } catch (e2) {
             console.log(e2);
         }
     }
-    document.getElementById('lb_modelrun').innerHTML = usedCycle.substring(11, 13) + 'Z';
-    document.getElementById('lb_index').innerHTML = time.toISOString().substring(0, 16) + 'Z';
+
+    updateCycleDisplay(usedCycle, time);
 
     var offset = (new Date(time) - new Date(usedCycle)) / 3600000;
-    ir_index.value = offset;
+    if (ir_index) {
+        ir_index.value = offset;
+    }
 }
 
 async function updateWindInfo(event, getVMG) {

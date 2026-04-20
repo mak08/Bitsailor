@@ -28,6 +28,13 @@ export function loadServerSettings() {
     return settingsPromise;
 }
 
+export function reloadServerSettings() {
+    // Reset the cache to force a reload
+    serverSettings = null;
+    settingsPromise = null;
+    return loadServerSettings();
+}
+
 export async function ensureServerSettings() {
     if (serverSettings) return serverSettings;
     await loadServerSettings();

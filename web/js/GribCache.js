@@ -309,6 +309,11 @@ export default class GribCache {
     // Track in-flight fetch/decode promises to dedupe concurrent requests
     #gribInflight = new Map();
 
+    clearCache () {
+        this.#gribCache.clear();
+        this.#gribInflight.clear();
+    }
+
     cacheGetGrib (cycle, res, offset) {
         let cycleStr = this.formatCycle(cycle);
         let key = `${cycleStr}+${res}+${offset}`;

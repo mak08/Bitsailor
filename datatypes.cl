@@ -26,6 +26,7 @@
   race-info
   interpolation
   grib-source
+  forecast-model
   resolution
   cycle
   polars

@@ -36,7 +36,8 @@ let settings = {
     "resolution": "0p25",
     "duration": 345600,
     "polarsId": undefined,
-    "useWaves": true
+    "useWaves": true,
+    "forecast_model": "NOAA-GFS-WIND"
 };
 
 let polarManager = new PolarManager();
@@ -50,7 +51,8 @@ let courseGateLayers = []; // layers created by GPX import (markers + polylines)
 function setupPage() {
     // Prefetch server settings for use across modules
     loadServerSettings().then(() => {
-        currentCycle = getLatestCycleFromSettings() || getCurrentCycle();
+        fillForecastModelDropdown();
+        currentCycle = getLatestCycleFromSettings(settings.forecast_model) || getCurrentCycle();
         fillCurrentsDropdown();
         // Ensure ir_index is set up before calling updateMap
         // (setUp assigns ir_index = document.getElementById("ir_index");)
@@ -58,6 +60,7 @@ function setupPage() {
         // Start periodic check for wind data updates
         startWindDataUpdateCheck();
     }).catch(() => {
+        fillForecastModelDropdown();
         currentCycle = getCurrentCycle();
         // Still show NONE even if server settings fail
         fillCurrentsDropdown();
@@ -112,8 +115,8 @@ async function checkForWindDataUpdates() {
         // Reload server settings
         await reloadServerSettings();
         
-        // Get the latest cycle from server settings
-        const latestCycle = getLatestCycleFromSettings();
+        // Get the latest cycle for the currently selected forecast model
+        const latestCycle = getLatestCycleFromSettings(settings.forecast_model);
         if (!latestCycle) return;
         
         // If the latest cycle is different from current, update
@@ -160,6 +163,44 @@ function fillCurrentsDropdown() {
     } catch (e) {
         sel.value = 'NONE';
     }
+}
+
+function fillForecastModelDropdown() {
+    const sel = document.getElementById('sel_forecast_model');
+    if (!sel) return;
+
+    sel.innerHTML = '';
+    const ss = getServerSettings();
+    const sources = ss && Array.isArray(ss.datasources)
+        ? ss.datasources.filter(ds => ds.datakind === 'wind')
+        : [];
+
+    if (sources.length === 0) {
+        const o = document.createElement('option');
+        o.value = 'NOAA-GFS-WIND';
+        o.textContent = 'NOAA-GFS-WIND';
+        sel.appendChild(o);
+    } else {
+        for (const ds of sources) {
+            const name = typeof ds.name === 'string' ? ds.name : String(ds.name);
+            const o = document.createElement('option');
+            o.value = name;
+            o.textContent = name;
+            sel.appendChild(o);
+        }
+    }
+
+    const saved = localStorage.getItem('xx.forecast_model');
+    let selected = saved && Array.from(sel.options).some(o => o.value === saved)
+        ? saved
+        : null;
+    if (!selected) {
+        selected = Array.from(sel.options).some(o => o.value === settings.forecast_model)
+            ? settings.forecast_model
+            : (sel.options.length ? sel.options[0].value : 'NOAA-GFS-WIND');
+    }
+    sel.value = selected;
+    settings.forecast_model = sel.value;
 }
 
 // Hook dropdown
@@ -272,6 +313,8 @@ function captureAllRaceSettings() {
     const gates = race.settings.gates || undefined;
     const currentSel = document.getElementById('sel_currents');
     const current = currentSel ? currentSel.value : 'NONE';
+    const forecastModelSel = document.getElementById('sel_forecast_model');
+    const forecastModel = forecastModelSel ? forecastModelSel.value : settings.forecast_model;
     const wavesSel = document.getElementById('cb_waves');
     const useWaves = wavesSel ? wavesSel.checked : true;
 
@@ -286,6 +329,7 @@ function captureAllRaceSettings() {
         options,
         gates,
         current,
+        forecast_model: forecastModel,
         useWaves
     };
     saveRaces();
@@ -298,6 +342,7 @@ function applyRaceSettings(race) {
   if (race.settings.nmeaHost) { const h = document.getElementById('tb_nmeahost'); if (h) h.value = race.settings.nmeaHost; }
   if (race.settings.nmeaPort) { const p = document.getElementById('tb_nmeaport'); if (p) p.value = race.settings.nmeaPort; }
   if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
+    if (race.settings.forecast_model) { const sf = document.getElementById('sel_forecast_model'); if (sf) { sf.value = race.settings.forecast_model; settings.forecast_model = race.settings.forecast_model; } }
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
   if (race.settings.resolution) setResolution(race.settings.resolution);
@@ -562,6 +607,8 @@ function setUp(getVMG) {
     // Set up other UI elements
     document.getElementById("sel_resolution").addEventListener("change", onSetResolution);
     document.getElementById("sel_polars").addEventListener("change", onSetPolars);
+    const selForecastModel = document.getElementById("sel_forecast_model");
+    if (selForecastModel) selForecastModel.addEventListener("change", onSetForecastModel);
     const selCurrents = document.getElementById("sel_currents");
     if (selCurrents) selCurrents.addEventListener("change", onSetCurrents);
     const cbWaves = document.getElementById("cb_waves");
@@ -780,6 +827,24 @@ function onSetCurrents(event) {
     captureRaceSettings('current', current);
 }
 
+function onSetForecastModel(event) {
+    const model = event.currentTarget.value || 'NOAA-GFS-WIND';
+    settings.forecast_model = model;
+    storeValue('forecast_model', model);
+    captureRaceSettings('forecast_model', model);
+
+    if (gribCache && typeof gribCache.setForecastModel === 'function') {
+        gribCache.setForecastModel(model);
+        gribCache.clearCache();
+    }
+
+    const latestCycle = getLatestCycleFromSettings(model);
+    if (latestCycle) {
+        currentCycle = latestCycle;
+        redrawWindByOffset(ir_index.value);
+    }
+}
+
 function onSetWaves(event) {
     const enabled = event.currentTarget.checked;
     settings.useWaves = enabled;
@@ -874,7 +939,9 @@ function updateMap() {
     // Load wind
     if (!gribCache) {
         let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date());
+        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date(), settings.forecast_model);
+    } else if (typeof gribCache.setForecastModel === 'function') {
+        gribCache.setForecastModel(settings.forecast_model);
     }
 
     redrawWindByOffset(ir_index.value);
@@ -903,10 +970,17 @@ function getCurrentCycle(d = new Date()) {
     return new Date(fc).toISOString();
 }
 
-function getLatestCycleFromSettings() {
+function getLatestCycleFromSettings(modelName = 'NOAA-GFS-WIND') {
     const ss = getServerSettings();
     if (!ss || !ss.datasources) return null;
-    const dataSource = ss.datasources.find(ds => ds.name === 'NOAA-GFS-WIND');
+
+    let requested = typeof modelName === 'string' ? modelName : String(modelName);
+    requested = requested.replace(/^.*::/, '').toUpperCase();
+
+    const dataSource = ss.datasources.find(ds => {
+        const name = typeof ds.name === 'string' ? ds.name : String(ds.name);
+        return name.toUpperCase() === requested;
+    });
     if (!dataSource || !dataSource.gribpaths || dataSource.gribpaths.length === 0) return null;
     
     // Find the most recent gribpath
@@ -1061,6 +1135,11 @@ function getRoute() {
     var sailInput = document.getElementById('sel_currentsail');
     if (sailInput) {
         query += `&sail=${sailInput.value}`;
+    }
+
+    var forecastModelInput = document.getElementById('sel_forecast_model');
+    if (forecastModelInput && forecastModelInput.value) {
+        query += `&forecast_model=${encodeURIComponent(forecastModelInput.value)}`;
     }
 
     // Add selected currents datasource (or NONE) to query

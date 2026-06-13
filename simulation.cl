@@ -218,8 +218,10 @@
           (stepper (make-stepper start-time  (routing-stepmax routing)))
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
-          (params-wind (get-params 'cl-weather::noaa-gfs-wind start-time)
-                       (get-params 'cl-weather::noaa-gfs-wind step-time))
+          (wind-source (or (routing-forecast-model routing)
+                           'cl-weather::noaa-gfs-wind))
+          (params-wind (get-params wind-source start-time)
+                       (get-params wind-source step-time))
           (params-wave (when waves (get-params 'cl-weather::gfswave-combined start-time))
                        (when waves (get-params 'cl-weather::gfswave-combined step-time)))
           (params-curnt (when currents (get-params currents start-time))

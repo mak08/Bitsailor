@@ -139,13 +139,15 @@ export default class GribCache {
     #curCycle = undefined;
     #curOffset = undefined;
     #curTime = undefined;
-    #curRes = undefined; 
+    #curRes = undefined;
+    #forecastModel = 'NOAA-GFS-WIND';
     // Server settings are handled by shared ServerSettings module
 
-    constructor (canvas, bounds, resolution, time) {
+    constructor (canvas, bounds, resolution, time, forecastModel = 'NOAA-GFS-WIND') {
         // Prefetch server settings via shared module
         loadServerSettings();
         this.#canvas = canvas;
+        this.#forecastModel = forecastModel || 'NOAA-GFS-WIND';
     }
     
     
@@ -359,6 +361,10 @@ export default class GribCache {
     updateCanvas () {
         this.drawWind(this.#curBounds, this.#curCycle, this.#curRes, this.#curOffset, this.#curTime, this.#canvas);
     }
+
+    setForecastModel (forecastModel) {
+        this.#forecastModel = forecastModel || 'NOAA-GFS-WIND';
+    }
     
     handleError (request) {
     };
@@ -366,11 +372,19 @@ export default class GribCache {
     gribPath (cycle, res, offset) {
         // Assumes settings are loaded; caller should gate via ensureServerSettings()
         const ss = getServerSettings();
+        let selectedName = typeof this.#forecastModel === 'string'
+            ? this.#forecastModel
+            : String(this.#forecastModel);
+        selectedName = selectedName.replace(/^.*::/, '').toUpperCase();
+
         const dataSource = ss && ss.datasources
-            ? ss.datasources.find((entry) => entry.name === 'NOAA-GFS-WIND')
+            ? ss.datasources.find((entry) => {
+                const name = typeof entry.name === 'string' ? entry.name : String(entry.name);
+                return name.toUpperCase() === selectedName;
+            })
             : undefined;
         if (!dataSource) {
-            throw new Error('Server settings missing datasource NOAA-GFS-WIND');
+            throw new Error(`Server settings missing datasource ${selectedName}`);
         }
         let run = cycle.getUTCHours().toFixed();
         let entry = dataSource.gribpaths.find((p) => p.step == offset && p.run == run);

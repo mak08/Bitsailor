@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Description
 ;;; Author         Michael Kappert 2015
-;;; Last Modified <michael 2026-04-03 22:54:01>
+;;; Last Modified <michael 2026-04-20 20:38:46>
 
 (in-package :bitsailor)
 
@@ -143,6 +143,7 @@
                                               (|useECMWF| nil)
                                               (|useWaves| nil)
                                               (|currents| nil)
+                                              (|forecast_model| nil)
                                               |slat|
                                               |slon|
                                               |dlat|
@@ -167,16 +168,21 @@
            (return-from |getRoute| (format nil "~a" e)))))
 
     (let* ((*read-default-float-format* 'double-float)
+           (currents (read-arg |currents| 'symbol 'cl-weather))
+           (forecast-model (let ((model (read-arg |forecast_model|)))
+                             (if (and model (not (string= model "")))
+                                 (read-arg |forecast_model| 'symbol 'cl-weather)
+                                 'cl-weather::noaa-gfs-wind)))
            (cycle (if cycle-supplied-p
                       (make-cycle :timestamp (parse-datetime |cycleTS|))
-                      (cl-weather::timestamp-cycle 'cl-weather::noaa-gfs-wind (now))))
-           (currents (read-arg |currents| 'symbol 'cl-weather))
+                      (cl-weather::timestamp-cycle forecast-model (now))))
            (routing
              (get-routing-presets :race-id |raceId|
                                   :polars-id (decode-uri-component |polarsId|)
                                   :use-ecmwf (string-equal (read-arg |useECMWF|) "true")
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :currents currents
+                                  :forecast-model forecast-model
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :tack |tack|
                                   :sail |sail|
@@ -194,6 +200,9 @@
         (error 'request-error :message "Start point is on land"))
       (when (equalp (routing-start routing) (routing-dest routing))
         (error 'request-error :message "Start and destination are the same"))
+      
+      (setf (http-header response :|Content-Type|)
+            "application/json")
       (let ((routeinfo
               (get-route routing)))
         (log2:info "Status ~a ~a"
@@ -467,13 +476,14 @@
                               (use-ecmwf t)
                               (use-waves nil)
                               (currents nil)
+                              (forecast-model 'cl-weather::noaa-gfs-wind)
                               (starttime nil)
                               (resolution "0p25" resolution-provided-p)
                               (options)
                               (tack)
                               (sail nil)
                               (stepmax (* 24 60 60))
-                              (cycle (current-cycle 'noaa-gfs-wind))
+                              (cycle (current-cycle forecast-model))
                               (slat)
                               (slon)
                               (dlat)
@@ -512,6 +522,7 @@
      :use-ecmwf use-ecmwf
      :use-waves use-waves
      :currents currents
+     :forecast-model forecast-model
      :twa-angles (make-twa-angles-buffer cpolars)
      :cycle cycle
      :merge-start *merge-start*

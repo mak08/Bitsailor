@@ -360,71 +360,81 @@ input[type=checkbox] {
 	grid-column: 2/7;
 }
 
-.currents-label {
+.forecast-model-label {
 	grid-row: 10;
 	grid-column: 1;
 }
 
-.currents-selector {
+.forecast-model-selector {
 	grid-row: 10;
 	grid-column: 2/7;
 }
 
-.waves-label {
+.currents-label {
 	grid-row: 11;
 	grid-column: 1;
 }
 
-.waves-checkbox {
+.currents-selector {
 	grid-row: 11;
+	grid-column: 2/7;
+}
+
+.waves-label {
+	grid-row: 12;
+	grid-column: 1;
+}
+
+.waves-checkbox {
+	grid-row: 12;
 	grid-column: 2;
 }
 
 
 /* Boat state */
 .boatstate-label {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 1;
 
 }
 .boatstate-group {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 2/7;
 }
 
 
 /* Hide wind */
 .displaywind-label {
-	grid-row: 14;
+	grid-row: 15;
 	grid-column: 1;
 
 }
 .displaywind-checkbox {
-	grid-row: 14;
+	grid-row: 15;
 	grid-column: 2;
 
 }
 
 /* Display tracks */
 .displaytracks-label {
-	grid-row: 14;
+	grid-row: 15;
 	grid-column: 3/6;
 }
 .displaytracks-checkbox {
-	grid-row: 14;
+	grid-row: 15;
 	grid-column: 6;
 }
 
 /* Execute */
 .execute-button {
-	grid-row: 12;
+	grid-row: 13;
 	grid-column: 1/2;
 
 }
 
 /* Progress bar */
 .progress-bar {
-	grid-row: 13;
+	grid-row: 14;
 	grid-column: 1;
 }
 
@@ -445,13 +455,13 @@ input[type=checkbox] {
 
 /* Current TWA */
 .current-twa-label {
-	grid-row: 15;
+	grid-row: 16;
 	grid-column: 1;
 	color: #60B260;
 	font-weight: bold;
 }
 .current-twa {
-	grid-row: 15;
+	grid-row: 16;
 	grid-column: 2;
 	color: #60B260;
 	font-weight: bold;
@@ -459,43 +469,43 @@ input[type=checkbox] {
 
 /* Current Heading */
 .current-heading-label {
-	grid-row: 16;
+	grid-row: 17;
 	grid-column: 1;
 	color: #00c2f8;
 	font-weight: bold;
 }
 .current-heading {
-	grid-row: 16;
+	grid-row: 17;
 	grid-column: 2;
 	color: #00c2f8;
 }
 
 /* Statistics */
 .statistics-label {
-	grid-row: 18;
+	grid-row: 19;
 	grid-column: 1;
 	font-style: italic;
 	font-weight: bold;
 }
 
 .statistics-from-label {
-	grid-row: 19;
+	grid-row: 20;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-from {
-	grid-row: 19;
+	grid-row: 20;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
 
 .statistics-duration-label {
-	grid-row: 20;
+	grid-row: 21;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-duration {
-	grid-row: 20;
+	grid-row: 21;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
@@ -503,34 +513,34 @@ input[type=checkbox] {
 /* Removed sails summary to reduce clutter */
 
 .statistics-min-wind-label {
-	grid-row: 21;
+	grid-row: 22;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-min-wind {
-	grid-row: 21;
+	grid-row: 22;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
 
 .statistics-min-twa-label {
-	grid-row: 22;
+	grid-row: 23;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-min-twa {
-	grid-row: 22;
+	grid-row: 23;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
 
 .statistics-polars-label {
-	grid-row: 23;
+	grid-row: 24;
 	grid-column: 1;
 	align-self: flex-start;
 }
 .statistics-polars {
-	grid-row: 23;
+	grid-row: 24;
 	grid-column: 2/7;
 	align-self: flex-start;
 }
@@ -538,20 +548,20 @@ input[type=checkbox] {
 /* Download */
 /* Separate row for schedule download */
 .route-label {
-	grid-row: 25; /* Final row label */
+	grid-row: 26; /* Final row label */
 	grid-column: 1;
 }.download-button {
-	grid-row: 25; /* Move near end of controls */
+	grid-row: 26; /* Move near end of controls */
 	grid-column: 2/7;
 }
 
 /* Separate row for schedule download */
 .schedule-label {
-	grid-row: 26; /* Final row label */
+	grid-row: 27; /* Final row label */
 	grid-column: 1;
 }
 .download-schedule {
-	grid-row: 26; /* Final row button */
+	grid-row: 27; /* Final row button */
 	grid-column: 2/7;
 }
 

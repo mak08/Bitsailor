@@ -52,7 +52,7 @@ function setupPage() {
     // Prefetch server settings for use across modules
     loadServerSettings().then(() => {
         fillForecastModelDropdown();
-        currentCycle = getLatestCycleFromSettings(settings.forecast_model) || getCurrentCycle();
+        currentCycle = getLatestCycleFromSettings('NOAA-GFS-WIND') || getCurrentCycle();
         fillCurrentsDropdown();
         // Ensure ir_index is set up before calling updateMap
         // (setUp assigns ir_index = document.getElementById("ir_index");)
@@ -115,8 +115,8 @@ async function checkForWindDataUpdates() {
         // Reload server settings
         await reloadServerSettings();
         
-        // Get the latest cycle for the currently selected forecast model
-        const latestCycle = getLatestCycleFromSettings(settings.forecast_model);
+        // Keep the browser wind preview on the latest NOAA GFS cycle
+        const latestCycle = getLatestCycleFromSettings('NOAA-GFS-WIND');
         if (!latestCycle) return;
         
         // If the latest cycle is different from current, update
@@ -832,17 +832,6 @@ function onSetForecastModel(event) {
     settings.forecast_model = model;
     storeValue('forecast_model', model);
     captureRaceSettings('forecast_model', model);
-
-    if (gribCache && typeof gribCache.setForecastModel === 'function') {
-        gribCache.setForecastModel(model);
-        gribCache.clearCache();
-    }
-
-    const latestCycle = getLatestCycleFromSettings(model);
-    if (latestCycle) {
-        currentCycle = latestCycle;
-        redrawWindByOffset(ir_index.value);
-    }
 }
 
 function onSetWaves(event) {
@@ -939,9 +928,7 @@ function updateMap() {
     // Load wind
     if (!gribCache) {
         let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date(), settings.forecast_model);
-    } else if (typeof gribCache.setForecastModel === 'function') {
-        gribCache.setForecastModel(settings.forecast_model);
+        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date(), 'NOAA-GFS-WIND');
     }
 
     redrawWindByOffset(ir_index.value);

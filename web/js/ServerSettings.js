@@ -44,9 +44,3 @@ export async function ensureServerSettings() {
 export function getServerSettings() {
     return serverSettings;
 }
-
-export function getDatasourceByName(name) {
-    const ss = serverSettings;
-    if (!ss || !ss.datasources) return undefined;
-    return ss.datasources.find((entry) => entry.name === name);
-}

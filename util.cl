@@ -21,46 +21,6 @@
                        (make-latlng :lat lat1 :lng lon1))
       seconds)))
 
-(defun compare-speed (polars-name twa tws &optional (options '("reach" "heavy" "light")))
-  (let* ((cpolars (get-combined-polars polars-name (encode-options options)))
-         (polars (get-polars-by-name polars-name))
-         (polars-raw (get-polars-raw polars-name))
-         (twa-index (position twa (joref polars-raw "twa") :test #'equalp))
-         (tws-index (position tws (joref polars-raw "tws") :test #'equalp)))
-    (destructuring-bind (speed sail)
-        (get-max-speed (cpolars-speed cpolars) twa (knots-to-m/s tws))
-      (format t "Compiled:         ~a~%"
-              (m/s-to-knots speed))
-      (format t "Raw interpolated: ~a~%"
-              (loop
-                 :for saildef :across  (joref polars-raw "sail")
-                 :when (equal (joref saildef "name") sail)
-                 :return (get-boat-speed-raw twa tws (joref polars-raw "twa") (joref polars-raw "tws") saildef)))
-      (format t "Converted:        ~a~%"
-              (m/s-to-knots (get-max-speed% twa (knots-to-m/s tws) polars (encode-options options))))
-      (format t "Raw:              ~a~%"
-              (when (and twa-index tws-index)
-                (loop
-                   :for saildef :across  (joref polars-raw "sail")
-                   :when (equal (joref saildef "name") sail)
-                   :return (aref (aref (joref saildef "speed") twa-index) tws-index))))
-      (format t "Sail:             ~a~%"
-              sail))))
-
-(defun get-boat-speed-raw (twa tws twa-values tws-values saildef)
-  (multiple-value-bind
-        (speed-index speed-fraction)
-      (fraction-index tws tws-values)
-    (multiple-value-bind
-          (angle-index angle-fraction)
-        (fraction-index twa twa-values)
-      (bilinear-unit speed-fraction
-                     angle-fraction
-                     (aref (aref (joref saildef "speed") angle-index) speed-index)
-                     (aref (aref (joref saildef "speed") angle-index) (1+ speed-index))
-                     (aref (aref (joref saildef "speed") (1+ angle-index)) speed-index)
-                     (aref (aref (joref saildef "speed") (1+ angle-index)) (1+ speed-index))))))
-
 (defun boat-speed-kn (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let ((cpolars (get-combined-polars polars-name (encode-options options))))
     (destructuring-bind (speed sail)

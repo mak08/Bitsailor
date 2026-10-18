@@ -24,19 +24,12 @@
 ;;; Parameters and configuration
 
 (defparameter *disable-nmea*  nil)
-(defparameter *max-wind* 384)
 (defparameter *max-angle* 120)
 (defparameter *max-iso-points* 1500)
 (defparameter *max-route-hours* (* 24 12))
 
-(defvar *api-key*)
 (defvar *use-bitmap* nil)
 (defvar *tracks* nil)
-(defvar *resolutions* '("1p00" "0p25"))
-(defvar *merge-start* 6d0)
-(defvar *merge-duration* 0d0)
-
-
 (defvar *web-root-directory*
   (make-pathname :directory (append (pathname-directory #.*compile-file-truename*)
                                     '("web"))))
@@ -56,16 +49,6 @@
    NIL (default) mean use only points provided in polar file.
    Clear *combined-polars-ht* to force recomputation of cpolars.")
 
-
-(defparameter +foil-speeds+ (map 'vector #'knots-to-m/s
-                                #(0.0d0 11.0d0 16.0d0 35.0d0 40.0d0 70.0d0)) )
-(defparameter +foil-angles+ #(0.0d0 70.0d0 80.0d0 160.0d0 170.0d0 180.0d0))
-(defparameter +foil-matrix+ #2a((1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.04d0 1.04d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)
-                               (1.00d0 1.00d0 1.00d0 1.00d0 1.00d0 1.00d0)))
 
 ;;; Loading race lists
 (defvar *racelist-timer* nil)

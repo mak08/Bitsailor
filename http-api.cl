@@ -11,22 +11,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Dynamic handlers
 
-(defun get-page (server handler request response)
-  (handler-case 
-      (let* ((user-id (http-authenticated-user handler request))
-             (app (get-request-app request))
-             (race-id (get-routing-request-race-id request))
-             (path (merge-pathnames (make-pathname :name app :type "html")
-                                    *web-root-directory*)))
-        (log2:info "race-id: ~a" race-id)
-        (setf (http-header response :|Content-Location|)
-              (path request))
-        (load-file path response))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
-
 ;;; This function is called from a dynamic handler
 (defun start-page (server handler request response)
   (handler-case 
@@ -38,34 +22,6 @@
       (log2:error "~a" e)
       (setf (status-code response) 500)
       (setf (status-text response) (format nil "~a" e)))))
-
-;;; This function is called from a dynamic handler
-(defun router (server handler request response)
-  (handler-case 
-      (let* ((user-id (http-authenticated-user handler request))
-             (app (get-request-app request))
-             (race-id (get-routing-request-race-id request))
-             (race-info (race-info race-id))
-             (page-base-name
-               (typecase race-info
-                 (race-info-vr "router-vr")
-                 (null
-                  (error "Unknown race ~a" race-id))))
-             (path (merge-pathnames (make-pathname :name page-base-name :type "html")
-                                    *web-root-directory*))
-             (query (parameters request)))
-        (log2:info "race-id: ~a" race-id)
-        (log2:info "type: ~a" (type-of (race-info race-id)))
-        (setf (http-header response :|Content-Location|)
-              (path request))
-        (load-html-file path response :substitutions (list (cons "GOOGLE_API_KEY" *api-key*))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (http-header response "Connection") "Close")
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e))
-      (setf (http-body response)
-            (format nil "<html><body>~a</body></html>" e)))))
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
@@ -134,13 +90,8 @@
 ;;; getRoute
 
 (defun |getRoute| (handler request response &key
-                                              (|raceId| nil)
                                               (|options| nil)
-                                              (|tack| nil)
-                                              (|sail| nil)
-                                              (|resolution| "0p25")
                                               |polarsId|
-                                              (|useECMWF| nil)
                                               (|useWaves| nil)
                                               (|currents| nil)
                                               (|forecast_model| nil)
@@ -149,7 +100,6 @@
                                               |dlat|
                                               |dlon|
                                               (|startTime| nil)
-                                              (|cycleTS| nil cycle-supplied-p)
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
   (handler-bind
@@ -173,22 +123,13 @@
                              (if (and model (not (string= model "")))
                                  (read-arg |forecast_model| 'symbol 'cl-weather)
                                  'cl-weather::noaa-gfs-wind)))
-           (cycle (if cycle-supplied-p
-                      (make-cycle :timestamp (parse-datetime |cycleTS|))
-                      (cl-weather::timestamp-cycle forecast-model (now))))
            (routing
-             (get-routing-presets :race-id |raceId|
-                                  :polars-id (decode-uri-component |polarsId|)
-                                  :use-ecmwf (string-equal (read-arg |useECMWF|) "true")
+             (get-routing-presets :polars-id (decode-uri-component |polarsId|)
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :currents currents
                                   :forecast-model forecast-model
                                   :options (cl-utilities:split-sequence #\, |options|)
-                                  :tack |tack|
-                                  :sail |sail|
-                                  :resolution |resolution|
                                   :starttime |startTime|
-                                  :cycle cycle
                                   :stepmax (if duration-supplied-p
                                                (read-arg |duration|)
                                                |duration|)
@@ -211,85 +152,6 @@
         (values
          (with-output-to-string (s)
            (json s routeinfo)))))))
-
-(defun get-request-app (request)
-  (let ((query-pairs (parameters request)))
-    (or (cadr (assoc "app" query-pairs :test #'string=))
-        "index")))
-
-(defun get-routing-request-race-id (request)
-  (or (cadr (assoc "race" (parameters request) :test #'string=))
-      (let* ((referer (http-header request :|referer|))
-             (query-string (puri:uri-query (puri:parse-uri referer)))
-             (query-pairs (parse-url-query query-string)))
-        (or (cadr (assoc "race" query-pairs :test #'string=))
-            "default"))))
-
-(defun arc-length (a b)
-  (when (< a 0) (incf a 360))
-  (when (< b 0) (incf b 360))
-  (when (< b a) (incf b 360))
-  (- b a))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Wind Tiles
-
-(defun parse-cycle-string (cycle)
-  (make-cycle
-   :timestamp (parse-datetime
-               (format nil "~a-~a-~aT~a:00Z"
-                       (subseq cycle 0 4)
-                       (subseq cycle 4 6)
-                       (subseq cycle 6 8)
-                       (subseq cycle 9 11)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TWA Path
-
-(defun |getTWAPath| (handler request response &key |presets| |raceId| |options| |gfsMode| |polarsId| |cycle| |time| |resolution| |latA| |lngA| |lat| |lng|)
-  (handler-case
-      (let* ((*read-default-float-format* 'double-float)
-             (user-id
-               (http-authenticated-user handler request))
-             (race-id (get-routing-request-race-id request))
-             (cycle (when |cycle| (make-cycle :timestamp (parse-timestring |cycle|))))
-             (routing
-               (get-routing-presets :race-id |raceId|
-                                    :polars-id |polarsId|
-                                    :options (cl-utilities:split-sequence #\, |options|)
-                                    :resolution |resolution|
-                                    :starttime |time|
-                                    :cycle cycle))
-             (time (parse-datetime |time|))
-             (lat-a (read-arg |latA|))
-             (lng-a (read-arg |lngA|))
-             (lat (read-arg |lat|))
-             (lng (read-arg |lng|)))
-        (values
-         (with-output-to-string (s)
-           (json s (get-twa-path routing :cycle cycle :time time :lat-a lat-a :lng-a lng-a :lat lat :lng lng)))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Batch routing
-
-(defun |checkWindow| (location request response &key (|logfile| "checkWindow.log"))
-  (handler-case
-      (let ((result
-             (check-window  (local-time:adjust-timestamp (local-time:now) (:offset :hour 2))
-                            (local-time:adjust-timestamp (local-time:now) (:offset :day 3))
-                            :options '("winch" "foil" "heavy" "reach" "hull")
-                            :logfile |logfile|)))
-        (values
-         (with-output-to-string (s)
-           (json s result))))
-    (error (e)
-      (log2:error "~a" e)
-      (setf (status-code response) 500)
-      (setf (status-text response) (format nil "~a" e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Commands
@@ -352,51 +214,6 @@
             (get-gprmc host port)))))
            
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Race list  & race info
-
-(defun |getRaceInfo| (handler request response)
-    (let* ((user-id
-             (http-authenticated-user handler request))
-           (race-id
-             (get-routing-request-race-id request))
-           (race-info
-             (race-info race-id)))
-      (values
-       (with-output-to-string (s)
-         (json s race-info)))))
-
-(defstruct raceinfo type name id gfs025 record class level category start-time closing-time start-pos finish-pos closed)
-
-(defun |getRaceListAdmin| (handler request response &key (|forceReload| "false"))
-  ;; Admin only!
-  (declare (ignore handler request response))
-  (get-race-list :force-reload (string= |forceReload| "true")))
-
-(defun |getRaceList| (handler request response)
-  ;; unauthenticated!
-  (declare (ignore handler request response))
-  "[]")
-
-(defun get-raceinfo (race)
-  (let* ((id (joref race "_id"))
-         (boat (joref race "boat"))
-         (start (joref race "start")))
-    (make-raceinfo
-     :type "vr"
-     :name (joref race "name")
-     :id (format nil "~a.~a" (joref id "race_id") (or (joref id "num")
-                                                      (joref id "leg_num")))
-     :gfs025 (if (string= (joref race "fineWinds") "TRUE") "yes" "no")
-     :record (when (string= (joref (joref race "race") "type") "record") "yes")
-     :class (joref boat "label")
-     :level (joref race "priceLevel")
-     :category  (joref race "vsrLevel")
-     :start-time (joref start "date")
-     :start-pos  (make-latlng
-                  :lat (joref start "lat")
-                  :lng (joref start "lon")))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router status & stats
 
 (defstruct (routerstatus (:constructor routerstatus
@@ -437,26 +254,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 
-(defun load-html-file (path response &key substitutions)
-  ;; The FILE-HANDLER response handler does a lot more - 
-  ;; Think about redesigning this
-  (with-open-file (f path :element-type 'character :external-format :utf-8)
-    (let ((buffer (make-array (file-length f) :element-type 'character)))
-      (read-sequence buffer f)
-      (dolist (subst substitutions)
-        (destructuring-bind (marker . value)
-            subst
-          (let ((start (search marker buffer)))
-            (when (numberp start)
-              (setf buffer
-                    (concatenate 'string
-                                 (subseq buffer 0 start)
-                                 value
-                                 (subseq buffer (+ start (length marker)))))))))
-      (setf (http-body response) buffer)))
-  (setf (http-header response :|Content-Type|)
-        (get-mime-for-extension (pathname-type path))))
-
 (defun load-file (path response)
   ;; The FILE-HANDLER response handler does a lot more - 
   ;; Think about redesigning this
@@ -471,19 +268,13 @@
 ;;; Helper functions
 
 (defun get-routing-presets (&key
-                              (race-id)
                               (polars-id)
-                              (use-ecmwf t)
                               (use-waves nil)
                               (currents nil)
                               (forecast-model 'cl-weather::noaa-gfs-wind)
                               (starttime nil)
-                              (resolution "0p25" resolution-provided-p)
                               (options)
-                              (tack)
-                              (sail nil)
                               (stepmax (* 24 60 60))
-                              (cycle (current-cycle forecast-model))
                               (slat)
                               (slon)
                               (dlat)
@@ -495,8 +286,6 @@
            (or options
                '("hull" "foil" "winch" "heavy" "light" "reach")))
          (cpolars (get-combined-polars polars-id (encode-options options))))
-    (when (not resolution-provided-p)
-      (setf resolution "0p25"))
     (make-routing
      :fan *max-angle*
      :start start
@@ -505,29 +294,11 @@
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :options options
-     :tack (cond
-             ((string= tack "port")
-              90d0)
-             ((string= tack "stbd")
-              -90d0)
-            (t
-             (log2:warning "No valid initial tack ~a" tack)
-             nil))
-     :sail sail
-     :resolution resolution
-     :minwind 0d0
-     :grib-source  :noaa
-     :interpolation :bilinear
      :polars cpolars
-     :use-ecmwf use-ecmwf
      :use-waves use-waves
      :currents currents
      :forecast-model forecast-model
-     :twa-angles (make-twa-angles-buffer cpolars)
-     :cycle cycle
-     :merge-start *merge-start*
-     :merge-window *merge-duration*
-     :simplify-route nil)))
+     :twa-angles (make-twa-angles-buffer cpolars))))
 
 (defun make-twa-angles-buffer (cpolars)
   (let ((buffer

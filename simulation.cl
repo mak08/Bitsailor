@@ -22,12 +22,6 @@
             sail)))
 ;; (declaim (notinline twa-boatspeed))
 
-(declaim (inline twa-sailspeed))
-(defun twa-sailspeed (polars sail tws twa)
-  (if (null sail)
-      0d0
-      (get-sail-speed polars (abs twa) tws sail)))
-
 (declaim (inline twa-heading))
 (defun twa-heading (wind-dir twa)
   "Compute HEADING resulting from TWA in WIND"
@@ -38,12 +32,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Boat speed
-
-(declaim (inline is-tack))
-(defun is-tack (a b)
-  (when (< a 0) (incf a 360))
-  (when (< b 0) (incf b 360)) 
-  (>= (abs (- b a)) 180))
 
 (declaim (inline get-origin-angle))
 (defun get-origin-angle (start-pos new-pos origin-distance)
@@ -189,18 +177,15 @@
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
-         (cycle (routing-cycle routing))
-         (resolution (routing-resolution routing)) 
          (isochrones nil))
-    (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a Cycle ~a"
+    (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a"
                 (format-latlng nil start-pos)
                 (format-latlng nil destination)
                 start-time
                 dest-heading
                 (routing-fan routing)
                 left
-                right
-                cycle)
+                right)
     (log2:info "Using currents ~a" currents)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
@@ -237,7 +222,7 @@
                (interpolate-uv (latlng-lat start-pos) (latlng-lng start-pos) params-wind)
              (make-array 1 :initial-contents
                          (list
-                          (create-routepoint nil start-pos start-time (routing-tack routing) nil (course-distance start-pos destination) nil "JIB" wind-dir wind-speed)))))
+                          (create-routepoint nil start-pos start-time nil nil (course-distance start-pos destination) nil nil wind-dir wind-speed)))))
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
@@ -247,18 +232,15 @@
               error
               (>= stepsum (routing-stepmax routing)))
           (let ((elapsed (timestamp-difference (now) elapsed0)))
-            (multiple-value-bind  (best-route best-path)
-                (construct-route routing isochrone destination)
+            (let ((best-route (construct-route isochrone destination)))
               (log-stats elapsed stepnum pointnum)
               (make-routeinfo :status (if reached "reached"
                                           (if error "no_route"
                                               "max_duration"))
                               :best best-route
-                              :path best-path
                               :stats (get-statistics best-route elapsed stepnum pointnum)
                               :polars (cpolars-label polars)
                               :options (routing-options routing)
-                              :maxspeed "-1"
                               :tracks (when *tracks*
                                         (extract-tracks start-pos (course-angle start-pos destination) isochrone))
                               :isochrones (prepare-routepoints isochrones)))))
@@ -407,21 +389,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed
 
-(declaim (inline foiling-factor))
-(defun-t foiling-factor double-float ((speed double-float) (twa double-float))
-  (multiple-value-bind
-        (speed-index speed-fraction)
-      (fraction-index speed +foil-speeds+)
-    (multiple-value-bind
-          (angle-index angle-fraction)
-        (fraction-index (abs twa) +foil-angles+)
-      (bilinear-unit speed-fraction
-                     angle-fraction
-                     (aref +foil-matrix+ speed-index angle-index)
-                     (aref +foil-matrix+ speed-index (1+ angle-index))
-                     (aref +foil-matrix+ (1+ speed-index) angle-index)
-                     (aref +foil-matrix+ (1+ speed-index) (1+ angle-index))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Aux functions
 
@@ -525,22 +492,14 @@
                    min-point point)))
      :finally (return min-point)))
 
-(defun construct-route (routing isochrone destination)
+(defun construct-route (isochrone destination)
   (let  ((best (best-point isochrone destination)))
     (do ((route nil)
-         (path nil)
          (cur-point best (routepoint-predecessor cur-point))
          (successor nil cur-point))
         ((null cur-point)
-         (values route
-                 path))
-      (push (routepoint-position cur-point) path)
-      (when (or (not (routing-simplify-route routing))
-                (null successor)
-                ;; (not (eql (routepoint-speed cur-point) (routepoint-speed successor)))
-                (not (eql (routepoint-twa cur-point) (routepoint-twa successor)))
-                (not (eql (routepoint-sail cur-point) (routepoint-sail successor))))
-        (push (create-trackpoint cur-point (or successor cur-point)) route)))))
+         route)
+      (push (create-trackpoint cur-point (or successor cur-point)) route))))
 
 
 (defun get-statistics (track elapsed stepnum pointnum)

@@ -14,8 +14,7 @@
               :polars "maxi_trimaran")
 |#
 
-(defun check-window (race-id
-                     start-offset
+(defun check-window (start-offset
                      window-size
                      &key
                        (logfile "startwindow")
@@ -38,18 +37,17 @@
         ((timestamp> starttime last)
          result)
       (let* ((parameters
-               (get-routing-presets "VR"
-                                    :race-id race-id
+               (get-routing-presets
+                                    :polars-id polars
                                     :slat slat
                                     :slon slon
                                     :dlat dlat
                                     :dlon dlon
                                     :stepmax stepmax
                                     :options options
-                                    :sail "Jib"
                                     :starttime starttime))
              (path
-               (merge-pathnames (format nil "~a-~a" logfile (routing-cycle parameters))
+               (merge-pathnames (format nil "~a-~a" logfile (format-datetime nil starttime))
                                 (make-pathname :type "log"))))
 
         (with-open-file (f path
@@ -63,7 +61,7 @@
               (route
                (push (routeinfo-stats route) result)
                (format f "~a ~a ~a~%"
-                       (routing-cycle parameters)
+                       (format-datetime nil starttime)
                        (routestats-start (routeinfo-stats route))
                        (routestats-duration  (routeinfo-stats route))))
               (t

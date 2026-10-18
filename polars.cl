@@ -46,11 +46,6 @@
          (tws-index (min (round (* tws 10.0)) (1- (second dim)))))
   (aref (cpolars-maxspeed cpolars) twa-index tws-index)))
 
-(declaim (inline get-sail-speed))
-(defun get-sail-speed (cpolars twa tws sail) 
-  (declare (double-float twa tws))
-  (aref (aref (cpolars-speed cpolars) (round (* twa 10.0)) (round (* tws 10.0))) sail))
-
 (defun encode-options (option-list)
   (let ((options 3))
     (when (member "light" option-list :test #'string=)

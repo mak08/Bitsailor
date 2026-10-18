@@ -75,18 +75,11 @@
  :request (:prefix "/admin")
  :handler (:query-function t :authentication nil :realm "admin"))
 
-(register-function "router.getRaceInfo" :authorizer (constantly t))
-(register-function "router.getWind" :authorizer (constantly t))
-(register-function "router.setParameter" :authorizer (constantly t))
-(register-function "router.getRaceList" :authorizer (constantly t))
 (register-function "router.getServerSettings" :authorizer (constantly t))
 (register-function "router.getPolarsList" :authorizer (constantly t))
-(register-function "router.setRoute" :authorizer (constantly t))
 (register-function "router.getRoute" :authorizer (constantly t))
 (register-function "router.getStatistics" :authorizer (constantly t))
-(register-function "router.resetNMEAConnection" :authorizer (constantly t))
 (register-function "router.getBoatPosition" :authorizer (constantly t))
-(register-function "router.checkWindow" :authorizer (constantly t))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; ----------------
@@ -159,12 +152,6 @@
  :handler (:dynamic 'start-page
            :authentication nil))
 
-(handle
- :request (:method :get
-           :path "/router")
- :handler (:dynamic 'router
-           :realm "bitsailor"
-           :authorizer (constantly t)))
 (handle 
  :request (:method :get
            :prefix "/activate-account")

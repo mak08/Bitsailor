@@ -16,34 +16,18 @@
      (format s "~a" (message c)))))
 
 
-(defstruct race-info data)
-(defstruct (race-info-vr (:include race-info)) (mode "vr"))
-(defstruct penalty (sail 0.95d0) (tack 0.95d0) (gybe 0.95d0))
-
 (defstruct posinfo time position speed course)
 
 (defstruct routing
-  race-info
-  interpolation
-  grib-source
   forecast-model
-  resolution
-  cycle
   polars
-  use-ecmwf
   use-waves
   currents
   ;; buffer for TWA angles plus 2 best VMG angles
   twa-angles
-  simplify-route
-  (minwind 0d0)
   stepmax
   (fan *max-angle*)
-  merge-start
-  merge-window
   options
-  tack
-  sail
   starttime
   start
   dest
@@ -57,11 +41,10 @@
                               (routing-dest routing)))))
 
 (defmethod print-object ((thing routing) stream)
-  (format stream "{D=~a T=~a M=~a C=~a TWA=~a"
+  (format stream "{D=~a T=~a Fan=~a TWA=~a"
           (routing-stepmax thing)
           (routing-starttime thing)
-          (routing-merge-start thing)
-          (routing-cycle thing)
+          (routing-fan thing)
           (routing-twa-angles thing)))
 
 (defstruct duration days hours minutes seconds)
@@ -86,7 +69,7 @@
           (routestats-calctime thing)
           (format-datetime nil (routestats-start thing))))
 
-(defstruct routeinfo status best path polars options maxspeed stats tracks isochrones)
+(defstruct routeinfo status best polars options stats tracks isochrones)
 
 (defmethod print-object ((thing routeinfo) stream)
   (let ((stats (or (routeinfo-stats thing)
@@ -98,13 +81,6 @@
 
 
 (defstruct isochrone center cycle offset path)
-
-(defstruct twainfo twa heading twapath hdgpath)
-
-(defmethod print-object ((thing twainfo) stream)
-  (format stream "{TWA:~a Heading:~a}"
-          (twainfo-twa thing)
-          (twainfo-heading thing)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.

@@ -18,9 +18,9 @@ ToDo Server
 *   Routing performance
     - restrict search to bounding box
 
-*   Frontend wind interpolation
-    - Backend serves "wind tiles" corresponding to sections of the raw forecasts
-    - Frontend performs temporal & spacial interpolation
+*   Frontend wind preview
+    - Browser loads and decodes forecast GRIB files directly
+    - Browser interpolates wind vectors for the map preview
 
 *   Session handling
     -   Persist settings: destination, NMEA port, what else?

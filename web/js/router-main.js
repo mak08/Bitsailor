@@ -33,7 +33,6 @@ let gribCache = null;
 
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
-    "resolution": "0p25",
     "duration": 345600,
     "polarsId": undefined,
     "useWaves": true,
@@ -306,7 +305,6 @@ function captureAllRaceSettings() {
     const nmeaPort = document.getElementById('tb_nmeaport')?.value;
     const polarsSel = document.getElementById('sel_polars');
     const polarsId = settings.polarsId || (polarsSel ? polarsSel.value : undefined);
-    const resolution = settings.resolution;
     const duration = settings.duration; // stored in seconds already
     const options = Array.isArray(settings.options) ? settings.options.slice() : (settings.options ? JSON.parse(JSON.stringify(settings.options)) : []);
     // Preserve existing gates if already captured via GPX import
@@ -324,7 +322,6 @@ function captureAllRaceSettings() {
         nmeaHost,
         nmeaPort,
         polarsId,
-        resolution,
         duration,
         options,
         gates,
@@ -345,7 +342,6 @@ function applyRaceSettings(race) {
     if (race.settings.forecast_model) { const sf = document.getElementById('sel_forecast_model'); if (sf) { sf.value = race.settings.forecast_model; settings.forecast_model = race.settings.forecast_model; } }
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
-  if (race.settings.resolution) setResolution(race.settings.resolution);
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
     // Restore persisted gates (clear existing overlays first)
     restoreRaceGates(race);
@@ -605,7 +601,6 @@ function setUp(getVMG) {
     document.getElementById("bt_copypos").addEventListener("click",onCopyPosition);
 
     // Set up other UI elements
-    document.getElementById("sel_resolution").addEventListener("change", onSetResolution);
     document.getElementById("sel_polars").addEventListener("change", onSetPolars);
     const selForecastModel = document.getElementById("sel_forecast_model");
     if (selForecastModel) selForecastModel.addEventListener("change", onSetForecastModel);
@@ -805,14 +800,6 @@ function onSetStartPosition(event) {
     }
 }
 
-function onSetResolution(event) {
-    let resolution = event.currentTarget.value;
-    settings.resolution = resolution;
-    storeValue('resolution', resolution);
-    redrawWindByOffset(ir_index.value);
-    captureRaceSettings('resolution', resolution);
-}
-
 function onSetPolars(event) {
     let polarsId = event.currentTarget.value;
     settings.polarsId = polarsId; // <-- Update settings
@@ -928,7 +915,7 @@ function updateMap() {
     // Load wind
     if (!gribCache) {
         let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, bounds || { "north": 50, "south": 40, "west": 0, "east": 10 }, settings.resolution, new Date(), 'NOAA-GFS-WIND');
+        gribCache = new GribCache(canvas, 'NOAA-GFS-WIND');
     }
 
     redrawWindByOffset(ir_index.value);
@@ -1056,23 +1043,9 @@ function pad0(val, length = 2, base = 10) {
 //////////////////////////////////////////////////////////////////////
 /// Accessors
 
-function setResolution(resolution) {
-    settings.resolution = resolution;
-    document.getElementById("sel_resolution").value = resolution;
-}
-
 function setDuration(duration) {
     settings.duration = duration * 3600;
     document.getElementById('sel_duration').value = duration;
-}
-
-function setSailnames(sailnames) {
-    polarManager.setSailNames(sailnames);
-    sailNames = sailnames; // Keep for compatibility
-}
-
-function getSailnames() {
-    return polarManager.getSailNames();
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1257,8 +1230,6 @@ function displayRouting(data) {
     startMarker.time = best[0].time;
 
     var markerIcon = L.icon({ iconUrl: "img/marker_32x12.png", iconAnchor: [6, 32], tooltipAnchor: [0, -36],  popupAnchor: [0, -36]});
-    var redMarkerIcon = L.icon({ iconUrl: "img/marker_red_32x12.png", iconAnchor: [6, 32], tooltipAnchor: [0, -36], popupAnchor: [0, -36]});
-
     var isDisplayTracks = document.getElementById('cb_displaytracks').checked;
     if (isDisplayTracks) {
         var tracks = data.tracks;
@@ -1293,13 +1264,9 @@ function displayRouting(data) {
     const baseTime = new Date(best[0].time);
     for (var i = 0; i < best.length; i++) {
         if (i == 0 || i == best.length - 1
-            || best[i].penalty
             || best[i].twa != best[i - 1].twa
             || best[i].sail != best[i - 1].sail) {
-            const icon = ((best[i].penalty === "sailChange") || (best[i].penalty === "tack") || (best[i].penalty === "gybe"))
-                  ? redMarkerIcon : markerIcon;
-            
-            createBestRouteMarkerAndCopies(best[i], icon, baseTime);
+            createBestRouteMarkerAndCopies(best[i], markerIcon, baseTime);
         }
     }
     document.getElementById("lb_from").textContent = (data.stats.start);
@@ -1571,12 +1538,12 @@ async function getWind(cycle, time) {
     let usedCycle = cycle;
 
     try {
-        await gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
+        await gribCache.update(bounds, new Date(usedCycle), time);
     } catch (e1) {
         console.log(e1);
         try {
             usedCycle = availableForecastCycle();
-            await gribCache.update(bounds, new Date(usedCycle), time, settings.resolution);
+            await gribCache.update(bounds, new Date(usedCycle), time);
         } catch (e2) {
             console.log(e2);
         }
@@ -1671,48 +1638,6 @@ function formatLatLngPosition(latlng) {
 
 function formatPointPosition(point) {
     return Util.formatPosition(point.position.lat, point.position.lng);
-}
-
-function formatSails(data) {
-    var best = data.best;
-    var t0 = new Date(best[0].time);
-    var start = t0;
-    var t1;
-    var sail = best[0].sail;
-    var m = {};
-    for (const s of best) {
-        t1 = new Date(s.time);
-        if (s.sail != sail) {
-            var dt = t1 - t0;
-            if (!m[sail]) {
-                m[sail] = dt;
-            } else {
-                m[sail] += dt;
-            }
-            t0 = t1;
-            sail = s.sail;
-        }
-    }
-
-    var dt = t1 - t0;
-    if (!m[sail]) {
-        m[sail] = dt;
-    } else {
-        m[sail] += dt;
-    }
-
-    dt = t1 - start;
-
-    var result = "";
-    for (const e in m) {
-        let sail = sailNames[e];
-        if (result) {
-            result = result + " - " + sail + ":" + (m[e] / dt * 100).toFixed() + "%";
-        } else {
-            result = sail + ":" + (m[e] / dt * 100).toFixed() + "%";
-        }
-    }
-    return result;
 }
 
 // Split a path into segments that do not cross the antimeridian.

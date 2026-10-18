@@ -51,7 +51,7 @@ function bilinear(x, y, f00, f10, f01, f11) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Interpolation
 
-function getValue(grib, offset, lat, lon) {
+function getValue(grib, lat, lon) {
 
     lat = 90 - lat;
     lon = lon>=0 ? lon : lon+360;
@@ -77,16 +77,6 @@ function getValue(grib, offset, lat, lon) {
     }
 }
 
-function interpolateSpatial (grib, offset, lat0, lat1, lon0, lon1, lat, lon) {
-    let w = {
-        "w00": getValue(grib, offset, lat0, lon0),
-        "w01": getValue(grib, offset, lat0, lon1),
-        "w10": getValue(grib, offset, lat1, lon0),
-        "w11": getValue(grib, offset, lat1, lon1)
-    }
-    return interpolateSpatial_UV(lat-lat0, lon-lon0, w);
-}
-
 function interpolateSpatial_UV (lambdaU, lambdaV, w) {
     return {
         "u": bilinear(lambdaU, lambdaV, w.w00.u, w.w10.u, w.w01.u, w.w11.u),
@@ -97,23 +87,18 @@ function interpolateSpatial_UV (lambdaU, lambdaV, w) {
 function interpolatePoint (u0, u1, v0, v1, fraction) {
     let u = linear(u0, u1, fraction);
     let v = linear(v0, v1, fraction);
-    return  {
-        "u": u,
-        "v": v,
-        "s": linear(abs(u0, v0), abs(u1, v1), fraction),
-        "d": angle(u, v)
-    }
+    return { "u": u, "v": v };
 }
 
-function interpolateTemporal (grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1) {
-    let p00 = getValue(grib0, offset0, lat0, lon0);
-    let p01 = getValue(grib0, offset0, lat0, lon1);
-    let p10 = getValue(grib0, offset0, lat1, lon0);
-    let p11 = getValue(grib0, offset0, lat1, lon1);
-    let q00 = getValue(grib1, offset1, lat0, lon0);
-    let q01 = getValue(grib1, offset1, lat0, lon1);
-    let q10 = getValue(grib1, offset1, lat1, lon0);
-    let q11 = getValue(grib1, offset1, lat1, lon1);
+function interpolateTemporal (grib0, grib1, timeFraction, lat0, lon0, lat1, lon1) {
+    let p00 = getValue(grib0, lat0, lon0);
+    let p01 = getValue(grib0, lat0, lon1);
+    let p10 = getValue(grib0, lat1, lon0);
+    let p11 = getValue(grib0, lat1, lon1);
+    let q00 = getValue(grib1, lat0, lon0);
+    let q01 = getValue(grib1, lat0, lon1);
+    let q10 = getValue(grib1, lat1, lon0);
+    let q11 = getValue(grib1, lat1, lon1);
     return {
         "w00": interpolatePoint(p00.u, q00.u, p00.v, q00.v, timeFraction),
         "w01": interpolatePoint(p01.u, q01.u, p01.v, q01.v, timeFraction),
@@ -139,11 +124,10 @@ export default class GribCache {
     #curCycle = undefined;
     #curOffset = undefined;
     #curTime = undefined;
-    #curRes = undefined;
     #forecastModel = 'NOAA-GFS-WIND';
     // Server settings are handled by shared ServerSettings module
 
-    constructor (canvas, bounds, resolution, time, forecastModel = 'NOAA-GFS-WIND') {
+    constructor (canvas, forecastModel = 'NOAA-GFS-WIND') {
         // Prefetch server settings via shared module
         loadServerSettings();
         this.#canvas = canvas;
@@ -155,12 +139,12 @@ export default class GribCache {
     ////////////////////////////////////////////////////////////////////////////////
     /// Interpolation
     
-    async windDataMagnitude (cycle, resolution, time, lat, lon) {
+    async windDataMagnitude (cycle, time, lat, lon) {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
         let offset = floor((curTime - baseTime) / 3600000, 3);
-        let grib0 = await this.getGribCached(cycle, resolution, offset);
-        let grib1 = await this.getGribCached(cycle, resolution, offset + 3);
+        let grib0 = await this.getGribCached(cycle, offset);
+        let grib1 = await this.getGribCached(cycle, offset + 3);
         if (grib0 && grib1) {
             const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
             const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
@@ -173,7 +157,7 @@ export default class GribCache {
             const lambdaU = (lat - lat0) / stepLat;
             const lambdaV = (wLon - lon0) / stepLon;
             const timeFraction = ((curTime - baseTime) / 3600000 - offset) / 3;
-            let w_t = interpolateTemporal(grib0, grib1, offset, offset+3, timeFraction, lat0, lon0, lat1, lon1);
+            let w_t = interpolateTemporal(grib0, grib1, timeFraction, lat0, lon0, lat1, lon1);
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
             // Exact magnitude from bilinear u,v (not bilinear of corner magnitudes)
@@ -184,49 +168,10 @@ export default class GribCache {
         }
     }
 
-    async windDataMagnitudeVR25 (cycle, resolution, time, lat, lon) {
-        let curTime = new  Date(time);
-        let baseTime1 = new Date(cycle);
-        let offset1 = ceil((curTime - baseTime1) / 3600000, 3);
-        let baseTime0 = new Date(baseTime1 - (6 *  3600000));
-        let offset0 = floor((curTime - baseTime0) / 3600000, 3);
-        if (offset1 <= 9) {
-            baseTime1 = baseTime0;
-            offset1 = offset0 + 3;
-        } else if (offset1 == 12) {
-            // merge with previous
-        } else {
-            baseTime0 = baseTime1;
-            offset0 = offset1 - 3;
-        }
-        let grib0 = await this.getGribCached(baseTime0, resolution, offset0);
-        let grib1 = await this.getGribCached(baseTime1, resolution, offset1);
-        if (grib0 && grib1) {
-            const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
-            const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
-            const stepLon = 360 / nLon;
-            const stepLat = 180 / (nLat - 1);
-            const wLon = wrapLonDeg(lon);
-            const lat0 = floor(lat, stepLat), lat1 = ceil(lat, stepLat);
-            let   lon0 = floor(wLon, stepLon), lon1 = lon0 + stepLon;
-            if (lon1 >= 360) lon1 -= 360;
-            const lambdaU = (lat - lat0) / stepLat;
-            const lambdaV = (wLon - lon0) / stepLon;
-            const timeFraction = ((curTime - baseTime0)/3600000 - offset0) / 3;
-            let w_t = interpolateTemporal(grib0, grib1, offset0, offset1, timeFraction, lat0, lon0, lat1, lon1);
-            let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
-            let direction = angle(w_s.u, w_s.v);
-            let speed = abs(w_s.u, w_s.v);
-            return { "direction": direction, "speed": speed };
-        } else {
-            return { "direction": 315.0, "speed": 11.5 };
-        }
-    }
-
     ////////////////////////////////////////////////////////////////////////////////
     /// Plotting wind data
     
-    async drawWind (bounds, cycle, resolution, offset, time, canvas) {
+    async drawWind (bounds, cycle, offset, time, canvas) {
         
         let rect = canvas.getBoundingClientRect();
         // Only draw if canvas is displayed (wind display enabled)
@@ -254,20 +199,20 @@ export default class GribCache {
             
             if (left < right) {
                 var dx = (right - left) / STEPS_X;
-                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
+                await this.drawMap(ctx, map, cycle, offset, time, dx, dy, top, bottom, left, right, 0, right - left);
             } else {
                 // left > right
                 var dx = (256 - left + right) / STEPS_X;
                 let mapWidthLeft = 256 - left;
                 let mapWidth = mapWidthLeft + right;
                 let canvasLeft = mapWidthLeft/mapWidth * ctx.canvas.width;
-                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
-                await this.drawMap(ctx, map, cycle, resolution, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
+                await this.drawMap(ctx, map, cycle, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
+                await this.drawMap(ctx, map, cycle, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
             }
         }
     }
 
-    async drawMap (ctx, projection, cycle, resolution, offset, time, dx, dy, top, bottom, left, right, canvasLeft, mapWidth) {
+    async drawMap (ctx, projection, cycle, offset, time, dx, dy, top, bottom, left, right, canvasLeft, mapWidth) {
         var mapHeight = bottom - top;
         for (var y = top; y < bottom; y += dy) {
             for (var x = left; x < right; x += dx) {
@@ -275,7 +220,7 @@ export default class GribCache {
                 var latLng = projection.unproject(mapPoint);
                 var pointX = canvasLeft + ((x - left) /  mapWidth) * ctx.canvas.width;
                 var pointY = (y - top) / mapHeight * ctx.canvas.height;
-                let w = await this.windDataMagnitude(cycle, resolution, time, latLng.lat, latLng.lng); 
+                let w = await this.windDataMagnitude(cycle, time, latLng.lat, latLng.lng);
                 this.drawWindArrow(ctx, pointX, pointY, w.direction, w.speed);
             }
         }
@@ -316,9 +261,9 @@ export default class GribCache {
         this.#gribInflight.clear();
     }
 
-    cacheGetGrib (cycle, res, offset) {
+    cacheGetGrib (cycle, offset) {
         let cycleStr = this.formatCycle(cycle);
-        let key = `${cycleStr}+${res}+${offset}`;
+        let key = `${cycleStr}+${offset}`;
         let grib = this.#gribCache.get(key);
         if (! grib) {
             return undefined;
@@ -326,23 +271,19 @@ export default class GribCache {
         return grib;
     }
 
-    cachePutGrib (cycle, res, offset, grib) {
+    cachePutGrib (cycle, offset, grib) {
         let cycleStr = this.formatCycle(cycle);
-        let key = `${cycleStr}+${res}+${offset}`;
+        let key = `${cycleStr}+${offset}`;
         this.#gribCache.set(key, grib);
     }
 
     ////////////////////////////////////////////////////////////////////////////////
     /// Public methods
     async getWind (lat, lon, time = this.#curTime) {
-        return await this.windDataMagnitude(this.#curCycle, this.#curRes, time, lat, lon);
+        return await this.windDataMagnitude(this.#curCycle, time, lat, lon);
     }
     
-    async getWindVR (lat, lon, time = this.#curTime, cycle=this.#curCycle, res=this.#curRes) {
-        return await this.windDataMagnitudeVR25(cycle, res, time, lat, lon);
-    }
-    
-    async update (bounds, cycle, time = new Date(), resolution = "1p00") {
+    async update (bounds, cycle, time = new Date()) {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
         let offset = floor((curTime - baseTime) / 3600000, 3);
@@ -350,8 +291,7 @@ export default class GribCache {
         this.#curCycle = baseTime;
         this.#curOffset = offset;
         this.#curTime = curTime;
-        this.#curRes = resolution;
-        await this.getGribCached(cycle, resolution, offset);
+        await this.getGribCached(cycle, offset);
         this.updateCanvas();
     }
 
@@ -359,17 +299,10 @@ export default class GribCache {
     /// Internal methods
     
     updateCanvas () {
-        this.drawWind(this.#curBounds, this.#curCycle, this.#curRes, this.#curOffset, this.#curTime, this.#canvas);
+        this.drawWind(this.#curBounds, this.#curCycle, this.#curOffset, this.#curTime, this.#canvas);
     }
 
-    setForecastModel (forecastModel) {
-        this.#forecastModel = forecastModel || 'NOAA-GFS-WIND';
-    }
-    
-    handleError (request) {
-    };
-
-    gribPath (cycle, res, offset) {
+    gribPath (cycle, offset) {
         // Assumes settings are loaded; caller should gate via ensureServerSettings()
         const ss = getServerSettings();
         let selectedName = typeof this.#forecastModel === 'string'
@@ -401,30 +334,30 @@ export default class GribCache {
         return `${d.getUTCFullYear()}${month}${day}${sep}${hour}`;
     }
     
-    async getGrib (cycle, res, offset) {
+    async getGrib (cycle, offset) {
         try {
             // Ensure server settings are available before building the path
             await ensureServerSettings();
-            let response = await fetch(this.gribPath(cycle, res, offset));
+            let response = await fetch(this.gribPath(cycle, offset));
             if (!response.ok) {
                 throw new Error(`${response.statusText}`);
             }
             let buffer = await response.arrayBuffer();
             let grib = decodeGRIB2ArrayBuffer(buffer);
-            this.cachePutGrib(cycle, res, offset, grib);
+            this.cachePutGrib(cycle, offset, grib);
             return grib;
         } catch (e) {
             throw new Error(e);
         }
     }
 
-    async getGribCached (cycle, res, offset) {
+    async getGribCached (cycle, offset) {
         // Fast path: decoded object already cached
-        let cached = this.cacheGetGrib(cycle, res, offset);
+        let cached = this.cacheGetGrib(cycle, offset);
         if (cached) return cached;
 
         // Key for in-flight dedup
-        const key = `${this.formatCycle(cycle)}+${res}+${offset}`;
+        const key = `${this.formatCycle(cycle)}+${offset}`;
 
         // Share in-flight fetch if present
         let inflight = this.#gribInflight.get(key);
@@ -433,7 +366,7 @@ export default class GribCache {
         // Start and register new in-flight fetch
         inflight = (async () => {
             try {
-                return await this.getGrib(cycle, res, offset);
+                return await this.getGrib(cycle, offset);
             } finally {
                 // Ensure cleanup regardless of success/failure
                 this.#gribInflight.delete(key);

@@ -122,7 +122,7 @@
            (forecast-model (let ((model (read-arg |forecast_model|)))
                              (if (and model (not (string= model "")))
                                  (read-arg |forecast_model| 'symbol 'cl-weather)
-                                 'cl-weather::noaa-gfs-wind)))
+                                 'cl-weather:noaa-gfs-wind)))
            (routing
              (get-routing-presets :polars-id (decode-uri-component |polarsId|)
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
@@ -238,8 +238,8 @@
   (with-output-to-string (s)
     (json s
           (routerstatus *server-start-time*
-                        cl-weather::*latest-forecast*
-                        (number-of-entries cl-weather::*forecast-ht*)
+                        cl-weather:*latest-forecast*
+                        (number-of-entries cl-weather:*forecast-ht*)
                         (length *last-request*)
                         "NOAA"
                         *max-iso-points*
@@ -271,7 +271,7 @@
                               (polars-id)
                               (use-waves nil)
                               (currents nil)
-                              (forecast-model 'cl-weather::noaa-gfs-wind)
+                              (forecast-model 'cl-weather:noaa-gfs-wind)
                               (starttime nil)
                               (options)
                               (stepmax (* 24 60 60))

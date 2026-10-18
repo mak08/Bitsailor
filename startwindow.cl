@@ -8,8 +8,8 @@
 #|
 (check-window 12 168
               :increment 180
-              :start cl-geomath::+los-angeles+
-              :dest cl-geomath::+honolulu+
+              :start cl-geomath:+los-angeles+
+              :dest cl-geomath:+honolulu+
               :stepmax (* 60 60 24 5)
               :polars "maxi_trimaran")
 |#

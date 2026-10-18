@@ -85,7 +85,7 @@
             (lng (latlng-lng current-pos)))
        (with-bindings
            (((wind-dir wind-speed)
-             (cl-weather::interpolate-uv lat lng params))
+             (cl-weather:interpolate-uv lat lng params))
             ((curnt-dir curnt-speed curnt-u curnt-v)
              (if current
                  (interpolate-uv lat lng current)
@@ -204,11 +204,11 @@
           ;; Get wind data for simulation time
           ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
           (wind-source (or (routing-forecast-model routing)
-                           'cl-weather::noaa-gfs-wind))
+                           'cl-weather:noaa-gfs-wind))
           (params-wind (get-params wind-source start-time)
                        (get-params wind-source step-time))
-          (params-wave (when waves (get-params 'cl-weather::gfswave-combined start-time))
-                       (when waves (get-params 'cl-weather::gfswave-combined step-time)))
+          (params-wave (when waves (get-params 'cl-weather:gfswave-combined start-time))
+                       (when waves (get-params 'cl-weather:gfswave-combined step-time)))
           (params-curnt (when currents (get-params currents start-time))
                         (when currents (get-params currents step-time)))
           (step-size (funcall stepper)
@@ -278,11 +278,11 @@
            ;; Collect hourly isochrones
            (when (zerop (timestamp-minute step-time))
              (let* ((iso (make-isochrone :center start-pos
-                                         :cycle (cl-weather::uv-cycle
+                                         :cycle (cl-weather:uv-cycle
                                                 (params-fc1 params-wind))
                                          :offset (truncate
                                                   (timestamp-difference step-time
-                                                                        (cl-weather::uv-cycle
+                                                                        (cl-weather:uv-cycle
                                                                          (params-fc1 params-wind)))
                                                   3600)
                                          :path (extract-points isochrone))))

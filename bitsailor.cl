@@ -150,7 +150,7 @@
 
 (defun get-server-settings ()
   (make-server-settings
-   :datasources (cl-weather::datasource-info)))
+   :datasources (cl-weather:datasource-info)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

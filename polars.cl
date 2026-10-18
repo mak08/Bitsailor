@@ -123,7 +123,9 @@
          (twa-steps (if (null *twa-steps*)
                         twa
                         (let ((content (loop :for s :from 30d0 :to 170d0 :by *twa-steps* :collect s)))
-                          (make-array (length content) :initial-contents content))))
+                          (make-array (length content)
+                                      :element-type 'double-float
+                                      :initial-contents content))))
          (speed (interpolated-speeds polars options))
          (maxspeed (compute-max-speed speed options)))
 
@@ -148,6 +150,7 @@
                       (interpolated-speed (/ twa  10.d0) (/ wind 10.d0) polars options)))
       :finally (return speeds))))
 
+(declaim (inline get-boat-speed))
 (defun interpolated-speed (twa tws polars options)
   (let* ((number-of-sails (length (polars-sails polars)))
          (sail-speeds
@@ -161,7 +164,9 @@
                                          (sail-speed (aref (polars-sails polars) k))))
                         (t
                          0d0)))))
-    (make-array number-of-sails :initial-contents sail-speeds)))
+    (make-array number-of-sails
+                :element-type 'double-float
+                :initial-contents sail-speeds)))
 
 (defun precompute-vmg (maxspeed max-wind)
   (let ((precomputed
@@ -206,15 +211,21 @@
                     (values (make-vmg :vmg (coerce best-vmg-up 'double-float) :sail best-sail-up :twa (coerce best-twa-up 'double-float))
                             (make-vmg :vmg (coerce (abs best-vmg-down) 'double-float) :sail best-sail-down :twa (coerce best-twa-down 'double-float)))))))
 
-(declaim (inline get-boat-speed))
-(defun get-boat-speed (angle wind-speed twa tws sailspeeds)
+(defun-t get-boat-speed double-float
+    ((angle double-float)
+     (wind-speed double-float)
+     (twa (simple-array double-float (*)))
+     (tws (simple-array double-float (*)))
+     (sailspeeds (simple-array double-float (* *))))
   (multiple-value-bind
         (speed-index speed-fraction)
-      (fraction-index wind-speed tws)
+        (cl-geomath::fraction-index-double wind-speed tws)
     (multiple-value-bind
           (angle-index angle-fraction)
-        (fraction-index angle twa)
-      (bilinear-unit angle-fraction
+        (cl-geomath::fraction-index-double angle twa)
+        (declare (fixnum speed-index angle-index)
+                 (double-float speed-fraction angle-fraction))
+        (bilinear-unit angle-fraction
                      speed-fraction
                      (aref sailspeeds angle-index speed-index)
                      (aref sailspeeds angle-index (1+ speed-index))

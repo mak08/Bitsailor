@@ -23,10 +23,9 @@
 ;; (declaim (notinline twa-boatspeed))
 
 (declaim (inline twa-heading))
-(defun twa-heading (wind-dir twa)
+(defun-t twa-heading double-float ((wind-dir double-float) (twa double-float))
   "Compute HEADING resulting from TWA in WIND"
-  (declare (double-float wind-dir twa)
-           (inline normalize-heading))
+  (declare (inline normalize-heading))
   (normalize-heading (+ twa wind-dir)))
 ;; (declaim (notinline twa-heading))
 
@@ -34,7 +33,8 @@
 ;;; Boat speed
 
 (declaim (inline get-origin-angle))
-(defun get-origin-angle (start-pos new-pos origin-distance)
+(defun-t get-origin-angle double-float
+    ((start-pos latlng) (new-pos latlng) (origin-distance double-float))
   (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
          (angle (normalize-heading course-angle)))
     angle))
@@ -43,7 +43,11 @@
 ;;; get-route
 
 (declaim (inline wave-factor))
-(defun wave-factor (wave lat lng twa)
+(defun-t wave-factor double-float
+    ((wave cl-weather::params)
+     (lat double-float)
+     (lng double-float)
+     (twa double-float))
   (let* ((wave-height (interpolate-simple lat lng wave))
          (factor
            (cond ((> (abs twa) 90d0)
@@ -70,7 +74,18 @@
   (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
-(defun expand-routepoint (routing routepoint left right step-size step-time params current wave polars delta-angle)
+(defun-t expand-routepoint fixnum
+    ((routing routing)
+     (routepoint (or routepoint null))
+     (left double-float)
+     (right double-float)
+     (step-size fixnum)
+     (step-time local-time:timestamp)
+     (params cl-weather::params)
+     (current (or null cl-weather::params))
+     (wave (or null cl-weather::params))
+     (polars cpolars)
+     (delta-angle double-float))
   (declare (special next-isochrone))
   (cond
     ((null routepoint)
@@ -79,10 +94,13 @@
     ((> (latlng-lat (routepoint-position routepoint)) 89.9d0)
      (return-from expand-routepoint 0))
     (t
-     (let* ((start-pos (routing-start routing))
-            (current-pos (routepoint-position routepoint))
+     (let* ((start-pos (the latlng (routing-start routing)))
+            (current-pos (the latlng (routepoint-position routepoint)))
             (lat (latlng-lat current-pos))
-            (lng (latlng-lng current-pos)))
+            (lng (latlng-lng current-pos))
+            (box (the box (routing-box routing)))
+            (twa-angles (the (array double-float (*))
+                             (routing-twa-angles routing))))
        (with-bindings
            (((wind-dir wind-speed)
              (cl-weather:interpolate-uv lat lng params))
@@ -92,14 +110,19 @@
                  (values 0d0 0d0 0d0 0d0)))
             ((up-vmg down-vmg)
              (best-vmg polars wind-speed)))
-         (let ((vmg-pos (length (routing-twa-angles routing))))
-           (setf (aref (routing-twa-angles routing) (- vmg-pos 1)) (vmg-twa up-vmg))
-           (setf (aref (routing-twa-angles routing) (- vmg-pos 2)) (vmg-twa down-vmg)))
+         (declare (type double-float lat lng wind-dir wind-speed
+                        curnt-dir curnt-speed curnt-u curnt-v)
+                  (type (array double-float (*)) twa-angles)
+                  (type box box))
+         (let ((vmg-pos (length twa-angles)))
+           (declare (fixnum vmg-pos))
+           (setf (aref twa-angles (- vmg-pos 1)) (vmg-twa up-vmg))
+           (setf (aref twa-angles (- vmg-pos 2)) (vmg-twa down-vmg)))
          (loop
            :with up-vmg-angle = (vmg-twa up-vmg)
            :with down-vmg-angle = (vmg-twa down-vmg)
-           :with added = 0
-           :for twa :across (routing-twa-angles routing)
+           :with added fixnum = 0
+           :for twa :of-type double-float :across twa-angles
            :when (valid-twa up-vmg-angle down-vmg-angle twa)
              :do (flet ((add-point (twa)
                           ;; (log2:trace "checking TWA: ~a" twa)
@@ -129,7 +152,7 @@
                                   (t
                                    (setf distance (* speed step-size))))
                                 (let* ((new-pos (add-distance-estimate current-pos distance heading)))
-                                  (when (in-latlng-box (routing-box routing) new-pos)
+                                  (when (in-latlng-box box new-pos)
                                     (let* ((origin-distance (course-distance start-pos new-pos))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle))

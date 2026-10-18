@@ -303,6 +303,7 @@
 (defun make-twa-angles-buffer (cpolars)
   (let ((buffer
           (make-array (length (cpolars-twa cpolars))
+                      :element-type 'double-float
                       :adjustable t
                       :fill-pointer t
                       :initial-contents (cpolars-twa cpolars))))

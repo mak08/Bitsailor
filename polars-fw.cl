@@ -21,37 +21,40 @@
            (joref json-object "id"))
          (label
           (joref json-object "name"))
-         (tws
+         (raw-tws
           (joref polars "tws"))
-         (twa
+         (raw-twa
           (joref polars "twa"))
+         (tws (make-array (length raw-tws) :element-type 'double-float))
+         (twa (make-array (length raw-twa) :element-type 'double-float))
          (sails
            (make-array 1 :initial-element (joref polars "table")))
          (saildefs
            (make-array (length sails))))
-    (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" label id (length sails) tws twa)
+    (log2:info "~30,,a Id ~5,,a, Sails ~a, TWS=~a, TWA=~a" label id (length sails) raw-tws raw-twa)
+    (loop
+       :for speed-index :below (length raw-tws)
+       :do (setf (aref tws speed-index)
+                 (knots-to-m/s (coerce (aref raw-tws speed-index) 'double-float))))
+    (loop
+       :for angle-index :below (length raw-twa)
+       :do (setf (aref twa angle-index)
+                 (coerce (aref raw-twa angle-index) 'double-float)))
     (loop
        :for saildef :across sails
        :for k :from 0
-       :do (let ((speeddata (make-array (list (length twa) (length tws)))))
+       :do (let ((speeddata (make-array (list (length twa) (length tws))
+                                        :element-type 'double-float)))
              (loop
                 :for angle-index :below (length twa)
                 :do (loop
                        :for speed-index :below (length tws)
                        :do (setf (aref speeddata angle-index speed-index)
-                                 (knots-to-m/s (aref (aref  saildef angle-index) speed-index)))))
+                                 (knots-to-m/s (coerce (aref (aref saildef angle-index) speed-index)
+                                                       'double-float)))))
              (setf (aref saildefs k)
                    (make-sail :name "UniSail"
                               :speed speeddata))))
-    ;; Convert TWS values to m/s
-    (loop
-       :for speed-index :below (length tws)
-       :do (setf (aref tws speed-index)
-                 (knots-to-m/s (aref tws speed-index))))
-    (loop
-       :for angle-index :below (length twa)
-       :do (setf (aref twa angle-index)
-                 (coerce (aref twa angle-index) 'double-float)))
     (make-polars-fw :name polars-name
                     :id label
                     :label label

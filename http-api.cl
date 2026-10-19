@@ -13,6 +13,7 @@
 
 ;;; This function is called from a dynamic handler
 (defun start-page (server handler request response)
+  (declare (ignore server handler request))
   (handler-case 
       (let* ((path
                (merge-pathnames (make-pathname :name "startpage" :type "html")
@@ -25,6 +26,7 @@
 
 ;;; This function is called from a dynamic handler
 (defun activate-account (server handler request response)
+  (declare (ignore server handler request))
   (sql:with-connection (*dbcon*)
     (let* ((secret (cadr (path request)))
            (provisional (get-user-prov-by-secret secret)))
@@ -102,6 +104,7 @@
                                               (|startTime| nil)
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
+  (declare (ignore handler request))
   (handler-bind
       ((request-error
          (lambda (c)
@@ -157,6 +160,7 @@
 ;;; Commands
 
 (defun handle-options (server handler request response)
+  (declare (ignore server handler request))
   (format t "~a~%" request)
   (format t "~a~%" (http-body request))
   (setf (http-header response :|Access-Control-Allow-Origin|)
@@ -169,6 +173,7 @@
   (setf (status-text response) "No Content"))
 
 (defun execute-commands (server handler request response)
+  (declare (ignore server handler request))
   (format t "~a~%" request)
   (format t "~a~%" (http-body request))
   (setf (http-header response :|Content-Type|)
@@ -189,6 +194,7 @@
 
 (defun |getServerSettings| (handler request response)
   ;; Provide datasource path templates etc.
+  (declare (ignore handler request response))
   (with-output-to-string (s)
     (json s (get-server-settings))))
 
@@ -196,6 +202,7 @@
 ;;; Polars
 
 (defun |getPolarsList| (handler request response)
+  (declare (ignore handler request response))
   (with-output-to-string (s)
     (json s (get-polars-list))))
 
@@ -204,6 +211,7 @@
 
 ;;; The web page can't fetch the position from the Telnet port itself.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.fairwinds.world") (|port| ""))
+  (declare (ignore handler request response))
   (let* ((host |host|)
          (port |port|))
     (unless (ignore-errors
@@ -235,6 +243,7 @@
   last_routestats)
 
 (defun |getStatistics| (handler request response)
+  (declare (ignore handler request response))
   (with-output-to-string (s)
     (json s
           (routerstatus *server-start-time*

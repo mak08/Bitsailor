@@ -52,22 +52,34 @@ function bilinear(x, y, f00, f10, f01, f11) {
 /// Interpolation
 
 function getValue(grib, lat, lon) {
+    const grid = grib.messages[0].GRID_DEFINITION_SECTION;
+    const uMessage = ['UGRD', '10U', '10u']
+        .map((name) => grib.getMessageByParameterName(name))
+        .find(Boolean);
+    const vMessage = ['VGRD', '10V', '10v']
+        .map((name) => grib.getMessageByParameterName(name))
+        .find(Boolean);
+    if (!uMessage || !vMessage) {
+        throw new Error('GRIB is missing 10 m U/V wind components');
+    }
 
-    lat = 90 - lat;
-    lon = lon>=0 ? lon : lon+360;
-    
-    let uData = grib.getMessageByParameterName('UGRD').DATA_SECTION.data;
-    let vData = grib.getMessageByParameterName('VGRD').DATA_SECTION.data;
-
-    let nLon = grib.messages[0].GRID_DEFINITION_SECTION.Ni;
-    let nLat = grib.messages[0].GRID_DEFINITION_SECTION.Nj;
+    const uData = uMessage.DATA_SECTION.data;
+    const vData = vMessage.DATA_SECTION.data;
+    const nLon = grid.Ni;
+    const nLat = grid.Nj;
 
     let resLon = nLon/360;
     let resLat = (nLat-1)/180;
 
-    let iLon = lon * resLon;
-    // BUGFIX: use resLat for latitude, not resLon
-    let iLat = lat * resLat;
+    const basicAngle = grid.basicAngleOfTheInitialProductionDomain;
+    const subdivisions = grid.subdivisionsOfBasicAngle;
+    const angleScale = basicAngle && subdivisions ? basicAngle / subdivisions : 1e-6;
+    const firstLongitude = grid.longitudeOfFirstGridPoint * angleScale;
+    const firstLatitude = grid.latitudeOfFirstGridPoint * angleScale;
+    const gridLongitude = wrapLonDeg(lon - firstLongitude);
+    const gridLatitude = firstLatitude - lat;
+    const iLon = Math.round(gridLongitude * resLon) % nLon;
+    const iLat = Math.round(gridLatitude * resLat);
 
     let idx = iLat * nLon + iLon;
     
@@ -142,9 +154,12 @@ export default class GribCache {
     async windDataMagnitude (cycle, time, lat, lon) {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
-        let offset = floor((curTime - baseTime) / 3600000, 3);
-        let grib0 = await this.getGribCached(cycle, offset);
-        let grib1 = await this.getGribCached(cycle, offset + 3);
+        let offset = (curTime - baseTime) / 3600000;
+        let frames = await this.getForecastFrames(baseTime, offset);
+        let grib0 = await this.getGribCached(baseTime, frames.before);
+        let grib1 = frames.before === frames.after
+            ? grib0
+            : await this.getGribCached(baseTime, frames.after);
         if (grib0 && grib1) {
             const nLon = grib0.messages[0].GRID_DEFINITION_SECTION.Ni;
             const nLat = grib0.messages[0].GRID_DEFINITION_SECTION.Nj;
@@ -156,7 +171,9 @@ export default class GribCache {
             if (lon1 >= 360) lon1 -= 360;
             const lambdaU = (lat - lat0) / stepLat;
             const lambdaV = (wLon - lon0) / stepLon;
-            const timeFraction = ((curTime - baseTime) / 3600000 - offset) / 3;
+            const timeFraction = frames.before === frames.after
+                ? 0
+                : (offset - frames.before) / (frames.after - frames.before);
             let w_t = interpolateTemporal(grib0, grib1, timeFraction, lat0, lon0, lat1, lon1);
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
@@ -286,20 +303,59 @@ export default class GribCache {
     async update (bounds, cycle, time = new Date()) {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
-        let offset = floor((curTime - baseTime) / 3600000, 3);
+        let offset = (curTime - baseTime) / 3600000;
         this.#curBounds = bounds;
         this.#curCycle = baseTime;
         this.#curOffset = offset;
         this.#curTime = curTime;
-        await this.getGribCached(cycle, offset);
-        this.updateCanvas();
+        let frames = await this.getForecastFrames(baseTime, offset);
+        await this.getGribCached(baseTime, frames.before);
+        if (frames.after !== frames.before) {
+            await this.getGribCached(baseTime, frames.after);
+        }
+        await this.updateCanvas();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
     /// Internal methods
     
-    updateCanvas () {
-        this.drawWind(this.#curBounds, this.#curCycle, this.#curOffset, this.#curTime, this.#canvas);
+    async updateCanvas () {
+        await this.drawWind(this.#curBounds, this.#curCycle, this.#curOffset, this.#curTime, this.#canvas);
+    }
+
+    async getForecastFrames (cycle, offset) {
+        await ensureServerSettings();
+        const ss = getServerSettings();
+        const selectedName = String(this.#forecastModel).replace(/^.*::/, '').toUpperCase();
+        const dataSource = ss && Array.isArray(ss.datasources)
+            ? ss.datasources.find((entry) => String(entry.name).toUpperCase() === selectedName)
+            : undefined;
+        if (!dataSource) {
+            throw new Error(`Server settings missing datasource ${selectedName}`);
+        }
+
+        const date = cycle.toISOString().substring(0, 10).replace(/-/g, '');
+        const run = cycle.getUTCHours();
+        const paths = Array.isArray(dataSource.gribpaths) ? dataSource.gribpaths : [];
+        const steps = paths
+            .filter((entry) => String(entry.date) === date && Number(entry.run) === run)
+            .map((entry) => Number(entry.step))
+            .filter(Number.isFinite)
+            .sort((a, b) => a - b);
+        if (steps.length === 0) {
+            throw new Error(`No GRIB steps for ${selectedName} cycle ${date} ${run}Z`);
+        }
+
+        const beforeSteps = steps.filter((step) => step <= offset);
+        const before = beforeSteps[beforeSteps.length - 1];
+        const after = steps.find((step) => step >= offset);
+        if (before === undefined) {
+            return { before: steps[0], after: steps[0] };
+        }
+        if (after === undefined) {
+            return { before: steps[steps.length - 1], after: steps[steps.length - 1] };
+        }
+        return { before, after };
     }
 
     gribPath (cycle, offset) {
@@ -320,7 +376,9 @@ export default class GribCache {
             throw new Error(`Server settings missing datasource ${selectedName}`);
         }
         let run = cycle.getUTCHours().toFixed();
-        let entry = dataSource.gribpaths.find((p) => p.step == offset && p.run == run);
+        const date = cycle.toISOString().substring(0, 10).replace(/-/g, '');
+        let entry = dataSource.gribpaths.find((p) =>
+            p.step == offset && p.run == run && String(p.date) === date);
         if (!entry) {
             throw new Error(`No GRIB path for run ${run} step ${offset}`);
         }

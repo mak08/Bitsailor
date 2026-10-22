@@ -51,7 +51,8 @@ function setupPage() {
     // Prefetch server settings for use across modules
     loadServerSettings().then(() => {
         fillForecastModelDropdown();
-        currentCycle = getLatestCycleFromSettings('NOAA-GFS-WIND') || getCurrentCycle();
+        currentCycle = getLatestCycleFromSettings(settings.forecast_model) || getCurrentCycle();
+        updateForecastRange(settings.forecast_model);
         fillCurrentsDropdown();
         // Ensure ir_index is set up before calling updateMap
         // (setUp assigns ir_index = document.getElementById("ir_index");)
@@ -114,14 +115,14 @@ async function checkForWindDataUpdates() {
         // Reload server settings
         await reloadServerSettings();
         
-        // Keep the browser wind preview on the latest NOAA GFS cycle
-        const latestCycle = getLatestCycleFromSettings('NOAA-GFS-WIND');
+        const latestCycle = getLatestCycleFromSettings(settings.forecast_model);
         if (!latestCycle) return;
         
         // If the latest cycle is different from current, update
         if (latestCycle !== currentCycle) {
             console.log(`Wind data updated: ${currentCycle} -> ${latestCycle}`);
             currentCycle = latestCycle;
+            updateForecastRange(settings.forecast_model);
             if (gribCache && typeof gribCache.clearCache === 'function') {
                 gribCache.clearCache();
             }
@@ -339,7 +340,13 @@ function applyRaceSettings(race) {
   if (race.settings.nmeaHost) { const h = document.getElementById('tb_nmeahost'); if (h) h.value = race.settings.nmeaHost; }
   if (race.settings.nmeaPort) { const p = document.getElementById('tb_nmeaport'); if (p) p.value = race.settings.nmeaPort; }
   if (race.settings.polarsId) { const sp = document.getElementById('sel_polars'); if (sp) { sp.value = race.settings.polarsId; settings.polarsId = race.settings.polarsId; } }
-    if (race.settings.forecast_model) { const sf = document.getElementById('sel_forecast_model'); if (sf) { sf.value = race.settings.forecast_model; settings.forecast_model = race.settings.forecast_model; } }
+    if (race.settings.forecast_model) {
+        const sf = document.getElementById('sel_forecast_model');
+        if (sf && Array.from(sf.options).some((option) => option.value === race.settings.forecast_model)) {
+            sf.value = race.settings.forecast_model;
+            setForecastModel(sf.value);
+        }
+    }
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
@@ -816,7 +823,7 @@ function onSetCurrents(event) {
 
 function onSetForecastModel(event) {
     const model = event.currentTarget.value || 'NOAA-GFS-WIND';
-    settings.forecast_model = model;
+    setForecastModel(model);
     storeValue('forecast_model', model);
     captureRaceSettings('forecast_model', model);
 }
@@ -915,7 +922,7 @@ function updateMap() {
     // Load wind
     if (!gribCache) {
         let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, 'NOAA-GFS-WIND');
+        gribCache = new GribCache(canvas, settings.forecast_model);
     }
 
     redrawWindByOffset(ir_index.value);
@@ -969,6 +976,47 @@ function getLatestCycleFromSettings(modelName = 'NOAA-GFS-WIND') {
     const day = latest.date.substring(6,8);
     const hour = latest.run.toString().padStart(2,'0');
     return `${year}-${month}-${day}T${hour}:00:00.000Z`;
+}
+
+function getMaxForecastStep(modelName) {
+    const ss = getServerSettings();
+    const cycle = getLatestCycleFromSettings(modelName);
+    if (!cycle || !ss || !Array.isArray(ss.datasources)) return 384;
+
+    const requested = String(modelName).replace(/^.*::/, '').toUpperCase();
+    const dataSource = ss.datasources.find((ds) => String(ds.name).toUpperCase() === requested);
+    if (!dataSource || !Array.isArray(dataSource.gribpaths)) return 384;
+
+    const cycleDate = cycle.substring(0, 10).replace(/-/g, '');
+    const cycleRun = new Date(cycle).getUTCHours();
+    const steps = dataSource.gribpaths
+        .filter((entry) =>
+            String(entry.date) === cycleDate && Number(entry.run) === cycleRun)
+        .map((entry) => Number(entry.step))
+        .filter(Number.isFinite);
+    return steps.length ? Math.max(...steps) : 384;
+}
+
+function setForecastModel(model) {
+    settings.forecast_model = model;
+    currentCycle = getLatestCycleFromSettings(model) || getCurrentCycle();
+    updateForecastRange(model);
+
+    const canvas = document.getElementById('wind-canvas');
+    if (canvas) gribCache = new GribCache(canvas, model);
+
+    if (ir_index) {
+        redrawWindByOffset(ir_index.value);
+    }
+}
+
+function updateForecastRange(model) {
+    if (!ir_index) return;
+    const maxStep = getMaxForecastStep(model);
+    ir_index.max = maxStep;
+    if (Number(ir_index.value) > maxStep) {
+        ir_index.value = maxStep;
+    }
 }
 
 
@@ -1540,12 +1588,13 @@ async function getWind(cycle, time) {
     try {
         await gribCache.update(bounds, new Date(usedCycle), time);
     } catch (e1) {
-        console.log(e1);
+        console.error(e1);
         try {
-            usedCycle = availableForecastCycle();
+            usedCycle = getLatestCycleFromSettings(settings.forecast_model) || availableForecastCycle();
+            if (usedCycle === cycle) throw e1;
             await gribCache.update(bounds, new Date(usedCycle), time);
         } catch (e2) {
-            console.log(e2);
+            console.error(e2);
         }
     }
 

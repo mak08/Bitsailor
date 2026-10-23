@@ -131,7 +131,8 @@ figure {
 #tab3:checked ~ figure .tab3,
 #tab4:checked ~ figure .tab4,
 #tab5:checked ~ figure .tab5,
-#tab6:checked ~ figure .tab6 {
+#tab6:checked ~ figure .tab6,
+#tab7:checked ~ figure .tab7 {
 	display: block;
 }
 
@@ -154,7 +155,8 @@ nav label:active { background: #706060; }
 #tab3:checked ~ nav label[for="tab3"],
 #tab4:checked ~ nav label[for="tab4"],
 #tab5:checked ~ nav label[for="tab5"],
-#tab6:checked ~ nav label[for="tab6"] {
+#tab6:checked ~ nav label[for="tab6"],
+#tab7:checked ~ nav label[for="tab7"] {
   background: white;
   color: #111;
   position: relative;
@@ -166,7 +168,8 @@ nav label:active { background: #706060; }
 #tab3:checked ~ nav label[for="tab3"]:after,
 #tab4:checked ~ nav label[for="tab4"]:after,
 #tab5:checked ~ nav label[for="tab5"]:after,
-#tab6:checked ~ nav label[for="tab6"]:after {
+#tab6:checked ~ nav label[for="tab6"]:after,
+#tab7:checked ~ nav label[for="tab7"]:after {
   content: "";
   display: block;
   position: absolute;
@@ -226,4 +229,40 @@ div.fixed {
 
 #bt_submit {
 	font-size: 110%;
+}
+
+/*******************************************************************************
+ * Polars viewer
+ *******************************************************************************/
+
+.polars-viewer {
+  text-align: center;
+}
+.polars-viewer canvas {
+  background: #f7f7f7;
+  border-radius: 5px;
+  box-shadow: 0 0 12px #aaa;
+  max-width: 100%;
+  height: auto;
+}
+.polars-viewer .polars-select,
+.polars-viewer .polars-tws {
+  margin: 8px auto;
+}
+.polars-viewer #polarSelect {
+  min-width: 260px;
+}
+.polars-viewer #twsSlider {
+  width: 360px;
+  max-width: 80%;
+  vertical-align: middle;
+}
+.polars-viewer #vmgBox {
+  display: inline-block;
+  margin: 8px auto;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #444;
+  border-radius: 5px;
+  text-align: left;
 }

@@ -8,6 +8,7 @@
     <meta name="author" content="Michael Kappert">
     <link rel="stylesheet" href="css/startpage.css">
     <script type="module" src="js/startpage.js"></script>
+    <script type="module" src="js/polars-viewer.js"></script>
     
   </head>
   
@@ -34,11 +35,13 @@
 
         <input id="tab5" type="radio" name="tabs">
         <input id="tab6" type="radio" name="tabs">
+        <input id="tab7" type="radio" name="tabs">
         <nav>
           <label for="tab1">Home</label>
           <label for="tab2">Usage</label>
           <!-- No label for tab3/tab4 (Races removed) -->
           <label for="tab5">Issues</label>
+          <label for="tab7">Polars</label>
           <label for="tab6">Status</label>
         </nav>
 
@@ -168,6 +171,22 @@
                 </li>
 
               </ul>
+            </div>
+          </div>
+
+          <div class="tab7">
+            <div class="polars-viewer">
+              <div class="polars-select">
+                <label for="polarSelect">Polars:</label>
+                <select id="polarSelect"></select>
+              </div>
+              <canvas id="polar" width="600" height="600"></canvas>
+              <div class="polars-tws">
+                <label for="twsSlider">TWS:</label>
+                <input type="range" id="twsSlider" min="0" max="40" step="0.1" value="10">
+                <span id="twsValue">10</span> kt
+              </div>
+              <div id="vmgBox"></div>
             </div>
           </div>
 

@@ -9,12 +9,15 @@ import * as Util from './Util.js';
     const slider = document.getElementById('twsSlider');
     const twsValue = document.getElementById('twsValue');
     const vmgBox = document.getElementById('vmgBox');
+    const tableBox = document.getElementById('polarTable');
     if (!canvas || !select || !slider) return;
 
     // polar: {twa: [..], tws: [..], table: [twaIndex][twsIndex]}
     let polar = null;
     let selectedTwa = 45;
     let draggingHandle = false;
+    let cellRefs = [];       // cellRefs[twaIndex][twsIndex] -> <td>
+    let highlighted = [];
 
     ////////////////////////////////////////////////////////////////////////////
     /// Data
@@ -42,6 +45,7 @@ import * as Util from './Util.js';
                 slider.min = polar.tws[0];
                 slider.max = polar.tws[polar.tws.length - 1];
                 slider.value = Math.min(Math.max(15, slider.min), slider.max);
+                buildTable();
                 draw();
             },
             () => console.error('Could not load polars ' + id));
@@ -66,6 +70,67 @@ import * as Util from './Util.js';
         const r1 = t[ai][ti] + (t[ai][ti2] - t[ai][ti]) * tf;
         const r2 = t[ai2][ti] + (t[ai2][ti2] - t[ai2][ti]) * tf;
         return r1 + (r2 - r1) * af;
+    }
+
+    // Table cells that contribute to the interpolated value (non-zero weight)
+    function cellsUsed(tws, twa) {
+        const [ti, tf] = locate(polar.tws, tws);
+        const [ai, af] = locate(polar.twa, twa);
+        const ti2 = Math.min(ti + 1, polar.tws.length - 1);
+        const ai2 = Math.min(ai + 1, polar.twa.length - 1);
+        const cells = [];
+        for (const [a, wa] of [[ai, 1 - af], [ai2, af]]) {
+            for (const [t, wt] of [[ti, 1 - tf], [ti2, tf]]) {
+                if (wa > 0 && wt > 0) cells.push([a, t]);
+            }
+        }
+        return cells;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    /// Table
+
+    function buildTable() {
+        const table = document.createElement('table');
+        const head = table.createTHead().insertRow();
+        head.appendChild(document.createElement('th')).textContent = 'TWA \\ TWS';
+        polar.tws.forEach(tws => {
+            head.appendChild(document.createElement('th')).textContent = tws;
+        });
+        const body = table.createTBody();
+        cellRefs = polar.twa.map((twa, a) => {
+            const row = body.insertRow();
+            row.appendChild(document.createElement('th')).textContent = twa;
+            return polar.table[a].map(speed => {
+                const td = row.insertCell();
+                td.textContent = speed;
+                return td;
+            });
+        });
+        highlighted = [];
+        tableBox.replaceChildren(table);
+    }
+
+    function updateTableHighlight(tws, twa) {
+        highlighted.forEach(td => td.classList.remove('used'));
+        const used = cellsUsed(tws, twa);
+        highlighted = used.map(([a, t]) => cellRefs[a][t]);
+        highlighted.forEach(td => td.classList.add('used'));
+        if (used.length === 0) return;
+        // Scroll within the table box only (not the page) to keep the cells visible
+        const first = highlighted[0];
+        const headHeight = tableBox.querySelector('thead').offsetHeight;
+        const rowTop = first.offsetTop;
+        const rowHeight = first.offsetHeight;
+        const viewTop = tableBox.scrollTop + headHeight;
+        const viewBottom = tableBox.scrollTop + tableBox.clientHeight;
+        if (rowTop < viewTop || rowTop + rowHeight > viewBottom) {
+            tableBox.scrollTop = rowTop - tableBox.clientHeight / 2;
+        }
+        const colLeft = first.offsetLeft;
+        if (colLeft < tableBox.scrollLeft + 60 || colLeft + first.offsetWidth > tableBox.scrollLeft + tableBox.clientWidth) {
+            tableBox.scrollLeft = colLeft - tableBox.clientWidth / 2;
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -177,6 +242,7 @@ import * as Util from './Util.js';
         const tws = Number(slider.value);
         twsValue.textContent = tws.toFixed(1);
         drawPolar(tws);
+        if (polar) updateTableHighlight(tws, selectedTwa);
     }
 
     ////////////////////////////////////////////////////////////////////////////

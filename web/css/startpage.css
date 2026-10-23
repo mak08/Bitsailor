@@ -266,3 +266,49 @@ div.fixed {
   border-radius: 5px;
   text-align: left;
 }
+.polars-viewer .polars-main {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+#polarTable {
+  position: relative;
+  max-height: 600px;
+  max-width: 460px;
+  overflow: auto;
+  border: 1px solid silver;
+  font-size: 80%;
+  text-align: right;
+}
+#polarTable table {
+  border-collapse: collapse;
+}
+#polarTable th,
+#polarTable td {
+  padding: 1px 6px;
+  border: 1px solid #e0e0e0;
+}
+#polarTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #504040;
+  color: #eee;
+}
+#polarTable tbody th {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #ddd;
+}
+#polarTable thead th:first-child {
+  left: 0;
+  z-index: 3;
+}
+#polarTable td.used {
+  background: #ffd54a;
+  color: #000;
+  font-weight: bold;
+}

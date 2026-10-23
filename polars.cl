@@ -312,16 +312,21 @@
     :while (and line (stringp line) (eql (aref line 0) #\#))
     :finally (return line)))
                  
+(defun read-csv-number (s)
+  "Read a number from a CSV cell. Accepts a decimal comma (\"34,65\"), which the
+Lisp reader would otherwise cut off at the comma, silently dropping the decimals."
+  (read-arg (substitute #\. #\, s)))
+
 (defun csv-to-json-object (csv-file)
   "Convert a simple CSV polar file to a json-object."
   (with-open-file (in csv-file :direction :input)
     (let* ((header (read-noncomment-line in))
-           (tws (mapcar #'read-arg
+           (tws (mapcar #'read-csv-number
                         (rest (split-sequence:split-sequence #\; header))))
            (lines (loop
                     :for line = (read-noncomment-line in nil)
                     :while line
-                    :collect (mapcar #'read-arg
+                    :collect (mapcar #'read-csv-number
                                      (split-sequence:split-sequence #\; line))))
            (have-tws-zero (zerop (first tws)))
            (have-twa-zero (zerop (first (first lines))))

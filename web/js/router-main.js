@@ -1326,6 +1326,23 @@ function displayRouting(data) {
 
 function setupCanvas() {
     var mapCanvas = document.getElementById('wind-canvas');
+    // Host the canvas in a Leaflet pane between tiles (200) and vector overlays (400),
+    // so isochrones, markers and popups are drawn above the wind.
+    const windPane = map.createPane('windPane');
+    windPane.style.zIndex = 250;
+    windPane.style.pointerEvents = 'none';
+    windPane.appendChild(mapCanvas);
+    const container = map.getContainer();
+    const fitCanvas = () => {
+        mapCanvas.style.width = container.clientWidth + 'px';
+        mapCanvas.style.height = container.clientHeight + 'px';
+    };
+    // While dragging, the canvas moves with the map pane; snap it back to the viewport once the move ends.
+    const realign = () => L.DomUtil.setPosition(mapCanvas, map.containerPointToLayerPoint([0, 0]));
+    fitCanvas();
+    realign();
+    map.on('moveend zoomend viewreset', realign);
+    map.on('resize', () => { fitCanvas(); realign(); });
     var mapRect = mapCanvas.getBoundingClientRect();
     geometry.width = mapRect.width * 6;
     geometry.height = mapRect.height * 6;

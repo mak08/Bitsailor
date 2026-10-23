@@ -1454,11 +1454,19 @@ function makeWaypointInfo(startTime, point) {
 
     result += "<b>DTF</b>:" + Util.m2nm(point.dtf).toFixed(2) + "nm ";
     result += "<b>Speed</b>: " + Util.ms2knots(point.speed).toFixed(1) + "kts";
+    if (typeof point["wave-factor"] === "number") {
+        result += " (×" + point["wave-factor"].toFixed(2) + ")";
+    }
     result += "<br>";
 
     result += "<b>Set</b>:" + (((point.crntdir||0.0)+180) % 360).toFixed(1) + "°  ";
     result += "<b>Drift</b>: " + Util.ms2knots((point.crntspd||0.0)).toFixed(1) + "kts";
     result += "<br>";
+
+    if (typeof point["wave-height"] === "number") {
+        result += "<b>Waves</b>: " + point["wave-height"].toFixed(1) + "m / " + (point["wave-dir"]||0.0).toFixed(0) + "°";
+        result += "<br>";
+    }
 
     result += "<b> TWA</b>: " + point.twa.toFixed(1);
     result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + sailNames[point.sail];

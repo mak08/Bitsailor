@@ -180,8 +180,17 @@ import * as Util from './Util.js';
         }
 
         const color = '#e41a1c';
-        let bestUp = { vmg: -Infinity, twa: null };
-        let bestDown = { vmg: -Infinity, twa: null };
+        // Optimal VMG angles: scan in 0.1 deg steps (integer loop avoids float drift)
+        let bestUp = { vmg: -Infinity, twa: null, speed: 0 };
+        let bestDown = { vmg: -Infinity, twa: null, speed: 0 };
+        for (let i = 0; i <= 1800; i++) {
+            const twa = i / 10;
+            const speed = interpolateSpeed(selectedTws, twa);
+            const vmg = speed * Math.cos(twa * Math.PI / 180);
+            if (twa <= 90 && vmg > bestUp.vmg) bestUp = { vmg, twa, speed };
+            if (twa >= 90 && -vmg > bestDown.vmg) bestDown = { vmg: -vmg, twa, speed };
+        }
+
         ctx.beginPath();
         for (let twa = 0; twa <= 180; twa += 2) {
             const speed = interpolateSpeed(selectedTws, twa);
@@ -189,14 +198,24 @@ import * as Util from './Util.js';
             const radius = (speed / maxSpeed) * maxRadius;
             const x = cx + radius * Math.cos(rad);
             const y = cy - radius * Math.sin(rad);
-            const vmg = speed * Math.cos(twa * Math.PI / 180);
-            if (twa <= 90 && vmg > bestUp.vmg) bestUp = { vmg, twa };
-            if (twa >= 90 && Math.abs(vmg) > bestDown.vmg) bestDown = { vmg: Math.abs(vmg), twa };
             if (twa === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
         ctx.stroke();
+
+        // Yellow marks at the optimal upwind and downwind TWA
+        for (const best of [bestUp, bestDown]) {
+            const brad = (90 - best.twa) * Math.PI / 180;
+            const r = (best.speed / maxSpeed) * maxRadius;
+            ctx.beginPath();
+            ctx.arc(cx + r * Math.cos(brad), cy - r * Math.sin(brad), 7, 0, 2 * Math.PI);
+            ctx.fillStyle = '#ffd400';
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+        }
 
         ctx.fillStyle = color;
         ctx.font = '16px Arial';
@@ -205,8 +224,8 @@ import * as Util from './Util.js';
         ctx.fillText(`TWS ${selectedTws.toFixed(2)} kt`, 30, 50);
 
         vmgBox.innerHTML =
-            `<b>VMG up:</b> ${bestUp.vmg.toFixed(2)} @ TWA ${bestUp.twa}°<br>` +
-            `<b>VMG down:</b> ${bestDown.vmg.toFixed(2)} @ TWA ${bestDown.twa}°`;
+            `<b>VMG up:</b> ${bestUp.vmg.toFixed(2)} @ TWA ${bestUp.twa.toFixed(1)}°<br>` +
+            `<b>VMG down:</b> ${bestDown.vmg.toFixed(2)} @ TWA ${bestDown.twa.toFixed(1)}°`;
 
         // Interactive TWA line with draggable handle
         const rad = (90 - selectedTwa) * Math.PI / 180;

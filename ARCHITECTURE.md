@@ -54,7 +54,7 @@ At a route point, `cl-weather:interpolate-uv` returns four values in order: dire
 3. Linearly interpolates U, V, and magnitude between forecast times using the parameter fraction.
 4. Computes direction from the time-interpolated U/V pair and returns direction, speed, U, and V.
 
-Positions outside a field's valid area return zero values. Currents use the same vector interpolation interface. When waves are enabled, `cl-weather:interpolate-simple` samples the scalar wave-height field with spatial bilinear interpolation and temporal linear interpolation. `wave-factor` then applies a coarse multiplier: waves of at least 3 m slow upwind sailing by 6-10%; for downwind angles it instead applies a 6-10% boost. Below 3 m the factor is 1.
+Positions outside a field's valid area return zero values. Currents use the same vector interpolation interface. When waves are enabled, `cl-weather:interpolate-simple` samples the scalar wave-height field with spatial bilinear interpolation and temporal linear interpolation. `wave-factor` then applies a coarse multiplier: waves of at least 3 m apply a multiplier by angle between boat heading and wave direction (DIRPW, direction the waves come from, interpolated via sin/cos) (<60° into: -5/-10/-15%; 60-120° beam: -3/-9/-12%; >120° with: +5/+10/+15%) for 3-4/4-5/5+ m. Below 3 m the factor is 1.
 
 The engine advances forecast parameters to each new simulation time. It does not pass a cycle or resolution argument to `get-params`; the weather library selects a cycle from the datasource and timestamp. The `forecast_model` symbol directly selects the wind datasource in the engine. The map preview independently uses NOAA GFS GRIB files in the browser.
 

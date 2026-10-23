@@ -26,7 +26,10 @@
                               wind-dir
                               wind-speed
                               curnt-dir
-                              curnt-speed)
+                              curnt-speed
+                              wave-height
+                              wave-dir
+                              wave-factor)
   (declare (special next-isochrone max-dist min-angle))
   (let*
       ((maxpoints (length next-isochrone))
@@ -59,7 +62,10 @@
                                  curnt-dir
                                  curnt-speed
                                  origin-angle
-                                 origin-distance)))))
+                                 origin-distance
+                                 wave-height
+                                 wave-dir
+                                 wave-factor)))))
   (values))
 
 (defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (zones nil) (use-bitmap *use-bitmap*))

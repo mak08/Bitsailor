@@ -88,7 +88,7 @@
 ;;; ### Think of a good sorting/data structure to support finding the most advanced point in a sector
 
 (defstruct (routepoint
-             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail wind-dir wind-speed curnt-dir curnt-speed (origin-angle 0) (origin-distance 0))))
+             (:constructor create-routepoint (predecessor position time twa heading &optional destination-distance speed sail wind-dir wind-speed curnt-dir curnt-speed (origin-angle 0) (origin-distance 0) wave-height wave-dir wave-factor)))
   predecessor
   position
   time
@@ -102,10 +102,13 @@
   curnt-dir
   curnt-speed
   origin-angle
-  origin-distance)
+  origin-distance
+  wave-height
+  wave-dir
+  wave-factor)
 
 (defstruct trackpoint
-  time position heading dtf speed sail crntdir crntspd twd tws twa)
+  time position heading dtf speed sail crntdir crntspd twd tws twa wave-height wave-dir wave-factor)
 
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)
@@ -118,7 +121,11 @@
                    :crntspd (routepoint-curnt-speed routepoint)
                    :twd (routepoint-wind-dir routepoint)
                    :tws (routepoint-wind-speed routepoint)
-                   :twa (routepoint-twa successor)))
+                   :twa (routepoint-twa successor)
+                   ;; Waves apply to the leg from ROUTEPOINT to SUCCESSOR
+                   :wave-height (routepoint-wave-height successor)
+                   :wave-dir (routepoint-wave-dir successor)
+                   :wave-factor (routepoint-wave-factor successor)))
 
 (defmethod print-object ((thing routepoint) stream)
   (format stream "<~a@~a|~a|~a>"

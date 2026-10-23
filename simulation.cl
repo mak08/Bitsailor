@@ -44,30 +44,23 @@
 
 (declaim (inline wave-factor))
 (defun-t wave-factor double-float
-    ((wave cl-weather::params)
-     (lat double-float)
-     (lng double-float)
-     (twa double-float))
-  (let* ((wave-height (interpolate-simple lat lng wave))
-         (factor
-           (cond ((> (abs twa) 90d0)
-                  (cond ((>= wave-height 5d0)
-                         1.1d0)
-                        ((>= wave-height 4d0)
-                         1.08d0)
-                        ((>= wave-height 3d0)
-                         1.06d0)
-                        (t
-                         1d0)))
-                 (t
-                  (cond ((>= wave-height 5d0)
-                         0.9d0)
-                        ((>= wave-height 4d0)
-                         0.92d0)
-                        ((>= wave-height 3d0)
-                         0.94d0)
-                        (t 1d0))))))
-    factor))
+    ((wave-height double-float)
+     (wave-dir double-float)
+     (heading double-float))
+  (let* (;; DIRPW is the direction the waves come from, like the wind direction.
+         (angle (abs (normalize-angle (- heading wave-dir))))
+         (tier (cond ((>= wave-height 5d0) 2)
+                     ((>= wave-height 4d0) 1)
+                     ((>= wave-height 3d0) 0)
+                     (t nil))))
+    (if (null tier)
+        1d0
+        (cond ((> angle 120d0)
+               (svref #(1.05d0 1.10d0 1.15d0) tier))
+              ((>= angle 60d0)
+               (svref #(0.97d0 0.91d0 0.88d0) tier))
+              (t
+               (svref #(0.95d0 0.90d0 0.85d0) tier))))))
 
 (declaim (inline valid-twa))
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
@@ -84,6 +77,7 @@
      (params cl-weather::params)
      (current (or null cl-weather::params))
      (wave (or null cl-weather::params))
+     (wave-dir (or null cl-weather::params))
      (polars cpolars)
      (delta-angle double-float))
   (declare (special next-isochrone))
@@ -108,10 +102,16 @@
              (if current
                  (interpolate-uv lat lng current)
                  (values 0d0 0d0 0d0 0d0)))
+            ((wave-height wave-direction)
+             (if (and wave wave-dir)
+                 (values (interpolate-simple lat lng wave)
+                         (interpolate-direction lat lng wave-dir))
+                 (values nil nil)))
             ((up-vmg down-vmg)
              (best-vmg polars wind-speed)))
          (declare (type double-float lat lng wind-dir wind-speed
                         curnt-dir curnt-speed curnt-u curnt-v)
+                  (type (or null double-float) wave-height wave-direction)
                   (type (array double-float (*)) twa-angles)
                   (type box box))
          (let ((vmg-pos (length twa-angles)))
@@ -134,7 +134,9 @@
                                        (integer step-size))
                               (let* ((heading (twa-heading wind-dir twa))
                                      (wave-factor
-                                       (if wave (wave-factor wave lat lng twa) 1d0))
+                                       (if wave-height
+                                           (wave-factor wave-height wave-direction heading)
+                                           1d0))
                                      (distance))
                                 (setf speed (* speed wave-factor))
                                 (cond
@@ -156,7 +158,9 @@
                                     (let* ((origin-distance (course-distance start-pos new-pos))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle))
-                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed))))))))))
+                                        (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed
+                                                         wave-height wave-direction
+                                                         (and wave-height wave-factor)))))))))))
                    (add-point (- twa))
                    (add-point twa))
            :finally (return added)))))))
@@ -232,6 +236,8 @@
                        (get-params wind-source step-time))
           (params-wave (when waves (get-params 'cl-weather:gfswave-combined start-time))
                        (when waves (get-params 'cl-weather:gfswave-combined step-time)))
+          (params-wave-dir (when waves (get-direction-params 'cl-weather:gfswave-combined start-time))
+                           (when waves (get-direction-params 'cl-weather:gfswave-combined step-time)))
           (params-curnt (when currents (get-params currents start-time))
                         (when currents (get-params currents step-time)))
           (step-size (funcall stepper)
@@ -279,7 +285,7 @@
       ;;          Add new points to next-isochrone.
       (map nil (lambda (rp)
                  (incf pointnum
-                       (expand-routepoint routing rp left right step-size step-time params-wind params-curnt params-wave polars delta-angle)))
+                       (expand-routepoint routing rp left right step-size step-time params-wind params-curnt params-wave params-wave-dir polars delta-angle)))
            isochrone)
       
       ;; Step 2 - Filter isochrone.

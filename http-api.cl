@@ -101,6 +101,7 @@
                                               |slon|
                                               |dlat|
                                               |dlon|
+                                              (|waypoints| nil)
                                               (|startTime| nil)
                                               (|duration| (* *max-route-hours* 3600)
                                                           duration-supplied-p))
@@ -140,8 +141,13 @@
                                   :slon (read-arg |slon| 'double-float)
                                   :dlat (read-arg |dlat| 'double-float)
                                   :dlon (read-arg |dlon| 'double-float))))
+      (setf (routing-waypoints routing) (parse-waypoints |waypoints|))
       (when (cl-map:point-on-land-p (routing-start routing))
         (error 'request-error :message "Start point is on land"))
+      (dolist (waypoint (routing-waypoints routing))
+        (when (cl-map:point-on-land-p waypoint)
+          (error 'request-error
+                 :message (format nil "Waypoint ~a is on land" (format-latlng nil waypoint)))))
       (when (equalp (routing-start routing) (routing-dest routing))
         (error 'request-error :message "Start and destination are the same"))
       
@@ -308,6 +314,16 @@
      :currents currents
      :forecast-model forecast-model
      :twa-angles (make-twa-angles-buffer cpolars))))
+
+(defun parse-waypoints (string)
+  "Parse a comma-separated list lat1,lon1,lat2,lon2,... into a list of latlng."
+  (when (and string (string/= string ""))
+    (let ((coords (mapcar (lambda (s) (read-arg s 'double-float))
+                          (cl-utilities:split-sequence #\, string))))
+      (unless (and (evenp (length coords)) (every #'numberp coords))
+        (error 'request-error :message "Invalid waypoints"))
+      (loop :for (lat lon) :on coords :by #'cddr
+            :collect (make-latlng :lat lat :lng lon)))))
 
 (defun make-twa-angles-buffer (cpolars)
   (let ((buffer

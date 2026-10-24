@@ -11,6 +11,8 @@ import { loadServerSettings, reloadServerSettings, getServerSettings } from './S
 let map = null;
 let startMarker = null;
 let destinationMarker = null;
+// Intermediate targets, in the order they are visited. Double-click a marker to remove it.
+let waypointMarkers = [];
 let routeLine = null;
 let courseGCLine = null;
 
@@ -419,6 +421,34 @@ function buildShortestSegments(startLatLng, destLatLng) {
     return segments;
 }
 
+// Segments for start -> waypoints (in order) -> destination
+function buildRouteSegments() {
+    const points = [startMarker.getLatLng(),
+                    ...waypointMarkers.map(m => m.getLatLng()),
+                    destinationMarker.getLatLng()];
+    const segments = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        segments.push(...buildShortestSegments(points[i], points[i + 1]));
+    }
+    return segments;
+}
+
+// Redraw both route lines after start, destination or waypoints changed
+function redrawRouteLines() {
+    if (!startMarker || !destinationMarker) return;
+    drawRouteLine();
+    if (courseGCLine) {
+        map.removeLayer(courseGCLine);
+        courseGCLine = null;
+    }
+    const gcGroup = L.featureGroup();
+    for (const seg of buildRouteSegments()) {
+        L.polyline(seg, { color: '#d00000', weight: 1, opacity: 1.0 }).addTo(gcGroup);
+    }
+    gcGroup.addTo(map);
+    courseGCLine = gcGroup;
+}
+
 // Draw route line between start and destination (shortest great-circle segment)
 function drawRouteLine() {
     if (!startMarker || !destinationMarker) return;
@@ -428,10 +458,7 @@ function drawRouteLine() {
         routeLine = null;
     }
 
-    const start = startMarker.getLatLng();
-    const dest = destinationMarker.getLatLng();
-
-    const segments = buildShortestSegments(start, dest);
+    const segments = buildRouteSegments();
 
     const fg = L.featureGroup();
     for (const seg of segments) {
@@ -605,6 +632,8 @@ function setUp(getVMG) {
     // Connect menu events
     document.getElementById("bt_setstart").addEventListener("click",function () { onContextMenu('start'); });
     document.getElementById("bt_setdest").addEventListener("click",function () { onContextMenu('dest'); });
+    document.getElementById("bt_addwaypoint").addEventListener("click",onAddWaypoint);
+    document.getElementById("bt_clearwaypoints").addEventListener("click",onClearWaypoints);
     document.getElementById("bt_copypos").addEventListener("click",onCopyPosition);
 
     // Set up other UI elements
@@ -742,6 +771,37 @@ function onContextMenu(point) {
     var mapMenu = document.getElementById("mapMenu");
     mapMenu.style.display = "none";
     setRoutePoint(point, map.mouseEventToLatLng(mapEvent.originalEvent));
+}
+
+function onAddWaypoint() {
+    var mapMenu = document.getElementById("mapMenu");
+    mapMenu.style.display = "none";
+    const latlng = map.mouseEventToLatLng(mapEvent.originalEvent);
+    const marker = L.marker(latlng, {
+        title: `Waypoint ${waypointMarkers.length + 1}`,
+        draggable: true
+    }).addTo(map);
+    marker.on('dblclick', function () {
+        map.removeLayer(marker);
+        waypointMarkers = waypointMarkers.filter(m => m !== marker);
+        redrawRouteLines();
+    });
+    marker.on('drag', redrawRouteLines);
+    waypointMarkers.push(marker);
+    redrawRouteLines();
+}
+
+function onClearWaypoints() {
+    document.getElementById("mapMenu").style.display = "none";
+    waypointMarkers.forEach(m => map.removeLayer(m));
+    waypointMarkers = [];
+    redrawRouteLines();
+}
+
+function getWaypointsQuery() {
+    return waypointMarkers
+        .map(m => { const p = m.getLatLng(); return `${p.lat},${wrapLon180(p.lng)}`; })
+        .join(',');
 }
 
 function onCopyPosition(event) {
@@ -1139,6 +1199,9 @@ function getRoute() {
     var query = makeQuery(settings);
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
+    if (waypointMarkers.length > 0) {
+        query += `&waypoints=${getWaypointsQuery()}`;
+    }
 
     var sailInput = document.getElementById('sel_currentsail');
     if (sailInput) {
@@ -1205,24 +1268,7 @@ function setRoutePointCore(point, latLng) {
         updateRouteMarkerCopies(destinationMarker);
     }
 
-    // Draw a short-segment great-circle line between start and destination
-    if (courseGCLine) {
-        map.removeLayer(courseGCLine);
-        courseGCLine = null;
-    }
-    const s = startMarker.getLatLng();
-    const d = destinationMarker.getLatLng();
-    const gcSegments = buildShortestSegments(s, d);
-    const gcGroup = L.featureGroup();
-    for (const seg of gcSegments) {
-        L.polyline(seg, {
-            color: '#d00000',
-            weight: 1,
-            opacity: 1.0
-        }).addTo(gcGroup);
-    }
-    gcGroup.addTo(map);
-    courseGCLine = gcGroup;
+    redrawRouteLines();
     captureRaceSettings(point, latLng);
 }
 

@@ -20,6 +20,7 @@
                (:file "constraints")
                (:file "filter")
                (:file "simulation")
+               (:file "waypoints")
                (:file "json")
                (:file "http-api")
                (:file "signup")

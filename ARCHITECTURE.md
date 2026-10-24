@@ -88,6 +88,12 @@ The route search in [simulation.cl](simulation.cl) proceeds as follows:
 
 The first step is shortened to align to a ten-minute boundary. Later step durations grow with forecast horizon: approximately two minutes initially, then ten, fifteen, and thirty minutes. The isochrone capacity is bounded by `*max-iso-points*` (1500 by default). At completion, the engine selects the frontier point nearest the destination and follows predecessor links to produce the route. Hourly frontiers are retained for the UI, and every generated step is retained in the `best` track.
 
+## Multi-Route (Waypoints)
+
+`getRoute` accepts an optional `waypoints=lat1,lon1,lat2,lon2,...` list of intermediate targets, visited in order before the destination. `get-route` dispatches to `get-route-via-waypoints` in [waypoints.cl](waypoints.cl) when `routing-waypoints` is set; otherwise it runs a single `get-route-leg` as before.
+
+For each intermediate target, `get-route-leg` runs isochrones until the next isochrone would pass the target (the existing `reached` test). From the frontier point closest to the target, `approach-target` sails a VMG path to the target exactly: one leg if the bearing is within the upwind/downwind VMG angles, otherwise a tack/gybe point solved from the two VMG headings (`approach-first-legs`), followed by a direct leg with exact final-step clipping. Wind is re-sampled per step (max 5 min); currents and waves are ignored on the approach. The arrival time is the start time of the next leg, and the remaining duration shrinks accordingly. If the approach crosses land (or a leg ends as `no_route`/`max_duration`), routing stops at that leg's closest isochrone point and the status is returned. Tracks, isochrones and statistics of all legs are concatenated. The UI adds waypoints via the map menu (double-click a marker to remove it).
+
 ## Current Boundaries And Caveats
 
 - The current route filter does not apply race constraints, ice limits, or exclusion zones despite the supporting types and declarations.

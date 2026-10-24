@@ -193,6 +193,13 @@
   (bordeaux-threads:with-lock-held (+last-request-lock+)
     (setf *last-request*
           (push (list (local-time:now) 'get-route) *last-request*)))
+  (if (routing-waypoints routing)
+      (get-route-via-waypoints routing)
+      (values (get-route-leg routing))))
+
+(defun get-route-leg (routing)
+  "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and
+the routepoint on the final isochrone that is closest to the destination."
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
          (distance (course-distance start-pos destination))
@@ -261,18 +268,21 @@
               error
               (>= stepsum (routing-stepmax routing)))
           (let ((elapsed (timestamp-difference (now) elapsed0)))
-            (let ((best-route (construct-route isochrone destination)))
+            (let* ((best-rp (best-point isochrone destination))
+                   (best-route (route-from-point best-rp)))
               (log-stats elapsed stepnum pointnum)
-              (make-routeinfo :status (if reached "reached"
-                                          (if error "no_route"
-                                              "max_duration"))
-                              :best best-route
-                              :stats (get-statistics best-route elapsed stepnum pointnum)
-                              :polars (cpolars-label polars)
-                              :options (routing-options routing)
-                              :tracks (when *tracks*
-                                        (extract-tracks start-pos (course-angle start-pos destination) isochrone))
-                              :isochrones (prepare-routepoints isochrones)))))
+              (values
+               (make-routeinfo :status (if reached "reached"
+                                           (if error "no_route"
+                                               "max_duration"))
+                               :best best-route
+                               :stats (get-statistics best-route elapsed stepnum pointnum)
+                               :polars (cpolars-label polars)
+                               :options (routing-options routing)
+                               :tracks (when *tracks*
+                                         (extract-tracks start-pos (course-angle start-pos destination) isochrone))
+                               :isochrones (prepare-routepoints isochrones))
+               best-rp))))
       
       (declare (fixnum max-points step-size stepsum pointnum)
                (special next-isochrone))
@@ -521,14 +531,17 @@
                    min-point point)))
      :finally (return min-point)))
 
+(defun route-from-point (best)
+  "Trackpoints along the predecessor chain ending at the routepoint BEST."
+  (do ((route nil)
+       (cur-point best (routepoint-predecessor cur-point))
+       (successor nil cur-point))
+      ((null cur-point)
+       route)
+    (push (create-trackpoint cur-point (or successor cur-point)) route)))
+
 (defun construct-route (isochrone destination)
-  (let  ((best (best-point isochrone destination)))
-    (do ((route nil)
-         (cur-point best (routepoint-predecessor cur-point))
-         (successor nil cur-point))
-        ((null cur-point)
-         route)
-      (push (create-trackpoint cur-point (or successor cur-point)) route))))
+  (route-from-point (best-point isochrone destination)))
 
 
 (defun get-statistics (track elapsed stepnum pointnum)

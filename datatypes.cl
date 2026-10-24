@@ -30,6 +30,8 @@
   options
   starttime
   start
+  ;; Intermediate targets (list of latlng) to be hit in order before DEST
+  waypoints
   dest
   box
   %dist)

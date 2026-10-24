@@ -82,33 +82,55 @@
 
             <div class="content-pane"  style="font-size:90%">
               <h3>Usage</h3>
-              Usage should be more or less self-explanatory.
-                <ul>
-                <li>Select the correct boat polars from the dropdown list</li>
+              <ol>
+                <li>Select the boat <b>polars</b>, the <b>forecast model</b> and, if wanted, <b>currents</b> and <b>waves</b>.</li>
                 <li>
-                  Set start and destination by dragging the <img src="img/start_32x20.png" alt="start flag">start and <img src="img/finish_32x20.png" alt="finish flag">finish flags<br>
-                  or right-click on the map to position them.<br>
-                  The start position can also be set using NMEA, see below.
+                  Set start and destination by dragging the <img src="img/start_32x20.png" alt="start flag"> start and
+                  <img src="img/finish_32x20.png" alt="finish flag"> finish flags,
+                  or right-click on the map and choose 'Set start' / 'Set destination'.<br>
+                  The start can also be typed into the 'Start position' field (press 'Set') or taken from NMEA, see below.
                 </li>
                 <li>
-                  Tick the 'Start time' box to specify a start time, or leave it unchecked to use the current time.
-                  Check if the start time is set correctly.
+                  Optionally add <b>intermediate waypoints</b>, see 'Multi-route' below.
                 </li>
                 <li>
-                  Select the maximum duration.
+                  Tick 'Start time' to specify a start time (UTC), or leave it unchecked to use the current time.
+                </li>
+                <li>
+                  Select the maximum <b>duration</b> (up to 15 days).
                   <p>
-                    Long routing may take several minutes. <em><b>Please avoid frequent long routings.</b></em><br>
+                    Long routings may take several minutes. <em><b>Please avoid frequent long routings.</b></em><br>
                     Short routings (up to 4 days) should only take a few seconds.
                   </p>
                 </li>
-                <li>
-                  Press 'Execute'.<br>
-                </li>
-				</ul>
+                <li>Press 'Execute'. The route, isochrones and (optionally) alternative tracks are drawn on the map.</li>
+              </ol>
 
-				<h3> GPX import</h3>
-				Use this function to import a fairwinds.world race course. 
-              
+              <h3>Multi-route (intermediate waypoints)</h3>
+              <ul>
+                <li>
+                  Right-click on the map and choose 'Add waypoint'. Waypoints are visited in the order you add them,
+                  before the destination. The red line shows the planned order.
+                </li>
+                <li>Drag a waypoint to move it. Double-click it to remove it. 'Clear waypoints' in the right-click menu removes all of them.</li>
+                <li>
+                  Each waypoint is hit exactly. The router computes isochrones until the next one would lie beyond the waypoint,
+                  then sails a VMG path from the closest point of that isochrone to the waypoint (with one tack or gybe if needed).
+                  The arrival time is the start time of the next leg.
+                </li>
+                <li>
+                  If the approach is not possible (e.g. the path crosses land) or the duration runs out, routing stops
+                  at the last isochrone reached. Waypoints on land are rejected.
+                </li>
+                <li>Currents and waves are not considered on the final approach to a waypoint. Waypoints are not saved and are lost on reload.</li>
+              </ul>
+
+              <h3>Races and GPX import</h3>
+              <ul>
+                <li>'Import' loads a fairwinds.world race course (GPX). Start and destination are set to the gate midpoints and the course is drawn on the map.</li>
+                <li>Imported races are stored in your browser and can be selected from the 'Races' list. 'Remove' deletes the selected race (or all races if none is selected).</li>
+              </ul>
+
               <h3>NMEA</h3>
               <ol>
                 <li>
@@ -123,11 +145,19 @@
                   </p>
                 </li>
               </ol>
+
+              <h3>Wind display and forecast slider</h3>
+              <ul>
+                <li>'Display wind' shows the wind field for the forecast hour selected with the slider (or the &lt;6, &lt;1, 1&gt;, 6&gt; buttons). The forecast cycle is shown next to it.</li>
+                <li>The status line shows wind, VMG angles, distance and bearing to the finish for the point under the cursor.</li>
+                <li>'Display tracks' additionally draws alternative paths from the isochrones.</li>
+              </ul>
+
               <h3>TWA tool</h3>
               <ul>
                 <li>
                   <p>
-                    When routing is complete and the route is displayed, click on any waypoint to anchor the TWA tool on the waypoint.<br>
+                    When routing is complete and the route is displayed, click on any route point to anchor the TWA tool on it.<br>
                     Click on the map to set a direction. The blue path represents a fixed heading.
                   </p>
                   <p style="font-size:80%">
@@ -136,17 +166,20 @@
                   </p>
                 </li>
               </ul>
-              <h3>Isochrones and Waypoints</h3>
-			  <ul><li>
-              Clicking on an isochrone highlights it and sets the wind interpolation to the corresponding time.<br>
-              Similarly clicking on a waypoint set the wind interpolation to the corresponding time,
-				</li>
-				<li>
-			  <b style="color:red">Red</b> isochrones signal that the previous cycle was used - either because the current cycle is only used later, or because the forecast was not yet available.
-			  </li></ul>
+
+              <h3>Isochrones and route points</h3>
+              <ul>
+                <li>
+                  Clicking on an isochrone highlights it and sets the wind display to the corresponding time.
+                  Clicking on a route point does the same and shows details (time, heading, TWA, speed, sail, wind, current).
+                </li>
+                <li>
+                  <b style="color:red">Red</b> isochrones signal that the previous cycle was used - either because the current cycle is only used later, or because the forecast was not yet available.
+                </li>
+              </ul>
 
               <h3>Downloading route information</h3>
-              Select the format (GPX or CSV) and press 'Download'.
+              Select the format (GPX or CSV) and press 'Download' to save the route, or download the schedule.
               
             </div>
           </div>
@@ -198,23 +231,26 @@
   <div class="status-grid" style="display:grid; grid-template-columns:auto 1fr; align-items:start; column-gap:16px; row-gap:8px; width:100%;">
     <div class="status-label" style="display:flex; flex-direction:column; gap:8px; justify-content:flex-start;">
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Server start</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Last forecast downloaded</label>
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Cached forecasts</label>
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Routing requests last 10min</label>
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Last routing stats</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Data source</label>
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Max isochrone points</label>
       <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">TWA step size</label>
+      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Forecast downloads</label>
     </div>
     <div class="status-data" style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
       <label id="tb_serverstart" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
-      <label id="tb_forecasts" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
       <label id="tb_fc_cache" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
       <label id="tb_requests" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
       <label id="tb_last_routestats" style="background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:block; white-space:normal; max-width:100%;">-</label>
-      <label id="tb_datasource" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
       <label id="tb_max_iso_points" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
       <label id="tb_twa_steps" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
+      <table id="tb_downloads" style="border-collapse:collapse; background-color:#D0D0D0; border:1px solid #C0C0C0; border-radius:4px;">
+        <thead>
+          <tr><th style="padding:2px 8px; text-align:left;">Source</th><th style="padding:2px 8px; text-align:left;">Completed cycle (UTC)</th><th style="padding:2px 8px; text-align:left;">In progress</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </div>
   </div>
 </div>

@@ -230,20 +230,79 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Router status & stats
 
+(defstruct downloadstatus
+  name
+  ;; Base time of the newest cycle that was downloaded completely, or NIL
+  completed
+  ;; Base time of a newer cycle with a partial download, or NIL
+  progress
+  progress-done
+  progress-total)
+
+(defparameter *download-status-sources*
+  '(("GFS" cl-weather::noaa-gfs-wind)
+    ("IFS" cl-weather::ecmwf-ifs-wind)
+    ("AIFS-SINGLE" cl-weather::ecmwf-aifs-wind)
+    ("AROME" cl-weather::arome-wind)
+    ("Fairwinds" cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia cl-weather::fw-current-english-channel))
+  "Display name and the datasources that make up each download indicator")
+
+(defun cycle-download-count (ids cycle)
+  "Number of downloaded files and total number of files of CYCLE for all datasources IDS.
+Returns NIL if the cycle does not exist for the datasources."
+  (handler-case
+      (let ((present 0) (total 0))
+        (dolist (id ids)
+          (let* ((datasource (cl-weather::get-datasource id cycle))
+                 (paths (remove-duplicates
+                         (mapcar (lambda (step) (cl-weather::local-pathname datasource step))
+                                 (cl-weather::schedule-steps (cl-weather::schedule datasource)))
+                         :test #'equal))
+                 (full-file-p (typep datasource 'cl-weather::file-download)))
+            (incf total (length paths))
+            (dolist (path paths)
+              (when (and (probe-file path)
+                         ;; Single-file downloads are written in place, so check for completeness
+                         (or (not full-file-p)
+                             (ignore-errors (cl-weather::grib-file-complete-p path))))
+                (incf present)))))
+        (values present total))
+    (error () nil)))
+
+(defun get-download-status ()
+  (loop
+    :for (name . ids) :in *download-status-sources*
+    :collect
+    (let ((completed nil) (progress nil) (done 0) (total 0))
+      (loop
+        :with cycle = (cl-weather:current-cycle (first ids))
+        :repeat 12
+        :do (multiple-value-bind (present all) (cycle-download-count ids cycle)
+              (cond
+                ((null present))
+                ((and (> all 0) (= present all))
+                 (setf completed (cl-weather:cycle-timestamp cycle))
+                 (return))
+                ((and (> present 0) (null progress))
+                 (setf progress (cl-weather:cycle-timestamp cycle)
+                       done present
+                       total all))))
+            (setf cycle (cl-weather:previous-cycle (first ids) cycle)))
+      (make-downloadstatus :name name :completed completed :progress progress
+                           :progress-done done :progress-total total))))
+
 (defstruct (routerstatus (:constructor routerstatus
                              (server-start
-                              latest-forecast 
+                              downloads
                               fc-cache-size 
                               requestcount
-                              datasource
                               max_iso_points
                               twa_steps
                               last_routestats)))
   server-start
-  latest-forecast
+  downloads
   fc-cache-size
   requestcount
-  datasource
   max_iso_points
   twa_steps
   last_routestats)
@@ -253,10 +312,9 @@
   (with-output-to-string (s)
     (json s
           (routerstatus *server-start-time*
-                        cl-weather:*latest-forecast*
+                        (get-download-status)
                         (number-of-entries cl-weather:*forecast-ht*)
                         (length *last-request*)
-                        "NOAA"
                         *max-iso-points*
                         *twa-steps*
                         *last-routestats*))))

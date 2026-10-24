@@ -22,23 +22,52 @@ import * as Util from './Util.js';
     // http://aguas-13:8080/start?app=router&race=8SUUWHr4JD
 
 
+    // "2026-10-24T12:00:00Z" -> "2026-10-24 12Z"
+    function formatCycle (timestamp) {
+        return timestamp ? `${timestamp.substring(0, 10)} ${timestamp.substring(11, 13)}Z` : null;
+    }
+
+    function renderDownloads (tbody, downloads) {
+        if (!tbody) return;
+        tbody.replaceChildren();
+        for (const d of (Array.isArray(downloads) ? downloads : [])) {
+            const row = tbody.insertRow();
+            const cells = [row.insertCell(), row.insertCell(), row.insertCell()];
+            cells.forEach(c => c.style.padding = '2px 8px');
+
+            cells[0].textContent = d.name;
+
+            const completed = formatCycle(d.completed);
+            cells[1].textContent = completed ? `\u25CF ${completed}` : '\u25CF none';
+            cells[1].style.color = completed ? 'darkgreen' : 'darkred';
+
+            const progress = formatCycle(d.progress);
+            if (progress) {
+                const pct = d["progress-total"] > 0
+                    ? Math.round(100 * d["progress-done"] / d["progress-total"]) : 0;
+                cells[2].textContent = `\u25D0 ${progress} (${d["progress-done"]}/${d["progress-total"]}, ${pct}%)`;
+                cells[2].style.color = 'darkorange';
+            } else {
+                cells[2].textContent = '-';
+            }
+        }
+    }
+
     function displayStatistics (request) {
         let routerstatus = JSON.parse(request.responseText);
 
         let tbServerstart = document.getElementById('tb_serverstart');
-        let tbForecasts = document.getElementById('tb_forecasts');
+        let tbDownloads = document.querySelector('#tb_downloads tbody');
         let tbFCCacheSize = document.getElementById('tb_fc_cache');
         let tbRequests = document.getElementById('tb_requests');
-        let tbDatasource = document.getElementById('tb_datasource');
         let tbMaxIso = document.getElementById('tb_max_iso_points');
         let tbTwaSteps = document.getElementById('tb_twa_steps');
         let tbLastStats = document.getElementById('tb_last_routestats');
 
         tbServerstart.textContent = routerstatus["server-start"]; 
-        tbForecasts.textContent = routerstatus["latest-forecast"];
+        renderDownloads(tbDownloads, routerstatus.downloads);
         tbFCCacheSize.textContent = routerstatus["fc-cache-size"];
         tbRequests.textContent   = routerstatus.requestcount;
-        tbDatasource.textContent = routerstatus.datasource ?? '';
 
         if (tbMaxIso && routerstatus.max_iso_points != null) {
             tbMaxIso.textContent = routerstatus.max_iso_points.toLocaleString();

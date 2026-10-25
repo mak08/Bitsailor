@@ -244,7 +244,8 @@
     ("IFS" cl-weather::ecmwf-ifs-wind)
     ("AIFS-SINGLE" cl-weather::ecmwf-aifs-wind)
     ("AROME" cl-weather::arome-wind)
-    ("Fairwinds" cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia cl-weather::fw-current-english-channel))
+    ("Fairwinds waves" cl-weather::gfswave-combined)
+    ("Fairwinds currents" cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia cl-weather::fw-current-english-channel))
   "Display name and the datasources that make up each download indicator")
 
 (defun cycle-download-count (ids cycle)

@@ -1,10 +1,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Multi-route: route through intermediate targets that are hit exactly.
+;;; Multi-route: route through intermediate targets: points that are hit exactly
+;;; and gates that are crossed (see GATE-CROSSING in filter.cl).
 ;;;
 ;;; Each intermediate leg runs isochrones until the next isochrone would lie
 ;;; beyond the target. From the closest point of that isochrone a VMG path to
 ;;; the target is sailed: one leg if the target is within the VMG angles,
-;;; otherwise a tack/gybe point is computed. The arrival time becomes the start
+;;; otherwise a tack/gybe point is computed. The approach is also tried from
+;;; the predecessors of that point and the earliest arrival wins, so that the
+;;; last (non-VMG) isochrone step is shortened. The arrival time becomes the start
 ;;; time of the next leg. If the approach is not feasible (land), routing stops
 ;;; at the current isochrone.
 
@@ -101,6 +104,43 @@ blocked by land or the boat cannot make progress."
             :for result = (sail-approach routing rp target first-leg)
             :when result :return result))))))
 
+(defparameter *approach-lookback* 12
+  "Number of predecessors of the last isochrone point that are tried as approach start points")
+
+(defparameter *gate-samples* 10
+  "Number of intervals along a gate that are tried as crossing points")
+
+(defun gate-sample-points (gate)
+  (let ((a (gate-a gate)) (b (gate-b gate)))
+    (let ((len (course-distance a b)) (angle (course-angle a b)))
+      (loop :for i :from 0 :to *gate-samples*
+            :collect (add-distance-exact a (* len (/ i *gate-samples*)) angle)))))
+
+(defun best-approach (routing rp gate target)
+  "Earliest arrival at TARGET (a point) or at any sampled point of GATE, found by
+sailing the VMG approach from RP and from its first *APPROACH-LOOKBACK* predecessors.
+The last isochrone step is not optimal VMG, so starting earlier on the track
+shortens that step. For a gate RP itself is a valid arrival. Returns a routepoint or NIL."
+  (let ((best (when gate rp))
+        (targets (if gate (gate-sample-points gate) (list target))))
+    (loop :for start = rp :then (routepoint-predecessor start)
+          :for i :from 0 :to *approach-lookback*
+          :while start
+          :do (dolist (tg targets)
+                (let ((arrival (approach-target routing start tg)))
+                  (when (and arrival
+                             (or (null best)
+                                 (timestamp< (routepoint-time arrival) (routepoint-time best))))
+                    (setf best arrival)))))
+    best))
+
+(defun target-position (target)
+  "Position that a leg towards TARGET (a latlng or a GATE) is aimed at."
+  (if (gate-p target)
+      (let ((a (gate-a target)) (b (gate-b target)))
+        (add-distance-exact a (/ (course-distance a b) 2d0) (course-angle a b)))
+      target))
+
 (defun get-route-via-waypoints (routing)
   (let* ((targets (append (routing-waypoints routing) (list (routing-dest routing))))
          (total (routing-stepmax routing))
@@ -116,7 +156,11 @@ blocked by land or the boat cannot make progress."
          (points 0)
          (info nil))
     (loop
-      :for (target . more) :on targets
+      :for (item . more) :on targets
+      :for gate = (when (gate-p item)
+                    (make-gate :a (gate-a item) :b (gate-b item)
+                               :next (target-position (first more))))
+      :for target = (target-position item)
       :for remaining = (- total (round (timestamp-difference time start-time)))
       :do (when (<= remaining 0)
             (setf status "max_duration")
@@ -128,6 +172,7 @@ blocked by land or the boat cannot make progress."
                   (routing-stepmax leg) remaining
                   (routing-box leg) (make-routing-box pos target)
                   (routing-%dist leg) nil
+                  (routing-gate leg) gate
                   (routing-waypoints leg) nil)
             (multiple-value-bind (leg-info best-rp) (get-route-leg leg)
               (let ((leg-track (routeinfo-best leg-info)))
@@ -145,11 +190,13 @@ blocked by land or the boat cannot make progress."
                    (setf track (append (butlast track) leg-track))
                    (return))
                   (t
-                   (let ((arrival (approach-target leg best-rp target)))
+                   ;; Sail the final part to the point or gate on optimal VMG,
+                   ;; starting from the best of the last few track points
+                   (let ((arrival (best-approach leg best-rp gate target)))
                      (cond
                        (arrival
                         (setf track (append (butlast track) (route-from-point arrival))
-                              pos target
+                              pos (routepoint-position arrival)
                               time (routepoint-time arrival)))
                        (t
                         (log2:warning "Approach to waypoint ~a failed, routing stopped"

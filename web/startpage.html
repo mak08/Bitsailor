@@ -127,7 +127,12 @@
                   Right-click on the map and choose 'Add waypoint'. Waypoints are visited in the order you add them,
                   before the destination. The red line shows the planned order.
                 </li>
-                <li>Drag a waypoint to move it. Double-click it to remove it. 'Clear waypoints' in the right-click menu removes all of them.</li>
+                <li>Drag a waypoint or gate endpoint to move it. Double-click a marker to remove it. 'Clear waypoints' in the right-click menu removes all waypoints and gates.</li>
+                <li>
+                  <b>Gates:</b> choose 'Add gate' in the right-click menu (first endpoint), then click the map for the second endpoint.
+                  The route must cross the orange gate line, at <em>any</em> point between the endpoints; it continues from the crossing point.
+                  Gates can only be intermediate targets, not the destination. Gate endpoints are not checked for land.
+                </li>
                 <li>
                   Each waypoint is hit exactly. The router computes isochrones until the next one would lie beyond the waypoint,
                   then sails a VMG path from the closest point of that isochrone to the waypoint (with one tack or gybe if needed).

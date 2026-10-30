@@ -18,6 +18,11 @@
 
 (defstruct posinfo time position speed course)
 
+(defstruct gate
+  "A gate between the endpoints A and B (latlng). NEXT is the position the route
+continues to after the gate; it is used to choose between several crossings."
+  a b next)
+
 (defstruct routing
   forecast-model
   polars
@@ -30,7 +35,9 @@
   options
   starttime
   start
-  ;; Intermediate targets (list of latlng) to be hit in order before DEST
+  ;; Intermediate targets in order before DEST: a latlng (hit exactly) or a GATE (to be crossed)
+  ;; Gate (struct GATE) that the current leg has to cross instead of reaching DEST exactly
+  gate
   waypoints
   dest
   box

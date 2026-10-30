@@ -12,6 +12,7 @@ let map = null;
 let startMarker = null;
 let destinationMarker = null;
 // Intermediate targets, in the order they are visited. Double-click a marker to remove it.
+// Items: {markers: [m] for a point, [mA, mB] for a gate, line: gate polyline or null}
 let waypointMarkers = [];
 let routeLine = null;
 let courseGCLine = null;
@@ -424,7 +425,7 @@ function buildShortestSegments(startLatLng, destLatLng) {
 // Segments for start -> waypoints (in order) -> destination
 function buildRouteSegments() {
     const points = [startMarker.getLatLng(),
-                    ...waypointMarkers.map(m => m.getLatLng()),
+                    ...waypointMarkers.map(wpCenter),
                     destinationMarker.getLatLng()];
     const segments = [];
     for (let i = 0; i < points.length - 1; i++) {
@@ -633,6 +634,7 @@ function setUp(getVMG) {
     document.getElementById("bt_setstart").addEventListener("click",function () { onContextMenu('start'); });
     document.getElementById("bt_setdest").addEventListener("click",function () { onContextMenu('dest'); });
     document.getElementById("bt_addwaypoint").addEventListener("click",onAddWaypoint);
+    document.getElementById("bt_addgate").addEventListener("click",onAddGate);
     document.getElementById("bt_clearwaypoints").addEventListener("click",onClearWaypoints);
     document.getElementById("bt_copypos").addEventListener("click",onCopyPosition);
 
@@ -773,35 +775,83 @@ function onContextMenu(point) {
     setRoutePoint(point, map.mouseEventToLatLng(mapEvent.originalEvent));
 }
 
+function wpCenter(item) {
+    const ps = item.markers.map(m => m.getLatLng());
+    return ps.length === 1 ? ps[0] : L.latLng((ps[0].lat + ps[1].lat) / 2, (ps[0].lng + ps[1].lng) / 2);
+}
+
+function removeWaypointItem(item) {
+    item.markers.forEach(m => map.removeLayer(m));
+    if (item.line) map.removeLayer(item.line);
+    waypointMarkers = waypointMarkers.filter(i => i !== item);
+    redrawRouteLines();
+}
+
+function makeWaypointMarker(latlng, title, item) {
+    const marker = L.marker(latlng, { title: title, draggable: true }).addTo(map);
+    marker.on('dblclick', () => removeWaypointItem(item));
+    marker.on('drag', () => { updateGateLine(item); redrawRouteLines(); });
+    return marker;
+}
+
+function updateGateLine(item) {
+    if (item.markers.length !== 2) return;
+    const pts = item.markers.map(m => m.getLatLng());
+    if (item.line) item.line.setLatLngs(pts);
+    else item.line = L.polyline(pts, { color: '#e08000', weight: 3, opacity: 0.9, dashArray: '6,4' }).addTo(map);
+}
+
 function onAddWaypoint() {
-    var mapMenu = document.getElementById("mapMenu");
-    mapMenu.style.display = "none";
+    document.getElementById("mapMenu").style.display = "none";
     const latlng = map.mouseEventToLatLng(mapEvent.originalEvent);
-    const marker = L.marker(latlng, {
-        title: `Waypoint ${waypointMarkers.length + 1}`,
-        draggable: true
-    }).addTo(map);
-    marker.on('dblclick', function () {
-        map.removeLayer(marker);
-        waypointMarkers = waypointMarkers.filter(m => m !== marker);
+    const item = { markers: [], line: null };
+    item.markers.push(makeWaypointMarker(latlng, `Waypoint ${waypointMarkers.length + 1}`, item));
+    waypointMarkers.push(item);
+    redrawRouteLines();
+}
+
+// Gate: first endpoint at the menu position, second endpoint at the next map click
+function onAddGate() {
+    document.getElementById("mapMenu").style.display = "none";
+    const latlng = map.mouseEventToLatLng(mapEvent.originalEvent);
+    const n = waypointMarkers.length + 1;
+    const item = { markers: [], line: null };
+    item.markers.push(makeWaypointMarker(latlng, `Gate ${n} (A)`, item));
+    const container = map.getContainer();
+    container.style.cursor = 'crosshair';
+    const preview = (e) => {
+        if (item.markers.length === 1) {
+            if (item.line) item.line.setLatLngs([latlng, e.latlng]);
+            else item.line = L.polyline([latlng, e.latlng], { color: '#e08000', weight: 3, dashArray: '6,4' }).addTo(map);
+        }
+    };
+    map.on('mousemove', preview);
+    map.once('click', (e) => {
+        map.off('mousemove', preview);
+        container.style.cursor = '';
+        item.markers.push(makeWaypointMarker(e.latlng, `Gate ${n} (B)`, item));
+        updateGateLine(item);
+        waypointMarkers.push(item);
         redrawRouteLines();
     });
-    marker.on('drag', redrawRouteLines);
-    waypointMarkers.push(marker);
-    redrawRouteLines();
 }
 
 function onClearWaypoints() {
     document.getElementById("mapMenu").style.display = "none";
-    waypointMarkers.forEach(m => map.removeLayer(m));
+    waypointMarkers.forEach(i => {
+        i.markers.forEach(m => map.removeLayer(m));
+        if (i.line) map.removeLayer(i.line);
+    });
     waypointMarkers = [];
     redrawRouteLines();
 }
 
 function getWaypointsQuery() {
     return waypointMarkers
-        .map(m => { const p = m.getLatLng(); return `${p.lat},${wrapLon180(p.lng)}`; })
-        .join(',');
+        .map(i => i.markers
+            .map(m => { const p = m.getLatLng(); return `${p.lat},${wrapLon180(p.lng)}`; })
+            .join(','))
+        .join('~');
 }
 
 function onCopyPosition(event) {

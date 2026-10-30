@@ -145,7 +145,8 @@
       (when (cl-map:point-on-land-p (routing-start routing))
         (error 'request-error :message "Start point is on land"))
       (dolist (waypoint (routing-waypoints routing))
-        (when (cl-map:point-on-land-p waypoint)
+        ;; Gate endpoints may lie on the coast, so only points are checked
+        (when (and (not (gate-p waypoint)) (cl-map:point-on-land-p waypoint))
           (error 'request-error
                  :message (format nil "Waypoint ~a is on land" (format-latlng nil waypoint)))))
       (when (equalp (routing-start routing) (routing-dest routing))
@@ -375,14 +376,19 @@ Returns NIL if the cycle does not exist for the datasources."
      :twa-angles (make-twa-angles-buffer cpolars))))
 
 (defun parse-waypoints (string)
-  "Parse a comma-separated list lat1,lon1,lat2,lon2,... into a list of latlng."
+  "Parse waypoints separated by ~. Each is either lat,lon (point) or
+lat1,lon1,lat2,lon2 (gate). Returns a list of latlng and GATE structs."
   (when (and string (string/= string ""))
-    (let ((coords (mapcar (lambda (s) (read-arg s 'double-float))
-                          (cl-utilities:split-sequence #\, string))))
-      (unless (and (evenp (length coords)) (every #'numberp coords))
-        (error 'request-error :message "Invalid waypoints"))
-      (loop :for (lat lon) :on coords :by #'cddr
-            :collect (make-latlng :lat lat :lng lon)))))
+    (loop
+      :for item :in (cl-utilities:split-sequence #\~ string)
+      :for coords = (mapcar (lambda (s) (read-arg s 'double-float))
+                            (cl-utilities:split-sequence #\, item))
+      :do (unless (and (member (length coords) '(2 4)) (every #'numberp coords))
+            (error 'request-error :message "Invalid waypoints"))
+      :collect (if (= (length coords) 2)
+                   (make-latlng :lat (first coords) :lng (second coords))
+                   (make-gate :a (make-latlng :lat (first coords) :lng (second coords))
+                              :b (make-latlng :lat (third coords) :lng (fourth coords)))))))
 
 (defun make-twa-angles-buffer (cpolars)
   (let ((buffer

@@ -155,6 +155,15 @@
                                    (setf distance (* speed step-size))))
                                 (let* ((new-pos (add-distance-estimate current-pos distance heading)))
                                   (when (in-latlng-box box new-pos)
+                                    (let ((gate (routing-gate routing)))
+                                      (when gate
+                                        (let ((fraction (gate-crossing gate current-pos new-pos)))
+                                          (when fraction
+                                            (record-gate-crossing gate fraction routepoint new-pos step-size
+                                                                  twa heading speed sail wind-dir wind-speed
+                                                                  curnt-dir curnt-speed
+                                                                  wave-height wave-direction
+                                                                  (and wave-height wave-factor))))))
                                     (let* ((origin-distance (course-distance start-pos new-pos))
                                            (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
                                       (when (and (heading-between left right origin-angle))
@@ -211,6 +220,9 @@ the routepoint on the final isochrone that is closest to the destination."
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
          (start-time
            (parse-datetime-local (routing-starttime routing) :timezone "+00:00"))
+         (gate (routing-gate routing))
+         (gate-hit nil)
+         (*gate-crossings* nil)
          (isochrones nil))
     (log2:info "Routing from ~a to ~a at ~a Course angle ~a Fan ~a Left ~a Right ~a"
                 (format-latlng nil start-pos)
@@ -268,7 +280,7 @@ the routepoint on the final isochrone that is closest to the destination."
               error
               (>= stepsum (routing-stepmax routing)))
           (let ((elapsed (timestamp-difference (now) elapsed0)))
-            (let* ((best-rp (best-point isochrone destination))
+            (let* ((best-rp (or gate-hit (best-point isochrone destination)))
                    (best-route (route-from-point best-rp)))
               (log-stats elapsed stepnum pointnum)
               (values
@@ -293,6 +305,7 @@ the routepoint on the final isochrone that is closest to the destination."
       
       ;; Step 1 - Compute next isochrone by exploring from each point in the current isochrone.
       ;;          Add new points to next-isochrone.
+      (setf *gate-crossings* nil)
       (map nil (lambda (rp)
                  (incf pointnum
                        (expand-routepoint routing rp left right step-size step-time params-wind params-curnt params-wave params-wave-dir polars delta-angle)))
@@ -310,7 +323,10 @@ the routepoint on the final isochrone that is closest to the destination."
                          (notany #'routepoint-p candidate))
            (setf error t))
           (t
-           (setf reached (reached candidate start-pos dest-heading distance))
+           ;; A gate leg is finished when a step crosses the gate line, otherwise by distance
+           (setf reached (if gate
+                             (and (setf gate-hit (best-gate-crossing)) t)
+                             (reached candidate start-pos dest-heading distance)))
            (unless reached
              (setf isochrone candidate))
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))

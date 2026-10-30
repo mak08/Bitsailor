@@ -5,6 +5,67 @@
 
 (in-package :bitsailor)
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Gates
+;;;
+;;; The isochrone alone cannot tell whether a gate was crossed: the frontier keeps
+;;; only the point with the largest origin distance per bucket, so the crossing may
+;;; hit an interior point of the gate which is not on the frontier. Instead, every
+;;; candidate step (predecessor -> new position) is tested against the gate
+;;; segment while the isochrone is expanded. That is a handful of flops per candidate.
+
+(defvar *gate-crossings* nil
+  "Routepoints on the gate line found while expanding the current isochrone")
+
+(defun gate-crossing (gate p0 p1)
+  "Fraction (0..1) of the step P0->P1 at which the gate segment is crossed, or NIL.
+Uses a local flat projection around P0, which is accurate for steps and gates of
+a few hundred km."
+  (let* ((lat0 (latlng-lat p0))
+         (lng0 (latlng-lng p0))
+         (k (cos (rad lat0))))
+    (flet ((x (p) (* k (normalize-angle (- (latlng-lng p) lng0))))
+           (y (p) (- (latlng-lat p) lat0)))
+      (let* ((rx (x p1)) (ry (y p1))
+             (xa (x (gate-a gate))) (ya (y (gate-a gate)))
+             (sx (- (x (gate-b gate)) xa))
+             (sy (- (y (gate-b gate)) ya))
+             (denom (- (* rx sy) (* ry sx))))
+        (when (> (abs denom) 1d-12)
+          (let ((fraction (/ (- (* xa sy) (* ya sx)) denom))
+                (u (/ (- (* xa ry) (* ya rx)) denom)))
+            (when (and (<= 0d0 fraction 1d0) (<= 0d0 u 1d0))
+              fraction)))))))
+
+(defun record-gate-crossing (gate fraction predecessor new-pos step-size
+                             twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed
+                             wave-height wave-dir wave-factor)
+  (let* ((p0 (routepoint-position predecessor))
+         (lat0 (latlng-lat p0))
+         (lng0 (latlng-lng p0))
+         (pos (make-latlng
+               :lat (+ lat0 (* fraction (- (latlng-lat new-pos) lat0)))
+               :lng (normalize-angle
+                     (+ lng0 (* fraction (normalize-angle (- (latlng-lng new-pos) lng0))))))))
+    (push (create-routepoint predecessor pos
+                             (adjust-timestamp (routepoint-time predecessor)
+                               (:offset :nsec (round (* fraction step-size 1000000000))))
+                             twa heading
+                             (course-distance pos (gate-next gate))
+                             speed sail wind-dir wind-speed curnt-dir curnt-speed 0d0 0d0
+                             wave-height wave-dir wave-factor)
+          *gate-crossings*)))
+
+(defun best-gate-crossing (&optional (crossings *gate-crossings*))
+  "The crossing closest to the next target that does not run over land."
+  (find-if-not (lambda (rp)
+                 (if *use-bitmap*
+                     (bm-is-land (routepoint-position rp))
+                     (intersects-land-p (routepoint-position (routepoint-predecessor rp))
+                                        (routepoint-position rp))))
+               (sort (copy-list crossings) #'<
+                     :key #'routepoint-destination-distance)))
+
 (declaim (inline bucket))
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate origin-angle delta-angle))

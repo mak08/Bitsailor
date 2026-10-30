@@ -165,7 +165,9 @@
                                                                   wave-height wave-direction
                                                                   (and wave-height wave-factor))))))
                                     (let* ((origin-distance (course-distance start-pos new-pos))
-                                           (origin-angle (get-origin-angle start-pos new-pos origin-distance)))
+                                           (origin-angle (if (and *routepoint-sink* (< origin-distance 1d0))
+                                                             0d0
+                                                             (get-origin-angle start-pos new-pos origin-distance))))
                                       (when (and (heading-between left right origin-angle))
                                         (add-routepoint routepoint new-pos origin-distance origin-angle delta-angle left 0d0 step-size step-time twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed
                                                          wave-height wave-direction

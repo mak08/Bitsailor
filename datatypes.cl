@@ -89,7 +89,7 @@ continues to after the gate; it is used to choose between several crossings."
             (length (routeinfo-isochrones thing)))))
 
 
-(defstruct isochrone center cycle offset path)
+(defstruct isochrone center cycle offset path stage)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.

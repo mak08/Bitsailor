@@ -21,6 +21,7 @@
                (:file "filter")
                (:file "simulation")
                (:file "waypoints")
+               (:file "gate-search")
                (:file "json")
                (:file "http-api")
                (:file "signup")

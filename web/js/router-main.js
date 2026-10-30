@@ -20,6 +20,7 @@ let courseGCLine = null;
 let trackMarkers = [];
 let routeTracks = [];
 let routeIsochrones = [];
+let selectedIsochroneStage = null;
 let twaPath = [];
 let hdgPath = [];
 let polarsList = [];
@@ -861,6 +862,7 @@ function onCopyPosition(event) {
 }
 
 function onSelectIsochrone(isochrone) {
+    selectedIsochroneStage = Number.isInteger(isochrone.stage) ? isochrone.stage : null;
     currentCycle = isochrone.cycle;
     var offset = isochrone.offset;
     document.getElementById("ir_index").value = offset;
@@ -1451,7 +1453,7 @@ function createIsochrones(isochrones) {
     var c = new Date(currentCycle);
     for (var i = 0; i < isochrones.length; i++) {
         const isoData = isochrones[i];
-        const style = getIsoStyle(isoData, 1, c);
+        const style = getIsoStyle(isoData, ir_index.valueAsNumber, c);
 
         const points = isoData.path.map(p => [p.lat, wrapLon180(p.lng)]);
         let segments = splitPathAtAntimeridian(points);
@@ -1463,9 +1465,13 @@ function createIsochrones(isochrones) {
             const isoLayer = L.polyline(seg, {
                 color: style.color,
                 weight: style.weight,
+                dashArray: style.dashArray,
                 opacity: 0.8
             }).addTo(map);
-            addInfo(isoLayer, isoData.cycle, isoData.offset);
+            addInfo(isoLayer, isoData.cycle, isoData.offset, isoData.stage);
+            const stageLabel = Number.isInteger(isoData.stage)
+                ? ` · ${isoData.stage} gates crossed in this group` : '';
+            isoLayer.bindTooltip(`${getIsochroneTime(isoData).toISOString().slice(0, 16)} UTC${stageLabel}`);
             routeIsochrones.push(isoLayer);
         }
     }
@@ -1484,7 +1490,10 @@ function getIsoStyle(isochrone, selectedOffset, availableCycle) {
     var h = i.getUTCHours();
     var weight = (h % 6) ? 1 : 3;
     var color;
-    if (isochrone.offset === selectedOffset) {
+    const selectedTime = c.getTime() + Number(selectedOffset) * 3600000;
+    const matchesStage = selectedIsochroneStage === null ||
+        isochrone.stage === selectedIsochroneStage;
+    if (i.getTime() === selectedTime && matchesStage) {
         color = '#ffffff';
         weight = 3;
     } else {
@@ -1494,7 +1503,9 @@ function getIsoStyle(isochrone, selectedOffset, availableCycle) {
             color = (h % 12) ? '#8080a0' : '#000000';
         }
     }
-    return { "color": color, "weight": weight };
+    const dashArray = Number.isInteger(isochrone.stage) && isochrone.stage > 0
+        ? (isochrone.stage % 2 ? '8 4' : '2 4') : null;
+    return { "color": color, "weight": weight, "dashArray": dashArray };
 }
 
 function updateIsochrones() {
@@ -1506,6 +1517,7 @@ function updateIsochrones() {
 }
 
 function clearRoute() {
+    selectedIsochroneStage = null;
     clearPath(twaPath);
     clearPath(hdgPath);
 
@@ -1656,7 +1668,8 @@ function drawPath(bPath, data, color) {
     }
 }
 
-function addInfo(isochrone, cycle, offset) {
+function addInfo(isochrone, cycle, offset, stage) {
+    isochrone.stage = stage;
     isochrone.cycle = cycle;
     isochrone.offset = offset;
     isochrone.on('click', function () {

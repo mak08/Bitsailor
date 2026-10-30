@@ -66,6 +66,9 @@ a few hundred km."
                (sort (copy-list crossings) #'<
                      :key #'routepoint-destination-distance)))
 
+(defvar *routepoint-sink* nil
+  "Optional candidate consumer used by the shared-clock gate search.")
+
 (declaim (inline bucket))
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate origin-angle delta-angle))
@@ -92,6 +95,13 @@ a few hundred km."
                               wave-dir
                               wave-factor)
   (declare (special next-isochrone max-dist min-angle))
+  (when *routepoint-sink*
+    (funcall *routepoint-sink*
+             (create-routepoint predecessor position step-time twa heading
+                                destination-distance speed sail wind-dir wind-speed
+                                curnt-dir curnt-speed origin-angle origin-distance
+                                wave-height wave-dir wave-factor))
+    (return-from add-routepoint (values)))
   (let*
       ((maxpoints (length next-isochrone))
        (offset (bucket left delta-angle))

@@ -116,7 +116,7 @@ blocked by land or the boat cannot make progress."
       (loop :for i :from 0 :to *gate-samples*
             :collect (add-distance-exact a (* len (/ i *gate-samples*)) angle)))))
 
-(defun best-approach (routing rp gate target)
+(defun best-approach (routing rp gate target &optional earliest-start)
   "Earliest arrival at TARGET (a point) or at any sampled point of GATE, found by
 sailing the VMG approach from RP and from its first *APPROACH-LOOKBACK* predecessors.
 The last isochrone step is not optimal VMG, so starting earlier on the track
@@ -125,7 +125,8 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
         (targets (if gate (gate-sample-points gate) (list target))))
     (loop :for start = rp :then (routepoint-predecessor start)
           :for i :from 0 :to *approach-lookback*
-          :while start
+          :while (and start (or (null earliest-start)
+                                (timestamp<= earliest-start (routepoint-time start))))
           :do (dolist (tg targets)
                 (let ((arrival (approach-target routing start tg)))
                   (when (and arrival
@@ -142,7 +143,7 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
       target))
 
 (defun get-route-via-waypoints (routing)
-  (let* ((targets (append (routing-waypoints routing) (list (routing-dest routing))))
+  (let* ((targets (group-gate-targets routing))
          (total (routing-stepmax routing))
          (start-time (parse-datetime-local (routing-starttime routing)))
          (elapsed0 (now))
@@ -156,11 +157,10 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
          (points 0)
          (info nil))
     (loop
-      :for (item . more) :on targets
-      :for gate = (when (gate-p item)
-                    (make-gate :a (gate-a item) :b (gate-b item)
-                               :next (target-position (first more))))
-      :for target = (target-position item)
+      :for (group . more) :on targets
+      :for gates = (butlast group)
+      :for target = (car (last group))
+      :for gate = nil
       :for remaining = (- total (round (timestamp-difference time start-time)))
       :do (when (<= remaining 0)
             (setf status "max_duration")
@@ -174,7 +174,7 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
                   (routing-%dist leg) nil
                   (routing-gate leg) gate
                   (routing-waypoints leg) nil)
-            (multiple-value-bind (leg-info best-rp) (get-route-leg leg)
+            (multiple-value-bind (leg-info best-rp last-crossing) (if gates (get-route-through-gates leg gates) (get-route-leg leg))
               (let ((leg-track (routeinfo-best leg-info)))
                 (setf info leg-info)
                 (incf steps (routestats-steps (routeinfo-stats leg-info)))
@@ -192,7 +192,8 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
                   (t
                    ;; Sail the final part to the point or gate on optimal VMG,
                    ;; starting from the best of the last few track points
-                   (let ((arrival (best-approach leg best-rp gate target)))
+                   (let ((arrival (best-approach leg best-rp gate target
+                                                 (when last-crossing (routepoint-time last-crossing)))))
                      (cond
                        (arrival
                         (setf track (append (butlast track) (route-from-point arrival))

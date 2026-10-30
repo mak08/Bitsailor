@@ -92,9 +92,15 @@ The first step is shortened to align to a ten-minute boundary. Later step durati
 
 `getRoute` accepts an optional `waypoints=` list of intermediate targets (items separated by `~`; `lat,lon` is a point, `lat1,lon1,lat2,lon2` is a gate), visited in order before the destination. `get-route` dispatches to `get-route-via-waypoints` in [waypoints.cl](waypoints.cl) when `routing-waypoints` is set; otherwise it runs a single `get-route-leg` as before.
 
-For each intermediate target, `get-route-leg` runs isochrones until the next isochrone would pass the target (the existing `reached` test). From the frontier point closest to the target, `approach-target` sails a VMG path to the target exactly: one leg if the bearing is within the upwind/downwind VMG angles, otherwise a tack/gybe point solved from the two VMG headings (`approach-first-legs`), followed by a direct leg with exact final-step clipping. Since the last isochrone step is not VMG-optimal, `best-approach` also tries the approach from the first `*approach-lookback*` predecessors of that point (and, for gates, towards `*gate-samples*`+1 sampled points on the gate) and keeps the earliest arrival; this shortens the non-VMG final step. Wind is re-sampled per step (max 5 min); currents and waves are ignored on the approach. The arrival time is the start time of the next leg, and the remaining duration shrinks accordingly. If the approach crosses land (or a leg ends as `no_route`/`max_duration`), routing stops at that leg's closest isochrone point and the status is returned. Tracks, isochrones and statistics of all legs are concatenated. The UI adds waypoints and gates via the map menu (double-click a marker to remove it).
+Consecutive gates and the following point waypoint (or final destination) are searched together by `get-route-through-gates` in [gate-search.cl](gate-search.cl). Each candidate carries its next-target index and a leg origin. All stages advance on a common simulation clock. The search continues approaching a gate after its first crossing: earlier crossings already travelling downstream compete with later crossings when those enter the next stage. Termination is at the destination of the group, rather than at the first gate crossing.
 
-Gates (`gate` struct in [datatypes.cl](datatypes.cl)) are intermediate only. Because the frontier keeps one point per angular bucket, a gate crossing may never appear on an isochrone. Instead `expand-routepoint` tests every candidate step against the gate segment (`gate-crossing` in [filter.cl](filter.cl), flat local projection) and records interpolated crossing routepoints. The leg ends at the first isochrone step with a non-land crossing (`best-gate-crossing`, preferring the crossing closest to the next target); the next leg starts at that point and time. The fan/box aim at the gate midpoint. Gate endpoints are not land-checked.
+Each bucket first retains a bounded pool of spatially separated candidates, ranked by outward progress (`*gate-bucket-candidates*`, default 4). After expansion, land checks select up to `*gate-bucket-survivors*` valid points from that pool. This bounds coastline work and provides fallback candidates when the leading point is blocked. As with other frontier pruning, a valid point outside the retained pool can be lost. Gate crossings are checked using the complete original step, including the portion before the recorded intersection. Ordered gate intersections are recorded as predecessor routepoints with fractional crossing times. For this initial implementation, the boat completes the crossing step on its existing heading and starts steering towards the next target at the following step; it does not yet turn at the fractional crossing time. Multiple gates crossed in one segment advance progress in intersection order.
+
+Pruning uses separate origin-centred bearing buckets for each gate stage. The fixed reference is the original start for stage zero and the previous gate midpoint for later stages. At the same simulation time, each bucket retains the point farthest from that reference, independently of its actual crossing origin and time. This preserves a broad outward frontier instead of compressing the approach into a few bearings from a distant target. `*gate-bucket-width*` defaults to 0.24 degrees, `*gate-bucket-survivors*` defaults to 1, and the effective width respects the `*max-iso-points*` budget per stage. The configured origin fan is applied around the reference-to-target bearing. This remains a bounded heuristic rather than a guarantee of global optimality; total frontier capacity grows with the number of gate stages.
+
+Hourly drawings use the outer envelope in the same origin-centred buckets. Angular gaps and large spatial jumps produce separate polylines, so points from disconnected sections cannot form radial spokes. All stages share the same simulation timestamp, including frontiers which have not yet crossed an earlier gate. Alternative `tracks` are currently omitted for gate groups.
+
+Point waypoints remain serial boundaries. After a group reaches its point waypoint, the existing VMG approach hits that point exactly, trying recent predecessors, but never looking back before the last gate crossing. The arrival starts the next group with the remaining duration. Groups without gates retain the original single-leg search. Currents and waves are included in ordinary expansion but remain ignored by the point approach. If a group fails or exhausts its duration, routing returns its best surviving partial track and corresponding status.
 
 ## Current Boundaries And Caveats
 
@@ -104,3 +110,26 @@ Gates (`gate` struct in [datatypes.cl](datatypes.cl)) are intermediate only. Bec
 - Land behavior differs by mode: vector mode checks each segment, while bitmap mode checks candidate endpoints only.
 - Startup initializes either the vector map or bitmap according to `*use-bitmap*`, but the HTTP endpoint's start-point validation always calls `cl-map:point-on-land-p`, which requires the vector map. Bitmap deployments should verify that this validation path has a loaded vector map.
 - The exact runtime data coverage, cycle schedules, and local map/GRIB paths depend on sibling-library and deployment configuration, not on the route algorithm itself.
+
+Gate isochrone fragments carry a `stage` field (number of gates crossed within
+that gate group). Overlapping stages represent different route constraints at
+the same simulation time; they are not a single geometric envelope. The UI uses
+solid/dashed/dotted lines and UTC/stage tooltips to distinguish them. Clicking a
+fragment highlights its stage at the selected absolute UTC time, comparing both
+forecast cycle and offset. Ordinary single-leg isochrones have no stage.
+
+
+Gate stages now retain radial high-water marks across simulation steps, keyed by
+stage and origin-bearing bucket. Candidates must exceed the previous accepted
+radius in that bucket; blocked candidates do not advance the mark. This restores
+the ordinary router's outward-progress heuristic and prevents coastal frontiers
+from retreating into already explored sectors. Marks are local to each request.
+
+Valid retained crossings also mark intervals along each gate
+(`*gate-coverage-bins*`, default 12). Once every interval has been reached, the
+stage approaching that gate is retired at the end of the step. Already crossed
+states continue, including all crossings retained in the closing step; retired
+stages cannot be reseeded. Partial coverage never retires a stage. Gates with
+unreachable intervals therefore remain open until termination. Coverage retirement
+and radial dominance are pruning heuristics, not guarantees of global optimality
+in time-varying weather.

@@ -661,7 +661,6 @@ function setUp(getVMG) {
     document.getElementById("bt_setstart").addEventListener("click",function () { onContextMenu('start'); });
     document.getElementById("bt_setdest").addEventListener("click",function () { onContextMenu('dest'); });
     document.getElementById("bt_addwaypoint").addEventListener("click",onAddWaypoint);
-    document.getElementById("bt_addgate").addEventListener("click",onAddGate);
     document.getElementById("bt_clearwaypoints").addEventListener("click",onClearWaypoints);
     document.getElementById("bt_copypos").addEventListener("click",onCopyPosition);
 
@@ -835,32 +834,6 @@ function onAddWaypoint() {
     item.markers.push(makeWaypointMarker(latlng, `Waypoint ${waypointMarkers.length + 1}`, item));
     waypointMarkers.push(item);
     redrawRouteLines();
-}
-
-// Gate: first endpoint at the menu position, second endpoint at the next map click
-function onAddGate() {
-    document.getElementById("mapMenu").style.display = "none";
-    const latlng = map.mouseEventToLatLng(mapEvent.originalEvent);
-    const n = waypointMarkers.length + 1;
-    const item = { markers: [], line: null };
-    item.markers.push(makeWaypointMarker(latlng, `Gate ${n} (A)`, item));
-    const container = map.getContainer();
-    container.style.cursor = 'crosshair';
-    const preview = (e) => {
-        if (item.markers.length === 1) {
-            if (item.line) item.line.setLatLngs([latlng, e.latlng]);
-            else item.line = L.polyline([latlng, e.latlng], { color: '#e08000', weight: 3, dashArray: '6,4' }).addTo(map);
-        }
-    };
-    map.on('mousemove', preview);
-    map.once('click', (e) => {
-        map.off('mousemove', preview);
-        container.style.cursor = '';
-        item.markers.push(makeWaypointMarker(e.latlng, `Gate ${n} (B)`, item));
-        updateGateLine(item);
-        waypointMarkers.push(item);
-        redrawRouteLines();
-    });
 }
 
 function onClearWaypoints() {
@@ -1292,8 +1265,10 @@ function getRoute() {
     startPos.lng = wrapLon180(startPos.lng);
     destPos.lng = wrapLon180(destPos.lng);
 
-    var query = makeQuery(settings);
-    if (currentCycle) query += `&cycle=${encodeURIComponent(new Date(currentCycle).toISOString())}`;
+    // The displayed cycle can belong to an inspected route. New routes use
+    // the server's source-specific current cycle and availability fallback.
+    const { cycle: ignoredCycle, ...routingSettings } = settings;
+    var query = makeQuery(routingSettings);
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
     if (waypointMarkers.length > 0) {

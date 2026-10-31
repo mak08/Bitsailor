@@ -55,7 +55,7 @@ Failed settings, polars or initial wind loading is reported in the router header
 
 ### Forecast-cycle contract and route inspection
 
-`router.getRoute` accepts an optional `cycle` query parameter as an ISO UTC source run time, for example `2026-10-31T12:00:00Z`. Run hours are validated against the selected wind source. The browser sends its displayed run; callers omitting `cycle` retain source-specific automatic selection through `timestamp-cycle`. The explicit cycle applies to wind, not the separately selected wave/current sources. `routing-wind-params` passes it through to `cl-weather:get-params`, whose existing `missing-forecast` handler retries the immediately previous cycle. Automatic selection and fallback can produce different actual wind cycles during one route.
+`router.getRoute` accepts an optional `cycle` query parameter as an ISO UTC source run time, for example `2026-10-31T12:00:00Z`. Run hours are validated against the selected wind source. The browser omits `cycle` on new routing requests, allowing source-specific automatic selection through `timestamp-cycle`. Its displayed run may belong to an inspected route and must not pin a new routing request. Explicit cycles remain available to API callers. The explicit cycle applies to wind, not the separately selected wave/current sources. `routing-wind-params` passes it through to `cl-weather:get-params`, whose existing `missing-forecast` handler retries the immediately previous cycle. Automatic selection and fallback can produce different actual wind cycles during one route.
 
 The response includes `forecast-model`, `requested-cycle` (false when omitted) and `initial-cycle` (the actual initial wind cycle). Each isochrone retains the actual `cycle` from the loaded wind fields, its endpoint `time`, `wind-time` (the start-of-step sampling timestamp), and `forecast-model`. These fields survive display fragmentation. Sampling time and endpoint time are distinct: the route advances a step using wind sampled at its beginning.
 
@@ -145,6 +145,8 @@ The first step is shortened to align to a ten-minute boundary. Later step durati
 
 ## Multi-Route (Waypoints)
 
+Gate creation is temporarily disabled in the Web UI because post-crossing pruning can discard useful crossing histories (see [GATE-LENGTH.md](diagnostics/GATE-LENGTH.md)). Point waypoints remain available. Gate support remains in the API for development; imported GPX course overlays are display-only.
+
 `getRoute` accepts an optional `waypoints=` list of intermediate targets (items separated by `~`; `lat,lon` is a point, `lat1,lon1,lat2,lon2` is a gate), visited in order before the destination. `get-route` dispatches to `get-route-via-waypoints` in [waypoints.cl](waypoints.cl) when `routing-waypoints` is set; otherwise it runs a single `get-route-leg` as before.
 
 Consecutive gates and the following point waypoint (or final destination) are searched together by `get-route-through-gates` in [gate-search.cl](gate-search.cl). Each candidate carries its next-target index and a leg origin. All stages advance on a common simulation clock. The search continues approaching a gate after its first crossing: earlier crossings already travelling downstream compete with later crossings when those enter the next stage. Termination is at the destination of the group, rather than at the first gate crossing.
@@ -160,7 +162,7 @@ Point waypoints remain serial boundaries. After a group reaches its point waypoi
 ## Current Boundaries And Caveats
 
 - The current route filter does not apply race constraints, ice limits, or exclusion zones despite the supporting types and declarations.
-- The route API has no explicit forecast-cycle or resolution override; weather selection is through the selected forecast model and simulation timestamps.
+- The route API accepts an explicit wind cycle; the Web UI leaves it unset for automatic selection. No resolution override is exposed.
 - Boat speed is selected from the best enabled sail in the polar mask. Tack/gybe and sail-change penalties are not applied.
 - Land behavior differs by mode: vector mode checks each segment, while bitmap mode checks candidate endpoints only.
 - Startup initializes either the vector map or bitmap according to `*use-bitmap*`, but the HTTP endpoint's start-point validation always calls `cl-map:point-on-land-p`, which requires the vector map. Bitmap deployments should verify that this validation path has a loaded vector map.

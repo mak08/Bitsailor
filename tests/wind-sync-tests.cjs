@@ -102,6 +102,38 @@ cache.updateCanvas = async () => {};
   // Leaflet layers must keep provenance as well as their geometric cycle/offset.
   vm.runInContext(`var layer = { on() {} }; addInfo(layer, '${base}', 15, 0, { 'wind-time': '2026-10-31T20:50:00Z', 'forecast-model': 'NOAA-GFS-WIND' });`, ui);
   assert.equal(vm.runInContext(`layer['wind-time']`, ui), '2026-10-31T20:50:00Z');
+  // New routing requests must not inherit the old cycle being inspected above.
+  // Exercise the real request builder, retaining ordered point waypoints.
+  let request;
+  ui.Util = { doGET: url => { request = new URL(url, 'http://localhost'); } };
+  ui.window = { setInterval() { return 1; } };
+  node('mapMenu').style = {};
+  node('sel_duration').value = 96;
+  node('sel_forecast_model').value = 'NOAA-GFS-WIND';
+  node('cb_waves').checked = true;
+  node('sel_currents').value = 'NONE';
+  vm.runInContext(`
+    setBusyCursor = () => {};
+    getStartTime = () => '2026-10-31T22:14';
+    startMarker = { getLatLng: () => ({ lat: 38.46, lng: 0.91 }) };
+    destinationMarker = { getLatLng: () => ({ lat: 40.00, lng: 4.88 }) };
+    waypointMarkers = [
+      { markers: [{ getLatLng: () => ({ lat: 39.1, lng: 2.2 }) }] },
+      { markers: [{ getLatLng: () => ({ lat: 40.0, lng: 4.0 }) }] }
+    ];
+    settings.cycle = '2026-10-05T12:00:00Z';
+    getRoute();
+  `, ui);
+  assert.equal(request.pathname, '/function/router.getRoute');
+  assert.equal(request.searchParams.has('cycle'), false);
+  const waypoints = request.searchParams.get('waypoints').split('~').map(p => p.split(',').map(Number));
+  assert.equal(waypoints.length, 2);
+  assert.equal(waypoints[0][0], 39.1);
+  assert.ok(Math.abs(waypoints[0][1] - 2.2) < 1e-10);
+  assert.deepEqual(waypoints[1], [40, 4]);
+  assert.equal(request.searchParams.get('forecast_model'), 'NOAA-GFS-WIND');
+  assert.equal(request.searchParams.get('startTime'), '2026-10-31T22:14');
+  assert.equal(vm.runInContext('currentCycle', ui), base); // Replay remains intact.
   // Matching the backend's scalar interpolation matters when vector directions differ.
   const magnitude = vm.runInContext('interpolatePoint(10, -10, 0, 0, 0.5).magnitude', context);
   assert.equal(magnitude, 10);

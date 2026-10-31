@@ -6,18 +6,21 @@ const main = fs.readFileSync('web/js/router-main.js', 'utf8').replace(/^import .
 // Detect HTML/script mismatches before exercising the startup coordinator.
 const html = fs.readFileSync('web/router-fw.html', 'utf8');
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+assert.ok(!ids.has('bt_addgate'), 'Gate creation must remain unavailable');
+assert.ok(ids.has('bt_addwaypoint'), 'Point waypoints must remain available');
 const setup = main.slice(main.indexOf('function setUp(getVMG)'), main.indexOf('function initMap()'));
 for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListener/g)) {
   assert.ok(ids.has(id), `Missing required startup control: ${id}`);
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'router-forecast-contract-20261031';
+const revision = 'router-race-ready-20261031';
+const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));
-assert.ok(routerSource.includes(`./GribCache.js?v=${revision}`));
+assert.ok(routerSource.includes(`./GribCache.js?v=${forecastRevision}`));
 for (const source of [routerSource, gribSource]) {
-  assert.ok(source.includes(`./ServerSettings.js?v=${revision}`));
+  assert.ok(source.includes(`./ServerSettings.js?v=${forecastRevision}`));
 }
 const server = fs.readFileSync('web/js/ServerSettings.js', 'utf8').replace(/export /g, '');
 const bootstrapAt = main.lastIndexOf('// Initialize everything when the page loads');

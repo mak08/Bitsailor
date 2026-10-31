@@ -8,7 +8,7 @@ function extract(name) {
     assert(start >= 0 && end > start);
     return source.slice(start, end);
 }
-const ctx = vm.createContext({ Date, selectedIsochroneStage: 1 });
+const ctx = vm.createContext({ Date, selectedIsochroneStage: 1, selectedRouteTime: null });
 vm.runInContext(extract('getIsochroneTime') + '\n' + extract('getIsoStyle'), ctx);
 const cycle = new Date('2026-10-30T12:00:00Z');
 const style = (iso) => ctx.getIsoStyle(iso, 18, cycle);

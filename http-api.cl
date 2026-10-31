@@ -15,6 +15,8 @@
 ;;; Serve startpage.html from the configured web root; log failures and set HTTP status 500.
 (defun start-page (server handler request response)
   (declare (ignore server handler request))
+  ;; The HTML selects versioned UI assets and must be revalidated after updates.
+  (setf (http-header response :|Cache-Control|) "no-cache")
   (handler-case 
       (let* ((path
                (merge-pathnames (make-pathname :name "startpage" :type "html")

@@ -1,29 +1,25 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// Shared Server Settings loader/cacher
 
-import { doGET } from './Util.js';
 
 let serverSettings = null;
 let settingsPromise = null;
 
 export function loadServerSettings() {
     if (settingsPromise) return settingsPromise;
-    settingsPromise = new Promise((resolve, reject) => {
-        doGET(
-            "/function/router.getServerSettings",
-            function(xhr) {
-                try {
-                    serverSettings = JSON.parse(xhr.responseText);
-                    resolve(serverSettings);
-                } catch (e) {
-                    reject(e);
-                }
-            },
-            function(xhr) {
-                console.error('Could not load server settings');
-                reject(new Error(xhr.statusText || 'Could not load server settings'));
-            }
-        );
+    settingsPromise = fetch('/function/router.getServerSettings', {
+        cache: 'no-cache', signal: AbortSignal.timeout(15000)
+    }).then(response => {
+        if (!response.ok) throw new Error(`Server settings: HTTP ${response.status}`);
+        return response.json();
+    }).then(data => {
+        if (!data || !Array.isArray(data.datasources)) throw new Error('Invalid server settings');
+        serverSettings = data;
+        return data;
+    }).catch(error => {
+        // A rejected cached promise must not prevent a later retry.
+        settingsPromise = null;
+        throw error;
     });
     return settingsPromise;
 }

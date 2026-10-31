@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css">
+	<link rel="stylesheet" href="css/router.css?v=router-startup-20261031">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js"></script>
+	<script type="module" src="js/router-main.js?v=router-startup-20261031"></script>
 
 </head>
 
@@ -22,6 +22,8 @@
 		<div class="header">
 			<div id="appname">
 				<a href="start" style="color:white">Bitsailor</a> Router
+                <span id="router-data-status" role="status" style="font-size:0.8em"></span>
+                <button id="bt_retrydata" type="button" hidden>Retry loading data</button>
 			</div>
 		</div>
 

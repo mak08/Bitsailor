@@ -45,6 +45,45 @@ The router page is [web/router-fw.html](web/router-fw.html), driven by [web/js/r
 The UI draws `best`, optional `tracks`, and hourly `isochrones` on the map. `stats` includes start time, duration, sail set, min/max wind and TWA, calculation time, steps, and generated point count. The browser gets datasource metadata from `router.getServerSettings`, then loads and decodes preview GRIB files directly from `/weather`; the server does not compute wind tiles for the UI.
 
 
+## Browser Startup And Asset Versioning
+
+The router initializes once at `DOMContentLoaded`, or immediately if the DOM is already ready when its module executes. It does not wait for the window's full `load` event. `setupPage` initializes the map, controls, default sail options, markers and wind canvas before requesting data. A guard prevents repeated initialization from attaching duplicate handlers or creating duplicate markers.
+
+`loadPageData` starts the polars-list and server-settings requests together and waits for both to settle. It then populates forecast/current controls, chooses the initial forecast cycle and enables wind drawing when server settings are available. Earlier map events are ignored by `updateMap` until the wind inputs and forecast slider are ready. Polars selection restores an existing or saved selection when the returned list contains it. Settings and polars fetches request cache revalidation and have a 15-second timeout.
+
+Failed settings, polars or initial wind loading is reported in the router header with a **Retry loading data** button. Retrying reuses the map and controls. [ServerSettings.js](web/js/ServerSettings.js) shares one settings promise among consumers; failed requests clear that promise so later attempts can retry. Successful settings are reused until an explicit reload, including the periodic forecast-update check.
+
+### Versioned URLs
+
+The startpage and router use explicit query-string revisions to prevent browsers from mixing older scripts with newer HTML. Current references include:
+
+| Reference | Revision |
+| --- | --- |
+| Startpage stylesheet and main script | `?v=e97e6be` |
+| Router links on the startpage | `router-fw.html?v=router-startup-20261031` |
+| Router stylesheet and main script | `?v=router-startup-20261031` |
+| Router import of `GribCache.js` | `?v=router-startup-20261031` |
+| Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-startup-20261031` |
+
+The browser caches resources by URL, including the query string. A new revision therefore requests a different resource URL and bypasses the older cached entry. PolarCL separates the query parameters from the request path, so it still serves the same underlying file. These revision strings are manually maintained identifiers, not automatically generated hashes or file-content selectors.
+
+Versioning the router link also refreshes the HTML containing the script reference. Changing only an imported module's URL inside an already-cached parent would not help if the browser kept using the old parent module.
+
+Matching shared-module URLs are important for state as well as freshness: ES modules are instantiated by resolved URL. `router-main.js` and `GribCache.js` import exactly the same versioned `ServerSettings.js` URL, so they share its cached settings and in-flight promise. Mixing versioned and unversioned imports would create separate module instances.
+
+### HTTP cache policy and updates
+
+`start-page` in [http-api.cl](http-api.cl), serving `/start`, adds `Cache-Control: no-cache`. This permits storage but requires revalidation before reuse; it does not mean `no-store`. This header helps visitors obtain the latest HTML and its versioned links. It is specific to `/start`, not a blanket cache policy on every static file. PolarCL's static-file handler separately supplies `Last-Modified` and supports conditional requests.
+
+When publishing changes to versioned browser assets:
+
+1. Update the affected file and its revision in the referring HTML or module.
+2. Update cached parent-module references up to the page entry point, and the router link when its HTML changes, so clients actually discover the new references.
+3. Keep all imports of a shared stateful module on the same revision.
+4. Reload the Lisp handler if its cache policy changes. Static HTML, CSS and JavaScript are read from disk and do not require Lisp recompilation.
+
+Unchanged modules and third-party assets are not automatically assigned the page's revision. The regression checks in [tests/router-startup-tests.cjs](tests/router-startup-tests.cjs) cover required HTML control IDs, matching versioned references, cold/late startup, both data-response orders and retry recovery. Run them from the Bitsailor directory with `node tests/router-startup-tests.cjs`.
+
 ## Weather Contract And Interpolation
 
 For each simulation timestamp the engine obtains forecast parameters with `cl-weather:get-params` for the selected forecast model. The result contains two adjacent forecast fields (`fc0`, `fc1`) and a time fraction. The `cl-weather` implementation selects forecast steps bracketing the requested timestamp, loads or reuses the GRIB data, and falls back to a previous cycle if a requested forecast is missing.

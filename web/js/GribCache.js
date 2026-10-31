@@ -6,7 +6,7 @@
 import * as Util from './Util.js';
 import {decodeGRIB2ArrayBuffer} from './JSGrib/JSGrib.js';
 import {colors, ms2bf} from './colors.js'; 
-import { ensureServerSettings, getServerSettings, loadServerSettings } from './ServerSettings.js';
+import { ensureServerSettings, getServerSettings, loadServerSettings } from './ServerSettings.js?v=router-startup-20261031';
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Aux math functions

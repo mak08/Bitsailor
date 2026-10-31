@@ -3,9 +3,9 @@
 
 import * as Util from './Util.js';
 import * as GPX from './GPX.js';
-import GribCache from './GribCache.js';
+import GribCache from './GribCache.js?v=router-startup-20261031';
 import PolarManager from './PolarManager.js';
-import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js';
+import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-startup-20261031';
 
 // Global variables
 let map = null;
@@ -40,7 +40,8 @@ let settings = {
     "duration": 345600,
     "polarsId": undefined,
     "useWaves": true,
-    "forecast_model": "NOAA-GFS-WIND"
+    "forecast_model": "NOAA-GFS-WIND",
+    "options": ["hull", "winch", "foil", "heavy", "light", "reach"]
 };
 
 let polarManager = new PolarManager();
@@ -50,36 +51,51 @@ let routeInfo = {};
 
 let courseGateLayers = []; // layers created by GPX import (markers + polylines)
 
-// Main initialization function
+let pageInitialized = false;
+let windReady = false;
+let loadingPageData = null;
+
+// Initialize DOM/map exactly once, independently of data-fetch timing and image loads.
 function setupPage() {
-    // Prefetch server settings for use across modules
-    loadServerSettings().then(() => {
+    if (pageInitialized) return;
+    pageInitialized = true;
+    initMap();
+    setUp(getVMG);
+    setupEventHandlers();
+    setupRaces();
+    document.getElementById('bt_retrydata').addEventListener('click', loadPageData);
+    startWindDataUpdateCheck();
+    return loadPageData();
+}
+
+// Fetch independent startup resources together, then enable the first wind redraw.
+// Failed resources can be retried without recreating markers or event handlers.
+function loadPageData() {
+    if (loadingPageData) return loadingPageData;
+    const retry = document.getElementById('bt_retrydata');
+    const message = document.getElementById('router-data-status');
+    retry.hidden = true;
+    message.textContent = 'Loading routing data…';
+    loadingPageData = (async () => {
+        const [server, polars] = await Promise.allSettled([loadServerSettings(), getPolarsList()]);
         fillForecastModelDropdown();
         currentCycle = getLatestCycleFromSettings(settings.forecast_model) || getCurrentCycle();
         updateForecastRange(settings.forecast_model);
         fillCurrentsDropdown();
-        // Ensure ir_index is set up before calling updateMap
-        // (setUp assigns ir_index = document.getElementById("ir_index");)
-        updateMap(); 
-        // Start periodic check for wind data updates
-        startWindDataUpdateCheck();
-    }).catch(() => {
-        fillForecastModelDropdown();
-        currentCycle = getCurrentCycle();
-        // Still show NONE even if server settings fail
-        fillCurrentsDropdown();
-        // Ensure ir_index is set up before calling updateMap
-        // (setUp assigns ir_index = document.getElementById("ir_index");)
-        updateMap(); 
-        // Start periodic check for wind data updates
-        startWindDataUpdateCheck();
-    });
-    // Initialize map first
-    initMap();
-    setUp(getVMG);
-    getPolarsList();
-    setupEventHandlers();
-    setupRaces();
+        windReady = server.status === 'fulfilled';
+        const windLoaded = windReady ? await updateMap() : false;
+        const failures = [];
+        if (!windReady) failures.push('forecast settings');
+        else if (windLoaded === false) failures.push('wind data');
+        if (polars.status === 'rejected') failures.push('polars');
+        message.textContent = failures.length ? `Could not load ${failures.join(' and ')}.` : '';
+        retry.hidden = failures.length === 0;
+    })().catch(error => {
+        console.error('Router startup failed', error);
+        message.textContent = 'Routing data could not be loaded.';
+        retry.hidden = false;
+    }).finally(() => { loadingPageData = null; });
+    return loadingPageData;
 }
 
 // Start periodic checking for wind data updates
@@ -241,24 +257,23 @@ function setupEventHandlers() {
 
 
 // Get polars list
-function getPolarsList() {
-    Util.doGET(
-        "/function/router.getPolarsList",
-        function(xhr) {
-            polarsList = JSON.parse(xhr.responseText);
-            let selPolars = document.getElementById('sel_polars');
-            polarsList.map(entry => {
-                let option = document.createElement('option');
-                option.value = entry.id;
-                option.innerHTML = entry.label;
-                selPolars.add(option);
-            });
-            settings.polarsId = selPolars.value;
-        },
-        function(xhr) {
-            console.error('Could not load polars list');
-        }
-    );
+async function getPolarsList() {
+    const selector = document.getElementById('sel_polars');
+    const selected = selector.value || settings.polarsId || localStorage.getItem('xx.polarsId');
+    const response = await fetch('/function/router.getPolarsList', { cache: 'no-cache', signal: AbortSignal.timeout(15000) });
+    if (!response.ok) throw new Error(`Polars list: HTTP ${response.status}`);
+    const entries = await response.json();
+    if (!Array.isArray(entries) || !entries.length) throw new Error('No polars available');
+    polarsList = entries;
+    selector.replaceChildren();
+    for (const entry of entries) {
+        const option = document.createElement('option');
+        option.value = entry.id;
+        option.textContent = entry.label;
+        selector.add(option);
+    }
+    if (entries.some(entry => entry.id === selected)) selector.value = selected;
+    settings.polarsId = selector.value;
 }
 
 function loadRaces() {
@@ -1029,6 +1044,7 @@ function restoreCursor() {
 
 
 function updateMap() {
+    if (!windReady || !ir_index) return;
     var bounds = getMapBounds();
 
     // Load wind
@@ -1037,7 +1053,7 @@ function updateMap() {
         gribCache = new GribCache(canvas, settings.forecast_model);
     }
 
-    redrawWindByOffset(ir_index.value);
+    return redrawWindByOffset(ir_index.value);
 }
 
 function getStartTime() {
@@ -1700,7 +1716,7 @@ function getIsochroneByTime(time) {
 }
 
 async function redrawWindByTime(time) {
-    await getWind(currentCycle, time);
+    return getWind(currentCycle, time);
 }
 
 function getOffsetTime(offset, cycle = currentCycle) {
@@ -1711,33 +1727,38 @@ function getOffsetTime(offset, cycle = currentCycle) {
 }
 
 async function redrawWindByOffset(offset) {
-    await redrawWindByTime(getOffsetTime(offset));
+    return redrawWindByTime(getOffsetTime(offset));
 }
 
 async function getWind(cycle, time) {
     let bounds = getMapBounds();
 
     let usedCycle = cycle;
+    let loaded = false;
 
     try {
         await gribCache.update(bounds, new Date(usedCycle), time);
+        loaded = true;
     } catch (e1) {
         console.error(e1);
         try {
             usedCycle = getLatestCycleFromSettings(settings.forecast_model) || availableForecastCycle();
             if (usedCycle === cycle) throw e1;
             await gribCache.update(bounds, new Date(usedCycle), time);
+            loaded = true;
         } catch (e2) {
             console.error(e2);
         }
     }
 
+    if (!loaded) return false;
     updateCycleDisplay(usedCycle, time);
 
     var offset = (new Date(time) - new Date(usedCycle)) / 3600000;
     if (ir_index) {
         ir_index.value = offset;
     }
+    return true;
 }
 
 async function updateWindInfo(event, getVMG) {
@@ -2189,6 +2210,8 @@ function clearCourseOverlays() {
 
 
 // Initialize everything when the page loads
-window.addEventListener("load", function() {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPage, { once: true });
+} else {
     setupPage();
-});
+}

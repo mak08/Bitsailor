@@ -100,6 +100,21 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
+;;; Parse an optional ISO UTC forecast cycle and reject invalid source run hours.
+(defun parse-routing-cycle (value model)
+  (when (and value (not (string= value "")))
+    (handler-case
+        (let* ((time (local-time:parse-timestring (decode-uri-component value)))
+               (cycle (cl-weather::make-cycle% :timestamp time)))
+          (unless (and (zerop (timestamp-minute time :timezone +utc-zone+))
+                       (zerop (timestamp-second time :timezone +utc-zone+))
+                       (zerop (local-time:nsec-of time))
+                       (member (timestamp-hour time :timezone +utc-zone+)
+                               (cl-weather::schedule-runs (cl-weather::datasource-schedule-for-cycle model cycle))))
+            (error "Invalid run time"))
+          cycle)
+      (error () (error 'request-error :message "Invalid forecast cycle; use an ISO UTC source run time")))))
+
 ;;; Parse routing query arguments, validate start/waypoints, run the router and serialize JSON;
 ;;; request errors map to 400 and other errors to 500.
 (defun |getRoute| (handler request response &key
@@ -108,6 +123,7 @@
                                               (|useWaves| nil)
                                               (|currents| nil)
                                               (|forecast_model| nil)
+                                              (|cycle| nil)
                                               |slat|
                                               |slon|
                                               |dlat|
@@ -143,6 +159,7 @@
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :currents currents
                                   :forecast-model forecast-model
+                                  :cycle (parse-routing-cycle |cycle| forecast-model)
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :starttime |startTime|
                                   :stepmax (if duration-supplied-p
@@ -213,11 +230,21 @@
 ;;; Server Settings
 
 ;;; Serialize datasource metadata used by the browser to locate forecast files.
-(defun |getServerSettings| (handler request response)
-  ;; Provide datasource path templates etc.
-  (declare (ignore handler request response))
-  (with-output-to-string (s)
-    (json s (get-server-settings))))
+(defun |getServerSettings| (handler request response &key |forecast_model| |cycle|)
+  (declare (ignore handler request))
+  (handler-case
+      (let* ((model (when |forecast_model| (read-arg |forecast_model| 'symbol 'cl-weather)))
+             (cycle (when |cycle| (parse-routing-cycle |cycle| model))))
+        (when (and |cycle| (null model))
+          (error 'request-error :message "forecast_model is required with cycle"))
+        (with-output-to-string (s)
+          ;; Describe the exact run, including archived runs; never substitute a cycle here.
+          (json s (if cycle
+                      (make-server-settings :datasources (list (cl-weather::datasource-info-for-cycle model cycle)))
+                      (get-server-settings)))))
+    (request-error (condition)
+      (setf (status-code response) 400)
+      (format nil "~a" (message condition)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars
@@ -374,6 +401,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               (use-waves nil)
                               (currents nil)
                               (forecast-model 'cl-weather:noaa-gfs-wind)
+                              (cycle nil)
                               (starttime nil)
                               (options)
                               (stepmax (* 24 60 60))
@@ -400,6 +428,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :use-waves use-waves
      :currents currents
      :forecast-model forecast-model
+     :cycle cycle
      :twa-angles (make-twa-angles-buffer cpolars))))
 
 (defun parse-waypoints (string)

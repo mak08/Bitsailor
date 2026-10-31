@@ -24,6 +24,7 @@ continues to after the gate; it is used to choose between several crossings."
   a b next)
 
 (defstruct routing
+  cycle
   forecast-model
   polars
   use-waves
@@ -85,7 +86,7 @@ continues to after the gate; it is used to choose between several crossings."
           (routestats-calctime thing)
           (format-datetime nil (routestats-start thing))))
 
-(defstruct routeinfo status best polars options stats tracks isochrones)
+(defstruct routeinfo status best polars options stats tracks isochrones forecast-model requested-cycle initial-cycle)
 
 ;;; Write a compact routeinfo representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routeinfo) stream)
@@ -97,7 +98,7 @@ continues to after the gate; it is used to choose between several crossings."
             (length (routeinfo-isochrones thing)))))
 
 
-(defstruct isochrone center cycle offset path stage)
+(defstruct isochrone center cycle offset path stage time wind-time forecast-model)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Isochrones are described by sets of routepoints.

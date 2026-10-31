@@ -15,6 +15,14 @@
 (defparameter *sailnames* #("Jib" "Spi" "Stay" "LJ" "C0" "HG" "LG"))
 
 (declaim (inline twa-boatspeed))
+;;; Obtain wind with the request's explicit cycle, or the source-specific default.
+;;; CL-WEATHER retains its one-previous-cycle fallback when a required field is missing.
+(defun routing-wind-params (routing time)
+  (let ((model (or (routing-forecast-model routing) 'cl-weather:noaa-gfs-wind)))
+    (if (routing-cycle routing)
+        (get-params model time :cycle (routing-cycle routing))
+        (get-params model time))))
+
 ;;; Return best boat speed in m/s and sail index for wind speed in m/s and signed TWA in degrees.
 (defun-t twa-boatspeed double-float ((polars cpolars) (wind-speed double-float) (twa double-float))
   (destructuring-bind (speed sail)
@@ -265,8 +273,10 @@ the selected gate crossing, or the final frontier point nearest the destination.
           ;; Sample weather at the start of each step before advancing step-time.
           (wind-source (or (routing-forecast-model routing)
                            'cl-weather:noaa-gfs-wind))
-          (params-wind (get-params wind-source start-time)
-                       (get-params wind-source step-time))
+          (params-wind (routing-wind-params routing start-time)
+                       (routing-wind-params routing step-time))
+          (initial-cycle (cl-weather:uv-cycle (params-fc1 params-wind)))
+          (wind-time start-time step-time)
           (params-wave (when waves (get-params 'cl-weather:gfswave-combined start-time))
                        (when waves (get-params 'cl-weather:gfswave-combined step-time)))
           (params-wave-dir (when waves (get-direction-params 'cl-weather:gfswave-combined start-time))
@@ -298,7 +308,10 @@ the selected gate crossing, or the final frontier point nearest the destination.
                    (best-route (route-from-point best-rp)))
               (log-stats elapsed stepnum pointnum)
               (values
-               (make-routeinfo :status (if reached "reached"
+               (make-routeinfo :forecast-model wind-source
+                               :requested-cycle (when (routing-cycle routing) (cl-weather::cycle-timestamp (routing-cycle routing)))
+                               :initial-cycle initial-cycle
+                               :status (if reached "reached"
                                            (if error "no_route"
                                                "max_duration"))
                                :best best-route
@@ -347,6 +360,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
            ;; Collect hourly isochrones
            (when (zerop (timestamp-minute step-time))
              (let* ((iso (make-isochrone :center start-pos
+                                         :time step-time :wind-time wind-time :forecast-model wind-source
                                          :cycle (cl-weather:uv-cycle
                                                 (params-fc1 params-wind))
                                          :offset (truncate
@@ -495,6 +509,8 @@ the selected gate crossing, or the final frontier point nearest the destination.
   (loop
      :for i :in (construct-isochrones isochrones)
      :collect (make-isochrone :center (isochrone-center i)
+                              :time (isochrone-time i) :wind-time (isochrone-wind-time i)
+                              :forecast-model (isochrone-forecast-model i) :stage (isochrone-stage i)
                               :cycle (isochrone-cycle i)
                               :offset (isochrone-offset i)
                               :path (loop
@@ -518,7 +534,9 @@ the selected gate crossing, or the final frontier point nearest the destination.
         (current-path nil)
         (isochrones nil))
        ((>= index (1- (length path)))
-        (cons (make-isochrone :center (isochrone-center isochrone)
+        (cons (make-isochrone :time (isochrone-time isochrone) :wind-time (isochrone-wind-time isochrone)
+                              :forecast-model (isochrone-forecast-model isochrone)
+                              :center (isochrone-center isochrone)
                               :cycle (isochrone-cycle isochrone)
                               :offset (isochrone-offset isochrone)
                               :path current-path)
@@ -530,7 +548,9 @@ the selected gate crossing, or the final frontier point nearest the destination.
                (or (< angle 1d0) (> angle 355d0))))
          (push point current-path))
         (t
-         (push (make-isochrone :cycle (isochrone-cycle isochrone)
+         (push (make-isochrone :time (isochrone-time isochrone) :wind-time (isochrone-wind-time isochrone)
+                               :forecast-model (isochrone-forecast-model isochrone)
+                               :cycle (isochrone-cycle isochrone)
                                :offset (isochrone-offset isochrone)
                                :path current-path)
                isochrones)

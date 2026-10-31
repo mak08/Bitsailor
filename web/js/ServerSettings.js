@@ -40,3 +40,21 @@ export async function ensureServerSettings() {
 export function getServerSettings() {
     return serverSettings;
 }
+
+// Archived routing cycles must be queried explicitly without replacing the live preview settings.
+const cyclePromises = new Map();
+export function loadForecastCycle(model, cycle) {
+    const cycleString = new Date(cycle).toISOString();
+    const key = `${model}/${cycleString}`;
+    if (!cyclePromises.has(key)) {
+        const query = new URLSearchParams({ forecast_model: model, cycle: cycleString });
+        const promise = fetch(`/function/router.getServerSettings?${query}`, {
+            cache: 'no-cache', signal: AbortSignal.timeout(15000)
+        }).then(response => {
+            if (!response.ok) throw new Error(`Forecast cycle metadata: HTTP ${response.status}`);
+            return response.json();
+        }).catch(error => { cyclePromises.delete(key); throw error; });
+        cyclePromises.set(key, promise);
+    }
+    return cyclePromises.get(key);
+}

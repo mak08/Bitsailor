@@ -6,7 +6,7 @@
 import * as Util from './Util.js';
 import {decodeGRIB2ArrayBuffer} from './JSGrib/JSGrib.js';
 import {colors, ms2bf} from './colors.js'; 
-import { ensureServerSettings, getServerSettings, loadServerSettings } from './ServerSettings.js?v=router-startup-20261031';
+import { ensureServerSettings, getServerSettings, loadServerSettings, loadForecastCycle } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Aux math functions
@@ -92,14 +92,15 @@ function getValue(grib, lat, lon) {
 function interpolateSpatial_UV (lambdaU, lambdaV, w) {
     return {
         "u": bilinear(lambdaU, lambdaV, w.w00.u, w.w10.u, w.w01.u, w.w11.u),
-        "v": bilinear(lambdaU, lambdaV, w.w00.v, w.w10.v, w.w01.v, w.w11.v)
+        "v": bilinear(lambdaU, lambdaV, w.w00.v, w.w10.v, w.w01.v, w.w11.v),
+        "magnitude": bilinear(lambdaU, lambdaV, w.w00.magnitude, w.w10.magnitude, w.w01.magnitude, w.w11.magnitude)
     }
 }
 
 function interpolatePoint (u0, u1, v0, v1, fraction) {
     let u = linear(u0, u1, fraction);
     let v = linear(v0, v1, fraction);
-    return { "u": u, "v": v };
+    return { "u": u, "v": v, "magnitude": linear(abs(u0, v0), abs(u1, v1), fraction) };
 }
 
 function interpolateTemporal (grib0, grib1, timeFraction, lat0, lon0, lat1, lon1) {
@@ -137,6 +138,8 @@ export default class GribCache {
     #curOffset = undefined;
     #curTime = undefined;
     #forecastModel = 'NOAA-GFS-WIND';
+    #updateVersion = 0;
+    #cycleSources = new Map();
     // Server settings are handled by shared ServerSettings module
 
     constructor (canvas, forecastModel = 'NOAA-GFS-WIND') {
@@ -177,8 +180,8 @@ export default class GribCache {
             let w_t = interpolateTemporal(grib0, grib1, timeFraction, lat0, lon0, lat1, lon1);
             let w_s = interpolateSpatial_UV(lambdaU, lambdaV, w_t);
             let direction = angle(w_s.u, w_s.v);
-            // Exact magnitude from bilinear u,v (not bilinear of corner magnitudes)
-            let speed = abs(w_s.u, w_s.v);
+            // Match CL-WEATHER: interpolate magnitudes separately from U/V.
+            let speed = w_s.magnitude;
             return { "direction": direction, "speed": speed };
         } else {
             return { "direction": 315.0, "speed": 11.5 };
@@ -297,6 +300,7 @@ export default class GribCache {
     ////////////////////////////////////////////////////////////////////////////////
     /// Public methods
     async getWind (lat, lon, time = this.#curTime) {
+        if (!this.#curCycle || !time) return null;
         return await this.windDataMagnitude(this.#curCycle, time, lat, lon);
     }
     
@@ -304,15 +308,19 @@ export default class GribCache {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
         let offset = (curTime - baseTime) / 3600000;
-        this.#curBounds = bounds;
-        this.#curCycle = baseTime;
-        this.#curOffset = offset;
-        this.#curTime = curTime;
+        const version = ++this.#updateVersion;
+        // Prepare both fields before publishing the new state. Failed loads
+        // must not redirect mouse lookups to an unavailable cycle/time.
         let frames = await this.getForecastFrames(baseTime, offset);
         await this.getGribCached(baseTime, frames.before);
         if (frames.after !== frames.before) {
             await this.getGribCached(baseTime, frames.after);
         }
+        if (version !== this.#updateVersion) return;
+        this.#curBounds = bounds;
+        this.#curCycle = baseTime;
+        this.#curOffset = offset;
+        this.#curTime = curTime;
         await this.updateCanvas();
     }
 
@@ -323,9 +331,25 @@ export default class GribCache {
         await this.drawWind(this.#curBounds, this.#curCycle, this.#curOffset, this.#curTime, this.#canvas);
     }
 
-    async getForecastFrames (cycle, offset) {
+    async ensureCycle(cycle) {
+        const key = cycle.toISOString();
+        if (this.#cycleSources.has(key)) return;
         await ensureServerSettings();
-        const ss = getServerSettings();
+        const name = String(this.#forecastModel).replace(/^.*::/, '').toUpperCase();
+        const date = key.slice(0, 10).replace(/-/g, '');
+        const run = cycle.getUTCHours();
+        const find = settings => settings?.datasources?.find(ds => String(ds.name).toUpperCase() === name);
+        let source = find(getServerSettings());
+        if (!source?.gribpaths?.some(path => String(path.date) === date && Number(path.run) === run)) {
+            source = find(await loadForecastCycle(name, cycle));
+        }
+        if (!source) throw new Error(`No metadata for ${name} cycle ${key}`);
+        this.#cycleSources.set(key, source);
+    }
+
+    async getForecastFrames (cycle, offset) {
+        await this.ensureCycle(cycle);
+        const ss = { datasources: [this.#cycleSources.get(cycle.toISOString())] };
         const selectedName = String(this.#forecastModel).replace(/^.*::/, '').toUpperCase();
         const dataSource = ss && Array.isArray(ss.datasources)
             ? ss.datasources.find((entry) => String(entry.name).toUpperCase() === selectedName)
@@ -360,7 +384,7 @@ export default class GribCache {
 
     gribPath (cycle, offset) {
         // Assumes settings are loaded; caller should gate via ensureServerSettings()
-        const ss = getServerSettings();
+        const ss = { datasources: [this.#cycleSources.get(cycle.toISOString())] };
         let selectedName = typeof this.#forecastModel === 'string'
             ? this.#forecastModel
             : String(this.#forecastModel);
@@ -388,25 +412,21 @@ export default class GribCache {
     formatCycle (d, sep = '-') {
         let month = (d.getUTCMonth()+1).toFixed().padStart(2, '0');
         let day = d.getUTCDate().toFixed().padStart(2, '0');
-        let hour = (Math.floor(d.getUTCHours()/6)*6).toFixed().padStart(2, '0');
+        let hour = d.getUTCHours().toFixed().padStart(2, '0');
         return `${d.getUTCFullYear()}${month}${day}${sep}${hour}`;
     }
     
     async getGrib (cycle, offset) {
-        try {
-            // Ensure server settings are available before building the path
-            await ensureServerSettings();
-            let response = await fetch(this.gribPath(cycle, offset));
-            if (!response.ok) {
-                throw new Error(`${response.statusText}`);
-            }
-            let buffer = await response.arrayBuffer();
-            let grib = decodeGRIB2ArrayBuffer(buffer);
-            this.cachePutGrib(cycle, offset, grib);
-            return grib;
-        } catch (e) {
-            throw new Error(e);
+        await this.ensureCycle(cycle);
+        const path = this.gribPath(cycle, offset);
+        const response = await fetch(path);
+        if (!response.ok) {
+            throw new Error(`GRIB request failed: HTTP ${response.status} ${response.statusText} (${path})`);
         }
+        const buffer = await response.arrayBuffer();
+        const grib = decodeGRIB2ArrayBuffer(buffer);
+        this.cachePutGrib(cycle, offset, grib);
+        return grib;
     }
 
     async getGribCached (cycle, offset) {

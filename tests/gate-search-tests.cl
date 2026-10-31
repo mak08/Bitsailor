@@ -26,7 +26,8 @@
     ;; occurs several steps later and reaches the destination first.
     (call-with-gate-test-functions
      (list
-      (cons 'wind-at (lambda (&rest args) (declare (ignore args)) (values 0d0 10d0)))
+      (cons 'wind-at (lambda (&rest args) (declare (ignore args))
+                       (values 0d0 10d0 (cl-weather::make-params :fc1 (cl-weather::make-uv :cycle start)))))
       (cons 'get-params (lambda (&rest args) (declare (ignore args))
                           (cl-weather::make-params :fc1 (cl-weather::make-uv :cycle start))))
       (cons 'approach-blocked-p (lambda (&rest args) (declare (ignore args)) nil))

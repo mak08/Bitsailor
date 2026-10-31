@@ -17,12 +17,12 @@
 
 (defparameter *approach-max-iterations* 1000)
 
-;;; Sample wind direction and speed at POS/TIME using the routing's selected forecast model.
+;;; Return wind direction, speed and the actual forecast parameters at POS/TIME.
 (defun wind-at (routing pos time)
-  (let ((params (get-params (or (routing-forecast-model routing)
-                                'cl-weather:noaa-gfs-wind)
-                            time)))
-    (interpolate-uv (latlng-lat pos) (latlng-lng pos) params)))
+  (let ((params (routing-wind-params routing time)))
+    (multiple-value-bind (direction speed)
+        (interpolate-uv (latlng-lat pos) (latlng-lng pos) params)
+      (values direction speed params))))
 
 (defun approach-first-legs (bearing distance twd up-twa down-twa)
   "Candidate first legs (heading . length) of a tack/gybe from a point to a target
@@ -163,7 +163,8 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
          (tracks nil)
          (steps 0)
          (points 0)
-         (info nil))
+         (info nil)
+         (initial-cycle nil))
     (loop
       :for (group . more) :on targets
       :for gates = (butlast group)
@@ -184,6 +185,7 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
                   (routing-waypoints leg) nil)
             (multiple-value-bind (leg-info best-rp last-crossing) (if gates (get-route-through-gates leg gates) (get-route-leg leg))
               (let ((leg-track (routeinfo-best leg-info)))
+                (unless info (setf initial-cycle (routeinfo-initial-cycle leg-info)))
                 (setf info leg-info)
                 (incf steps (routestats-steps (routeinfo-stats leg-info)))
                 (incf points (routestats-points (routeinfo-stats leg-info)))
@@ -213,7 +215,9 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
                         (setf status "no_route"
                               track (append (butlast track) leg-track))
                         (return))))))))))
-    (make-routeinfo :status status
+    (make-routeinfo :forecast-model (routing-forecast-model routing)
+                    :requested-cycle (when (routing-cycle routing) (cl-weather::cycle-timestamp (routing-cycle routing)))
+                    :initial-cycle initial-cycle :status status
                     :best track
                     :stats (get-statistics track (timestamp-difference (now) elapsed0) steps points)
                     :polars (routeinfo-polars info)

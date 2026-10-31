@@ -127,7 +127,7 @@ single-leg routing; a blocked winner leaves its bucket empty for this step."
                  (routepoint-position (gate-state-point state)))
           :collect state))
 
-(defun gate-frontier-isochrones (frontier centers time wind max-step-distance)
+(defun gate-frontier-isochrones (frontier centers time wind max-step-distance &optional model wind-time)
   "Build display fragments from each stage's outer envelope, splitting gaps and radial jumps."
   (let ((result nil))
     (dotimes (stage (length centers))
@@ -145,7 +145,8 @@ single-leg routing; a blocked winner leaves its bucket empty for this step."
                 (setf (aref outer index) point)))))
         (flet ((emit ()
                  (when path
-                   (push (make-isochrone :center center :stage stage
+                   (push (make-isochrone :center center :stage stage :time time
+                           :forecast-model model :wind-time wind-time
                            :cycle (cl-weather:uv-cycle (params-fc1 wind))
                            :offset (truncate (timestamp-difference time
                                              (cl-weather:uv-cycle (params-fc1 wind))) 3600)
@@ -238,9 +239,10 @@ The endpoint stays on the common clock; intersections retain fractional times."
          (start-time (parse-datetime-local (routing-starttime routing)))
          (started (now))
          (stepper (make-stepper start-time (routing-stepmax routing)))
-         (initial (multiple-value-bind (wd ws) (wind-at routing (routing-start routing) start-time)
-                    (create-routepoint nil (routing-start routing) start-time nil nil
-                                       nil nil nil wd ws)))
+         (initial-wind (multiple-value-list (wind-at routing (routing-start routing) start-time)))
+         (initial-params (third initial-wind))
+         (initial (create-routepoint nil (routing-start routing) start-time nil nil
+                                    nil nil nil (first initial-wind) (second initial-wind)))
          (frontier (list (make-gate-state :point initial :origin initial)))
          (best (first frontier))
          (status "max_duration") (elapsed 0) (steps 0) (points 0) (isochrones nil))
@@ -248,7 +250,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
           :do (let* ((dt (min (funcall stepper) (- (routing-stepmax routing) elapsed)))
                      (time (adjust-timestamp start-time (:offset :sec elapsed)))
                      (end-time (adjust-timestamp time (:offset :sec dt)))
-                     (wind (get-params (or (routing-forecast-model routing) 'cl-weather:noaa-gfs-wind) time))
+                     (wind (routing-wind-params routing time))
                      (current (when (routing-currents routing) (get-params (routing-currents routing) time)))
                      (wave (when (routing-use-waves routing) (get-params 'cl-weather:gfswave-combined time)))
                      (wave-dir (when wave (get-direction-params 'cl-weather:gfswave-combined time)))
@@ -305,9 +307,12 @@ The endpoint stays on the common clock; intersections retain fractional times."
                   (setf isochrones
                         (nconc isochrones
                                (gate-frontier-isochrones frontier centers end-time wind
-                                 max-step-distance))))))
+                                 max-step-distance (routing-forecast-model routing) time))))))
     (let* ((rp (gate-state-point best)) (track (route-from-point rp)))
       (values (make-routeinfo :status status :best track
+                :forecast-model (routing-forecast-model routing)
+                :requested-cycle (when (routing-cycle routing) (cl-weather::cycle-timestamp (routing-cycle routing)))
+                :initial-cycle (cl-weather:uv-cycle (params-fc1 initial-params))
                 :polars (cpolars-label (routing-polars routing)) :options (routing-options routing)
                 :stats (get-statistics track (timestamp-difference (now) started) steps points)
                 :isochrones isochrones)

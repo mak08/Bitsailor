@@ -312,3 +312,30 @@ div.fixed {
   color: #000;
   font-weight: bold;
 }
+
+/* Runtime status */
+.tab6 { box-sizing: border-box; }
+.status-toolbar { display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.status-toolbar h2 { margin: 0 0 6px; }
+.status-toolbar button { padding: 7px 14px; cursor: pointer; }
+#status-updated, .status-note { color: #686060; font-size: 0.85em; }
+#status-error { color: #8b1818; padding: 12px; background: #fff0eb; border: 1px solid #d69d91; }
+.status-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px; margin: 22px 0; }
+.status-card { border: 1px solid #d6cdcd; padding: 16px; background: #faf8f6; min-width: 0; }
+.status-card h3, .status-section h3 { margin: 0 0 12px; color: #504040; }
+.status-metric { font-size: 1.1em; font-weight: bold; }
+.status-card progress { width: 100%; height: 16px; accent-color: #6f4e37; }
+.status-card dl, .status-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.status-card dd, .status-details dd { margin: 0; overflow-wrap: anywhere; font-weight: bold; }
+.status-section { margin-top: 26px; }
+.status-table-wrap { overflow-x: auto; }
+.status-section table { border-collapse: collapse; font-size: 0.9em; }
+.status-section th { background: #f0eae5; color: #504040; }
+.status-section th, .status-section td { padding: 9px 12px; border-bottom: 1px solid #e4dede; vertical-align: top; }
+#status-parameters td:last-child { overflow-wrap: anywhere; min-width: 180px; }
+.status-details { max-width: 800px; }
+@media (max-width: 600px) {
+  .status-cards { grid-template-columns: minmax(0, 1fr); }
+  .status-toolbar { align-items: flex-start; }
+  .status-section th, .status-section td { padding: 6px; }
+}

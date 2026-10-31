@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// Sailsphere Router UI
 
-import * as Util from './Util.js';
 
 ( function () {
 
     function setUp () {
+        document.getElementById('status-refresh').addEventListener('click', updateStatistics);
         updateStatistics();
         setInterval(updateStatistics, 60000);
     };
@@ -30,7 +30,13 @@ import * as Util from './Util.js';
     function renderDownloads (tbody, downloads) {
         if (!tbody) return;
         tbody.replaceChildren();
-        for (const d of (Array.isArray(downloads) ? downloads : [])) {
+        const sources = Array.isArray(downloads) ? downloads : [];
+        if (!sources.length) {
+            const cell = tbody.insertRow().insertCell();
+            cell.colSpan = 3;
+            cell.textContent = 'Download status unavailable.';
+        }
+        for (const d of sources) {
             const row = tbody.insertRow();
             const cells = [row.insertCell(), row.insertCell(), row.insertCell()];
             cells.forEach(c => c.style.padding = '2px 8px');
@@ -53,74 +59,99 @@ import * as Util from './Util.js';
         }
     }
 
-    function displayStatistics (request) {
-        let routerstatus = JSON.parse(request.responseText);
+    function text(id, value) {
+        document.getElementById(id).textContent = value;
+    }
 
-        let tbServerstart = document.getElementById('tb_serverstart');
-        let tbDownloads = document.querySelector('#tb_downloads tbody');
-        let tbFCCacheSize = document.getElementById('tb_fc_cache');
-        let tbRequests = document.getElementById('tb_requests');
-        let tbMaxIso = document.getElementById('tb_max_iso_points');
-        let tbTwaSteps = document.getElementById('tb_twa_steps');
-        let tbLastStats = document.getElementById('tb_last_routestats');
+    function formatBytes(value) {
+        if (!Number.isFinite(value)) return 'Unavailable';
+        const unit = value >= 1024 ** 3 ? 'GiB' : 'MiB';
+        return `${(value / (unit === 'GiB' ? 1024 ** 3 : 1024 ** 2)).toFixed(1)} ${unit}`;
+    }
 
-        tbServerstart.textContent = routerstatus["server-start"]; 
-        renderDownloads(tbDownloads, routerstatus.downloads);
-        tbFCCacheSize.textContent = routerstatus["fc-cache-size"];
-        tbRequests.textContent   = routerstatus.requestcount;
+    function number(value) {
+        return Number.isFinite(value) ? value.toLocaleString() : '—';
+    }
 
-        if (tbMaxIso && routerstatus.max_iso_points != null) {
-            tbMaxIso.textContent = routerstatus.max_iso_points.toLocaleString();
+    function tableRows(id, rows, empty) {
+        const body = document.querySelector(`#${id} tbody`);
+        body.replaceChildren();
+        if (!rows.length) {
+            const cell = body.insertRow().insertCell();
+            cell.textContent = empty;
+            cell.colSpan = document.querySelector(`#${id} thead tr`).cells.length;
         }
-        if (tbTwaSteps && routerstatus.twa_steps != null) {
-            // Show degrees with 1 decimal if needed
-            const val = Number(routerstatus.twa_steps);
-            tbTwaSteps.textContent = Number.isFinite(val) ? `${val % 1 ? val.toFixed(1) : val}°` : '-';
-        }
-
-        if (tbLastStats) {
-            const rs = routerstatus.last_routestats;
-            if (rs && Number.isFinite(rs.calctime) && Number.isFinite(rs.steps) && Number.isFinite(rs.points)) {
-                const duration = rs.duration;
-                const elapsed = `${rs.calctime.toFixed(2)}s`;
-                const points  = Number(rs.points).toFixed(0);
-                const steps   = Number(rs.steps);
-                const pps     = rs.calctime > 0 ? (points / rs.calctime).toFixed() : '∞';
-                const sPerI   = steps > 0 ? (rs.calctime / steps).toFixed(2) : '—';
-                const pPerI   = steps > 0 ? Math.round(points / steps).toFixed() : '—';
-
-                tbLastStats.textContent =
-                    `Duration ${duration} | Elapsed ${elapsed} | Positions ${points.toLocaleString()} | ` +
-                    `Isochrones ${steps} | p/s=${pps} | s/i=${sPerI} | p/i=${pPerI}`;
-            } else {
-                tbLastStats.textContent = '-';
-            }
+        for (const values of rows) {
+            const row = body.insertRow();
+            for (const value of values) row.insertCell().textContent = value ?? '—';
         }
     }
-    
-    function handleError (xhr) {
-        alert(xhr.responseText);
+
+    function displayStatistics(request) {
+        const status = JSON.parse(request.responseText);
+        text('tb_serverstart', status['server-start'] || 'Unavailable');
+        text('tb_requests', number(status.requestcount));
+        renderDownloads(document.querySelector('#tb_downloads tbody'), status.downloads);
+        const memory = status.memory || {};
+        const used = memory['heap-used'], limit = memory['heap-limit'];
+        const percent = Number.isFinite(used) && limit > 0 ? 100 * used / limit : null;
+        text('status-heap', percent === null ? 'Unavailable' : `${formatBytes(used)} / ${formatBytes(limit)} (${percent.toFixed(1)}%)`);
+        const bar = document.getElementById('status-heap-bar');
+        bar.hidden = percent === null;
+        bar.value = Math.min(100, Math.max(0, percent ?? 0));
+        text('status-forecast-bytes', formatBytes(memory['forecast-bytes']));
+        text('tb_fc_cache', number(status['fc-cache-size']));
+        text('status-polars-cache', `${number(status.caches?.polars)} / ${number(status.caches?.['combined-polars'])}`);
+        text('status-races-cache', number(status.caches?.races));
+        tableRows('status-cache-groups', (Array.isArray(memory.groups) ? memory.groups : []).map(g => [
+            g.source, `${g.date} ${String(g.run).padStart(2, '0')}Z`, g.resolution, number(g.entries), formatBytes(g.bytes)
+        ]), 'No decoded forecasts cached.');
+        tableRows('status-parameters', (Array.isArray(status.parameters) ? status.parameters : []).map(p => [p.group, p.name, p.value]), 'Configuration unavailable. Reload the updated server.');
+        const details = document.getElementById('status-last-route');
+        details.replaceChildren();
+        const rs = status.last_routestats;
+        const fields = rs ? [
+            ['Start', rs.start], ['Sailing duration', rs.duration],
+            ['Calculation time', Number.isFinite(rs.calctime) ? `${rs.calctime.toFixed(2)} s` : '—'],
+            ['Iterations', number(rs.steps)], ['Generated positions', number(rs.points)],
+            ['Positions / second', rs.calctime > 0 ? number(Math.round(rs.points / rs.calctime)) : '—'],
+            ['Seconds / iteration', rs.steps > 0 ? (rs.calctime / rs.steps).toFixed(3) : '—'],
+            ['Positions / iteration', rs.steps > 0 ? number(Math.round(rs.points / rs.steps)) : '—']
+        ] : [['No routing completed yet', '—']];
+        for (const [label, value] of fields) {
+            const dt = document.createElement('dt'), dd = document.createElement('dd');
+            dt.textContent = label;
+            dd.textContent = value ?? '—';
+            details.append(dt, dd);
+        }
+        document.getElementById('status-error').hidden = true;
+        text('status-updated', `Updated ${new Date().toLocaleTimeString()} · refreshes every minute`);
     }
-    
-    function updateStatistics () {
-        Util.doGET("/function/router.getStatistics", displayStatistics, handleError);
+
+    let pending = false;
+    async function updateStatistics() {
+        if (pending) return;
+        pending = true;
+        document.getElementById('status-refresh').disabled = true;
+        try {
+            const response = await fetch('/function/router.getStatistics', { signal: AbortSignal.timeout(15000), cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            displayStatistics({ responseText: await response.text() });
+        } catch (error) {
+            handleError(error);
+        } finally {
+            pending = false;
+            document.getElementById('status-refresh').disabled = false;
+        }
     }
-    
-    
-    function appendTextCell (row, text) {
-        var cell = row.insertCell(-1);
-        var textNode = document.createTextNode(text);
-        cell.appendChild(textNode);
+
+    function handleError(error) {
+        const element = document.getElementById('status-error');
+        element.hidden = false;
+        element.textContent = 'Status could not be refreshed. Previously displayed values may be stale. Try Refresh.';
+        console.error('Status refresh failed', error);
     }
-  
-    function appendLinkCell (row, text, url) {
-        var cell = row.insertCell(-1);
-        var link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.innerHTML = text;
-        cell.appendChild(link);
-    }
-  
+
     document.addEventListener("DOMContentLoaded", function(event) {
         setUp()
     });

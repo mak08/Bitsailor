@@ -1,5 +1,7 @@
 ;;; Load after (asdf:load-system "bitsailor"), then call TEST-GATE-SEARCH,
-;;; TEST-GATE-SEARCH-EXPANSION and TEST-GATE-FRONTIER-PRUNING. Fixtures require no map or weather downloads.
+;;; TEST-GATE-SEARCH-EXPANSION, TEST-GATE-FRONTIER-PRUNING,
+;;; TEST-GATE-RETIREMENT-AND-PROGRESS and TEST-GATE-RESULT-SELECTION.
+;;; Fixtures require no map or weather downloads.
 (in-package :bitsailor)
 
 (defun call-with-gate-test-functions (bindings thunk)
@@ -203,21 +205,22 @@
            (inner (create-routepoint rp (add-distance-exact origin 9000d0 90d0) start nil nil))
            (state (make-gate-state :point inner :origin other)))
       (retain-gate-state state buckets targets centers)
-      (let* ((kept (first (gethash (gate-state-key state targets centers) buckets)))
+      (let* ((kept (gethash (gate-state-key state targets centers) buckets))
              (distance (course-distance origin (routepoint-position (gate-state-point kept)))))
         (assert (> distance 9900d0))))
-    ;; After ranking the pool, reject the blocked leader and use the next
-    ;; valid candidate. Do not query dominated candidates after filling a slot.
+    ;; Bucket selection is a direct replacement/discard decision. A blocked
+    ;; winner is filtered once and leaves an empty bucket, with no fallback.
     (let* ((valid (make-gate-state :origin rp :source rp
                     :point (create-routepoint rp (add-distance-exact origin 10000d0 91d0) start nil nil)))
            (blocked (make-gate-state :origin rp :source rp
                       :point (create-routepoint rp (add-distance-exact origin 11000d0 91d0) start nil nil)))
            (inner (make-gate-state :origin rp :source rp
                     :point (create-routepoint rp (add-distance-exact origin 9000d0 91d0) start nil nil)))
-           (pool (make-hash-table :test #'equal))
+           (winners (make-hash-table :test #'equal))
            (checked 0))
       (dolist (state (list valid blocked inner))
-        (retain-gate-state state pool targets centers 4))
+        (retain-gate-state state winners targets centers))
+      (assert (eq blocked (gethash (gate-state-key blocked targets centers) winners)))
       (call-with-gate-test-functions
        (list (cons 'approach-blocked-p
                    (lambda (from to)
@@ -225,8 +228,26 @@
                      (incf checked)
                      (> (course-distance from to) 10500d0))))
        (lambda ()
-         (assert (equal (select-gate-survivors pool) (list valid)))
-         (assert (= checked 2)))))
+         (assert (null (select-gate-survivors winners)))
+         (assert (= checked 1)))))
+    ;; A better spatial neighbour replaces the winner, and a new exact tie
+    ;; wins without a spacing test. Inferior candidates cannot displace it.
+    (let ((winners (make-hash-table :test #'equal)))
+      (flet ((candidate (distance)
+               (make-gate-state :origin rp :source rp
+                 :point (create-routepoint rp (add-distance-exact origin distance 91d0)
+                                            start nil nil))))
+        (let* ((winner (candidate 10600d0))
+               (neighbour (candidate 10650d0))
+               (tie (candidate 10650d0))
+               (key (gate-state-key winner targets centers)))
+          (retain-gate-state winner winners targets centers)
+          (retain-gate-state (candidate 9000d0) winners targets centers)
+          (assert (eq winner (gethash key winners)))
+          (retain-gate-state neighbour winners targets centers)
+          (assert (eq neighbour (gethash key winners)))
+          (retain-gate-state tie winners targets centers)
+          (assert (eq tie (gethash key winners))))))
     ;; Inner survivors at the same bearing cannot create radial spokes. A gap
     ;; in the angular envelope produces separate paths, not a chord across it.
     (let ((inner (create-routepoint rp (add-distance-exact origin 2000d0 90d0) start nil nil)))
@@ -260,7 +281,8 @@
         ;; Crossing histories at another stage have independent progress marks.
         (retain-gate-state (state 9000d0 1) buckets targets centers)
         (assert (= (hash-table-count buckets) 2)))))
-  (let* ((gate (make-gate :a (make-latlng :lat 0d0 :lng 1d0)
+  (let* ((*gate-retirement-coverage* 1)
+         (gate (make-gate :a (make-latlng :lat 0d0 :lng 1d0)
                           :b (make-latlng :lat 1d0 :lng 1d0)))
          (gates (vector gate))
          (coverage (vector (make-array 4 :element-type 'bit :initial-element 0))))
@@ -275,4 +297,41 @@
       (record-gate-coverage (list (hit 1d0)) gates coverage)
       (assert (gate-stage-retired-p 0 coverage))
       (assert (not (gate-stage-retired-p 1 coverage)))))
+  ;; Half the distinct intervals suffice by default; strict mode remains available.
+  (let* ((*gate-retirement-coverage* 1/2)
+         (bins (make-array 12 :element-type 'bit :initial-element 0))
+         (coverage (vector bins)))
+    (fill bins 1 :end 5)
+    (assert (not (gate-stage-retired-p 0 coverage)))
+    (setf (aref bins 11) 1)
+    (assert (gate-stage-retired-p 0 coverage))
+    (assert (not (gate-stage-retired-p 1 coverage)))
+    (let ((*gate-retirement-coverage* 1))
+      (assert (not (gate-stage-retired-p 0 coverage)))
+      (fill bins 1)
+      (assert (gate-stage-retired-p 0 coverage))))
+  ;; Round half coverage up for odd interval counts.
+  (let ((*gate-retirement-coverage* 1/2))
+    (assert (not (gate-stage-retired-p 0 (vector #*11000))))
+    (assert (gate-stage-retired-p 0 (vector #*11100))))
   (format t "~&Gate retirement and persistent progress regressions passed.~%"))
+
+;;; Check linear result selection across stages, distance ordering and exact ties.
+(defun test-gate-result-selection ()
+  (let* ((time (now))
+         (destination (make-latlng :lat 0d0 :lng 3d0))
+         (targets (vector destination destination)))
+    (flet ((state (stage longitude)
+             (make-gate-state :stage stage
+               :point (create-routepoint nil (make-latlng :lat 0d0 :lng longitude)
+                                          time nil nil))))
+      (let* ((early (state 0 2.9d0))
+             (advanced (state 1 1d0))
+             (nearer (state 1 2d0))
+             (tie (state 1 2d0)))
+        (assert (eq advanced (best-gate-state (list early advanced) targets)))
+        (assert (eq nearer (best-gate-state (list early advanced nearer tie) targets)))
+        (assert (eq early (best-gate-state (list early advanced nearer) targets t)))
+        (assert (eq nearer (best-gate-state (list nearer tie) targets t)))
+        (assert (null (best-gate-state nil targets))))))
+  (format t "~&Gate result selection regressions passed.~%"))

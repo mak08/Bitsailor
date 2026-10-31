@@ -23,6 +23,7 @@
                (:file "waypoints")
                (:file "gate-search")
                (:file "json")
+               (:file "status")
                (:file "http-api")
                (:file "signup")
                (:file "bitsailor")

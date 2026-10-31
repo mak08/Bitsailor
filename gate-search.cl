@@ -4,22 +4,25 @@
 
 (defparameter *gate-bucket-width* 0.24d0
   "Minimum angular width of buckets measured from the fixed stage origin.")
-(defparameter *gate-bucket-survivors* 1
-  "Spatially distinct candidates retained per bucket and gate stage.")
-
-(defparameter *gate-bucket-candidates* 4
-  "Spatially separated candidates ranked before land checks for each bucket.")
-
 (defparameter *gate-coverage-bins* 12
-  "Intervals along each gate which must have valid crossings before retirement.")
+  "Number of intervals used to track valid retained crossings along each gate.")
+(defparameter *gate-retirement-coverage* 1/2
+  "Minimum fraction of gate intervals hit before retiring the preceding stage.
+Rounded up to whole intervals: the default requires 6 of 12 (50%). This heuristic
+tolerates sampling/pruning gaps but can discard useful later crossings there.
+Bind to 1 to require complete coverage.")
 (defvar *gate-progress* nil "Request-local radial high-water marks by stage and bucket.")
-(defstruct gate-state point (stage 0) origin source crossings)
+(defstruct gate-state point (stage 0) origin source crossings
+  ;; Set during bucket retention; points and stage centres stay fixed thereafter.
+  radius)
 
-;;; Return true only for a gate stage whose coverage vector is completely marked; the final
-;;; destination stage cannot retire.
+;;; Retire a gate stage once the configured fraction of distinct intervals has been hit.
+;;; The final destination stage cannot retire; repeated hits do not increase coverage.
 (defun gate-stage-retired-p (stage coverage)
   (and (< stage (length coverage))
-       (every (lambda (hit) (= hit 1)) (aref coverage stage))))
+       (let ((bins (aref coverage stage)))
+         (>= (count 1 bins)
+             (ceiling (* *gate-retirement-coverage* (length bins)))))))
 
 ;;; Mark along-gate intervals reached by crossings in valid retained states; repeated hits do not
 ;;; fill other intervals.
@@ -81,10 +84,10 @@
 (defun gate-course-angle (from to)
   (if (< (course-distance from to) 1d-3) 0d0 (course-angle from to)))
 
-;;; Choose bucket width from the configured minimum and per-stage point/survivor budget.
+;;; Choose bucket width from the configured minimum and per-stage point budget.
 (defun gate-angular-width ()
   (max *gate-bucket-width*
-       (/ 360d0 (max 1 (floor *max-iso-points* *gate-bucket-survivors*)))))
+       (/ 360d0 (max 1 *max-iso-points*))))
 
 ;;; Return the fixed stage origin when available, otherwise the state's actual crossing origin.
 (defun gate-stage-center (state centers)
@@ -101,63 +104,45 @@
                     360d0)
                (gate-angular-width))))
 
-(defun retain-gate-state (state buckets targets &optional centers
-                                                        (capacity *gate-bucket-survivors*))
-  "Keep outward progress in origin-centred sectors, separately for every stage.
-A common origin makes candidates from different gate crossings comparable at the
-same simulation time. Reject candidates behind the historical radial maximum,
-then retain up to CAPACITY spatially separated candidates for later land checks."
+(defun retain-gate-state (state buckets targets &optional centers)
+  "Keep one outward winner per stage/bearing bucket; prefer the new state on ties.
+Reject historical radial regressions. Land checks follow winner selection, as in
+single-leg routing; a blocked winner leaves its bucket empty for this step."
   (let* ((key (gate-state-key state targets centers))
          (old (gethash key buckets))
-         (center (gate-stage-center state centers))
-         (ranked (stable-sort (cons state (copy-list old)) #'>
-                             :key (lambda (s)
-                                    (course-distance center
-                                      (routepoint-position (gate-state-point s))))))
-         (kept nil))
-    ;; Compare against previous time steps, not just the current frontier.
-    (when (and *gate-progress*
-               (<= (course-distance center (routepoint-position (gate-state-point state)))
-                   (gethash key *gate-progress* -1d0)))
-      (return-from retain-gate-state nil))
-    (dolist (candidate ranked)
-      (unless (some (lambda (s)
-                      (< (course-distance
-                          (routepoint-position (gate-state-point s))
-                          (routepoint-position (gate-state-point candidate)))
-                         100d0))
-                    kept)
-        (push candidate kept))
-      (when (= (length kept) capacity) (return)))
-    (setf (gethash key buckets) (nreverse kept))))
+         (distance (course-distance (gate-stage-center state centers)
+                                    (routepoint-position (gate-state-point state)))))
+    (when (and (or (null *gate-progress*)
+                   (> distance (gethash key *gate-progress* -1d0)))
+               (or (null old) (>= distance (gate-state-radius old))))
+      (setf (gate-state-radius state) distance
+            (gethash key buckets) state))))
 
+;;; Land-check each bucket's sole winner over the complete step, including pre-crossing travel.
+;;; Discard blocked winners without a fallback; history and coverage use only valid survivors.
 (defun select-gate-survivors (buckets)
-  "Check the original complete step, including any pre-crossing segment."
-  (loop :for candidates :being :the :hash-values :of buckets
-        :append (loop :with count = 0
-                      :for candidate :in candidates
-                      :unless (approach-blocked-p
-                               (routepoint-position (gate-state-source candidate))
-                               (routepoint-position (gate-state-point candidate)))
-                        :collect candidate :and :do (incf count)
-                      :until (= count *gate-bucket-survivors*))))
+  (loop :for state :being :the :hash-values :of buckets
+        :unless (approach-blocked-p
+                 (routepoint-position (gate-state-source state))
+                 (routepoint-position (gate-state-point state)))
+          :collect state))
 
 (defun gate-frontier-isochrones (frontier centers time wind max-step-distance)
   "Build display fragments from each stage's outer envelope, splitting gaps and radial jumps."
   (let ((result nil))
     (dotimes (stage (length centers))
       (let* ((center (aref centers stage))
-             (outer (make-hash-table))
+             (outer (make-array (ceiling 360d0 (gate-angular-width)) :initial-element nil))
              (path nil) (previous nil) (previous-angle nil))
         (dolist (state frontier)
           (when (= stage (gate-state-stage state))
             (let* ((point (gate-state-point state))
                    (index (second (gate-state-key state nil centers)))
-                   (old (gethash index outer)))
+                   (old (aref outer index)))
               (when (or (null old)
                         (> (course-distance center (routepoint-position point))
                            (course-distance center (routepoint-position old))))
-                (setf (gethash index outer) point)))))
+                (setf (aref outer index) point)))))
         (flet ((emit ()
                  (when path
                    (push (make-isochrone :center center :stage stage
@@ -166,9 +151,9 @@ then retain up to CAPACITY spatially separated candidates for later land checks.
                                              (cl-weather:uv-cycle (params-fc1 wind))) 3600)
                            :path (nreverse path)) result)
                    (setf path nil))))
-          (dolist (index (sort (loop :for key :being :the :hash-keys :of outer :collect key) #'<))
-            (let* ((point (gethash index outer))
-                   (pos (routepoint-position point))
+          (loop :for point :across outer
+                :when point :do
+            (let* ((pos (routepoint-position point))
                    (angle (mod (gate-course-angle center pos) 360d0)))
               (when (and previous
                          (or (> (- angle previous-angle) (max 1d0 (* 3 (gate-angular-width))))
@@ -219,6 +204,24 @@ The endpoint stays on the common clock; intersections retain fractional times."
         (and (> (course-distance origin pos) 1d-3)
              (<= (abs (normalize-angle (- (gate-course-angle origin pos) bearing))) 1.5d0)
          (>= (course-distance origin pos) (course-distance origin destination))))))
+
+;;; Select one result in a single pass, preserving the first candidate on ties.
+;;; Arrivals minimize distance to the destination. Partial routes prefer the furthest
+;;; stage, then minimize distance to that stage's target; no frontier reordering is needed.
+(defun best-gate-state (states targets &optional arrivals-p)
+  (let ((best nil) (best-stage -1) (best-distance nil))
+    (dolist (state states best)
+      (let ((stage (gate-state-stage state)))
+        (when (or arrivals-p (>= stage best-stage))
+          (let ((distance (if arrivals-p
+                              (course-distance (routepoint-position (gate-state-point state))
+                                               (aref targets (1- (length targets))))
+                              (gate-stage-distance (aref targets stage)
+                                (routepoint-position (gate-state-point state))))))
+            (when (or (null best)
+                      (and (not arrivals-p) (> stage best-stage))
+                      (< distance best-distance))
+              (setf best state best-stage stage best-distance distance))))))))
 
 ;;; Expand all active gate stages on one clock, prune radial regressions and retire covered
 ;;; stages; return route info, best point and last crossing origin.
@@ -271,8 +274,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
                                           (gate-state-reached-p next (routing-dest routing)))
                                      (when (validp) (push next arrivals))
                                      (unless (gate-stage-retired-p (gate-state-stage next) coverage)
-                                       (retain-gate-state next buckets targets centers
-                                                          (max *gate-bucket-survivors* *gate-bucket-candidates*)))))))))
+                                       (retain-gate-state next buckets targets centers))))))))
                     (setf (routing-start leg) origin (routing-dest leg) target
                           (routing-gate leg) nil
                           ;; A fixed stage reference preserves the original fan
@@ -286,9 +288,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
                                      (routing-polars leg) (/ 360d0 *max-iso-points*))))))
                 (incf steps) (incf elapsed dt)
                 (when arrivals
-                  (setf best (first (sort arrivals #'< :key (lambda (s)
-                                     (course-distance (routepoint-position (gate-state-point s))
-                                                      (routing-dest routing)))))
+                  (setf best (best-gate-state arrivals targets t)
                         status "reached")
                   (return))
                 (let ((next (select-gate-survivors buckets)))
@@ -300,14 +300,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
                                          (gate-stage-retired-p (gate-state-stage state) coverage)) next))
                   (unless next (setf status "no_route") (return))
                   (setf frontier next
-                        best (first (stable-sort (copy-list next)
-                                    (lambda (a b)
-                                      (if (= (gate-state-stage a) (gate-state-stage b))
-                                          (< (gate-stage-distance (aref targets (gate-state-stage a))
-                                               (routepoint-position (gate-state-point a)))
-                                             (gate-stage-distance (aref targets (gate-state-stage b))
-                                               (routepoint-position (gate-state-point b))))
-                                          (> (gate-state-stage a) (gate-state-stage b))))))))
+                        best (best-gate-state next targets)))
                 (when (zerop (timestamp-minute end-time))
                   (setf isochrones
                         (nconc isochrones

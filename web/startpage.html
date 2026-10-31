@@ -264,34 +264,52 @@
             </div>
           </div>
 
-          <!-- Tab 6 (Status) - keep visibility controlled by tab CSS -->
+          <!-- Tab visibility stays controlled by the existing radio-button CSS. -->
           <div class="tab6">
-  <div class="status-grid" style="display:grid; grid-template-columns:auto 1fr; align-items:start; column-gap:16px; row-gap:8px; width:100%;">
-    <div class="status-label" style="display:flex; flex-direction:column; gap:8px; justify-content:flex-start;">
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Server start</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Cached forecasts</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Routing requests last 10min</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Last routing stats</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Max isochrone points</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">TWA step size</label>
-      <label style="display:inline-block; white-space:nowrap; padding:2px 6px; border:1px solid transparent; border-radius:4px; box-sizing:border-box;">Forecast downloads</label>
-    </div>
-    <div class="status-data" style="display:flex; flex-direction:column; gap:8px; align-items:flex-start;">
-      <label id="tb_serverstart" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
-      <label id="tb_fc_cache" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;"></label>
-      <label id="tb_requests" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">----</label>
-      <label id="tb_last_routestats" style="background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:block; white-space:normal; max-width:100%;">-</label>
-      <label id="tb_max_iso_points" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
-      <label id="tb_twa_steps" style="min-width:8em; background-color:#D0D0D0; padding:2px 6px; border:1px solid #C0C0C0; border-radius:4px; display:inline-block; white-space:nowrap;">-</label>
-      <table id="tb_downloads" style="border-collapse:collapse; background-color:#D0D0D0; border:1px solid #C0C0C0; border-radius:4px;">
-        <thead>
-          <tr><th style="padding:2px 8px; text-align:left;">Source</th><th style="padding:2px 8px; text-align:left;">Completed cycle (UTC)</th><th style="padding:2px 8px; text-align:left;">In progress</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-</div>
+            <div class="status-toolbar">
+              <div><h2>Server status</h2><span id="status-updated" aria-live="polite">Loading…</span></div>
+              <button id="status-refresh" type="button">Refresh</button>
+            </div>
+            <p id="status-error" role="alert" hidden></p>
+            <div class="status-cards">
+              <section class="status-card">
+                <h3>Activity</h3>
+                <dl><dt>Server started</dt><dd id="tb_serverstart">—</dd>
+                  <dt>Requests in the last 10 minutes</dt><dd id="tb_requests">—</dd></dl>
+              </section>
+              <section class="status-card">
+                <h3>Lisp heap</h3>
+                <p id="status-heap" class="status-metric">—</p>
+                <progress id="status-heap-bar" max="100" value="0" aria-label="Lisp heap usage"></progress>
+                <p class="status-note">Current allocation / configured limit. May include reclaimable garbage; refreshing does not force GC. Native memory is excluded.</p>
+              </section>
+              <section class="status-card">
+                <h3>Caches</h3>
+                <dl><dt>Decoded forecast arrays</dt><dd id="status-forecast-bytes">—</dd>
+                  <dt>Forecast entries</dt><dd id="tb_fc_cache">—</dd>
+                  <dt>Raw / combined polars</dt><dd id="status-polars-cache">—</dd>
+                  <dt>Race records</dt><dd id="status-races-cache">—</dd></dl>
+                <p class="status-note">Forecast bytes count unique decoded arrays, excluding object headers and cache metadata. This is part of the Lisp heap.</p>
+              </section>
+            </div>
+            <section class="status-section">
+              <h3>Forecast cache by cycle</h3>
+              <div class="status-table-wrap"><table id="status-cache-groups"><thead><tr><th>Source</th><th>Cycle (UTC)</th><th>Resolution</th><th>Entries</th><th>Decoded memory</th></tr></thead><tbody></tbody></table></div>
+            </section>
+            <section class="status-section">
+              <h3>Forecast downloads</h3>
+              <div class="status-table-wrap"><table id="tb_downloads"><thead><tr><th>Source</th><th>Completed cycle (UTC)</th><th>In progress</th></tr></thead><tbody></tbody></table></div>
+            </section>
+            <section class="status-section">
+              <h3>Last routing</h3>
+              <dl id="status-last-route" class="status-details"><dt>No routing completed yet</dt><dd>—</dd></dl>
+            </section>
+            <section class="status-section">
+              <h3>Server configuration</h3>
+              <p class="status-note">Current values in the running image, including configuration overrides. Route-specific choices are supplied by each routing request.</p>
+              <div class="status-table-wrap"><table id="status-parameters"><thead><tr><th>Group</th><th>Parameter</th><th>Current value</th></tr></thead><tbody></tbody></table></div>
+            </section>
+          </div>
 
         </figure>	
         

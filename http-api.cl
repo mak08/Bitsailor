@@ -316,28 +316,31 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               requestcount
                               max_iso_points
                               twa_steps
-                              last_routestats)))
+                              last_routestats &optional parameters memory caches)))
   server-start
   downloads
   fc-cache-size
   requestcount
   max_iso_points
   twa_steps
-  last_routestats)
+  last_routestats
+  parameters memory caches)
 
-;;; Serialize server uptime origin, download/cache counts, request count, routing limits and the
-;;; last route statistics.
+;;; Serialize activity, downloads, cache counts, memory snapshots, current operational settings
+;;; and the last route statistics; keep legacy top-level fields for existing clients.
 (defun |getStatistics| (handler request response)
   (declare (ignore handler request response))
-  (with-output-to-string (s)
-    (json s
-          (routerstatus *server-start-time*
-                        (get-download-status)
-                        (number-of-entries cl-weather:*forecast-ht*)
-                        (length *last-request*)
-                        *max-iso-points*
-                        *twa-steps*
-                        *last-routestats*))))
+  (let ((memory (get-memory-status)))
+    (with-output-to-string (s)
+      (json s
+            (routerstatus *server-start-time*
+                          (get-download-status)
+                          (memorystatus-forecast-entries memory)
+                          (bordeaux-threads:with-lock-held (+last-request-lock+) (length *last-request*))
+                          *max-iso-points*
+                          *twa-steps*
+                          (bordeaux-threads:with-lock-held (+last-routestats-lock+) *last-routestats*)
+                          (get-status-parameters) memory (get-cache-status))))))
 
 ;;; Count entries by traversing the supplied hash table.
 (defun number-of-entries (hashtable)

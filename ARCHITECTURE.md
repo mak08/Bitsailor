@@ -2,6 +2,8 @@
 
 Bitsailor is a Common Lisp sailing router. The core system coordinates route search, boat polars, forecast data, land avoidance, and an HTTP/Web UI. The route search is an isochrone expansion: it propagates candidate boat positions over time, reduces each generation to a bounded set, and reconstructs a path by following predecessor links.
 
+For the ordered-gate search, point-waypoint handling, pruning criteria and sorting replacements, see [Multi-leg routing](MULTI-LEG-ROUTING.md).
+
 ## Component Map
 
 ```mermaid
@@ -94,9 +96,9 @@ The first step is shortened to align to a ten-minute boundary. Later step durati
 
 Consecutive gates and the following point waypoint (or final destination) are searched together by `get-route-through-gates` in [gate-search.cl](gate-search.cl). Each candidate carries its next-target index and a leg origin. All stages advance on a common simulation clock. The search continues approaching a gate after its first crossing: earlier crossings already travelling downstream compete with later crossings when those enter the next stage. Termination is at the destination of the group, rather than at the first gate crossing.
 
-Each bucket first retains a bounded pool of spatially separated candidates, ranked by outward progress (`*gate-bucket-candidates*`, default 4). After expansion, land checks select up to `*gate-bucket-survivors*` valid points from that pool. This bounds coastline work and provides fallback candidates when the leading point is blocked. As with other frontier pruning, a valid point outside the retained pool can be lost. Gate crossings are checked using the complete original step, including the portion before the recorded intersection. Ordered gate intersections are recorded as predecessor routepoints with fractional crossing times. For this initial implementation, the boat completes the crossing step on its existing heading and starts steering towards the next target at the following step; it does not yet turn at the fractional crossing time. Multiple gates crossed in one segment advance progress in intersection order.
+Each bucket retains only its outward winner: a candidate replaces the incumbent if its radius is greater or equal, otherwise it is discarded. Land checks run after selection; a blocked winner leaves an empty bucket, just as in the single-leg router. There is no candidate pool, insertion or spacing scan. Gate crossings are checked using the complete original step, including the portion before the recorded intersection. Ordered gate intersections are recorded as predecessor routepoints with fractional crossing times. For this initial implementation, the boat completes the crossing step on its existing heading and starts steering towards the next target at the following step; it does not yet turn at the fractional crossing time. Multiple gates crossed in one segment advance progress in intersection order.
 
-Pruning uses separate origin-centred bearing buckets for each gate stage. The fixed reference is the original start for stage zero and the previous gate midpoint for later stages. At the same simulation time, each bucket retains the point farthest from that reference, independently of its actual crossing origin and time. This preserves a broad outward frontier instead of compressing the approach into a few bearings from a distant target. `*gate-bucket-width*` defaults to 0.24 degrees, `*gate-bucket-survivors*` defaults to 1, and the effective width respects the `*max-iso-points*` budget per stage. The configured origin fan is applied around the reference-to-target bearing. This remains a bounded heuristic rather than a guarantee of global optimality; total frontier capacity grows with the number of gate stages.
+Pruning uses separate origin-centred bearing buckets for each gate stage. The fixed reference is the original start for stage zero and the previous gate midpoint for later stages. At the same simulation time, each bucket retains the point farthest from that reference, independently of its actual crossing origin and time. This preserves a broad outward frontier instead of compressing the approach into a few bearings from a distant target. `*gate-bucket-width*` defaults to 0.24 degrees, each bucket has one winner, and the effective width respects the `*max-iso-points*` budget per stage. The configured origin fan is applied around the reference-to-target bearing. This remains a bounded heuristic rather than a guarantee of global optimality; total frontier capacity grows with the number of gate stages.
 
 Hourly drawings use the outer envelope in the same origin-centred buckets. Angular gaps and large spatial jumps produce separate polylines, so points from disconnected sections cannot form radial spokes. All stages share the same simulation timestamp, including frontiers which have not yet crossed an earlier gate. Alternative `tracks` are currently omitted for gate groups.
 
@@ -126,10 +128,17 @@ the ordinary router's outward-progress heuristic and prevents coastal frontiers
 from retreating into already explored sectors. Marks are local to each request.
 
 Valid retained crossings also mark intervals along each gate
-(`*gate-coverage-bins*`, default 12). Once every interval has been reached, the
-stage approaching that gate is retired at the end of the step. Already crossed
-states continue, including all crossings retained in the closing step; retired
-stages cannot be reseeded. Partial coverage never retires a stage. Gates with
-unreachable intervals therefore remain open until termination. Coverage retirement
+(`*gate-coverage-bins*`, default 12). Once the configured coverage fraction
+(`*gate-retirement-coverage*`, default 1/2) has been reached, the stage approaching
+that gate is retired at the end of the step. The default therefore requires six
+of twelve distinct intervals. Already crossed states continue, including all
+crossings retained in the closing step; retired stages cannot be reseeded.
+Binding the fraction to 1 restores full-coverage retirement. Coverage retirement
 and radial dominance are pruning heuristics, not guarantees of global optimality
 in time-varying weather.
+
+## Status and memory reporting
+
+The startpage Status tab polls `router.getStatistics` every minute and supports manual refresh. [status.cl](status.cl) supplies the current operational configuration, raw/combined polar and race cache counts, SBCL dynamic-heap usage/limit, and unique decoded forecast-array bytes grouped by source, cycle and resolution. Snapshots hold the forecast-cache lock while examining metadata; they never scan array elements or force garbage collection. Heap usage can include reclaimable garbage and excludes native allocations. Forecast byte counts exclude headers and metadata.
+
+The explicit settings inventory includes routing, gate, point-approach, service and path settings. It excludes transient state, locks and credentials. Configuration values are read when requested so overrides appear immediately. Legacy top-level statistics fields remain available. The UI retains previous values and displays a stale-data message on refresh failure. Tests are in `tests/status-tests.cl` and `tests/status-ui-tests.cjs`.

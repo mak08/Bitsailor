@@ -2,14 +2,13 @@
 ;;; Multi-route: route through intermediate targets: points that are hit exactly
 ;;; and gates that are crossed (see GATE-CROSSING in filter.cl).
 ;;;
-;;; Each intermediate leg runs isochrones until the next isochrone would lie
-;;; beyond the target. From the closest point of that isochrone a VMG path to
-;;; the target is sailed: one leg if the target is within the VMG angles,
-;;; otherwise a tack/gybe point is computed. The approach is also tried from
-;;; the predecessors of that point and the earliest arrival wins, so that the
-;;; last (non-VMG) isochrone step is shortened. The arrival time becomes the start
-;;; time of the next leg. If the approach is not feasible (land), routing stops
-;;; at the current isochrone.
+;;; Consecutive gates and the following point form one shared-clock search
+;;; (gate-search.cl). Point waypoints divide the route into sequential legs.
+;;; At each intermediate point, try direct or VMG approaches from the selected
+;;; frontier point and its recent predecessors, without going back before the
+;;; last gate crossing. The earliest successful approach starts the next leg.
+;;; If no approach succeeds, stop with the track reached so far. The final
+;;; destination uses the search engine's arrival criterion without this refinement.
 
 (in-package :bitsailor)
 
@@ -18,6 +17,7 @@
 
 (defparameter *approach-max-iterations* 1000)
 
+;;; Sample wind direction and speed at POS/TIME using the routing's selected forecast model.
 (defun wind-at (routing pos time)
   (let ((params (get-params (or (routing-forecast-model routing)
                                 'cl-weather:noaa-gfs-wind)
@@ -42,6 +42,7 @@ at BEARING and DISTANCE. Returns (NIL) if the target is within the VMG angles
               (when (and (>= l1 0d0) (>= l2 0d0))
                 (list (cons h1 l1) (cons h2 l2)))))))))
 
+;;; Test an approach segment for land in vector mode, or just its endpoint in bitmap mode.
 (defun approach-blocked-p (from to)
   (if *use-bitmap*
       (bm-is-land to)
@@ -50,7 +51,8 @@ at BEARING and DISTANCE. Returns (NIL) if the target is within the VMG angles
 (defun sail-approach (routing rp target first-leg)
   "Sail from routepoint RP to TARGET, first along FIRST-LEG (heading . length) if
 given, then directly. Returns the routepoint at TARGET, or NIL if the path is
-blocked by land or the boat cannot make progress."
+blocked by land, progress is too slow, or the iteration limit is reached.
+Wind is resampled each step; currents and wave effects are not applied here."
   (let ((polars (routing-polars routing))
         (current rp)
         (fixed-heading (car first-leg))
@@ -91,7 +93,8 @@ blocked by land or the boat cannot make progress."
                   (return current))))))))))
 
 (defun approach-target (routing rp target)
-  "Sail a VMG path from the routepoint RP to TARGET. Returns the final routepoint or NIL."
+  "Try a direct or VMG tack/gybe approach from RP to TARGET. Return the first
+feasible candidate's final routepoint, or NIL; tack orders are not ranked by arrival time."
   (let* ((pos (routepoint-position rp))
          (distance (course-distance pos target)))
     (multiple-value-bind (twd tws) (wind-at routing pos (routepoint-time rp))
@@ -110,6 +113,8 @@ blocked by land or the boat cannot make progress."
 (defparameter *gate-samples* 10
   "Number of intervals along a gate that are tried as crossing points")
 
+;;; Generate equally spaced great-circle samples along the gate, including both endpoints; used by
+;;; the legacy sampled approach helper.
 (defun gate-sample-points (gate)
   (let ((a (gate-a gate)) (b (gate-b gate)))
     (let ((len (course-distance a b)) (angle (course-angle a b)))
@@ -117,10 +122,11 @@ blocked by land or the boat cannot make progress."
             :collect (add-distance-exact a (* len (/ i *gate-samples*)) angle)))))
 
 (defun best-approach (routing rp gate target &optional earliest-start)
-  "Earliest arrival at TARGET (a point) or at any sampled point of GATE, found by
-sailing the VMG approach from RP and from its first *APPROACH-LOOKBACK* predecessors.
-The last isochrone step is not optimal VMG, so starting earlier on the track
-shortens that step. For a gate RP itself is a valid arrival. Returns a routepoint or NIL."
+  "Return the earliest successful approach tried from RP and up to
+*APPROACH-LOOKBACK* predecessors, never starting before EARLIEST-START when supplied.
+TARGET is the point waypoint. The legacy GATE mode samples points along the gate
+and treats RP as an existing arrival; shared-clock gate routing does not use it.
+Return NIL if no approach succeeds and no existing gate arrival is supplied."
   (let ((best (when gate rp))
         (targets (if gate (gate-sample-points gate) (list target))))
     (loop :for start = rp :then (routepoint-predecessor start)
@@ -142,6 +148,8 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
         (add-distance-exact a (/ (course-distance a b) 2d0) (course-angle a b)))
       target))
 
+;;; Route consecutive gate groups between point waypoints, concatenate results and stop on failure
+;;; or duration exhaustion.
 (defun get-route-via-waypoints (routing)
   (let* ((targets (group-gate-targets routing))
          (total (routing-stepmax routing))
@@ -190,8 +198,8 @@ shortens that step. For a gate RP itself is a valid arrival. Returns a routepoin
                    (setf track (append (butlast track) leg-track))
                    (return))
                   (t
-                   ;; Sail the final part to the point or gate on optimal VMG,
-                   ;; starting from the best of the last few track points
+                   ;; Refine the approach to this intermediate point, trying recent
+                   ;; predecessors no earlier than the last gate crossing.
                    (let ((arrival (best-approach leg best-rp gate target
                                                  (when last-crossing (routepoint-time last-crossing)))))
                      (cond

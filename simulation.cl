@@ -15,6 +15,7 @@
 (defparameter *sailnames* #("Jib" "Spi" "Stay" "LJ" "C0" "HG" "LG"))
 
 (declaim (inline twa-boatspeed))
+;;; Return best boat speed in m/s and sail index for wind speed in m/s and signed TWA in degrees.
 (defun-t twa-boatspeed double-float ((polars cpolars) (wind-speed double-float) (twa double-float))
   (destructuring-bind (speed sail)
       (get-max-speed polars (abs twa) wind-speed)
@@ -33,6 +34,7 @@
 ;;; Boat speed
 
 (declaim (inline get-origin-angle))
+;;; Return the normalized bearing from START-POS to NEW-POS, reusing their distance in metres.
 (defun-t get-origin-angle double-float
     ((start-pos latlng) (new-pos latlng) (origin-distance double-float))
   (let* ((course-angle  (course-angle-d start-pos new-pos origin-distance))
@@ -43,6 +45,8 @@
 ;;; get-route
 
 (declaim (inline wave-factor))
+;;; Return the Fairwinds speed multiplier from wave height in metres and heading relative to
+;;; incoming wave direction in degrees.
 (defun-t wave-factor double-float
     ((wave-height double-float)
      (wave-dir double-float)
@@ -63,10 +67,13 @@
                (svref #(0.95d0 0.90d0 0.85d0) tier))))))
 
 (declaim (inline valid-twa))
+;;; Test whether TWA is positive and lies inclusively between the upwind and downwind VMG angles.
 (defun-t valid-twa boolean ((up double-float) (down double-float) (twa double-float))
   (and (> twa 0) (<= up twa down)))
 
 (declaim (inline expand-routepoint))
+;;; Sample both tacks at valid polar/VMG angles, apply weather effects and emit candidates inside
+;;; the box and fan; return the generated count.
 (defun-t expand-routepoint fixnum
     ((routing routing)
      (routepoint (or routepoint null))
@@ -178,6 +185,8 @@
 
 (defstruct box north south west east antimed-p)
 
+;;; Build a latitude/longitude search box around both endpoints, adding degree margins and
+;;; handling antimeridian crossings.
 (defun make-routing-box (start dest &key (lat-margin 10d0) (lon-margin 10d0))
   (let* ((lat-min (min (latlng-lat start) (latlng-lat dest)))
          (lat-max (max (latlng-lat start) (latlng-lat dest)))
@@ -190,9 +199,11 @@
               :east (if antimed-p (- lon-max lon-margin) (+ lon-max lon-margin))
               :antimed-p antimed-p)))
 
+;;; Identify longitude pairs separated by more than 180 degrees in the supplied representation.
 (defun antimed-p (lon0 lon1)
   (> (abs (- lon0 lon1)) 180d0))
 
+;;; Test latitude and wrapped longitude against a routing box.
 (defun in-latlng-box (box pos)
   (and (<= (box-south box) (latlng-lat pos) (box-north box))
        (if (box-antimed-p box)
@@ -200,6 +211,8 @@
             (longitude-between (box-west box) (latlng-lng pos) (box-east box)))
            (longitude-between (box-east box) (latlng-lng pos) (box-west box)))))
 
+;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
+;;; engine.
 (defun get-route (routing)
   (bordeaux-threads:with-lock-held (+last-request-lock+)
     (setf *last-request*
@@ -210,7 +223,7 @@
 
 (defun get-route-leg (routing)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and
-the routepoint on the final isochrone that is closest to the destination."
+the selected gate crossing, or the final frontier point nearest the destination."
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
          (distance (course-distance start-pos destination))
@@ -242,15 +255,14 @@ the routepoint on the final isochrone that is closest to the destination."
           (stepnum 1 (1+ stepnum))
           (pointnum 0)
           (elapsed0 (now))
-          ;; Increase max-points per isochrone as the isochrones expand to keep resolution roughly constant
+          ;; The initial value already equals the cap, so bucket capacity stays fixed.
           (max-points *max-iso-points* (min *max-iso-points* (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
           (max-dist (make-array *max-iso-points* :initial-element 0d0))
           (min-angle (/ 360d0 *max-iso-points*))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
           (stepper (make-stepper start-time  (routing-stepmax routing)))
-          ;; Get wind data for simulation time
-          ;; Advance the simulation time AFTER each iteration - this is most likely what GE does
+          ;; Sample weather at the start of each step before advancing step-time.
           (wind-source (or (routing-forecast-model routing)
                            'cl-weather:noaa-gfs-wind))
           (params-wind (get-params wind-source start-time)
@@ -276,8 +288,8 @@ the routepoint on the final isochrone that is closest to the destination."
           ;; The next isochrone - in addition we collect all hourly isochrones
           (next-isochrone (make-array max-points :initial-element nil)
                           (make-array max-points :initial-element nil)))
-         ;; When the maximum number of iterations is reached, construct the best path
-         ;; from the most advanced point's predecessor chain.
+         ;; Stop on arrival, an empty frontier, or the duration limit. Build the path
+         ;; from the selected gate crossing or the point nearest the destination.
          ((or reached
               error
               (>= stepsum (routing-stepmax routing)))
@@ -348,6 +360,8 @@ the routepoint on the final isochrone that is closest to the destination."
           (log2:trace "Reached destination at ~a" step-time))))))
 
 
+;;; Diagnostic single-request wrapper: print endpoint and residual-time information and return the
+;;; last trackpoint.
 (defun get-route-multi (routing)
   (let* ((start (routing-start routing))
          (dest (routing-dest routing))
@@ -366,8 +380,10 @@ the routepoint on the final isochrone that is closest to the destination."
     (format t "Time to dest: ~a~%" (calculate-time-to-dest routing point dest))
     point))
 
+;;; Estimate remaining seconds from a trackpoint using fixed wind and either direct polar speed or
+;;; best VMG; print diagnostics.
 (defun calculate-time-to-dest (routing trackpoint dest)
-  ;; Calculate time sailing VMC/VMG, assuming constant TWA & TWD
+  ;; Estimate direct/VMG sailing time with wind direction and speed held fixed.
   (let* ((polars (routing-polars routing))
          (pos (trackpoint-position trackpoint))
          (twd (trackpoint-twd trackpoint))
@@ -395,6 +411,8 @@ the routepoint on the final isochrone that is closest to the destination."
                (/ dist-vmg (vmg-vmg vmg-up))
                (/ dist-vmg (vmg-vmg vmg-down)))))))))
 
+;;; Accept a candidate whose origin distance reaches DISTANCE within 1.5 degrees of ANGLE; START
+;;; is currently unused.
 (defun reached (candidate start angle distance)
   (some (lambda (p)
           (let ((a  (routepoint-origin-angle p))
@@ -407,6 +425,8 @@ the routepoint on the final isochrone that is closest to the destination."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
+;;; Return a closure yielding step seconds and the next timestamp, initially aligning to ten
+;;; minutes and then increasing step size with horizon.
 (defun make-stepper (start-time step-max)
   (let* ((step-time
            start-time)
@@ -449,6 +469,7 @@ the routepoint on the final isochrone that is closest to the destination."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Aux functions
 
+;;; Log elapsed calculation time, iteration count and generated-point count.
 (defun log-stats (elapsed stepnum pointnum)
   (log2:trace "Elapsed ~2$, Positions ~a, Isochrones ~a | p/s=~2$ | s/i=~4$ | p/i=~2$"
               elapsed
@@ -458,6 +479,8 @@ the routepoint on the final isochrone that is closest to the destination."
               (/ elapsed stepnum)
               (coerce (/ pointnum stepnum) 'float)))
 
+;;; Adjust the destination's longitude representation when it lies at least 180 degrees east of
+;;; the start.
 (defun normalized-destination (routing)
   (if (>= (- (latlng-lng (routing-dest routing))
              (latlng-lng (routing-start routing)))
@@ -466,6 +489,8 @@ the routepoint on the final isochrone that is closest to the destination."
                    :lngr% (- (latlng-lngr (routing-dest routing)) (* 2 pi)))
       (routing-dest routing)))
 
+;;; Split saved single-leg frontiers into display paths and convert their routepoints to
+;;; positions.
 (defun prepare-routepoints (isochrones)
   (loop
      :for i :in (construct-isochrones isochrones)
@@ -476,12 +501,15 @@ the routepoint on the final isochrone that is closest to the destination."
                                        :for r :in (isochrone-path i)
                                        :collect (routepoint-position r)))))
 
+;;; Flatten the display fragments produced for each saved single-leg isochrone.
 (defun construct-isochrones (isochrones)
   (loop
     :for isochrone :in isochrones
     :for i = (separate-isochrones isochrone)
     :append i))
 
+;;; Split an ordered routepoint vector at bearing gaps; the current loop omits its final vector
+;;; element.
 (defun separate-isochrones (isochrone)
   (do* ((path (isochrone-path isochrone))
         (index 0 (1+ index))
@@ -508,6 +536,7 @@ the routepoint on the final isochrone that is closest to the destination."
                isochrones)
          (setf current-path (list point))))))
 
+;;; Compact non-NIL routepoints from a bucket vector into a dense vector, preserving bucket order.
 (defun extract-points (isochrone)
   (let ((points (loop
                    :for i :below (length isochrone) :by 1
@@ -515,12 +544,15 @@ the routepoint on the final isochrone that is closest to the destination."
                    :when p :collect p)))
     (make-array (length points) :initial-contents points)))
 
+;;; Return the forward angular difference from ALPHA to BETA in degrees, accounting for
+;;; wraparound.
 (defun-t arc-length double-float ((alpha double-float)  (beta double-float))
   (when (< alpha 0) (incf alpha 360d0))
   (when (< beta 0) (incf beta 360d0))
   (when (< beta alpha) (incf beta 360d0))
   (- beta alpha))
 
+;;; Return predecessor-position paths within 30 degrees of the requested course from START-POS.
 (defun extract-tracks (start-pos course-angle isochrone)
   (loop
     :for point :across isochrone
@@ -536,6 +568,8 @@ the routepoint on the final isochrone that is closest to the destination."
                  (push (routepoint-position p) v))))
 
 (declaim (inline best-point))
+;;; Update candidates' destination distances in metres and return the nearest point, or NIL for an
+;;; empty vector.
 (defun best-point (isochrone destination)
   (loop
      :with min-dtf = nil :and min-point = nil
@@ -558,10 +592,14 @@ the routepoint on the final isochrone that is closest to the destination."
        route)
     (push (create-trackpoint cur-point (or successor cur-point)) route)))
 
+;;; Select the frontier point nearest DESTINATION and convert its predecessor chain into
+;;; chronological trackpoints.
 (defun construct-route (isochrone destination)
   (route-from-point (best-point isochrone destination)))
 
 
+;;; Summarize track duration, sails, wind/TWA ranges and search effort; also update the shared
+;;; last-statistics record under a lock.
 (defun get-statistics (track elapsed stepnum pointnum)
   (let ((sails nil)
         (min-wind 100)
@@ -599,6 +637,7 @@ the routepoint on the final isochrone that is closest to the destination."
         (setf *last-routestats* routestats))
       (values routestats))))
 
+;;; Split elapsed seconds into a duration record of days, hours, minutes and seconds.
 (defun encode-duration (seconds)
   (multiple-value-bind (days rest-hours)
       (truncate seconds 86400)
@@ -617,6 +656,8 @@ the routepoint on the final isochrone that is closest to the destination."
   "Compute TWA resulting from HEADING in WIND"
   (normalize-angle (- heading wind-dir)))
 
+;;; Accept NIL as now, pass timestamps through, or parse a minute-resolution date/time string with
+;;; the supplied timezone suffix.
 (defun parse-datetime-local (time &key (timezone "+00:00"))
   (etypecase time
     (null

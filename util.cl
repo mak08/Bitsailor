@@ -9,18 +9,23 @@
 ;;; Helpers
 
 
+;;; Return sail index and boat speed in knots for polar ID, TWA in degrees and wind speed in
+;;; knots.
 (defun getboatspeed (polars-id twa tws-kn)
   (let ((polars (get-combined-polars polars-id bitsailor::+allsails+)))
     (multiple-value-bind (speed sail)
         (twa-boatspeed  polars (knots-to-m/s tws-kn) (coerce twa 'double-float))
       (values sail (m/s-to-knots speed)))))
 
+;;; Compute average speed in knots between degree coordinates over an elapsed number of seconds.
 (defun distance-knots (lat0 lon0 lat1 lon1 seconds)
   (m/s-to-knots
    (/ (course-distance (make-latlng :lat lat0 :lng lon0)
                        (make-latlng :lat lat1 :lng lon1))
       seconds)))
 
+;;; Legacy convenience lookup intended to return knots and sail; its get-max-speed call currently
+;;; passes an array instead of cpolars.
 (defun boat-speed-kn (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (let ((cpolars (get-combined-polars polars-name (encode-options options))))
     (destructuring-bind (speed sail)
@@ -28,6 +33,8 @@
       (values (m/s-to-knots speed)
               sail))))
 
+;;; Look up exact angle/wind cells in legacy raw sail JSON and return per-sail name/speed pairs;
+;;; OPTIONS is ignored.
 (defun boat-speed-raw (polars-name twa tws &optional (options '("reach" "heavy" "light")))
   (declare (ignorable options))
   (let* ((polars (get-polars-raw polars-name))
@@ -41,17 +48,22 @@
                       (aref (aref (joref saildef "speed") twa-index) tws-index)))))
 
 (defvar *polars-raw-ht* (make-hash-table :test #'equal))
+;;; Cache legacy scriptData/polar JSON by filename; this is separate from the Fairwinds polar
+;;; loader.
 (defun get-polars-raw (polars-name)
   (or (gethash polars-name *polars-raw-ht*)
       (setf (gethash polars-name *polars-raw-ht*)
             (joref (joref (parse-json-file polars-name) "scriptData") "polar"))))
 
+;;; Write the selected isochrone from parsed routing JSON to a semicolon-delimited
+;;; latitude/longitude file.
 (defun export-routing-isochrone-csv (filename routing number)
   (let ((isochrones (joref routing "isochrones")))
     (assert (< number (length isochrones)))
     (with-open-file (f filename :direction :output :if-does-not-exist :create :if-exists :overwrite)
       (write-isochrone-csv f (aref isochrones number)))))
 
+;;; Write a header and four-decimal degree coordinates for a parsed JSON isochrone.
 (defun write-isochrone-csv (stream isochrone)
   (format stream "~a;~a~%" "lat" "lon")
   (loop
@@ -59,6 +71,8 @@
     :do  (format stream "~,4F;~,4F~%" (joref p "lat") (joref p "lng"))))
 
 
+;;; Write every isochrone in parsed routing JSON as a GPX track, rather than exporting the best
+;;; route.
 (defun export-routing-gpx (filename routing)
   (let ((isochrones (joref routing "isochrones")))
     (with-open-file (f filename :direction :output :if-does-not-exist :create :if-exists :overwrite)
@@ -69,6 +83,7 @@
         :do (write-isochrone-gpx f iso))
       (format f "~a~%" "</gpx>"))))
 
+;;; Write one parsed JSON isochrone as a GPX track segment, normalizing longitudes.
 (defun write-isochrone-gpx (stream isochrone)
   (format stream "~a~%" "<trk>")
   (format stream "~a~%" "<trkseg>")
@@ -80,6 +95,7 @@
   (format stream "~a~%" "</trkseg>")
   (format stream "~a~%" "</trk>"))
 
+;;; Move a longitude outside [-180,180] one revolution towards that range.
 (defun tweak-long (x)
   (if (> x 180d0) (- x 360d0)
       (if (< x -180d0) (+ x 360d0)

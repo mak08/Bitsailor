@@ -8,12 +8,16 @@
 #|
 (check-window 12 168
               :increment 180
-              :start cl-geomath:+los-angeles+
-              :dest cl-geomath:+honolulu+
+              :slat (latlng-lat cl-geomath:+los-angeles+)
+              :slon (latlng-lng cl-geomath:+los-angeles+)
+              :dlat (latlng-lat cl-geomath:+honolulu+)
+              :dlon (latlng-lng cl-geomath:+honolulu+)
               :stepmax (* 60 60 24 5)
               :polars "maxi_trimaran")
 |#
 
+;;; Try start times across an inclusive hour window at minute increments, append per-run log files
+;;; and return successful statistics in reverse order.
 (defun check-window (start-offset
                      window-size
                      &key

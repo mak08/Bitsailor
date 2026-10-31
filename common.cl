@@ -37,16 +37,16 @@
 (defvar *polars-dir*
   (merge-pathnames (make-pathname :directory '(:relative "polars") :type "json")
                    *source-root*)
-  "A string designating the directory containing polar files")
+  "Pathname designating the directory containing polar files")
 
 (defvar *races-dir*
   (merge-pathnames (make-pathname :directory '(:relative "races") :type "json")
                    *source-root*)
-  "A string designating the directory containing race definitions")
+  "Pathname designating the directory containing race definitions")
 
 (defparameter *twa-steps* 5d0
   "Set this to the desired TWA step width (eg. 5d0).
-   NIL (default) mean use only points provided in polar file.
+   NIL means use only the angles provided in the polar file; the default is 5 degrees.
    Clear *combined-polars-ht* to force recomputation of cpolars.")
 
 
@@ -63,6 +63,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Preventing eval injection
 
+;;; Read a Lisp value with reader evaluation disabled; optionally coerce it or intern symbols in
+;;; PACKAGE. Return NIL on errors.
 (defun read-arg (s &optional type (package *package*))
   (let ((*read-eval* nil))
     (ignore-errors

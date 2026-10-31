@@ -21,6 +21,8 @@
 (defstruct http-status protocol code text)
 (defstruct http-header name value)
 
+;;; Invoke curl and parse its response; HEAD suppresses the body, while supplying BODY selects
+;;; curl's POST behavior. Timeouts are seconds.
 (defun http (url &key (headers ()) (method :get) (body nil) (max-time 10) (connect-timeout 2))
   (ecase method ((:get :head :post)))
   (let* ((head-flag (if (eq method :head) "-I" ""))
@@ -52,6 +54,8 @@
             (t
              (error "curl: error ~a" program-status))))))))
 
+;;; Parse one HTTP status/header block and optionally a Content-Length-sized character body;
+;;; chunked bodies are unsupported.
 (defun parse-http-response (s &key (fetch-body t))
   (with-input-from-string (f s)
     (let*
@@ -82,6 +86,7 @@
                           :headers headers
                           :body body))))
 
+;;; Split an HTTP status line into protocol, integer status code and trimmed reason text.
 (defun parse-status-line (s)
   (log2:trace "~a" s) 
   (let* ((p1 (position #\Space s))
@@ -91,6 +96,7 @@
                       :text (string-trim " "
                                          (subseq s (1+ p2))))))
 
+;;; Split a header at its first colon and trim whitespace from the value.
 (defun parse-http-header (s)
   (log2:trace "~a" s) 
   (let ((p (position #\: s)))

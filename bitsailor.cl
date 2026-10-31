@@ -48,6 +48,8 @@
 ;;; 8 - Start weather updates
 ;;; 9 - Configure and start web server from *server-config*   
 
+;;; Load configuration, initialize polars/database/map, start timers/weather/HTTP services and
+;;; optionally keep the toplevel alive.
 (defun start-router (&key
                        (rcfile (pathname *rcfile*))
                        (start-sentinel t))
@@ -109,7 +111,7 @@
     ;; Cleanup old forecasts once (also called periodically from cleanup timer)
     (cleanup-cycles :dry-run nil)
 
-    ;; Load latest complete bundle and possbily update (synchronous), start asynchronous updates.
+    ;; Start weather cycle updates in a background worker.
     (log2:info "Downloading forecasts and starting weather updates")
     (bordeaux-threads:make-thread (lambda ()
                                     (start-cycle-updates))
@@ -148,6 +150,7 @@
 
 (defstruct server-settings datasources)
 
+;;; Wrap the weather library's datasource metadata in the server-settings response structure.
 (defun get-server-settings ()
   (make-server-settings
    :datasources (cl-weather:datasource-info)))
@@ -155,6 +158,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;
 
+;;; Remove request-history entries older than ten minutes while holding the request-history lock.
 (defun update-statistics ()
   (let ((lowbound (local-time:adjust-timestamp (local-time:now) (offset :minute -10))))
     (bordeaux-threads:with-lock-held (+last-request-lock+)

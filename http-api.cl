@@ -12,6 +12,7 @@
 ;;; Dynamic handlers
 
 ;;; This function is called from a dynamic handler
+;;; Serve startpage.html from the configured web root; log failures and set HTTP status 500.
 (defun start-page (server handler request response)
   (declare (ignore server handler request))
   (handler-case 
@@ -25,6 +26,8 @@
       (setf (status-text response) (format nil "~a" e)))))
 
 ;;; This function is called from a dynamic handler
+;;; Promote the account matching the URL activation secret from USER_PROV to USER and serve the
+;;; activation page.
 (defun activate-account (server handler request response)
   (declare (ignore server handler request))
   (sql:with-connection (*dbcon*)
@@ -51,6 +54,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; User sign-up
 
+;;; Reserve a boat name and send an activation email; conflicting names produce an HTTP 400
+;;; response.
 (defun |signUp| (handler request response &key |emailAddress| |boatName| |password|)
   (declare (ignore handler request))
   (sql:with-connection (*dbcon*)
@@ -73,6 +78,8 @@
              (othwerwise
               "An error occurred"))))))))
 
+;;; Decode each percent-encoded hexadecimal character; this does not perform UTF-8 byte decoding
+;;; or translate plus signs.
 (defun decode-uri-component (s)
   (let ((*read-base* 16))
     (do
@@ -91,6 +98,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; getRoute
 
+;;; Parse routing query arguments, validate start/waypoints, run the router and serialize JSON;
+;;; request errors map to 400 and other errors to 500.
 (defun |getRoute| (handler request response &key
                                               (|options| nil)
                                               |polarsId|
@@ -166,6 +175,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Commands
 
+;;; Set permissive CORS headers and a 204 response for an OPTIONS request.
 (defun handle-options (server handler request response)
   (declare (ignore server handler request))
   (format t "~a~%" request)
@@ -179,6 +189,7 @@
   (setf (status-code response) 204)
   (setf (status-text response) "No Content"))
 
+;;; Forward a JSON command body to the Virtual Regatta device endpoint and copy its response body.
 (defun execute-commands (server handler request response)
   (declare (ignore server handler request))
   (format t "~a~%" request)
@@ -199,6 +210,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Server Settings
 
+;;; Serialize datasource metadata used by the browser to locate forecast files.
 (defun |getServerSettings| (handler request response)
   ;; Provide datasource path templates etc.
   (declare (ignore handler request response))
@@ -208,6 +220,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars
 
+;;; Serialize the available polar IDs and labels for the browser.
 (defun |getPolarsList| (handler request response)
   (declare (ignore handler request response))
   (with-output-to-string (s)
@@ -217,6 +230,7 @@
 ;;; NMEA
 
 ;;; The web page can't fetch the position from the Telnet port itself.
+;;; Validate the supplied NMEA port, fetch a GPRMC position server-side and serialize the result.
 (defun |getBoatPosition| (handler request response &key (|host| "nmea.fairwinds.world") (|port| ""))
   (declare (ignore handler request response))
   (let* ((host |host|)
@@ -251,7 +265,7 @@
 
 (defun cycle-download-count (ids cycle)
   "Number of downloaded files and total number of files of CYCLE for all datasources IDS.
-Returns NIL if the cycle does not exist for the datasources."
+Returns two values, present and total; returns NIL on errors. Missing files count as absent."
   (handler-case
       (let ((present 0) (total 0))
         (dolist (id ids)
@@ -271,6 +285,8 @@ Returns NIL if the cycle does not exist for the datasources."
         (values present total))
     (error () nil)))
 
+;;; Inspect up to twelve cycles per datasource group, reporting the latest complete cycle and a
+;;; newer partial download.
 (defun get-download-status ()
   (loop
     :for (name . ids) :in *download-status-sources*
@@ -309,6 +325,8 @@ Returns NIL if the cycle does not exist for the datasources."
   twa_steps
   last_routestats)
 
+;;; Serialize server uptime origin, download/cache counts, request count, routing limits and the
+;;; last route statistics.
 (defun |getStatistics| (handler request response)
   (declare (ignore handler request response))
   (with-output-to-string (s)
@@ -321,6 +339,7 @@ Returns NIL if the cycle does not exist for the datasources."
                         *twa-steps*
                         *last-routestats*))))
 
+;;; Count entries by traversing the supplied hash table.
 (defun number-of-entries (hashtable)
   (let ((count 0))
     (maphash (lambda (k v) (declare (ignore k v)) (incf count)) hashtable)
@@ -329,6 +348,7 @@ Returns NIL if the cycle does not exist for the datasources."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 
+;;; Read PATH as octets into the HTTP response body and infer Content-Type from its extension.
 (defun load-file (path response)
   ;; The FILE-HANDLER response handler does a lot more - 
   ;; Think about redesigning this
@@ -342,6 +362,8 @@ Returns NIL if the cycle does not exist for the datasources."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Helper functions
 
+;;; Build routing inputs, polar cache and search bounds; cap duration in seconds at *MAX-ROUTE-
+;;; HOURS*.
 (defun get-routing-presets (&key
                               (polars-id)
                               (use-waves nil)
@@ -390,6 +412,8 @@ lat1,lon1,lat2,lon2 (gate). Returns a list of latlng and GATE structs."
                    (make-gate :a (make-latlng :lat (first coords) :lng (second coords))
                               :b (make-latlng :lat (third coords) :lng (fourth coords)))))))
 
+;;; Copy the polar's angle samples into an adjustable double-float vector with two slots reserved
+;;; for runtime VMG angles.
 (defun make-twa-angles-buffer (cpolars)
   (let ((buffer
           (make-array (length (cpolars-twa cpolars))
@@ -404,6 +428,7 @@ lat1,lon1,lat2,lon2 (gate). Returns a list of latlng and GATE structs."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Predefined races
 
+;;; Read a UUID from Linux's /proc/sys/kernel/random/uuid interface.
 (defun create-uuid ()
   (with-open-file (f "/proc/sys/kernel/random/uuid")
     (read-line f)))

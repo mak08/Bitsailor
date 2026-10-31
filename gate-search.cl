@@ -15,10 +15,14 @@
 (defvar *gate-progress* nil "Request-local radial high-water marks by stage and bucket.")
 (defstruct gate-state point (stage 0) origin source crossings)
 
+;;; Return true only for a gate stage whose coverage vector is completely marked; the final
+;;; destination stage cannot retire.
 (defun gate-stage-retired-p (stage coverage)
   (and (< stage (length coverage))
        (every (lambda (hit) (= hit 1)) (aref coverage stage))))
 
+;;; Mark along-gate intervals reached by crossings in valid retained states; repeated hits do not
+;;; fill other intervals.
 (defun record-gate-coverage (states gates coverage)
   (dolist (state states)
     (dolist (crossing (gate-state-crossings state))
@@ -29,6 +33,7 @@
                                    (gate-position-fraction (aref gates stage) (cdr crossing)))))))
         (setf (aref bins index) 1)))))
 
+;;; Update request-local maximum radii for accepted states in each stage/bearing bucket.
 (defun record-gate-progress (states centers)
   (when *gate-progress*
     (dolist (state states)
@@ -60,6 +65,8 @@
     (if (< den 1d-12) 0d0
         (max 0d0 (min 1d0 (/ (+ (* px x) (* py y)) den))))))
 
+;;; Measure distance in metres to a point target or to the gate's locally projected nearest
+;;; position.
 (defun gate-stage-distance (target pos)
   (course-distance pos
                    (if (gate-p target)
@@ -69,17 +76,23 @@
                            (course-angle a b)))
                        target)))
 
+;;; Return a bearing in degrees, using zero when points are less than a millimetre apart to avoid
+;;; an undefined direction.
 (defun gate-course-angle (from to)
   (if (< (course-distance from to) 1d-3) 0d0 (course-angle from to)))
 
+;;; Choose bucket width from the configured minimum and per-stage point/survivor budget.
 (defun gate-angular-width ()
   (max *gate-bucket-width*
        (/ 360d0 (max 1 (floor *max-iso-points* *gate-bucket-survivors*)))))
 
+;;; Return the fixed stage origin when available, otherwise the state's actual crossing origin.
 (defun gate-stage-center (state centers)
   (if centers (aref centers (gate-state-stage state))
       (routepoint-position (gate-state-origin state))))
 
+;;; Identify the stage and wrapped origin-bearing bucket; TARGETS is retained as an unused
+;;; interface argument.
 (defun gate-state-key (state targets &optional centers)
   (declare (ignore targets))
   (list (gate-state-stage state)
@@ -92,7 +105,8 @@
                                                         (capacity *gate-bucket-survivors*))
   "Keep outward progress in origin-centred sectors, separately for every stage.
 A common origin makes candidates from different gate crossings comparable at the
-same simulation time. Target-centred distance pruning collapses distant approaches."
+same simulation time. Reject candidates behind the historical radial maximum,
+then retain up to CAPACITY spatially separated candidates for later land checks."
   (let* ((key (gate-state-key state targets centers))
          (old (gethash key buckets))
          (center (gate-stage-center state centers))
@@ -129,7 +143,7 @@ same simulation time. Target-centred distance pruning collapses distant approach
                       :until (= count *gate-bucket-survivors*))))
 
 (defun gate-frontier-isochrones (frontier centers time wind max-step-distance)
-  "Draw only the outer envelope of each stage, splitting gaps and radial jumps."
+  "Build display fragments from each stage's outer envelope, splitting gaps and radial jumps."
   (let ((result nil))
     (dotimes (stage (length centers))
       (let* ((center (aref centers stage))
@@ -194,6 +208,8 @@ The endpoint stays on the common clock; intersections retain fractional times."
     (setf (routepoint-predecessor point) from)
     (make-gate-state :point point :stage stage :origin origin :source (gate-state-point state) :crossings crossings)))
 
+;;; Test final arrival by proximity or by passing the destination distance within 1.5 degrees from
+;;; the actual crossing origin.
 (defun gate-state-reached-p (state destination)
   (let* ((point (gate-state-point state))
          (origin (routepoint-position (gate-state-origin state)))
@@ -204,6 +220,8 @@ The endpoint stays on the common clock; intersections retain fractional times."
              (<= (abs (normalize-angle (- (gate-course-angle origin pos) bearing))) 1.5d0)
          (>= (course-distance origin pos) (course-distance origin destination))))))
 
+;;; Expand all active gate stages on one clock, prune radial regressions and retire covered
+;;; stages; return route info, best point and last crossing origin.
 (defun get-route-through-gates (routing gates)
   (declare (notinline expand-routepoint))
   (let* ((targets (coerce (append gates (list (routing-dest routing))) 'vector))

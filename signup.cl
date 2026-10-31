@@ -30,6 +30,8 @@ Best Regards
 
 ")
 
+;;; Invoke the local mail command as MAILUSER and return the activation URL; mail-command errors
+;;; are suppressed.
 (defun send-email (email activation-secret boat &key (mailuser *mailuser*) (hostname *mailhost*))
   (declare (ignore boat))
   (let* ((mailcmd "mail")
@@ -45,11 +47,12 @@ Best Regards
      (get-output-stream-string out))
     activation-link))
 
+;;; Reserve a boat name in USER_PROV, returning (NIL :BOATNAME-EXISTS) for another email's
+;;; reservation or (T :OK).
 (defun register-signup (email activation-secret boatname pwhash)
   ;; Check if the boat name can be reserved.
-  ;; If not, return NIL and a message describing the reason.
-  ;; If yes, reserve boatname by creating an inactive entry in USER.
-  ;; Return t.
+  ;; Return NIL and a reason keyword on conflict; otherwise upsert USER_PROV.
+  ;; Activation later promotes this provisional record to USER.
   (let* ((user
            (get-user-by-boatname boatname))
          (provisional

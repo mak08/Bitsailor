@@ -37,6 +37,8 @@ a few hundred km."
             (when (and (<= 0d0 fraction 1d0) (<= 0d0 u 1d0))
               fraction)))))))
 
+;;; Interpolate a crossing position and fractional timestamp, link it to PREDECESSOR and push it
+;;; onto *GATE-CROSSINGS*.
 (defun record-gate-crossing (gate fraction predecessor new-pos step-size
                              twa heading speed sail wind-dir wind-speed curnt-dir curnt-speed
                              wave-height wave-dir wave-factor)
@@ -70,10 +72,13 @@ a few hundred km."
   "Optional candidate consumer used by the shared-clock gate search.")
 
 (declaim (inline bucket))
+;;; Convert an origin bearing to an integer angular bucket using DELTA-ANGLE degrees per bucket.
 (defun-t bucket fixnum ((origin-angle double-float) (delta-angle double-float))
   (truncate origin-angle delta-angle))
   
 (declaim (inline add-routepoint))
+;;; Send a candidate to the shared gate-search sink, or retain outward progress in the single-leg
+;;; angular bucket and history arrays.
 (defun-t add-routepoint null ((predecessor routepoint)
                               (position latlng)
                               (origin-distance double-float)
@@ -139,6 +144,8 @@ a few hundred km."
                                  wave-factor)))))
   (values))
 
+;;; Remove empty, zoned and land-blocked candidates. Bitmap mode checks endpoints; vector mode
+;;; checks segments. LIMITS is unused.
 (defun-t filter-isochrone vector ((isochrone vector) &key (limits nil) (zones nil) (use-bitmap *use-bitmap*))
   (let ((filtered
           (loop

@@ -5,6 +5,7 @@
 
 (in-package :bitsailor)
 
+;;; Nest MULTIPLE-VALUE-BIND forms in source order so later bindings can use earlier values.
 (defmacro with-bindings (bindings &body forms)
   (let* ((bindings (reverse bindings))
          (head (car bindings))
@@ -21,6 +22,8 @@
 (defvar *memoized-functions-ht*
   (make-hash-table))
 
+;;; Replace F's global function with an EQUAL-keyed argument cache; preserve the original for
+;;; UNMEMOIZE.
 (defun memoize (f)
   (let* ((ff (symbol-function f))
          (entry (gethash f *memoized-functions-ht*)))
@@ -37,6 +40,7 @@
                                (setf (gethash args cache)
                                      (apply ff args)))))))))))
 
+;;; Restore the original global function registered by MEMOIZE; signal an error if none was saved.
 (defun unmemoize (f)
   (let ((entry (gethash f *memoized-functions-ht*)))
     (cond
@@ -46,6 +50,8 @@
       (t
         (error "~a is not memoized" f)))))
 
+;;; Look up ARG in MEMO-HT, evaluating and caching FORM only when the key is absent (cached NIL is
+;;; valid).
 (defmacro memoized (arg memo-ht form)
   `(multiple-value-bind (value found)
        (gethash ,arg ,memo-ht)

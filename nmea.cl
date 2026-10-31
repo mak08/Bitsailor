@@ -8,6 +8,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
 
+;;; Read NMEA socket lines until reading stops, then return the first matching GPRMC position;
+;;; connection timeout returns NIL.
 (defun get-gprmc (host port &key (timeout 250) (connect-timeout 1))
   (log2:info "Connecting to NMEA socket at ~a:~a" host port)
   (handler-case
@@ -34,6 +36,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Internal functions
 
+;;; Decode GPRMC position and UTC date/time into POSINFO; speed/course remain strings and
+;;; validity/checksum fields are ignored.
 (defun parse-gprmc (m)
   ;; $GPRMC,185951.00,A,4103.4804,N,02426.2568,W,10.795927221436223,256,120421,,,A*66
   (destructuring-bind (key time a lat lat-sgn lng lng-sgn speed course date vari vari-sign &rest flags)
@@ -54,6 +58,7 @@
                     :speed speed
                     :course course))))
   
+;;; Convert NMEA degrees/minutes text and hemisphere into signed decimal degrees.
 (defun decode-latlng (value direction)
   (let* ((p (- (position #\. value) 2))
          (degrees (parse-integer (subseq value 0 p)))

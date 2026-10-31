@@ -10,10 +10,12 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Special types
 
+;;; Serialize a duration using its printed representation as a JSON string.
 (defmethod json% (stream (thing duration))
   (format stream "\"~s\"" thing))
 
 
+;;; Serialize geographic vectors as latitude/longitude objects and other vectors as JSON arrays.
 (defmethod json% (stream (thing vector))
   (typecase thing
     (latlng

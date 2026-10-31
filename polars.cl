@@ -11,8 +11,10 @@
 (defstruct cpolars id label name maxspeed speed sailspeeds twa vmg)
 (defstruct sail name speed)
 
+;;; Write a compact cpolars representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing cpolars) stream)
   (format stream "[CPolars ~a ~a]" (cpolars-label thing) (cpolars-name thing)))
+;;; Write a compact polars representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing polars) stream)
   (format stream "[Polars ~a ~a]" (polars-label thing) (polars-name thing)))
 
@@ -38,6 +40,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; API
 (declaim (inline get-max-speed))
+;;; Return the cached (speed sail-index) pair at rounded 0.1-degree TWA and 0.1-m/s wind indices,
+;;; clamping upper bounds.
 (defun get-max-speed (cpolars twa tws)
   (declare (double-float twa tws))
   (let* ((speed (cpolars-maxspeed cpolars))
@@ -46,6 +50,8 @@
          (tws-index (min (round (* tws 10.0)) (1- (second dim)))))
   (aref (cpolars-maxspeed cpolars) twa-index tws-index)))
 
+;;; Encode light, heavy and reach sail groups as a bit mask; the two base sails are always
+;;; enabled.
 (defun encode-options (option-list)
   (let ((options 3))
     (when (member "light" option-list :test #'string=)
@@ -59,6 +65,8 @@
     options))
 
 (declaim (inline compute-max-speed))
+;;; Build a (speed sail-index) table from per-sail speeds; sail masking has already occurred
+;;; upstream, so OPTIONS is unused here.
 (defun compute-max-speed (speed options)
   (let* ((dimensions (array-dimensions speed))
          (max (make-array dimensions)))
@@ -70,6 +78,8 @@
       :finally (return max))))
 
 (declaim (inline compute-max-speed-1))
+;;; Choose the fastest sail at one grid cell, preferring later sails on ties; impose a 0.007 m/s
+;;; minimum speed.
 (defun compute-max-speed-1 (speed twa tws)
   (do*
    ((imax 0)
@@ -84,6 +94,7 @@
         (setf imax i
               vmax v)))))
 
+;;; Return or build the cached combined polar table for an ID and sail-option mask.
 (defun get-combined-polars (id &optional (options +allsails+))
   ;; cpolar speeds are in m/s, not kts!
   (log2:info "id=(~a)~a options=~a" (type-of id) id options)
@@ -96,6 +107,8 @@
               (preprocess-polars id options)))))
 
 (declaim (inline best-vmg))
+;;; Return upwind and downwind VMG records for rounded wind speed in m/s, clamping above the
+;;; cached range.
 (defun best-vmg (cpolars windspeed)
   (let ((index (round (* windspeed 10d0)))
         (vmg (cpolars-vmg cpolars)))
@@ -107,6 +120,8 @@
        (values-list (aref vmg (1- (length vmg))))))))
 
 
+;;; Project polar boat speed onto COURSE-ANGLE relative to TWA; angles are degrees and speeds are
+;;; m/s.
 (defun vmc (cpolars twa tws course-angle)
   (destructuring-bind (speed sail)
       (get-max-speed cpolars twa tws)
@@ -115,6 +130,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Implementation
 
+;;; Build sampled TWA angles, interpolated sail speeds, winning-sail lookup and VMG tables for a
+;;; polar/options pair.
 (defun preprocess-polars (id options)
   (let* ((polars (get-polars-by-id id))
          (tws (polars-tws polars))
@@ -137,6 +154,8 @@
                   :maxspeed maxspeed
                   :vmg (precompute-vmg maxspeed max-wind))))
 
+;;; Tabulate per-sail speeds at 0.1-degree TWA and 0.1-m/s wind increments through the polar's
+;;; maximum wind.
 (defun interpolated-speeds (polars options)
   (let* ((tws (polars-tws polars))
          (max-wind (ceiling (aref tws (1- (length tws)))))
@@ -151,6 +170,7 @@
       :finally (return speeds))))
 
 (declaim (inline get-boat-speed))
+;;; Return a speed vector for one TWA/wind pair; disabled sails contribute zero.
 (defun interpolated-speed (twa tws polars options)
   (let* ((number-of-sails (length (polars-sails polars)))
          (sail-speeds
@@ -168,6 +188,8 @@
                 :element-type 'double-float
                 :initial-contents sail-speeds)))
 
+;;; Build paired upwind/downwind VMG records for wind speeds from zero through MAX-WIND in 0.1-m/s
+;;; increments.
 (defun precompute-vmg (maxspeed max-wind)
   (let ((precomputed
          (loop
@@ -185,6 +207,8 @@
   (twa 0d0 :type double-float)
   (sail nil :type t))
 
+;;; Search integer angles 0 through 170 degrees for maximum positive and negative wind-axis
+;;; velocity; return two VMG records.
 (defun best-vmg% (maxspeed tws)
   (loop
      :with best-vmg-up = 0.0d0
@@ -211,6 +235,8 @@
                     (values (make-vmg :vmg (coerce best-vmg-up 'double-float) :sail best-sail-up :twa (coerce best-twa-up 'double-float))
                             (make-vmg :vmg (coerce (abs best-vmg-down) 'double-float) :sail best-sail-down :twa (coerce best-twa-down 'double-float)))))))
 
+;;; Bilinearly interpolate a single sail's raw speed table at angle in degrees and wind speed in
+;;; m/s.
 (defun-t get-boat-speed double-float
     ((angle double-float)
      (wind-speed double-float)
@@ -236,11 +262,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from file
 
+;;; Return raw polars indexed by name, signalling an error if the name is unknown.
 (defun get-polars-by-name (name)
   (let ((polars (gethash name *polars-name-ht*)))
     (or polars
         (error "No polars found with id=(~a)~a" (type-of name) name))))
 
+;;; Return raw polars indexed by ID, signalling an error if the ID is unknown.
 (defun get-polars-by-id (id)
   (let ((polars (gethash id *polars-id-ht*)))
     (or polars
@@ -249,6 +277,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Return list of available polars
 
+;;; Return lightweight polar records containing IDs and labels for the browser's selector.
 (defun get-polars-list ()
   (let ((polars-list (list)))
     (maphash (lambda (k v)
@@ -262,16 +291,19 @@
 ;;; Reading polars from JSON
 ;;; JSON polars are in deg and kts, while GRIB data is in m/s!
 
+;;; Load JSON polar files from DIRECTORY into the polar lookup tables.
 (defun load-polars-directory (&key (directory *polars-dir*))
   (loop
      :for name :in (directory (merge-pathnames directory (make-pathname :name :wild :type "json")))
      :do
-        ;; Side-effects are performed by the RS/VR functions
+        ;; Loading registers the translated polar in the lookup tables.
         (let ((filename (merge-pathnames name
                                          (merge-pathnames (make-pathname :type "json")
                                                           (pathname *polars-dir*)))))
           (load-polars-file filename))))
 
+;;; Read a JSON polar file and dispatch the supported Fairwinds data_json format; reject other
+;;; formats.
 (defun load-polars-file (filename)
   (let* ((json-object  (parse-json-file filename)))
     (log2:info "Loading ~a" filename)
@@ -280,6 +312,7 @@
           (t
            (error "Unknown polars format")))))
 
+;;; Collect the IDs currently present in the raw polar cache.
 (defun list-polars ()
   (let ((polar-ids nil))
     (maphash (lambda (k v) (push k polar-ids)) *polars-id-ht*)
@@ -288,11 +321,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Reading polars from CSV
 
+;;; Convert each CSV polar file in DIRECTORY to a sibling JSON file, replacing existing JSON
+;;; output.
 (defun csv-to-json-directory  (&key (directory *polars-dir*))
   (loop
     :for name :in (directory (merge-pathnames (make-pathname :name :wild :type "csv") directory))
     :do
-       ;; Side-effects are performed by the RS/VR functions
+       ;; Write the converted data to the corresponding JSON file.
        (let ((filename-csv (merge-pathnames (merge-pathnames (make-pathname :type "csv")
                                                              (pathname *polars-dir*))
                                             name))
@@ -306,6 +341,8 @@
            (log2:info "~a --> ~a~%" filename-csv filename-json)
            (json json-file (csv-to-json-object filename-csv))))))
 
+;;; Read past lines beginning with #; EOF handling follows EOF-ERROR-P. Blank lines are not
+;;; handled specially.
 (defun read-noncomment-line (stream &optional (eof-error-p t))
   (loop
     :for line = (read-line stream eof-error-p)

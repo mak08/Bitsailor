@@ -5,6 +5,7 @@
 
 (in-package :bitsailor)
 
+;;; Translate a Fairwinds JSON polar and register it under its resulting name and ID.
 (defun translate-polars-fw (polars-name json-object)
   (let* ((polars (translate-polars-fw% polars-name json-object))
          (id (polars-id polars))
@@ -12,6 +13,8 @@
     (setf (gethash name *polars-name-ht*) polars)
     (setf (gethash id *polars-id-ht*) polars)))
 
+;;; Build raw Fairwinds polars, converting angles to double floats and wind/boat speeds from knots
+;;; to m/s.
 (defun translate-polars-fw% (polars-name json-object)
   ;;; Speed values are in knots. Convert to m/s.
   ;;; Angles are integer deg values. Coerce to double-float because double float is used in simulation

@@ -43,12 +43,14 @@ continues to after the gate; it is used to choose between several crossings."
   box
   %dist)
 
+;;; Compute and cache the start-to-destination great-circle distance in metres.
 (defmethod routing-dist (routing)
   (or (routing-%dist routing)
       (setf  (routing-%dist routing)
              (course-distance (routing-start routing)
                               (routing-dest routing)))))
 
+;;; Write a compact routing representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routing) stream)
   (format stream "{D=~a T=~a Fan=~a TWA=~a"
           (routing-stepmax thing)
@@ -57,21 +59,26 @@ continues to after the gate; it is used to choose between several crossings."
           (routing-twa-angles thing)))
 
 (defstruct duration days hours minutes seconds)
+;;; Write a compact duration representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing duration) stream)
   (format stream "~dd ~2,'0dh ~2,'0dm"
           (duration-days thing)
           (duration-hours thing)
           (duration-minutes thing)))
 
+;;; Return the matching options-list tail when the foil option is present, otherwise NIL.
 (defun routing-foils (routing)
   (member "foil" (routing-options routing) :test #'string=))
+;;; Return the matching options-list tail when the hull option is present, otherwise NIL.
 (defun routing-hull (routing)
   (member "hull" (routing-options routing) :test #'string=))
+;;; Return the matching options-list tail when the winch option is present, otherwise NIL.
 (defun routing-winches (routing)
   (member "winch" (routing-options routing) :test #'string=))
 
 (defstruct routestats start duration sails min-wind max-wind min-twa max-twa calctime steps points)
 
+;;; Write a compact routestats representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routestats) stream)
   (format stream "D:~a T:~,2f S:~a"
           (routestats-duration thing)
@@ -80,6 +87,7 @@ continues to after the gate; it is used to choose between several crossings."
 
 (defstruct routeinfo status best polars options stats tracks isochrones)
 
+;;; Write a compact routeinfo representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routeinfo) stream)
   (let ((stats (or (routeinfo-stats thing)
                    (make-routestats))))
@@ -119,6 +127,8 @@ continues to after the gate; it is used to choose between several crossings."
 (defstruct trackpoint
   time position heading dtf speed sail crntdir crntspd twd tws twa wave-height wave-dir wave-factor)
 
+;;; Convert a predecessor-chain point for output, using SUCCESSOR for the outgoing leg's heading,
+;;; speed, sail and waves.
 (defun create-trackpoint (routepoint successor)
   (make-trackpoint :time (routepoint-time routepoint)
                    :position (routepoint-position routepoint)
@@ -136,6 +146,7 @@ continues to after the gate; it is used to choose between several crossings."
                    :wave-dir (routepoint-wave-dir successor)
                    :wave-factor (routepoint-wave-factor successor)))
 
+;;; Write a compact routepoint representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routepoint) stream)
   (format stream "<~a@~a|~a|~a>"
           (routepoint-position thing)
@@ -152,17 +163,21 @@ continues to after the gate; it is used to choose between several crossings."
                      (adjust-timestamp timestamp (offset :hour offset))
                      :format '((:year 4) "-" (:month 2) "-" (:day 2) ", " (:hour 2) "Uhr") :timezone timezone))  
 
+;;; Write UTC hours and minutes with a Z suffix, or return a string when STREAM is NIL.
 (defun format-time (stream timestamp)
   (format stream "~2,'0d:~2,'0dZ"
           (timestamp-hour timestamp :timezone +utc-zone+)
           (timestamp-minute timestamp :timezone +utc-zone+)))
 
+;;; Write the UTC calendar date as YYYY-MM-DD, or return a string when STREAM is NIL.
 (defun format-date (stream timestamp)
   (format stream "~4,'0d-~2,'0d-~2,'0d"
           (timestamp-year timestamp :timezone +utc-zone+)
           (timestamp-month timestamp :timezone +utc-zone+)
           (timestamp-day timestamp :timezone +utc-zone+)))
 
+;;; Format date and time using TIMEZONE (UTC by default); the output always includes a literal Z
+;;; suffix.
 (defun format-datetime (stream timestamp &key (timezone +utc-zone+))
   (format stream "~4,'0d-~2,'0d-~2,'0dT~2,'0d:~2,'0d:~2,'0dZ"
           (timestamp-year timestamp :timezone timezone)
@@ -172,6 +187,8 @@ continues to after the gate; it is used to choose between several crossings."
           (timestamp-minute timestamp :timezone timezone)
           (timestamp-second timestamp :timezone timezone)))
 
+;;; Parse a date and time separated by T as UTC, allowing omitted seconds and an optional trailing
+;;; Z.
 (defun parse-datetime (string)
   (destructuring-bind (date time)
       (cl-utilities:split-sequence #\T string)
@@ -191,6 +208,7 @@ continues to after the gate; it is used to choose between several crossings."
                             (read-from-string y)
                             :timezone +utc-zone+))))))
 
+;;; Write a compact timestamp representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing timestamp) stream)
   (format-rfc1123-timestring stream thing))
 

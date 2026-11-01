@@ -78,7 +78,8 @@ a few hundred km."
   
 (declaim (inline add-routepoint))
 ;;; Send a candidate to the shared gate-search sink, or retain outward progress in the single-leg
-;;; angular bucket and history arrays.
+;;; angular bucket and history arrays. MAX-DIST is the persistent, absolute-bearing history;
+;;; NEXT-ISOCHRONE uses fan-offset slots and is cleared each step. Both comparisons are strict.
 (defun-t add-routepoint null ((predecessor routepoint)
                               (position latlng)
                               (origin-distance double-float)
@@ -123,6 +124,8 @@ a few hundred km."
               (> origin-distance
                  (routepoint-origin-distance (aref next-isochrone bucket))))
       (when (> origin-distance (aref max-dist max-bucket))
+        ;; Record admission now, before FILTER-ISOCHRONE checks land. A blocked
+        ;; winner leaves this radial mark in place; no smaller fallback is kept.
         (setf (aref max-dist max-bucket) origin-distance)
         (setf (aref next-isochrone bucket)
               (create-routepoint predecessor

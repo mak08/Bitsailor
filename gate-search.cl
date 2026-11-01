@@ -194,6 +194,17 @@ The endpoint stays on the common clock; intersections retain fractional times."
     (setf (routepoint-predecessor point) from)
     (make-gate-state :point point :stage stage :origin origin :source (gate-state-point state) :crossings crossings)))
 
+;;; Check a newly crossed endpoint against its new stage's actual-origin fan.
+;;; This prunes the completed step; it does not turn the boat at the crossing.
+(defun gate-state-in-fan-p (state targets fan)
+  (let* ((origin (routepoint-position (gate-state-origin state)))
+         (position (routepoint-position (gate-state-point state)))
+         (target (target-position (aref targets (gate-state-stage state)))))
+    (or (< (course-distance origin position) 1d-3)
+        (<= (abs (normalize-angle (- (gate-course-angle origin position)
+                                    (gate-course-angle origin target))))
+            fan))))
+
 ;;; Test final arrival by proximity or by passing the destination distance within 1.5 degrees from
 ;;; the actual crossing origin.
 (defun gate-state-reached-p (state destination)
@@ -238,7 +249,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
          (centers (coerce (cons (routing-start routing) (mapcar #'target-position gates)) 'vector))
          (start-time (parse-datetime-local (routing-starttime routing)))
          (started (now))
-         (stepper (make-stepper start-time (routing-stepmax routing)))
+         (stepper (make-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)))
          (initial-wind (multiple-value-list (wind-at routing (routing-start routing) start-time)))
          (initial-params (third initial-wind))
          (initial (create-routepoint nil (routing-start routing) start-time nil nil
@@ -259,7 +270,8 @@ The endpoint stays on the common clock; intersections retain fractional times."
                      (max-step-distance 100d0))
                 (dolist (state frontier)
                   (let* ((leg (copy-routing routing))
-                         (origin (aref centers (gate-state-stage state)))
+                         (center (aref centers (gate-state-stage state)))
+                         (origin (routepoint-position (gate-state-origin state)))
                          (target (target-position (aref targets (gate-state-stage state))))
                          (*routepoint-sink*
                            (lambda (point)
@@ -268,20 +280,27 @@ The endpoint stays on the common clock; intersections retain fractional times."
                                         (course-distance (routepoint-position (gate-state-point state))
                                                          (routepoint-position point))))
                              (let ((next (advance-gate-state state point targets)))
-                               (flet ((validp ()
-                                        (not (approach-blocked-p
-                                              (routepoint-position (gate-state-point state))
-                                              (routepoint-position point)))))
-                                 (if (and (= (gate-state-stage next) final-stage)
-                                          (gate-state-reached-p next (routing-dest routing)))
-                                     (when (validp) (push next arrivals))
-                                     (unless (gate-stage-retired-p (gate-state-stage next) coverage)
-                                       (retain-gate-state next buckets targets centers))))))))
+                               ;; Entering a new stage must not seed a frontier outside
+                               ;; its crossing-centred fan, even on the crossing step.
+                               (when (or (null (gate-state-crossings next))
+                                         (gate-state-in-fan-p next targets (routing-fan leg)))
+                                 (flet ((validp ()
+                                          (not (approach-blocked-p
+                                                (routepoint-position (gate-state-point state))
+                                                (routepoint-position point)))))
+                                   (if (and (= (gate-state-stage next) final-stage)
+                                            (gate-state-reached-p next (routing-dest routing)))
+                                       (when (validp) (push next arrivals))
+                                       (unless (gate-stage-retired-p (gate-state-stage next) coverage)
+                                         (retain-gate-state next buckets targets centers)))))))))
                     (setf (routing-start leg) origin (routing-dest leg) target
                           (routing-gate leg) nil
-                          ;; A fixed stage reference preserves the original fan
-                          ;; and outward-frontier criterion across crossing origins.
-                          (routing-box leg) (make-routing-box origin target))
+                          ;; Steering/fan geometry follows the actual crossing origin.
+                          ;; Buckets, radial history and the search box keep the fixed
+                          ;; stage centre. This pools crossing histories; a common
+                          ;; frame alone does not establish radial dominance (see
+                          ;; diagnostics/GATE-LENGTH.md).
+                          (routing-box leg) (make-routing-box center target))
                     (let ((bearing (gate-course-angle origin target)))
                       (incf points (expand-routepoint leg (gate-state-point state)
                                      (mod (- bearing (routing-fan leg)) 360d0)
@@ -307,7 +326,7 @@ The endpoint stays on the common clock; intersections retain fractional times."
                   (setf isochrones
                         (nconc isochrones
                                (gate-frontier-isochrones frontier centers end-time wind
-                                 max-step-distance (routing-forecast-model routing) time))))))
+                                 max-step-distance (routing-model-at routing time) time))))))
     (let* ((rp (gate-state-point best)) (track (route-from-point rp)))
       (values (make-routeinfo :status status :best track
                 :forecast-model (routing-forecast-model routing)

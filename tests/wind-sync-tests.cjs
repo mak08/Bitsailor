@@ -131,7 +131,13 @@ cache.updateCanvas = async () => {};
   assert.equal(waypoints[0][0], 39.1);
   assert.ok(Math.abs(waypoints[0][1] - 2.2) < 1e-10);
   assert.deepEqual(waypoints[1], [40, 4]);
-  assert.equal(request.searchParams.get('forecast_model'), 'NOAA-GFS-WIND');
+  assert.deepEqual(request.searchParams.getAll('forecast_model'), ['NOAA-GFS-WIND']);
+  assert.deepEqual(request.searchParams.getAll('useWaves'), ['true']);
+  assert.equal(request.searchParams.get('forecast_switch_hours'), 'off');
+  node('sel_secondary_forecast_model').value = 'ECMWF-IFS-WIND';
+  vm.runInContext(`settings.forecast_switch_hours = '12'; getRoute();`, ui);
+  assert.deepEqual(request.searchParams.getAll('secondary_forecast_model'), ['ECMWF-IFS-WIND']);
+  assert.deepEqual(request.searchParams.getAll('forecast_switch_hours'), ['12']);
   assert.equal(request.searchParams.get('startTime'), '2026-10-31T22:14');
   assert.equal(vm.runInContext('currentCycle', ui), base); // Replay remains intact.
   // Matching the backend's scalar interpolation matters when vector directions differ.

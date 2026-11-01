@@ -123,6 +123,8 @@
                                               (|useWaves| nil)
                                               (|currents| nil)
                                               (|forecast_model| nil)
+                                              (|secondary_forecast_model| nil)
+                                              (|forecast_switch_hours| nil)
                                               (|cycle| nil)
                                               |slat|
                                               |slon|
@@ -159,6 +161,8 @@
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :currents currents
                                   :forecast-model forecast-model
+                                  :secondary-forecast-model (parse-secondary-model |secondary_forecast_model| |forecast_switch_hours|)
+                                  :forecast-switch-hours (parse-forecast-switch-hours |forecast_switch_hours|)
                                   :cycle (parse-routing-cycle |cycle| forecast-model)
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :starttime |startTime|
@@ -392,6 +396,19 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
         (get-mime-for-extension (pathname-type path))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Secondary model switching is opt-in; reject malformed enabled requests as 400.
+(defun parse-forecast-switch-hours (value)
+  (cond ((or (null value) (equal value "off")) nil)
+        ((member value '("6" "12" "24") :test #'equal) (parse-integer value))
+        (t (error 'request-error :message "forecast_switch_hours must be off, 6, 12 or 24"))))
+
+(defun parse-secondary-model (value hours)
+  (when (parse-forecast-switch-hours hours)
+    (let ((model (and value (find-symbol (string-upcase value) :cl-weather))))
+      (unless (and model (find-class model nil) (subtypep model 'cl-weather::datakind-wind))
+        (error 'request-error :message "A valid secondary wind model is required"))
+      model)))
+
 ;;; Helper functions
 
 ;;; Build routing inputs, polar cache and search bounds; cap duration in seconds at *MAX-ROUTE-
@@ -401,6 +418,8 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               (use-waves nil)
                               (currents nil)
                               (forecast-model 'cl-weather:noaa-gfs-wind)
+                              (secondary-forecast-model nil)
+                              (forecast-switch-hours nil)
                               (cycle nil)
                               (starttime nil)
                               (options)
@@ -428,6 +447,10 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :use-waves use-waves
      :currents currents
      :forecast-model forecast-model
+     :secondary-forecast-model secondary-forecast-model
+     :forecast-switch-time (when forecast-switch-hours
+                             (adjust-timestamp (parse-datetime-local starttime)
+                                               (:offset :hour forecast-switch-hours)))
      :cycle cycle
      :twa-angles (make-twa-angles-buffer cpolars))))
 

@@ -2,6 +2,8 @@
 
 This document describes the implementation in the working tree, including the gate-retirement threshold and the removal of general-purpose sorting from the active multi-leg search. It distinguishes the search's arrival objective from the heuristics used to limit its size. The algorithm is an approximate isochrone search; it does not guarantee the globally earliest arrival.
 
+A [six-figure sequence](figures/gate-frontier/README.md) shows actual frontier states approaching a gate, crossing it on the shared clock, and retiring the pre-gate stage.
+
 ## 1. Entry points and target grouping
 
 The HTTP handler `|getRoute|` in [http-api.cl](http-api.cl) parses `waypoints` as a `~`-separated sequence. Two coordinates specify a point; four specify the endpoints of a gate. The destination remains a separate point. `get-route` in [simulation.cl](simulation.cl) dispatches requests with waypoints to `get-route-via-waypoints` in [waypoints.cl](waypoints.cl). Requests without waypoints use `get-route-leg`.
@@ -48,10 +50,10 @@ The routepoint contains position, time, sailing/weather data and a predecessor l
 
 The fixed stage centre and the actual crossing origin have different purposes:
 
-- Stage 0's fixed centre is the leg start. Stage k's fixed centre is the midpoint of gate k−1. It determines angular buckets, radial progress, the routing fan and search box.
-- A state's actual origin is the position where its own path last crossed a gate. The final arrival test uses this origin, and it supplies the boundary for the intermediate-point approach lookback.
+- Stage 0's fixed centre is the leg start. Stage k's fixed centre is the midpoint of gate k−1. It determines angular buckets, radial progress and the search box.
+- A state's actual origin is the position where its own path last crossed a gate. The search fan is measured from this origin toward the next target. The final arrival test also uses it, and it supplies the boundary for the intermediate-point approach lookback.
 
-Using a common fixed centre lets crossings from different positions compete in the same stage. Resetting the angular frame independently at every crossing would produce many separate fans. The midpoint is a reference for pruning; the boat is not moved there.
+Using a common fixed centre lets crossings from different positions compete in the same stage. The fan follows each actual crossing, while all candidates still compete in the same fixed bucket frame. The midpoint is a reference for pruning; the boat is not moved there.
 
 ## 3. One clock for the whole gate group
 
@@ -59,7 +61,7 @@ All frontier endpoints share the same timestamp. `make-stepper` chooses the time
 
 Wind, optional currents, and optional wave parameters are obtained for the start of the step. Each frontier point samples the fields at its own position. `expand-routepoint` tries both tacks at the polar's sampled TWA values plus the current upwind and downwind VMG angles. Only positive TWA magnitudes within the VMG interval are expanded.
 
-For each heading it computes polar speed, wave adjustment and optional current displacement, then an endpoint for the step. Candidates must lie within the stage's latitude/longitude box and angular fan. The fan is centred on the bearing from the fixed stage centre to the target position; a gate's target position is its midpoint. These are geographic restrictions on endpoints, not a ranking by estimated arrival time.
+For each heading it computes polar speed, wave adjustment and optional current displacement, then an endpoint for the step. Candidates must lie within the stage's latitude/longitude box and angular fan. The fan is centred on the bearing from the state's actual last crossing origin (or the leg start in stage 0) to the target position; a gate's target position is its midpoint. Its endpoint bearing is measured from that same actual origin. The search box remains based on the fixed stage centre. These are geographic restrictions on endpoints, not a ranking by estimated arrival time.
 
 When the gate search binds `*routepoint-sink*`, `add-routepoint` sends candidate routepoints to that consumer instead of the ordinary single-leg bucket array. A routepoint is currently allocated before gate-stage pruning, including for candidates that are immediately discarded.
 
@@ -220,10 +222,11 @@ while duration remains:
     create empty per-stage/bearing bucket winners and arrival list
 
     for each frontier state:
-        expand both tacks within the fixed stage fan and box
+        expand both tacks within the actual-crossing fan and fixed-stage box
         for each emitted endpoint:
             insert ordered gate intersections into its track
             determine its resulting stage
+            if newly crossed and outside the resulting actual-crossing fan: discard
             if it qualifies as a final arrival:
                 land-check the complete step and collect if valid
             else if its stage is not retired:

@@ -26,6 +26,9 @@ continues to after the gate; it is used to choose between several crossings."
 (defstruct routing
   cycle
   forecast-model
+  secondary-forecast-model
+  ;; Absolute timestamp, preserved when routing is copied for later legs.
+  forecast-switch-time
   polars
   use-waves
   currents

@@ -17,9 +17,18 @@
 (declaim (inline twa-boatspeed))
 ;;; Obtain wind with the request's explicit cycle, or the source-specific default.
 ;;; CL-WEATHER retains its one-previous-cycle fallback when a required field is missing.
+(defun routing-model-at (routing time)
+  (if (and (routing-secondary-forecast-model routing)
+           (routing-forecast-switch-time routing)
+           (timestamp>= time (routing-forecast-switch-time routing)))
+      (routing-secondary-forecast-model routing)
+      (or (routing-forecast-model routing) 'cl-weather:noaa-gfs-wind)))
+
 (defun routing-wind-params (routing time)
-  (let ((model (or (routing-forecast-model routing) 'cl-weather:noaa-gfs-wind)))
-    (if (routing-cycle routing)
+  (let ((model (routing-model-at routing time)))
+    ;; An explicit cycle belongs to the primary source only.
+    (if (and (routing-cycle routing)
+             (eq model (or (routing-forecast-model routing) 'cl-weather:noaa-gfs-wind)))
         (get-params model time :cycle (routing-cycle routing))
         (get-params model time))))
 
@@ -266,13 +275,17 @@ the selected gate crossing, or the final frontier point nearest the destination.
           ;; The initial value already equals the cap, so bucket capacity stays fixed.
           (max-points *max-iso-points* (min *max-iso-points* (+ max-points 10)))
           (delta-angle (/ 360d0 max-points) (/ 360d0 max-points))
+          ;; Per-leg radial high-water marks in absolute bearing buckets; unlike
+          ;; NEXT-ISOCHRONE, this array has no step form and persists across steps.
+          ;; ADD-ROUTEPOINT updates it before land filtering, without rollback.
+          ;; See diagnostics/MAX-DIST.md for indexing and pruning limitations.
           (max-dist (make-array *max-iso-points* :initial-element 0d0))
           (min-angle (/ 360d0 *max-iso-points*))
           ;; The first step-size and when we apply it is important - brings step-time to mod 10min
-          (stepper (make-stepper start-time  (routing-stepmax routing)))
+          (stepper (make-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)))
           ;; Sample weather at the start of each step before advancing step-time.
-          (wind-source (or (routing-forecast-model routing)
-                           'cl-weather:noaa-gfs-wind))
+          (wind-source (routing-model-at routing start-time)
+                       (routing-model-at routing step-time))
           (params-wind (routing-wind-params routing start-time)
                        (routing-wind-params routing step-time))
           (initial-cycle (cl-weather:uv-cycle (params-fc1 params-wind)))
@@ -308,7 +321,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
                    (best-route (route-from-point best-rp)))
               (log-stats elapsed stepnum pointnum)
               (values
-               (make-routeinfo :forecast-model wind-source
+               (make-routeinfo :forecast-model (routing-model-at routing start-time)
                                :requested-cycle (when (routing-cycle routing) (cl-weather::cycle-timestamp (routing-cycle routing)))
                                :initial-cycle initial-cycle
                                :status (if reached "reached"
@@ -441,7 +454,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
 
 ;;; Return a closure yielding step seconds and the next timestamp, initially aligning to ten
 ;;; minutes and then increasing step size with horizon.
-(defun make-stepper (start-time step-max)
+(defun make-stepper (start-time step-max &optional switch-time)
   (let* ((step-time
            start-time)
          (start-seconds
@@ -473,6 +486,12 @@ the selected gate crossing, or the final frontier point nearest the destination.
                           1800)
                          (t
                           1800)))))))
+        ;; Restore the regular sampling grid after a shortened boundary step.
+        (when (and switch-time (timestamp>= step-time switch-time))
+          (setf step-size (- step-size (mod (timestamp-to-unix step-time) step-size))))
+        ;; End a step exactly at the model boundary, including non-hour departures.
+        (when (and switch-time (timestamp< step-time switch-time))
+          (setf step-size (min step-size (ceiling (timestamp-difference switch-time step-time)))))
         (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
         (values step-size
                 step-time)))))

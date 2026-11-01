@@ -44,6 +44,8 @@ let settings = {
     "polarsId": undefined,
     "useWaves": true,
     "forecast_model": "NOAA-GFS-WIND",
+    "secondary_forecast_model": "ECMWF-IFS-WIND",
+    "forecast_switch_hours": "off",
     "options": ["hull", "winch", "foil", "heavy", "light", "reach"]
 };
 
@@ -228,6 +230,37 @@ function fillForecastModelDropdown() {
     }
     sel.value = selected;
     settings.forecast_model = sel.value;
+    const secondary = document.getElementById('sel_secondary_forecast_model');
+    if (secondary) {
+        secondary.innerHTML = sel.innerHTML;
+        const savedSecondary = localStorage.getItem('xx.secondary_forecast_model');
+        secondary.value = Array.from(secondary.options).some(o => o.value === savedSecondary)
+            ? savedSecondary : (Array.from(secondary.options).some(o => o.value === 'ECMWF-IFS-WIND')
+                ? 'ECMWF-IFS-WIND' : sel.value);
+        settings.secondary_forecast_model = secondary.value;
+        const hours = localStorage.getItem('xx.forecast_switch_hours');
+        settings.forecast_switch_hours = ['6', '12', '24'].includes(hours) ? hours : 'off';
+        updateSecondaryControls();
+    }
+}
+
+function updateSecondaryControls() {
+    const secondary = document.getElementById('sel_secondary_forecast_model');
+    if (secondary) {
+        secondary.value = settings.secondary_forecast_model;
+        secondary.disabled = settings.forecast_switch_hours === 'off';
+    }
+    document.querySelectorAll('input[name="forecast_switch_hours"]').forEach(input => {
+        input.checked = input.value === settings.forecast_switch_hours;
+    });
+}
+
+function onSetSecondaryForecast(event) {
+    const key = event.target.name;
+    settings[key] = event.target.value;
+    storeValue(key, settings[key]);
+    captureRaceSettings(key, settings[key]);
+    updateSecondaryControls();
 }
 
 // Hook dropdown
@@ -354,6 +387,8 @@ function captureAllRaceSettings() {
         gates,
         current,
         forecast_model: forecastModel,
+        secondary_forecast_model: settings.secondary_forecast_model,
+        forecast_switch_hours: settings.forecast_switch_hours,
         useWaves
     };
     saveRaces();
@@ -373,6 +408,9 @@ function applyRaceSettings(race) {
             setForecastModel(sf.value);
         }
     }
+    settings.secondary_forecast_model = race.settings.secondary_forecast_model || 'ECMWF-IFS-WIND';
+    settings.forecast_switch_hours = race.settings.forecast_switch_hours || 'off';
+    updateSecondaryControls();
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
   if (race.settings.duration)   setDuration(race.settings.duration / 3600);
@@ -668,6 +706,9 @@ function setUp(getVMG) {
     document.getElementById("sel_polars").addEventListener("change", onSetPolars);
     const selForecastModel = document.getElementById("sel_forecast_model");
     if (selForecastModel) selForecastModel.addEventListener("change", onSetForecastModel);
+    document.getElementById('sel_secondary_forecast_model')?.addEventListener('change', onSetSecondaryForecast);
+    document.querySelectorAll('input[name="forecast_switch_hours"]').forEach(input =>
+        input.addEventListener('change', onSetSecondaryForecast));
     const selCurrents = document.getElementById("sel_currents");
     if (selCurrents) selCurrents.addEventListener("change", onSetCurrents);
     const cbWaves = document.getElementById("cb_waves");
@@ -1268,6 +1309,13 @@ function getRoute() {
     // The displayed cycle can belong to an inspected route. New routes use
     // the server's source-specific current cycle and availability fallback.
     const { cycle: ignoredCycle, ...routingSettings } = settings;
+    // Merge control values before serialization so every parameter occurs once.
+    routingSettings.forecast_model = document.getElementById('sel_forecast_model')?.value || settings.forecast_model;
+    routingSettings.secondary_forecast_model = document.getElementById('sel_secondary_forecast_model')?.value || settings.secondary_forecast_model;
+    const currentInput = document.getElementById('sel_currents');
+    routingSettings.currents = currentInput?.value !== 'NONE' ? currentInput?.value : undefined;
+    const wavesInput = document.getElementById('cb_waves');
+    if (wavesInput) routingSettings.useWaves = wavesInput.checked ? 'true' : 'false';
     var query = makeQuery(routingSettings);
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
@@ -1278,21 +1326,6 @@ function getRoute() {
     var sailInput = document.getElementById('sel_currentsail');
     if (sailInput) {
         query += `&sail=${sailInput.value}`;
-    }
-
-    var forecastModelInput = document.getElementById('sel_forecast_model');
-    if (forecastModelInput && forecastModelInput.value) {
-        query += `&forecast_model=${encodeURIComponent(forecastModelInput.value)}`;
-    }
-
-    // Add selected currents datasource (or NONE) to query
-    var currentInput = document.getElementById('sel_currents');
-    if (currentInput && currentInput.value != 'NONE') {
-        query += `&currents=${encodeURIComponent(currentInput.value)}`;
-    }
-    var wavesInput = document.getElementById('cb_waves');
-    if (wavesInput) {
-        query += `&useWaves=${wavesInput.checked ? 'true' : 'false'}`;
     }
 
     Util.doGET(

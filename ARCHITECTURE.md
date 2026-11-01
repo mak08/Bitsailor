@@ -143,6 +143,8 @@ The route search in [simulation.cl](simulation.cl) proceeds as follows:
 
 The first step is shortened to align to a ten-minute boundary. Later step durations grow with forecast horizon: approximately two minutes initially, then ten, fifteen, and thirty minutes. The isochrone capacity is bounded by `*max-iso-points*` (1500 by default). At completion, the engine selects the frontier point nearest the destination and follows predecessor links to produce the route. Hourly frontiers are retained for the UI, and every generated step is retained in the `best` track.
 
+`get-route-leg` also maintains `max-dist`, a per-leg array of radial high-water marks indexed by absolute bearing from the leg start. Unlike the next frontier, it persists across steps: a candidate must exceed both its current-step bucket winner and the historical radius. Marks are updated before land filtering and are not rolled back when a winner is blocked. This suppresses inward or repeated expansion but can discard useful detours; it is a pruning heuristic, not an earliest-arrival proof. See [MAX-DIST.md](diagnostics/MAX-DIST.md) for indexing, update order, examples and the distinction from gate-search history.
+
 ## Multi-Route (Waypoints)
 
 Gate creation is temporarily disabled in the Web UI because post-crossing pruning can discard useful crossing histories (see [GATE-LENGTH.md](diagnostics/GATE-LENGTH.md)). Point waypoints remain available. Gate support remains in the API for development; imported GPX course overlays are display-only.
@@ -153,7 +155,7 @@ Consecutive gates and the following point waypoint (or final destination) are se
 
 Each bucket retains only its outward winner: a candidate replaces the incumbent if its radius is greater or equal, otherwise it is discarded. Land checks run after selection; a blocked winner leaves an empty bucket, just as in the single-leg router. There is no candidate pool, insertion or spacing scan. Gate crossings are checked using the complete original step, including the portion before the recorded intersection. Ordered gate intersections are recorded as predecessor routepoints with fractional crossing times. For this initial implementation, the boat completes the crossing step on its existing heading and starts steering towards the next target at the following step; it does not yet turn at the fractional crossing time. Multiple gates crossed in one segment advance progress in intersection order.
 
-Pruning uses separate origin-centred bearing buckets for each gate stage. The fixed reference is the original start for stage zero and the previous gate midpoint for later stages. At the same simulation time, each bucket retains the point farthest from that reference, independently of its actual crossing origin and time. This preserves a broad outward frontier instead of compressing the approach into a few bearings from a distant target. `*gate-bucket-width*` defaults to 0.24 degrees, each bucket has one winner, and the effective width respects the `*max-iso-points*` budget per stage. The configured origin fan is applied around the reference-to-target bearing. This remains a bounded heuristic rather than a guarantee of global optimality; total frontier capacity grows with the number of gate stages.
+Pruning uses separate origin-centred bearing buckets for each gate stage. The fixed reference is the original start for stage zero and the previous gate midpoint for later stages. At the same simulation time, each bucket retains the point farthest from that reference, independently of its actual crossing origin and time. This preserves a broad outward frontier instead of compressing the approach into a few bearings from a distant target. `*gate-bucket-width*` defaults to 0.24 degrees, each bucket has one winner, and the effective width respects the `*max-iso-points*` budget per stage. The search fan uses a separate origin: each state’s actual last crossing point (the route start in stage zero). Both the target bearing and candidate bearing for the fan test are measured from that point. Angular buckets, radial history and the coarse search box continue to use the fixed stage reference. A crossing step completes its old-stage heading before next-stage steering begins; its endpoint must also pass the resulting stage’s actual-crossing fan test to be retained. This remains a bounded heuristic rather than a guarantee of global optimality; total frontier capacity grows with the number of gate stages.
 
 Hourly drawings use the outer envelope in the same origin-centred buckets. Angular gaps and large spatial jumps produce separate polylines, so points from disconnected sections cannot form radial spokes. All stages share the same simulation timestamp, including frontiers which have not yet crossed an earlier gate. Alternative `tracks` are currently omitted for gate groups.
 
@@ -197,3 +199,17 @@ in time-varying weather.
 The startpage Status tab polls `router.getStatistics` every minute and supports manual refresh. [status.cl](status.cl) supplies the current operational configuration, raw/combined polar and race cache counts, SBCL dynamic-heap usage/limit, and unique decoded forecast-array bytes grouped by source, cycle and resolution. Snapshots hold the forecast-cache lock while examining metadata; they never scan array elements or force garbage collection. Heap usage can include reclaimable garbage and excludes native allocations. Forecast byte counts exclude headers and metadata.
 
 The explicit settings inventory includes routing, gate, point-approach, service and path settings. It excludes transient state, locks and credentials. Configuration values are read when requested so overrides appear immediately. Legacy top-level statistics fields remain available. The UI retains previous values and displays a stale-data message on refresh failure. Tests are in `tests/status-tests.cl` and `tests/status-ui-tests.cjs`.
+
+### Secondary wind model
+
+Route requests accept `secondary_forecast_model` and `forecast_switch_hours`
+(`off`, `6`, `12`, or `24`; omitted means off). The UI defaults to ECMWF-IFS
+as the secondary model and keeps switching off until enabled. Both choices are
+saved locally and with race settings. Routing parameters are merged before URL
+serialization to avoid duplicate model, currents, and wave parameters.
+
+The switch is measured from the original departure and stored as an absolute
+timestamp, retained across point and gate legs. Steps end at the switch boundary;
+wind sampled at or after it uses the secondary source. An explicit primary cycle
+is not forwarded to a different secondary model. Each isochrone records the model
+and actual cycle used for its step, preserving wind replay provenance.

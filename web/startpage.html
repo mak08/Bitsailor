@@ -58,6 +58,9 @@
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
                 <ul>
+                  <li><b>2026-11-01 &ndash; Secondary forecast model</b><br>
+                    Routes can now switch forecast models after 6, 12 or 24 hours &ndash; for example, from NOAA-GFS to ECMWF-IFS. See the Usage tab for details.
+                  </li>
                   <li><b>2026-10-31 &ndash; Routing update</b><br>
                     <ul>
                       <li><b>Gate routing is temporarily disabled while a route-pruning issue is corrected. Intermediate point waypoints remain available.</b></li>
@@ -128,6 +131,20 @@
                 </li>
                 <li>Press 'Execute'. The route, isochrones and (optionally) alternative tracks are drawn on the map.</li>
               </ol>
+
+              <h3>Secondary forecast model</h3>
+              <p>
+                Use one forecast model at the start of a route and another for its later stages.
+                Select the primary forecast under <b>Model</b>, choose <b>6 h</b>, <b>12 h</b> or <b>24 h</b> under <b>Switch after</b>,
+                then select the secondary forecast under <b>Then</b> (ECMWF-IFS by default).
+                Leave <b>Switch after</b> set to <b>Off</b> to use the primary model for the entire route.
+              </p>
+              <p>
+                For example, select NOAA-GFS under <b>Model</b>, ECMWF-IFS under <b>Then</b> and <b>12 h</b> under <b>Switch after</b>
+                to use GFS for the first 12 hours and IFS for the rest of the route.
+                The switch is measured from the original departure time; reaching an intermediate waypoint does not restart the timer.
+                Your choices are saved locally and with race settings.
+              </p>
 
               <h3>Multi-route (intermediate waypoints)</h3>
               <ul>

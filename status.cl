@@ -39,6 +39,7 @@
       ("Routing" "*use-bitmap*" "bitmap land checks")
       ("Routing" "*tracks*" "alternative track output")
       ("Gates" "*gate-bucket-width*" "degrees, minimum bucket width")
+      ("Gates" "*gate-origin-distance-factor*" "gate widths behind midpoint; minimum two")
       ("Gates" "*gate-coverage-bins*" "intervals per gate")
       ("Gates" "*gate-retirement-coverage*" "fraction of intervals required")
       ("Point approaches" "*approach-max-step*" "seconds")

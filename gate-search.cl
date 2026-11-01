@@ -3,7 +3,12 @@
 (in-package :bitsailor)
 
 (defparameter *gate-bucket-width* 0.24d0
-  "Minimum angular width of buckets measured from the fixed stage origin.")
+  "Minimum bucket width in the stage's transformed bearing coordinates.")
+(defparameter *gate-origin-distance-factor* 2d0
+  "Artificial origin distance in gate widths; values below two are clamped to two.")
+(defvar *gate-bucket-frames* nil
+  "Request-local stage bearing transforms, independent of each actual crossing origin.")
+(defstruct gate-bucket-frame axis scale)
 (defparameter *gate-coverage-bins* 12
   "Number of intervals used to track valid retained crossings along each gate.")
 (defparameter *gate-retirement-coverage* 1/2
@@ -89,6 +94,47 @@ Bind to 1 to require complete coverage.")
   (max *gate-bucket-width*
        (/ 360d0 (max 1 *max-iso-points*))))
 
+;;; Place a common origin behind the gate, away from the next target. A one-kilometre
+;;; floor handles short/degenerate gates; the gate-width multiplier is at least two.
+;;; Return the origin and a bearing transform which preserves lateral gate resolution.
+(defun gate-artificial-origin (gate target)
+  (let* ((midpoint (target-position gate))
+         (width (course-distance (gate-a gate) (gate-b gate)))
+         (distance (max 1000d0 (* (max 2d0 *gate-origin-distance-factor*) width)))
+         (heading (gate-course-angle midpoint (target-position target)))
+         (origin (add-distance-exact midpoint distance (mod (+ heading 180d0) 360d0))))
+    (values origin
+            (make-gate-bucket-frame
+             :axis (gate-course-angle origin midpoint)
+             :scale (max 1d0 (/ (* 2d0 distance) (max width 1000d0)))))))
+
+;;; Build one fixed common origin and bearing transform per stage; stage zero uses
+;;; the real start with the ordinary untransformed full-circle buckets.
+(defun gate-stage-geometry (start targets)
+  (let* ((count (length targets))
+         (centers (make-array count))
+         (frames (make-array count :initial-element nil)))
+    (setf (aref centers 0) start)
+    (loop :for stage :from 1 :below count :do
+      (multiple-value-bind (origin frame)
+          (gate-artificial-origin (aref targets (1- stage)) (aref targets stage))
+        (setf (aref centers stage) origin (aref frames stage) frame)))
+    (values centers frames)))
+
+;;; Expand bearing resolution near the forward axis without adding buckets. The
+;;; monotone full-circle transform is atan2(scale*sin(angle-axis), cos(angle-axis)).
+;;; Only pruning/display uses it; steering and the fan retain geographic bearings.
+(defun gate-bucket-angle (state centers)
+  (let* ((angle (gate-course-angle (gate-stage-center state centers)
+                                  (routepoint-position (gate-state-point state))))
+         (frame (when *gate-bucket-frames*
+                  (aref *gate-bucket-frames* (gate-state-stage state)))))
+    (if frame
+        (let ((relative (rad (normalize-angle (- angle (gate-bucket-frame-axis frame))))))
+          (mod (deg (atan (* (gate-bucket-frame-scale frame) (sin relative))
+                          (cos relative))) 360d0))
+        (mod angle 360d0))))
+
 ;;; Return the fixed stage origin when available, otherwise the state's actual crossing origin.
 (defun gate-stage-center (state centers)
   (if centers (aref centers (gate-state-stage state))
@@ -99,9 +145,7 @@ Bind to 1 to require complete coverage.")
 (defun gate-state-key (state targets &optional centers)
   (declare (ignore targets))
   (list (gate-state-stage state)
-        (floor (mod (gate-course-angle (gate-stage-center state centers)
-                                      (routepoint-position (gate-state-point state)))
-                    360d0)
+        (floor (gate-bucket-angle state centers)
                (gate-angular-width))))
 
 (defun retain-gate-state (state buckets targets &optional centers)
@@ -118,13 +162,20 @@ single-leg routing; a blocked winner leaves its bucket empty for this step."
       (setf (gate-state-radius state) distance
             (gethash key buckets) state))))
 
+;;; Check every actual segment added since SOURCE, including fractional gate touches and turns.
+;;; A chord from SOURCE to the endpoint would miss land along a bent crossing step.
+(defun gate-state-blocked-p (state)
+  (loop :for point = (gate-state-point state) :then previous
+        :for previous = (routepoint-predecessor point)
+        :until (or (eq point (gate-state-source state)) (null previous))
+        :thereis (approach-blocked-p (routepoint-position previous)
+                                    (routepoint-position point))))
+
 ;;; Land-check each bucket's sole winner over the complete step, including pre-crossing travel.
 ;;; Discard blocked winners without a fallback; history and coverage use only valid survivors.
 (defun select-gate-survivors (buckets)
   (loop :for state :being :the :hash-values :of buckets
-        :unless (approach-blocked-p
-                 (routepoint-position (gate-state-source state))
-                 (routepoint-position (gate-state-point state)))
+        :unless (gate-state-blocked-p state)
           :collect state))
 
 (defun gate-frontier-isochrones (frontier centers time wind max-step-distance &optional model wind-time)
@@ -155,7 +206,8 @@ single-leg routing; a blocked winner leaves its bucket empty for this step."
           (loop :for point :across outer
                 :when point :do
             (let* ((pos (routepoint-position point))
-                   (angle (mod (gate-course-angle center pos) 360d0)))
+                   (angle (gate-bucket-angle
+                           (make-gate-state :stage stage :point point) centers)))
               (when (and previous
                          (or (> (- angle previous-angle) (max 1d0 (* 3 (gate-angular-width))))
                              (> (course-distance previous pos) (* 4 max-step-distance))))
@@ -165,9 +217,50 @@ single-leg routing; a blocked winner leaves its bucket empty for this step."
           (emit))))
     (nreverse result)))
 
-(defun advance-gate-state (state point targets)
-  "Record all ordered crossings on this step. Steering changes next step.
-The endpoint stays on the common clock; intersections retain fractional times."
+;;; Sail the remaining fractional step toward TARGET, choosing the direct polar angle or
+;;; the better VMG-boundary tack. Reuse this step's weather sampling time, interpolate at
+;;; the crossing position, and include the ordinary wave/current velocity adjustments.
+;;; The endpoint stays on the shared clock; this is one heading, not a tack/gybe manoeuvre.
+(defun gate-turn-endpoint (routing crossing end-time target wind current wave wave-dir)
+  (let* ((pos (routepoint-position crossing))
+         (lat (latlng-lat pos)) (lon (latlng-lng pos))
+         (seconds (coerce (timestamp-difference end-time (routepoint-time crossing)) 'double-float))
+         (bearing (gate-course-angle pos (target-position target)))
+         (polars (routing-polars routing)))
+    (with-bindings
+        (((wind-dir wind-speed) (interpolate-uv lat lon wind))
+         ((current-dir current-speed current-u current-v)
+          (if current (interpolate-uv lat lon current) (values 0d0 0d0 0d0 0d0)))
+         ((height direction)
+          (if (and wave wave-dir)
+              (values (interpolate-simple lat lon wave) (interpolate-direction lat lon wave-dir))
+              (values nil nil)))
+         ((up down) (best-vmg polars wind-speed)))
+      (let* ((wanted (abs (heading-twa wind-dir bearing)))
+             (angle (max (vmg-twa up) (min (vmg-twa down) wanted)))
+             (best nil) (best-vmg nil))
+        (dolist (twa (list angle (- angle)) best)
+          (multiple-value-bind (speed sail) (twa-boatspeed polars wind-speed twa)
+            (let* ((heading (twa-heading wind-dir twa))
+                   (factor (when height (wave-factor height direction heading)))
+                   (boat-speed (* speed (or factor 1d0)))
+                   (sog boat-speed) (cog heading))
+              (when current
+                (let ((u (- (+ current-u (* boat-speed (sin (rad heading))))))
+                      (v (- (+ current-v (* boat-speed (cos (rad heading)))))))
+                  (setf sog (enorm u v) cog (mod (angle u v) 360d0))))
+              (let ((vmg (* sog (cos (rad (normalize-angle (- cog bearing)))))))
+                (when (or (null best-vmg) (> vmg best-vmg))
+                  (setf best-vmg vmg
+                        best (create-routepoint crossing
+                               (add-distance-estimate pos (* sog seconds) cog)
+                               end-time twa cog nil boat-speed sail wind-dir wind-speed
+                               current-dir current-speed 0d0 0d0 height direction factor)))))))))))
+
+(defun advance-gate-state (state point targets &optional routing wind current wave wave-dir)
+  "Record ordered gate touches, with fractional timestamps on the shared-clock step.
+When ROUTING is supplied and the next target is behind the incoming heading,
+turn at the intersection and sail the remaining time toward that target."
   (let ((stage (gate-state-stage state))
         (origin (gate-state-origin state))
         (from (gate-state-point state))
@@ -190,12 +283,18 @@ The endpoint stays on the common clock; intersections retain fractional times."
                   (routepoint-wave-factor point))
                 (setf from (first *gate-crossings*) origin from)
                 (push (cons stage (routepoint-position from)) crossings)
-                (incf stage)))
+                (incf stage)
+                (when (and routing
+                           (> (abs (normalize-angle
+                                    (- (gate-course-angle (routepoint-position from)
+                                         (target-position (aref targets stage)))
+                                       (routepoint-heading point)))) 90d0))
+                  (setf point (gate-turn-endpoint routing from (routepoint-time point)
+                                (aref targets stage) wind current wave wave-dir)))))
     (setf (routepoint-predecessor point) from)
     (make-gate-state :point point :stage stage :origin origin :source (gate-state-point state) :crossings crossings)))
 
-;;; Check a newly crossed endpoint against its new stage's actual-origin fan.
-;;; This prunes the completed step; it does not turn the boat at the crossing.
+;;; Check the completed, possibly turned endpoint against the new actual-crossing fan.
 (defun gate-state-in-fan-p (state targets fan)
   (let* ((origin (routepoint-position (gate-state-origin state)))
          (position (routepoint-position (gate-state-point state)))
@@ -241,12 +340,14 @@ The endpoint stays on the common clock; intersections retain fractional times."
   (declare (notinline expand-routepoint))
   (let* ((targets (coerce (append gates (list (routing-dest routing))) 'vector))
          (final-stage (length gates))
+         (geometry (multiple-value-list (gate-stage-geometry (routing-start routing) targets)))
+         (centers (first geometry))
+         (*gate-bucket-frames* (second geometry))
          (*gate-progress* (make-hash-table :test #'equal))
          (coverage (map 'vector (lambda (gate)
                                  (declare (ignore gate))
                                  (make-array *gate-coverage-bins* :element-type 'bit :initial-element 0))
                         gates))
-         (centers (coerce (cons (routing-start routing) (mapcar #'target-position gates)) 'vector))
          (start-time (parse-datetime-local (routing-starttime routing)))
          (started (now))
          (stepper (make-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)))
@@ -270,7 +371,6 @@ The endpoint stays on the common clock; intersections retain fractional times."
                      (max-step-distance 100d0))
                 (dolist (state frontier)
                   (let* ((leg (copy-routing routing))
-                         (center (aref centers (gate-state-stage state)))
                          (origin (routepoint-position (gate-state-origin state)))
                          (target (target-position (aref targets (gate-state-stage state))))
                          (*routepoint-sink*
@@ -279,15 +379,13 @@ The endpoint stays on the common clock; intersections retain fractional times."
                                    (max max-step-distance
                                         (course-distance (routepoint-position (gate-state-point state))
                                                          (routepoint-position point))))
-                             (let ((next (advance-gate-state state point targets)))
+                             (let ((next (advance-gate-state state point targets routing wind current wave wave-dir)))
                                ;; Entering a new stage must not seed a frontier outside
                                ;; its crossing-centred fan, even on the crossing step.
                                (when (or (null (gate-state-crossings next))
                                          (gate-state-in-fan-p next targets (routing-fan leg)))
                                  (flet ((validp ()
-                                          (not (approach-blocked-p
-                                                (routepoint-position (gate-state-point state))
-                                                (routepoint-position point)))))
+                                          (not (gate-state-blocked-p next))))
                                    (if (and (= (gate-state-stage next) final-stage)
                                             (gate-state-reached-p next (routing-dest routing)))
                                        (when (validp) (push next arrivals))
@@ -296,11 +394,9 @@ The endpoint stays on the common clock; intersections retain fractional times."
                     (setf (routing-start leg) origin (routing-dest leg) target
                           (routing-gate leg) nil
                           ;; Steering/fan geometry follows the actual crossing origin.
-                          ;; Buckets, radial history and the search box keep the fixed
-                          ;; stage centre. This pools crossing histories; a common
-                          ;; frame alone does not establish radial dominance (see
-                          ;; diagnostics/GATE-LENGTH.md).
-                          (routing-box leg) (make-routing-box center target))
+                          ;; Buckets and radial history use the common artificial
+                          ;; origin. It is not a sailed position or a steering origin.
+                          (routing-box leg) (make-routing-box origin target))
                     (let ((bearing (gate-course-angle origin target)))
                       (incf points (expand-routepoint leg (gate-state-point state)
                                      (mod (- bearing (routing-fan leg)) 360d0)

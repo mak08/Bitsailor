@@ -1,5 +1,45 @@
 # Sensitivity to gate length
 
+## Current experiment: common artificial origin
+
+The working-tree search now uses a common artificial origin behind each gate,
+away from the next target, at `max(1000 metres, 2 × gate width)` by default.
+`*gate-origin-distance-factor*` adjusts the multiplier, clamped to at least two.
+Buckets share this geographic origin, with a bounded nonlinear bearing transform
+which improves forward resolution. Steering remains tied to actual crossings.
+A target behind the incoming course can be pursued during the remaining
+fractional crossing step. See [MULTI-LEG-ROUTING.md](../MULTI-LEG-ROUTING.md).
+
+This is an experimental replacement for the midpoint frame, not a proof that
+longer gates can never produce worse approximate routes. Gate endpoints still
+influence the reference frame and coverage retirement. Gate UI controls have been re-enabled for the artificial-origin implementation. The diagnosis and measurements below describe the **previous
+midpoint-origin implementation**, before this experiment.
+
+### Controlled comparison of the experiment
+
+Both gate geometries were run at the identical `2026-10-31T22:14` start time,
+with the original pinned October 5 wind cycle, the same polars/options, real land
+checks, and **waves disabled in all four runs**:
+
+| Implementation | Long gate | Short gate |
+| --- | --- | --- |
+| Previous midpoint frame | 16h 16m | 15h 01m |
+| Artificial origin, transformed buckets and turn-back remainder | 15h 01m | 15h 16m |
+
+The longer gate no longer gives the worse result in this comparison. The
+remaining 15-minute difference shows that this is still a geometry-sensitive
+approximation. These numbers assess the combined experiment, not the origin
+placement in isolation. The invalid old cycle is retained only to hold wind
+inputs fixed; it is not a forecast recommendation.
+
+The requested wave-enabled replay failed in the baseline implementation when
+wave selection switched to the November 1 combined file: one interpolation
+frame was NIL (`forecast-fraction NIL ...`). Thus the table is a wind-only
+comparison, not a successful replay of the original wave-enabled request.
+Constant-field regressions separately exercise wave/current adjustments during
+a turned remainder, multi-gate touches, land along a bent step, and the shared
+endpoint clock. Gate controls have since been re-enabled; the forecast-cycle request behavior is unchanged.
+
 ## Bug: crossing histories share a radial dominance rule
 
 The longer gate must not produce a worse optimum if it admits the shorter
@@ -66,7 +106,7 @@ The reference-frame experiments below independently connect this pruning
 mechanism to the reproduced ETA difference.
 
 These measurements instrumented the existing algorithm without changing its
-selection rules. No routing correction has yet been applied for this defect.
+selection rules. At the time of those measurements no routing correction had yet been applied; the subsequent experiment is described above.
 
 The two reported requests were reproduced against the current working-tree router, including the crossing-centred fan change. Both were also run with the same start time, `2026-10-31T22:14`, to isolate gate geometry. These are duration measurements from this reproduction, not claims of globally optimal ETA.
 

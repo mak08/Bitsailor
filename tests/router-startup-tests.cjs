@@ -6,7 +6,7 @@ const main = fs.readFileSync('web/js/router-main.js', 'utf8').replace(/^import .
 // Detect HTML/script mismatches before exercising the startup coordinator.
 const html = fs.readFileSync('web/router-fw.html', 'utf8');
 const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
-assert.ok(!ids.has('bt_addgate'), 'Gate creation must remain unavailable');
+assert.ok(ids.has('bt_addgate'), 'Gate creation control must be available');
 assert.ok(ids.has('bt_addwaypoint'), 'Point waypoints must remain available');
 const setup = main.slice(main.indexOf('function setUp(getVMG)'), main.indexOf('function initMap()'));
 for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListener/g)) {
@@ -14,7 +14,7 @@ for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListen
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'router-race-ready-20261031';
+const revision = 'router-gates-20261101';
 const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));

@@ -53,7 +53,7 @@
               <div class="welcome">
                 <h2>Bitsailor is back!</h2>
                 <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
-                <p><b>Please find the <a href="router-fw.html?v=router-race-ready-20261031">Router</a> page</b> <a href="router-fw.html?v=router-race-ready-20261031" target=_blank><b>here</b></a></p>
+                <p><b>Please find the <a href="router-fw.html?v=router-gates-20261101">Router</a> page</b> <a href="router-fw.html?v=router-gates-20261101" target=_blank><b>here</b></a></p>
               </div>
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
@@ -61,9 +61,13 @@
                   <li><b>2026-11-01 &ndash; Secondary forecast model</b><br>
                     Routes can now switch forecast models after 6, 12 or 24 hours &ndash; for example, from NOAA-GFS to ECMWF-IFS. See the Usage tab for details.
                   </li>
+                  <li><b>2026-11-01 &ndash; Gate routing improved and re-enabled</b><br>
+                    'Add gate' is available again with improved routing. See Usage for details.
+                    <b>Use no more than four gates per route for performance.</b>
+                  </li>
                   <li><b>2026-10-31 &ndash; Routing update</b><br>
                     <ul>
-                      <li><b>Gate routing is temporarily disabled while a route-pruning issue is corrected. Intermediate point waypoints remain available.</b></li>
+                      <li>Gate routing was temporarily disabled for investigation; it was re-enabled with revised pruning on November 1.</li>
                       <li>New routing requests automatically use the server's current forecast cycle, independently of the wind currently displayed on the map.</li>
                       <li>The revamped Status tab shows current server settings, heap usage and forecast-cache memory by cycle, alongside download progress and routing statistics.</li>
                       <li>Selecting an isochrone or routepoint displays wind from the forecast cycle used by the router. Wind interpolation is aligned with the router, and unavailable forecasts are reported instead of silently using a newer run.</li>
@@ -146,14 +150,17 @@
                 Your choices are saved locally and with race settings.
               </p>
 
-              <h3>Multi-route (intermediate waypoints)</h3>
+              <h3>Multi-route (intermediate waypoints and gates)</h3>
               <ul>
                 <li>Right-click on the map and choose 'Add waypoint'. Waypoints are visited in the order you add them, before the destination. The red line shows the planned order.</li>
                 <li>Drag a waypoint to move it. Double-click a marker to remove it. 'Clear waypoints' in the right-click menu removes all waypoints.</li>
                 <li>Point waypoints are hit exactly, with a final approach that may include a tack or gybe. The arrival time is the start time of the next leg.</li>
                 <li>If the approach is not possible (e.g. the path crosses land) or the duration runs out, routing stops at the last isochrone reached. Waypoints on land are rejected.</li>
                 <li>Currents and waves are not considered on the final approach to a waypoint. Manually added waypoints are lost on reload.</li>
-                <li><b>Gate routing is temporarily unavailable.</b></li>
+                <li>To add a gate, right-click and choose 'Add gate' for the first endpoint, then click the map for the second endpoint. Gates and waypoints are visited in the order added. Drag endpoints to move them; double-click a gate marker to remove the gate. 'Clear waypoints' removes both waypoints and gates.</li>
+                <li>Revised pruning uses a shared reference behind each gate, improving the continuation toward the next target. The search retains more detail in that direction without increasing the per-stage point limit.</li>
+                <li>When the next target lies behind the gate, the boat can turn immediately at the touch point and use the remaining step time toward it. Land checks follow the actual sailed segments.</li>
+                <li>The route must touch or cross the gate between its endpoints. <b>Use no more than four gates per route for performance.</b></li>
               </ul>
 
               <h3>Races and GPX import</h3>

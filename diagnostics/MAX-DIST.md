@@ -138,8 +138,9 @@ The shared-clock gate router binds `*routepoint-sink*`. In that branch,
 Both mechanisms reject radial regression, but their update order differs:
 the gate router records progress from selected land-valid survivors, whereas
 single-leg `max-dist` updates before land filtering. Gate routing also pools
-different crossing origins and times under a stage's midpoint reference. That
-extra assumption is the cross-history pruning defect described in
+different crossing origins and times under a common geographic reference. The
+current artificial-origin experiment replaces the earlier midpoint frame; its
+motivation, measurements and remaining dominance limitations are described in
 [GATE-LENGTH.md](GATE-LENGTH.md). Ordinary point-waypoint legs restart from one
 fixed origin and a fresh history array, so they do not pool those gate crossing
 histories. They still retain the general radial-pruning limitations above.

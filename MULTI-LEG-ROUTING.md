@@ -2,7 +2,7 @@
 
 This document describes the implementation in the working tree, including the gate-retirement threshold and the removal of general-purpose sorting from the active multi-leg search. It distinguishes the search's arrival objective from the heuristics used to limit its size. The algorithm is an approximate isochrone search; it does not guarantee the globally earliest arrival.
 
-A [six-figure sequence](figures/gate-frontier/README.md) shows actual frontier states approaching a gate, crossing it on the shared clock, and retiring the pre-gate stage.
+A [six-figure sequence](figures/gate-frontier/README.md) records the earlier midpoint-origin implementation. Those figures have not been regenerated for the artificial-origin experiment described below. Gate creation is available again through the Web UI's 'Add gate' context-menu entry and through the API.
 
 ## 1. Entry points and target grouping
 
@@ -40,7 +40,7 @@ A `gate-state` contains:
 | `point` | Current routepoint at the shared simulation time |
 | `stage` | Number of gates already crossed |
 | `origin` | Initial routepoint or the latest actual gate-crossing routepoint |
-| `source` | Original previous-step point, used to check the complete sailed segment for land |
+| `source` | Original previous-step point, bounding the chain of sailed segments to check for land |
 | `crossings` | Gate indices and crossing positions introduced on this step |
 | `radius` | Cached distance from the fixed stage centre, assigned during candidate retention |
 
@@ -50,10 +50,21 @@ The routepoint contains position, time, sailing/weather data and a predecessor l
 
 The fixed stage centre and the actual crossing origin have different purposes:
 
-- Stage 0's fixed centre is the leg start. Stage k's fixed centre is the midpoint of gate k−1. It determines angular buckets, radial progress and the search box.
+- Stage 0's fixed centre is the leg start. Stage k's fixed centre is an artificial point behind gate k−1, away from the next target. It determines angular buckets, radial progress and display ordering.
 - A state's actual origin is the position where its own path last crossed a gate. The search fan is measured from this origin toward the next target. The final arrival test also uses it, and it supplies the boundary for the intermediate-point approach lookback.
 
-Using a common fixed centre lets crossings from different positions compete in the same stage. The fan follows each actual crossing, while all candidates still compete in the same fixed bucket frame. The midpoint is a reference for pruning; the boat is not moved there.
+Using one fixed centre lets crossings from different positions compete in the same geographic frame. The fan and search box follow each actual crossing; the boat is never moved to the artificial point.
+
+For midpoint M, gate width W and next target position T, place the artificial origin O on the great-circle ray from M away from T:
+
+```text
+L = max(1000 metres, max(2, *gate-origin-distance-factor*) × W)
+O = advance(M, L, bearing(M, T) + 180 degrees)
+```
+
+The default factor is two. The 1 km floor avoids unstable geometry for very short gates. A coincident M and T uses the defined zero-bearing fallback; there is no meaningful target direction in that case. The multiplier is exposed on the Status tab. Typical gate dimensions must be regional: extending a great-circle ray over planetary distances no longer represents a useful point behind a gate.
+
+This places the entire gate ahead of the origin in the next-leg direction for local geometry. Useful departures are less likely to decrease radius than with a midpoint origin. It does not establish global dominance or invariance when the gate's unused endpoints change.
 
 ## 3. One clock for the whole gate group
 
@@ -61,7 +72,7 @@ All frontier endpoints share the same timestamp. `make-stepper` chooses the time
 
 Wind, optional currents, and optional wave parameters are obtained for the start of the step. Each frontier point samples the fields at its own position. `expand-routepoint` tries both tacks at the polar's sampled TWA values plus the current upwind and downwind VMG angles. Only positive TWA magnitudes within the VMG interval are expanded.
 
-For each heading it computes polar speed, wave adjustment and optional current displacement, then an endpoint for the step. Candidates must lie within the stage's latitude/longitude box and angular fan. The fan is centred on the bearing from the state's actual last crossing origin (or the leg start in stage 0) to the target position; a gate's target position is its midpoint. Its endpoint bearing is measured from that same actual origin. The search box remains based on the fixed stage centre. These are geographic restrictions on endpoints, not a ranking by estimated arrival time.
+For each heading it computes polar speed, wave adjustment and optional current displacement, then an endpoint for the step. Candidates must lie within the stage's latitude/longitude box and angular fan. The fan is centred on the bearing from the state's actual last crossing origin (or the leg start in stage 0) to the target position; a gate's target position is its midpoint. Its endpoint bearing is measured from that same actual origin. The search box is based on the actual crossing origin and target, so the artificial origin does not enlarge or shift the sailed search region. These are geographic restrictions on endpoints, not a ranking by estimated arrival time.
 
 When the gate search binds `*routepoint-sink*`, `add-routepoint` sends candidate routepoints to that consumer instead of the ordinary single-leg bucket array. A routepoint is currently allocated before gate-stage pruning, including for candidates that are immediately discarded.
 
@@ -74,9 +85,12 @@ On a crossing it:
 1. Interpolates a position on the segment and a fractional timestamp between its endpoints.
 2. Inserts that crossing routepoint into the predecessor chain.
 3. Increments the stage and records the crossing position for coverage accounting.
-4. Tests the remainder of the segment against the next gate, allowing more than one ordered gate to be crossed in one step.
+4. If the new target is more than 90 degrees behind the incoming course, turns at the crossing and computes a new endpoint for the remaining fractional duration.
+5. Tests the resulting remainder against the next gate, allowing multiple ordered touches and a turn within one step.
 
-The endpoint remains at the common step-end time. The boat continues along the heading already chosen for that step; steering toward the next gate starts in the following iteration. Thus different parts of a gate may be reached hours apart without requiring fractional-time frontiers or gate buckets with different clocks. The exact crossing times remain in the reconstructed tracks.
+The endpoint remains at the common step-end time. For a turn, `gate-turn-endpoint` selects the direct polar angle when permitted, otherwise the better of the two VMG-boundary tacks, by velocity projected toward the next target. It interpolates the step's existing weather fields at the crossing position and applies the ordinary current and wave adjustments. It does not compute a two-tack manoeuvre or resample weather at a different forecast time. A target ahead of the incoming course keeps the original remainder; normal heading expansion resumes on the following iteration. The resulting endpoint must pass the new actual-crossing fan test.
+
+A gate only needs to be touched: the returning segment may remain on its original side. Fractional touch times stay in the predecessor chain, but all frontier endpoints retain the common end time. Final destination arrival is still determined at that end time, without fractional refinement.
 
 ## 5. Pruning and bucket winners
 
@@ -95,10 +109,15 @@ Three quantities must not be confused:
 ```text
 width = max(*gate-bucket-width*,
             360 / max(1, *max-iso-points*))
-key   = (stage, floor(wrapped-bearing / width))
+delta = bearing(common-origin, endpoint) - bearing(common-origin, gate-midpoint)
+scale = max(1, 2 × L / max(W, 1000 metres))
+angle = wrap360(degrees(atan2(scale × sin(delta), cos(delta))))
+key   = (stage, floor(angle / width))
 ```
 
-With the defaults, the width is 0.24 degrees, giving 1500 possible buckets per stage. Normally only a subset lies within the fan or has reachable candidates. The retained frontier allows one survivor per occupied bucket. This is a per-stage budget, not a single budget shared by all stages.
+Stage zero uses ordinary absolute bearings. Later stages apply the monotone full-circle transform above, with delta evaluated in radians. It magnifies resolution near the forward axis and coarsens it toward the sides. This limits the loss of physical resolution caused by moving the origin back, without adding buckets or sorting. All paths in a stage use the same transform.
+
+With the defaults, the width is 0.24 transformed degrees, giving 1500 possible buckets per stage. Normally only a subset lies within the fan or has reachable candidates. The retained frontier allows one survivor per occupied bucket. This is a per-stage budget, not a single budget shared by all stages.
 
 ### Historical progress
 
@@ -123,7 +142,7 @@ The new candidate wins an exact radius tie. Selection uses one bucket lookup, co
 
 ### Land filtering after winner selection
 
-After expansion, `select-gate-survivors` checks each bucket's sole winner. In vector mode it checks the complete segment from `source` to the endpoint, including travel before a gate intersection. Bitmap mode checks only the endpoint. There is at most one such land check per occupied non-arrival bucket per step.
+After expansion, `select-gate-survivors` checks each bucket's sole winner. It walks the predecessor chain back to `source`. In vector mode it checks every sailed segment, including the approach to each touch and the turned remainder. Bitmap mode checks each segment endpoint. A bent step cannot be checked using only the straight chord from source to endpoint. Each occupied non-arrival bucket is filtered once, but can require several segment checks.
 
 A blocked winner leaves its bucket empty even if an earlier discarded candidate was valid. This matches the ordinary single-leg router's select-then-filter policy. It deliberately gives up the former pool's fallback candidates. Testing every prospective winner for land before replacement could preserve a valid incumbent, but would increase land checks; that is not the current implementation.
 
@@ -180,7 +199,7 @@ The sampled-gate mode of `best-approach` and `*gate-samples*` are legacy helpers
 
 At full-hour step endpoints, `gate-frontier-isochrones` constructs display paths separately for each stage. It keeps the outermost frontier point in each angular bucket, stores these in a bucket-indexed array, and traverses the array in increasing index order. No sort is required.
 
-It splits paths when the angular gap exceeds `max(1 degree, 3 × bucket width)` or the position gap exceeds four times the largest emitted displacement seen in the step (with a 100-metre minimum displacement scale). This avoids drawing long chords and radial connections across missing portions of a frontier.
+It splits paths when the gap in transformed bucket-bearing coordinates exceeds `max(1 degree, 3 × bucket width)` or the position gap exceeds four times the largest emitted displacement seen in the step (with a 100-metre minimum displacement scale). This avoids drawing long chords and radial connections across missing portions of a frontier.
 
 Each fragment contains a centre, stage, forecast cycle, whole-hour offset and position path. Several fragments can represent one stage at the same time. Different stages can also have frontiers at the same time. Neither necessarily indicates duplicate search states. Retirement prevents future expansion of a stage; it does not erase its earlier fragments.
 

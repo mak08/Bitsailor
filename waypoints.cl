@@ -144,8 +144,11 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
 (defun target-position (target)
   "Position that a leg towards TARGET (a latlng or a GATE) is aimed at."
   (if (gate-p target)
-      (let ((a (gate-a target)) (b (gate-b target)))
-        (add-distance-exact a (/ (course-distance a b) 2d0) (course-angle a b)))
+      (let* ((a (gate-a target)) (b (gate-b target))
+             (distance (course-distance a b)))
+        ;; A degenerate gate has a position but no defined endpoint bearing.
+        (if (< distance 1d-3) a
+            (add-distance-exact a (/ distance 2d0) (course-angle a b))))
       target))
 
 ;;; Route consecutive gate groups between point waypoints, concatenate results and stop on failure

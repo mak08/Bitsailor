@@ -3,7 +3,7 @@
 
 import * as Util from './Util.js';
 import * as GPX from './GPX.js';
-import GribCache from './GribCache.js?v=router-forecast-contract-20261031';
+import GribCache from './GribCache.js?v=router-forecast-selection-20261103';
 import PolarManager from './PolarManager.js';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
@@ -20,7 +20,6 @@ let courseGCLine = null;
 let trackMarkers = [];
 let routeTracks = [];
 let routeIsochrones = [];
-let selectedIsochroneStage = null;
 let twaPath = [];
 let hdgPath = [];
 let polarsList = [];
@@ -33,10 +32,9 @@ let twaAnchor = null;
 let mapEvent = null;
 let ir_index = null;
 let currentCycle = null;
-let requestedWindTime = null;
 let routeWindSelection = null;
-let selectedRouteTime = null;
 let gribCache = null;
+let gribCacheModel = null;
 
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
@@ -68,19 +66,13 @@ function setupPage() {
     setUp(getVMG);
     setupEventHandlers();
     setupRaces();
-    document.getElementById('bt_retrydata').addEventListener('click', loadPageData);
     startWindDataUpdateCheck();
     return loadPageData();
 }
 
 // Fetch independent startup resources together, then enable the first wind redraw.
-// Failed resources can be retried without recreating markers or event handlers.
 function loadPageData() {
     if (loadingPageData) return loadingPageData;
-    const retry = document.getElementById('bt_retrydata');
-    const message = document.getElementById('router-data-status');
-    retry.hidden = true;
-    message.textContent = 'Loading routing data…';
     loadingPageData = (async () => {
         const [server, polars] = await Promise.allSettled([loadServerSettings(), getPolarsList()]);
         fillForecastModelDropdown();
@@ -88,20 +80,14 @@ function loadPageData() {
         updateForecastRange(settings.forecast_model);
         fillCurrentsDropdown();
         windReady = server.status === 'fulfilled';
-        const windLoaded = windReady
-            ? await (requestedWindTime ? redrawWindByTime(requestedWindTime) : updateMap())
-            : false;
+        if (windReady) await updateMap();
         const failures = [];
-        if (!windReady) failures.push('forecast settings');
-        else if (windLoaded === false) failures.push('wind data');
+        if (server.status === 'rejected') failures.push('forecast settings');
         if (polars.status === 'rejected') failures.push('polars');
-        if (failures.length) message.textContent = `Could not load ${failures.join(' and ')}.`;
-        else if (!routeWindSelection) message.textContent = '';
-        retry.hidden = failures.length === 0;
+        if (failures.length) alert(`Could not load ${failures.join(' and ')}.`);
     })().catch(error => {
         console.error('Router startup failed', error);
-        message.textContent = 'Routing data could not be loaded.';
-        retry.hidden = false;
+        alert(`Routing data could not be loaded: ${error.message}`);
     }).finally(() => { loadingPageData = null; });
     return loadingPageData;
 }
@@ -114,7 +100,15 @@ function startWindDataUpdateCheck() {
     }, 600000);
 }
 
-function updateCycleDisplay(cycle, time) {
+function setModelHeading(recorded) {
+    const heading = document.getElementById('model-heading');
+    heading.textContent = recorded ? 'Recorded model' : 'Displayed model';
+    heading.className = recorded ? 'recorded' : '';
+}
+
+function updateCycleDisplay(model, cycle, time, recorded) {
+    setModelHeading(recorded);
+    document.getElementById('lb_displayed_model').textContent = model;
     const lbModelrun = document.getElementById('lb_modelrun');
     const lbIndex = document.getElementById('lb_index');
     let cycleString = null;
@@ -404,8 +398,7 @@ function applyRaceSettings(race) {
     if (race.settings.forecast_model) {
         const sf = document.getElementById('sel_forecast_model');
         if (sf && Array.from(sf.options).some((option) => option.value === race.settings.forecast_model)) {
-            sf.value = race.settings.forecast_model;
-            setForecastModel(sf.value);
+            setForecastModel(race.settings.forecast_model);
         }
     }
     settings.secondary_forecast_model = race.settings.secondary_forecast_model || 'ECMWF-IFS-WIND';
@@ -413,7 +406,7 @@ function applyRaceSettings(race) {
     updateSecondaryControls();
     if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
-  if (race.settings.duration)   setDuration(race.settings.duration / 3600);
+  restoreRaceDuration(race.settings.duration);
     // Restore persisted gates (clear existing overlays first)
     restoreRaceGates(race);
   drawRouteLine();
@@ -938,27 +931,24 @@ function precedingIsochrone(time) {
     return best;
 }
 
+function recordedForecastModel(iso) {
+    const model = iso?.['forecast-model'] || routeInfo['forecast-model'];
+    return model && String(model).replace(/^.*::/, '').toUpperCase();
+}
+
 function syncRouteWind(iso, time, sampleTime = time) {
     const cycle = iso?.cycle || routeInfo['initial-cycle'];
-    const model = iso?.['forecast-model'] || routeInfo['forecast-model'];
+    const model = recordedForecastModel(iso);
     if (!cycle || !model) {
-        document.getElementById('router-data-status').textContent = 'This route has no forecast provenance. Recompute it to synchronize wind.';
+        alert('This route has no forecast provenance. Recompute it to synchronize wind.');
         return Promise.resolve(false);
     }
-    const normalized = String(model).replace(/^.*::/, '').toUpperCase();
-    if (settings.forecast_model !== normalized) {
-        settings.forecast_model = normalized;
-        gribCache = new GribCache(document.getElementById('wind-canvas'), normalized);
-    }
-    document.getElementById('sel_forecast_model').value = normalized;
-    routeWindSelection = { cycle, model: normalized };
-    selectedIsochroneStage = Number.isInteger(iso?.stage) ? iso.stage : null;
-    selectedRouteTime = new Date(time);
-    return getWind(cycle, new Date(sampleTime)).then(ok => { if (ok) updateIsochrones(); return ok; });
+    routeWindSelection = { cycle, model, time: new Date(time), sampleTime: new Date(sampleTime),
+        isochrone: iso, stage: iso?.stage };
+    return getWind(cycle, routeWindSelection.sampleTime);
 }
 
 function onSelectIsochrone(isochrone) {
-    selectedIsochroneStage = Number.isInteger(isochrone.stage) ? isochrone.stage : null;
     return syncRouteWind(isochrone, isochroneTime(isochrone), isochrone['wind-time'] || isochroneTime(isochrone));
 }
 
@@ -978,7 +968,6 @@ function onDisplayTracks(event) {
 }
 
 function onAdjustIndex(event) {
-    selectedRouteTime = null;
     var source = event.target.id;
     if (source == "bt_dec6")
         ir_index.valueAsNumber = ir_index.valueAsNumber - 6;
@@ -988,8 +977,16 @@ function onAdjustIndex(event) {
         ir_index.valueAsNumber = ir_index.valueAsNumber + 1;
     else if (source == "bt_inc6")
         ir_index.valueAsNumber = ir_index.valueAsNumber + 6;
-    updateIsochrones();
-    redrawWindByOffset(ir_index.value);
+    const time = getOffsetTime(ir_index.value);
+    if (routeWindSelection) {
+        const stage = routeWindSelection.stage;
+        const atTime = (routeInfo.isochrones || []).filter(iso => isochroneTime(iso).getTime() === time.getTime());
+        const iso = atTime.find(iso => iso.stage === stage) || atTime[0];
+        if (iso) return onSelectIsochrone(iso);
+        // Between isochrones, keep browsing the recorded run without highlighting a line.
+        routeWindSelection = { ...routeWindSelection, isochrone: null, time, sampleTime: time };
+    }
+    return redrawWindByTime(time);
 }
 
 function onDelayedStart(event) {
@@ -1026,11 +1023,13 @@ function onSetCurrents(event) {
     captureRaceSettings('current', current);
 }
 
-function onSetForecastModel(event) {
+async function onSetForecastModel(event) {
     const model = event.currentTarget.value || 'NOAA-GFS-WIND';
-    setForecastModel(model);
-    storeValue('forecast_model', model);
-    captureRaceSettings('forecast_model', model);
+    const raceName = currentRaceName;
+    if (await setForecastModel(model)) {
+        storeValue('forecast_model', model);
+        if (raceName === currentRaceName) captureRaceSettings('forecast_model', model);
+    }
 }
 
 function onSetWaves(event) {
@@ -1044,7 +1043,7 @@ function onSetDuration(event) {
     let duration = event.target.value;
     settings.duration = duration * 3600;
     storeValue('duration', duration);
-    captureRaceSettings('duration', duration);
+    captureRaceSettings('duration', settings.duration);
 }
 
 
@@ -1112,14 +1111,7 @@ function restoreCursor() {
 
 function updateMap() {
     if (!windReady || !ir_index) return;
-    var bounds = getMapBounds();
-
-    // Load wind
-    if (!gribCache) {
-        let canvas = document.getElementById('wind-canvas');
-        gribCache = new GribCache(canvas, settings.forecast_model);
-    }
-
+    if (routeWindSelection) return getWind(routeWindSelection.cycle, routeWindSelection.sampleTime);
     return redrawWindByOffset(ir_index.value);
 }
 
@@ -1193,18 +1185,11 @@ function getMaxForecastStep(modelName) {
 }
 
 function setForecastModel(model) {
-    routeWindSelection = null;
-    selectedRouteTime = null;
-    settings.forecast_model = model;
-    currentCycle = getLatestCycleFromSettings(model) || getCurrentCycle();
-    updateForecastRange(model);
-
-    const canvas = document.getElementById('wind-canvas');
-    if (canvas) gribCache = new GribCache(canvas, model);
-
-    if (ir_index) {
-        redrawWindByOffset(ir_index.value);
-    }
+    // Keep routing on the last working model while the candidate loads.
+    document.getElementById('sel_forecast_model').value = settings.forecast_model;
+    const cycle = getLatestCycleFromSettings(model) || getCurrentCycle();
+    const offset = Math.min(Number(ir_index?.value || 0), getMaxForecastStep(model));
+    return getWind(cycle, getOffsetTime(offset, cycle), model);
 }
 
 function updateForecastRange(model) {
@@ -1288,9 +1273,16 @@ function pad0(val, length = 2, base = 10) {
 //////////////////////////////////////////////////////////////////////
 /// Accessors
 
-function setDuration(duration) {
-    settings.duration = duration * 3600;
-    document.getElementById('sel_duration').value = duration;
+function restoreRaceDuration(savedDuration) {
+    const selector = document.getElementById('sel_duration');
+    const options = Array.from(selector.options);
+    const duration = Number(savedDuration);
+    // Race snapshots store seconds. Older selector changes stored hours.
+    const option = options.find(option => Number(option.value) * 3600 === duration)
+        || options.find(option => Number(option.value) === duration)
+        || options.find(option => option.defaultSelected);
+    selector.value = option.value;
+    settings.duration = Number(option.value) * 3600;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -1361,6 +1353,8 @@ function getRoute() {
             routeInfo = JSON.parse(data.response);
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
+            routeWindSelection = null;
+            setModelHeading(false);
             clearRoute();
             displayRouting(routeInfo);
             bt_execute.disabled = false;
@@ -1535,7 +1529,7 @@ function createIsochrones(isochrones) {
     var c = new Date(currentCycle);
     for (var i = 0; i < isochrones.length; i++) {
         const isoData = isochrones[i];
-        const style = getIsoStyle(isoData, ir_index.valueAsNumber, c);
+        const style = getIsoStyle(isoData, c);
 
         const points = isoData.path.map(p => [p.lat, wrapLon180(p.lng)]);
         let segments = splitPathAtAntimeridian(points);
@@ -1553,29 +1547,21 @@ function createIsochrones(isochrones) {
             addInfo(isoLayer, isoData.cycle, isoData.offset, isoData.stage, isoData);
             const stageLabel = Number.isInteger(isoData.stage)
                 ? ` · ${isoData.stage} gates crossed in this group` : '';
-            isoLayer.bindTooltip(`${getIsochroneTime(isoData).toISOString().slice(0, 16)} UTC${stageLabel}`);
+            isoLayer.bindTooltip(`${isochroneTime(isoData).toISOString().slice(0, 16)} UTC${stageLabel}`);
             routeIsochrones.push(isoLayer);
         }
     }
 }
 
-function getIsochroneTime(isochrone) {
-    var basetime = new Date(isochrone.cycle);
-    var offset = isochrone.offset;
-    return new Date(basetime - 0 + offset * 3600 * 1000);
-}
-
-function getIsoStyle(isochrone, selectedOffset, availableCycle) {
+function getIsoStyle(isochrone, availableCycle) {
     var c = availableCycle;
     var d = new Date(isochrone.cycle);
-    var i = getIsochroneTime(isochrone);
+    var i = isochroneTime(isochrone);
     var h = i.getUTCHours();
     var weight = (h % 6) ? 1 : 3;
     var color;
-    const selectedTime = selectedRouteTime ? selectedRouteTime.getTime() : c.getTime() + Number(selectedOffset) * 3600000;
-    const matchesStage = selectedIsochroneStage === null ||
-        isochrone.stage === selectedIsochroneStage;
-    if (i.getTime() === selectedTime && matchesStage) {
+    const selected = routeWindSelection?.isochrone;
+    if (selected && i.getTime() === isochroneTime(selected).getTime() && selected.stage === isochrone.stage) {
         color = '#ffffff';
         weight = 3;
     } else {
@@ -1593,15 +1579,12 @@ function getIsoStyle(isochrone, selectedOffset, availableCycle) {
 function updateIsochrones() {
     var c = new Date(currentCycle);
     for (const isochrone of routeIsochrones) {
-        var style = getIsoStyle(isochrone, ir_index.valueAsNumber, c);
+        var style = getIsoStyle(isochrone, c);
         isochrone.setStyle({ color: style.color, weight: style.weight });
     }
 }
 
 function clearRoute() {
-    routeWindSelection = null;
-    selectedRouteTime = null;
-    selectedIsochroneStage = null;
     clearPath(twaPath);
     clearPath(hdgPath);
 
@@ -1804,53 +1787,61 @@ async function redrawWindByOffset(offset) {
 
 let windRequestVersion = 0;
 
-async function getWind(cycle, time) {
-    requestedWindTime = new Date(time);
+async function getWind(cycle, time, candidateModel) {
     const version = ++windRequestVersion;
-    const cache = gribCache;
-    const selection = routeWindSelection;
-    const model = selection?.model || settings.forecast_model;
+    const isCurrent = () => version === windRequestVersion;
+    const selection = candidateModel ? null : routeWindSelection;
+    const model = candidateModel || selection?.model || settings.forecast_model;
+    const cache = model === gribCacheModel ? gribCache
+        : new GribCache(document.getElementById('wind-canvas'), model);
     if (selection) cycle = selection.cycle;
     const bounds = getMapBounds();
     let usedCycle = cycle;
     try {
         try {
-            await cache.update(bounds, new Date(usedCycle), time);
+            await cache.update(bounds, new Date(usedCycle), time, isCurrent);
         } catch (initialError) {
-            if (version !== windRequestVersion) return false;
+            if (!isCurrent()) return false;
             // Downloads/cycle selection may have changed since page startup.
             await reloadServerSettings();
+            if (!isCurrent()) return false;
             usedCycle = selection ? selection.cycle : getLatestCycleFromSettings(model);
             if (!usedCycle) throw new Error(`No available forecast cycle for ${model}`);
-            await cache.update(bounds, new Date(usedCycle), time);
+            await cache.update(bounds, new Date(usedCycle), time, isCurrent);
         }
-        if (version !== windRequestVersion || cache !== gribCache) return false;
+        if (!isCurrent()) return false;
+        gribCache = cache;
+        gribCacheModel = model;
+        if (candidateModel) {
+            settings.forecast_model = model;
+            document.getElementById('sel_forecast_model').value = model;
+            routeWindSelection = null;
+        }
         currentCycle = usedCycle;
         windReady = true;
         const canvas = document.getElementById('wind-canvas');
         if (canvas?.style) canvas.style.visibility = 'visible';
-        if (selection) {
-            settings.forecast_model = model;
-            document.getElementById('sel_forecast_model').value = model;
-        }
         if (!selection) updateForecastRange(model);
-        else if (ir_index) ir_index.max = Math.max(Number(ir_index.max), (new Date(time) - new Date(usedCycle)) / 3600000);
-        updateCycleDisplay(usedCycle, time);
-        if (ir_index) ir_index.value = (new Date(time) - new Date(usedCycle)) / 3600000;
-        document.getElementById('router-data-status').textContent = selection
-            ? `Recorded ${model} wind · run ${new Date(usedCycle).toISOString()} · sampled ${new Date(time).toISOString()}`
-            : '';
+        const indexOffset = ((selection?.time || time) - new Date(usedCycle)) / 3600000;
+        if (ir_index) {
+            if (selection) ir_index.max = Math.max(Number(ir_index.max), indexOffset);
+            ir_index.value = indexOffset;
+        }
+        updateCycleDisplay(model, usedCycle, time, Boolean(selection));
+        updateIsochrones();
         return true;
     } catch (error) {
-        if (version === windRequestVersion) {
+        if (isCurrent()) {
             if (selection) {
                 windReady = false;
                 const canvas = document.getElementById('wind-canvas');
                 if (canvas?.style) canvas.style.visibility = 'hidden';
+                updateIsochrones();
+                setModelHeading(true);
+                document.getElementById('lb_displayed_model').textContent = '—';
             }
             console.error('Wind display failed', error);
-            document.getElementById('router-data-status').textContent = `${selection ? 'Recorded forecast unavailable (no substitute used)' : 'Could not display wind'}: ${error.message}`;
-            document.getElementById('bt_retrydata').hidden = false;
+            alert(`${selection ? 'Recorded forecast unavailable' : 'Could not display wind'} for ${model}: ${error.message}`);
         }
         return false;
     }

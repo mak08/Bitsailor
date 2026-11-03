@@ -19,7 +19,7 @@ const context = vm.createContext({
 });
 vm.runInContext(cacheSource, context);
 const cache = vm.runInContext('new GribCache(null)', context);
-cache.updateCanvas = async () => {};
+cache.drawWind = async () => {};
 (async () => {
   // A failed update must leave the previous valid cycle/time available to hover lookups.
   await cache.update({}, new Date(base), new Date('2026-10-31T09:00:00Z'));
@@ -42,7 +42,7 @@ cache.updateCanvas = async () => {};
   };
   context.fetch = async path => { archivedRequests.push(path); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; };
   const archived = vm.runInContext('new GribCache(null)', context);
-  archived.updateCanvas = async () => {};
+  archived.drawWind = async () => {};
   await archived.update({}, new Date(later), new Date('2026-10-31T21:00:00Z'));
   assert.deepEqual(archivedRequests, ['/weather/archive-9']);
 
@@ -50,9 +50,10 @@ cache.updateCanvas = async () => {};
   const node = id => { if (!nodes.has(id)) nodes.set(id, {}); return nodes.get(id); };
   let refreshed = 0, failDisplay = false;
   const attempts = [];
+  const alerts = [];
   const ui = vm.createContext({
     console: { error() {} }, Date, PolarManager: class {},
-    document: { getElementById: node },
+    document: { getElementById: node }, alert: message => alerts.push(message),
     reloadServerSettings: async () => { refreshed++; },
   });
   vm.runInContext(main.slice(0, main.lastIndexOf('// Initialize everything when the page loads')), ui);
@@ -65,7 +66,7 @@ cache.updateCanvas = async () => {};
     getMapBounds = () => ({});
     updateIsochrones = () => {};
     updateForecastRange = () => {};
-    updateCycleDisplay = () => {};
+    gribCacheModel = settings.forecast_model;
     getLatestCycleFromSettings = () => '${later}';
     gribCache = { update: async (_, cycle, time) => {
       attempts.push([cycle.toISOString(), time.toISOString()]);
@@ -77,6 +78,7 @@ cache.updateCanvas = async () => {};
     { cycle: '${later}', time: '2026-10-31T23:00:00Z', offset: 11 },
     { cycle: '${base}', time: '2026-10-31T18:00:00Z', offset: 12 }
   ] };`, ui);
+  node('sel_forecast_model').value = 'NOAA-GFS-WIND';
   failDisplay = true;
   assert.equal(await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1 })`, ui), false);
   assert.equal(refreshed, 1);
@@ -84,11 +86,12 @@ cache.updateCanvas = async () => {};
     ['2026-10-31T06:00:00.000Z', '2026-10-31T21:00:00.000Z'],
     ['2026-10-31T06:00:00.000Z', '2026-10-31T21:00:00.000Z']
   ]);
-  assert.match(node('router-data-status').textContent, /Recorded forecast unavailable/);
+  assert.match(alerts.pop(), /Recorded forecast unavailable/);
   // A valid old run is used despite the newer run being advertised.
   failDisplay = false;
   vm.runInContext(`gribCache.update = async (_, cycle, time) => { attempts.push([cycle.toISOString(), time.toISOString()]); };`, ui);
   assert.equal(await vm.runInContext(`onMarkerClicked({ time: '2026-10-31T21:30:00Z' })`, ui), true);
+  assert.equal(node('model-heading').textContent, 'Recorded model');
   assert.equal(node('ir_index').value, 15.5);
   assert.equal(vm.runInContext('currentCycle', ui), base);
   assert.equal(vm.runInContext('getOffsetTime(9.5).toISOString()', ui), '2026-10-31T15:30:00.000Z');
@@ -98,7 +101,80 @@ cache.updateCanvas = async () => {};
   // Isochrone sampling time is distinct from its endpoint/selection time.
   await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1, 'wind-time': '2026-10-31T20:50:00Z' })`, ui);
   assert.equal(attempts.at(-1)[1], '2026-10-31T20:50:00.000Z');
-  assert.equal(vm.runInContext('selectedRouteTime.toISOString()', ui), '2026-10-31T21:00:00.000Z');
+  assert.equal(node('ir_index').value, 15);
+  assert.equal(vm.runInContext('routeWindSelection.time.toISOString()', ui), '2026-10-31T21:00:00.000Z');
+  ui.GribCache = class {
+    constructor(canvas, model) { this.model = model; }
+    async update() {}
+  };
+  assert.equal(await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, 'forecast-model': 'router::ecmwf-ifs-wind' })`, ui), true);
+  assert.equal(vm.runInContext('gribCache.model', ui), 'ECMWF-IFS-WIND');
+  assert.equal(node('model-heading').textContent, 'Recorded model');
+  assert.equal(node('lb_displayed_model').textContent, 'ECMWF-IFS-WIND');
+  assert.equal(node('sel_forecast_model').value, 'NOAA-GFS-WIND');
+  assert.equal(vm.runInContext('settings.forecast_model', ui), 'NOAA-GFS-WIND');
+  assert.equal(node('model-heading').className, 'recorded');
+  // Both slider and step buttons switch to the model recorded for the selected hour.
+  for (const control of ['ir_index', 'bt_inc']) {
+    const slider = node('ir_index');
+    Object.defineProperty(slider, 'valueAsNumber', { configurable: true,
+      get() { return Number(this.value); }, set(value) { this.value = value; } });
+    slider.value = control === 'bt_inc' ? 11 : 12;
+    assert.equal(await vm.runInContext(`onAdjustIndex({target: {id: '${control}'}})`, ui), true);
+    assert.equal(slider.value, 12);
+    assert.equal(node('model-heading').textContent, 'Recorded model');
+    assert.equal(node('model-heading').className, 'recorded');
+    assert.equal(node('lb_displayed_model').textContent, 'NOAA-GFS-WIND');
+    await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, 'forecast-model': 'ECMWF-IFS-WIND' })`, ui);
+    assert.equal(node('model-heading').textContent, 'Recorded model');
+    assert.equal(node('model-heading').className, 'recorded');
+  }
+  // Compare the model of the highlighted stage, including across cycle boundaries.
+  vm.runInContext(`routeInfo.isochrones.push(
+    { cycle: '${base}', offset: 13, stage: 0, 'forecast-model': 'NOAA-GFS-WIND' },
+    { cycle: '${later}', offset: 7, stage: 1, 'forecast-model': 'router::ecmwf-ifs-wind' },
+    { cycle: '${base}', offset: 14, stage: 1, 'forecast-model': 'NOAA-GFS-WIND' }
+  );`, ui);
+  await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1, 'forecast-model': 'ECMWF-IFS-WIND' })`, ui);
+  // The same absolute hour can have a different slider offset on the new model's cycle.
+  for (const [offset, model, cycle, newOffset] of [
+    [13, 'ECMWF-IFS-WIND', later, 7], [8, 'NOAA-GFS-WIND', base, 14],
+    [13, 'ECMWF-IFS-WIND', later, 7], [10, 'ECMWF-IFS-WIND', later, 10]
+  ]) {
+    node('ir_index').value = offset;
+    assert.equal(await vm.runInContext("onAdjustIndex({target: {id: 'ir_index'}})", ui), true);
+    assert.equal(node('model-heading').textContent, 'Recorded model');
+    assert.equal(node('lb_displayed_model').textContent, model);
+    assert.equal(node('ir_index').value, newOffset);
+    assert.equal(vm.runInContext('currentCycle', ui), cycle);
+    assert.equal(node('sel_forecast_model').value, 'NOAA-GFS-WIND');
+  }
+  assert.equal(vm.runInContext('routeWindSelection.isochrone', ui), null);
+  await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, 'forecast-model': 'ECMWF-IFS-WIND' })`, ui);
+  // A failed model switch leaves both the active route replay and routing preferences intact.
+  vm.runInContext(`getMaxForecastStep = () => 384;
+    currentRaceName = 'test';
+    races = [{name: currentRaceName, settings: {forecast_model: settings.forecast_model}}];`, ui);
+  const stored = [];
+  ui.storeValue = (...entry) => stored.push(entry);
+  ui.localStorage = { setItem() {} };
+  ui.GribCache = class {
+    constructor(canvas, model) { this.model = model; }
+    async update() { if (this.model === 'AROME') throw new Error('missing forecast'); }
+  };
+  async function chooseModel(model) {
+    node('sel_forecast_model').value = model;
+    await vm.runInContext("onSetForecastModel({currentTarget: document.getElementById('sel_forecast_model')})", ui);
+  }
+  const previousCache = vm.runInContext('gribCache', ui);
+  await chooseModel('AROME');
+  assert.deepEqual(alerts, ['Could not display wind for AROME: missing forecast']);
+  assert.equal(vm.runInContext('gribCache', ui), previousCache);
+  assert.equal(vm.runInContext('currentCycle', ui), base);
+  assert.equal(node('lb_displayed_model').textContent, 'ECMWF-IFS-WIND');
+  assert.equal(node('sel_forecast_model').value, 'NOAA-GFS-WIND');
+  assert.equal(vm.runInContext('races[0].settings.forecast_model', ui), 'NOAA-GFS-WIND');
+  assert.deepEqual(stored, []);
   // Leaflet layers must keep provenance as well as their geometric cycle/offset.
   vm.runInContext(`var layer = { on() {} }; addInfo(layer, '${base}', 15, 0, { 'wind-time': '2026-10-31T20:50:00Z', 'forecast-model': 'NOAA-GFS-WIND' });`, ui);
   assert.equal(vm.runInContext(`layer['wind-time']`, ui), '2026-10-31T20:50:00Z');
@@ -109,7 +185,6 @@ cache.updateCanvas = async () => {};
   ui.window = { setInterval() { return 1; } };
   node('mapMenu').style = {};
   node('sel_duration').value = 96;
-  node('sel_forecast_model').value = 'NOAA-GFS-WIND';
   node('cb_waves').checked = true;
   node('sel_currents').value = 'NONE';
   vm.runInContext(`
@@ -140,6 +215,32 @@ cache.updateCanvas = async () => {};
   assert.deepEqual(request.searchParams.getAll('forecast_switch_hours'), ['12']);
   assert.equal(request.searchParams.get('startTime'), '2026-10-31T22:14');
   assert.equal(vm.runInContext('currentCycle', ui), base); // Replay remains intact.
+  await chooseModel('ECMWF-IFS-WIND');
+  assert.equal(node('model-heading').textContent, 'Displayed model');
+  assert.equal(node('sel_forecast_model').value, 'ECMWF-IFS-WIND');
+  assert.equal(vm.runInContext('routeWindSelection', ui), null);
+  node('ir_index').value = 11; // An existing isochrone on the current cycle.
+  await vm.runInContext("onAdjustIndex({target: {id: 'ir_index'}})", ui);
+  assert.equal(vm.runInContext('routeWindSelection', ui), null);
+  assert.equal(node('model-heading').textContent, 'Displayed model');
+  assert.equal(vm.runInContext('races[0].settings.forecast_model', ui), 'ECMWF-IFS-WIND');
+  assert.deepEqual(stored, [['forecast_model', 'ECMWF-IFS-WIND']]);
+  // A slower failed switch must not undo a newer successful choice or show a stale error.
+  let rejectSlow;
+  ui.GribCache = class {
+    constructor(canvas, model) { this.model = model; }
+    async update() {
+      if (this.model === 'AROME') await new Promise((_, reject) => { rejectSlow = reject; });
+    }
+  };
+  const slow = chooseModel('AROME');
+  await chooseModel('NOAA-GFS-WIND');
+  rejectSlow(new Error('late failure'));
+  await slow;
+  assert.equal(alerts.length, 1);
+  assert.equal(vm.runInContext('gribCacheModel', ui), 'NOAA-GFS-WIND');
+  assert.equal(node('sel_forecast_model').value, 'NOAA-GFS-WIND');
+  assert.equal(vm.runInContext('races[0].settings.forecast_model', ui), 'NOAA-GFS-WIND');
   // Matching the backend's scalar interpolation matters when vector directions differ.
   const magnitude = vm.runInContext('interpolatePoint(10, -10, 0, 0, 0.5).magnitude', context);
   assert.equal(magnitude, 10);

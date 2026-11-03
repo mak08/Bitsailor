@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css?v=router-forecast-contract-20261031">
+	<link rel="stylesheet" href="css/router.css?v=router-model-heading-20261103">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js?v=router-gates-20261101"></script>
+	<script type="module" src="js/router-main.js?v=router-explicit-replay-20261103"></script>
 
 </head>
 
@@ -22,8 +22,6 @@
 		<div class="header">
 			<div id="appname">
 				<a href="start" style="color:white">Bitsailor</a> Router
-                <span id="router-data-status" role="status" style="font-size:0.8em"></span>
-                <button id="bt_retrydata" type="button" hidden>Retry loading data</button>
 			</div>
 		</div>
 
@@ -310,15 +308,9 @@
 
 		</div>
 
-		<div class="footer-left">
-		</div>
-
-
 		<div class="footer">
-
+			<strong>Wind scale (Bft)</strong>
 			<div class="legend">
-
-				<label style="margin: 2px 10px 2px 2px;">Wind scale</label>
 				<div class="colorbox" style="background-color:#0080ff;"> 0</div>
 				<div class="colorbox" style="background-color:#00ffff;"> 1</div>
 				<div class="colorbox" style="background-color:#00ffa0;"> 2</div>
@@ -332,31 +324,21 @@
 				<div class="colorbox" style="background-color:#d020ff;">10</div>
 				<div class="colorbox" style="background-color:#8020ff;">11</div>
 				<div class="colorbox" style="background-color:#0000ff;">12</div>
-				<label style="margin: 2px 2px 2px 10px;">Bft</label>
 			</div>
-
-			<div class="cursor-position">
-				<label id="lb_position">-.-.-.-</label>
-			</div>
-
-			<div class="forecast-info">
-				<div>
-					<label><b>Cycle:</b></label> <label id="lb_modelrun"></label>
-				</div>
-				<div class="forecast-header">
-					<label><b>Time:</b></label>
-				</div>
-				<div class="forecast-slider-label">
-					<label id="lb_index"></label>
-				</div>
-				<div class="forecast-slider">
-					<button id="bt_dec6" type="button">&lt;6</button>
-					<button id="bt_dec" type="button">&lt;1</button>
-					<input id="ir_index" type="range" min="0" max="384" step="1" value="0" />
-					<button id="bt_inc" type="button">1&gt;</button>
-					<button id="bt_inc6" type="button">6&gt;</button>
-				</div>
-
+			<strong>Lat/lng at cursor</strong>
+			<span id="lb_position">-.-.-.-</span>
+			<strong id="model-heading">Displayed model</strong>
+			<span id="lb_displayed_model">—</span>
+			<strong>Cycle</strong>
+			<span id="lb_modelrun"></span>
+			<strong>Time</strong>
+			<span id="lb_index"></span>
+			<div class="forecast-slider">
+				<button id="bt_dec6" type="button">&lt;6</button>
+				<button id="bt_dec" type="button">&lt;1</button>
+				<input id="ir_index" type="range" min="0" max="384" step="1" value="0" />
+				<button id="bt_inc" type="button">1&gt;</button>
+				<button id="bt_inc6" type="button">6&gt;</button>
 			</div>
 
 		</div>

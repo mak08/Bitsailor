@@ -52,8 +52,8 @@ button:active {
 	display: grid;
 	grid-template-areas: 'header menu'
 						 'controls main'
-						 'footer-left footer';
-	grid-template-rows: 48px minmax(0, 1fr) 48px; /* Add minmax to prevent overflow */
+						 'footer footer';
+	grid-template-rows: minmax(48px, max-content) minmax(0, 1fr) auto;
 	grid-template-columns: 40vh 1fr;
 	grid-gap: 2px; /* Increase from 1px to 2px */
 	height: 100vh;
@@ -77,7 +77,7 @@ button:active {
 .header {
 	display: flex;
 	align-items: baseline;
-	justify-content: space-around;
+	justify-content: flex-start;
 }
 
 #appname {
@@ -89,10 +89,27 @@ button:active {
 }
 
 .menu {
-	display: flex;
-	justify-content: space-between;
-	align-items: center; /* Change from flex-end to center */
-	padding: 8px 4px; /* Add more padding */
+	display: grid;
+	min-height: max-content;
+	grid-template-columns: minmax(15ch, 1fr) minmax(24ch, 1.5fr) minmax(34ch, 2fr) max-content;
+	align-items: center;
+	min-width: 0;
+	overflow-x: auto;
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+.menu div, .menu label {
+	margin-block: 0;
+}
+
+.cursor-vmg-down, .cursor-dtf {
+	display: grid;
+	grid-template-columns: 10ch 3ch 10ch;
+}
+
+.cursor-dtf {
+	grid-template-columns: 14ch 3ch 14ch;
 }
 
 #donate {
@@ -130,18 +147,14 @@ button:active {
 @media only screen and (max-width: 600px) {
 	.grid-container {
 		grid-template-columns: 1fr;
-		grid-template-rows: 48px auto 48px;
+		grid-template-rows: minmax(48px, max-content) auto auto;
 		height: 100vh;
 		width: 100vw;
 	}
-	.menu, .controls, .footer, .footer-left {
+	.menu, .controls, .footer {
 		font-size: 90%;
 		padding: 2px;
 	}
-    .footer, .footer-left {
-        height: 48px;
-        align-items: center;
-    }	
 	.map, .map-overlay {
 		height: 100%;
 		width: 100%;
@@ -159,21 +172,37 @@ button:active {
 }
 
 
-.footer-left {
-    grid-area: footer-left;
-	height: 48px;
-	color: #ededeb;
-    background-color: #464242; 
-}
 .footer {
-    grid-area: footer;
-	height: 48px;
-	display: flex;
-	flex-direction: row;
-	align-items: center;
+	grid-area: footer;
+	display: grid;
+	grid-template-rows: repeat(2, auto);
+	grid-auto-flow: column;
+	/* Only the static legend and slider size themselves to their contents. */
+	grid-template-columns: max-content 46ch 19ch 16ch 19ch max-content;
+	font-variant-numeric: tabular-nums;
 	justify-content: space-between;
+	align-items: center;
+	column-gap: 12px;
+	min-width: 0;
+	overflow-x: auto;
+	font-size: 90%;
+	white-space: nowrap;
 	color: #ededeb;
-    background-color: #464242; 
+	background-color: #464242;
+}
+
+#model-heading {
+	color: #161616;
+	background-color: #ffeb3b;
+}
+
+#model-heading.recorded {
+	background-color: #ff6565;
+}
+
+.footer > * {
+	margin: 0;
+	justify-self: start;
 }
 
 #wind-canvas {
@@ -216,26 +245,10 @@ input[type=checkbox] {
 
 /* Forecast slider*/
 
-.forecast-info {
-	display: flex;
-	flex-direction: row;
-	justify-self: end;
-	align-items: center;
-	justify-content: space-between;
-}
-
-.forecast-header {
-	margin: 2px 2px 2px 10px;
-}
-.forecast-slider-label {
-	margin: 2px 2px;
-}
 .forecast-slider {
+	grid-row: span 2;
 	display: flex;
-	flex-direction: row;
-	justify-self: end;
 	align-items: center;
-	margin: 2px 10px;
 }
 
 /* Position entry */
@@ -425,15 +438,6 @@ input[type=checkbox] {
 	grid-column: 1;
 }
 
-/* Cursor position */
-
-.cursor-position {
-	grid-row: 21;
-	grid-column: 2;
-	margin: 2px 20px;
-}
-
-
 /* Cursor wind */
 .current-wind {
 	grid-row: 21;
@@ -567,8 +571,7 @@ input[type=checkbox] {
 .colorbox {
 	width: 20px; 
 	height: 16px; 
-	margin-left: 0px;
-	margin-right: 0px;
+	margin: 0;
 	padding: 1px;
 	text-align: center;
 }

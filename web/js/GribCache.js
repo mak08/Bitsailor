@@ -133,9 +133,7 @@ function wrapLonDeg(lon) {
 export default class GribCache {
 
     #canvas = undefined;
-    #curBounds = undefined;
     #curCycle = undefined;
-    #curOffset = undefined;
     #curTime = undefined;
     #forecastModel = 'NOAA-GFS-WIND';
     #updateVersion = 0;
@@ -191,7 +189,7 @@ export default class GribCache {
     ////////////////////////////////////////////////////////////////////////////////
     /// Plotting wind data
     
-    async drawWind (bounds, cycle, offset, time, canvas) {
+    async drawWind (bounds, cycle, offset, time, canvas, isCurrent) {
         
         let rect = canvas.getBoundingClientRect();
         // Only draw if canvas is displayed (wind display enabled)
@@ -199,9 +197,10 @@ export default class GribCache {
             let STEPS_X = floor(rect.width/15);
             let STEPS_Y = floor(rect.height/15);
             
-            var ctx = canvas.getContext("2d");
+            // Keep the displayed forecast intact until the entire new frame is ready.
+            const frame = canvas.cloneNode(false);
+            var ctx = frame.getContext("2d");
             ctx.globalAlpha = 0.3;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             // Draw wind arrows are at evenly spaced map points
             // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
@@ -228,6 +227,11 @@ export default class GribCache {
                 let canvasLeft = mapWidthLeft/mapWidth * ctx.canvas.width;
                 await this.drawMap(ctx, map, cycle, offset, time, dx, dy, top, bottom, left, 256, 0, mapWidth);
                 await this.drawMap(ctx, map, cycle, offset, time, dx, dy, top, bottom, 0, right, canvasLeft, mapWidth);
+            }
+            if (isCurrent()) {
+                const display = canvas.getContext("2d");
+                display.clearRect(0, 0, canvas.width, canvas.height);
+                display.drawImage(frame, 0, 0);
             }
         }
     }
@@ -304,7 +308,7 @@ export default class GribCache {
         return await this.windDataMagnitude(this.#curCycle, time, lat, lon);
     }
     
-    async update (bounds, cycle, time = new Date()) {
+    async update (bounds, cycle, time = new Date(), requestIsCurrent = () => true) {
         let curTime = new  Date(time);
         let baseTime = new Date(cycle);
         let offset = (curTime - baseTime) / 3600000;
@@ -316,21 +320,17 @@ export default class GribCache {
         if (frames.after !== frames.before) {
             await this.getGribCached(baseTime, frames.after);
         }
-        if (version !== this.#updateVersion) return;
-        this.#curBounds = bounds;
+        const isCurrent = () => version === this.#updateVersion && requestIsCurrent();
+        if (!isCurrent()) return;
+        await this.drawWind(bounds, baseTime, offset, curTime, this.#canvas, isCurrent);
+        if (!isCurrent()) return;
         this.#curCycle = baseTime;
-        this.#curOffset = offset;
         this.#curTime = curTime;
-        await this.updateCanvas();
     }
 
     ////////////////////////////////////////////////////////////////////////////////
     /// Internal methods
     
-    async updateCanvas () {
-        await this.drawWind(this.#curBounds, this.#curCycle, this.#curOffset, this.#curTime, this.#canvas);
-    }
-
     async ensureCycle(cycle) {
         const key = cycle.toISOString();
         if (this.#cycleSources.has(key)) return;

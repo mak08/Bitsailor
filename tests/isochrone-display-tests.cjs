@@ -8,17 +8,19 @@ function extract(name) {
     assert(start >= 0 && end > start);
     return source.slice(start, end);
 }
-const ctx = vm.createContext({ Date, selectedIsochroneStage: 1, selectedRouteTime: null });
-vm.runInContext(extract('getIsochroneTime') + '\n' + extract('getIsoStyle'), ctx);
+const ctx = vm.createContext({ Date, routeWindSelection: null });
+vm.runInContext(['isochroneTime', 'getIsoStyle'].map(extract).join('\n'), ctx);
 const cycle = new Date('2026-10-30T12:00:00Z');
-const style = (iso) => ctx.getIsoStyle(iso, 18, cycle);
+const style = (iso) => ctx.getIsoStyle(iso, cycle);
+assert.notEqual(style({ cycle, offset: 18, stage: 1 }).color, '#ffffff');
+ctx.routeWindSelection = { isochrone: { cycle, offset: 18, stage: 1 } };
 assert.equal(style({ cycle, offset: 18, stage: 1 }).color, '#ffffff');
 assert.notEqual(style({ cycle, offset: 18, stage: 0 }).color, '#ffffff');
 // Same offset from a different cycle is a different time.
 assert.notEqual(style({ cycle: '2026-10-30T06:00:00Z', offset: 18, stage: 1 }).color, '#ffffff');
 // Different cycle and offset can identify the same absolute time.
 assert.equal(style({ cycle: '2026-10-30T06:00:00Z', offset: 24, stage: 1 }).color, '#ffffff');
-ctx.selectedIsochroneStage = null;
+ctx.routeWindSelection = { isochrone: { cycle, offset: 18 } };
 assert.equal(style({ cycle, offset: 18 }).color, '#ffffff');
 assert.equal(style({ cycle, offset: 18, stage: 0 }).dashArray, null);
 assert.equal(style({ cycle, offset: 18, stage: 1 }).dashArray, '8 4');

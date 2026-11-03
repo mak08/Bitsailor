@@ -242,6 +242,19 @@ cache.drawWind = async () => {};
   assert.equal(node('sel_forecast_model').value, 'NOAA-GFS-WIND');
   assert.equal(vm.runInContext('races[0].settings.forecast_model', ui), 'NOAA-GFS-WIND');
   // Matching the backend's scalar interpolation matters when vector directions differ.
+  // Fine-tuned samples carry explicit forecast provenance; marker copies must
+  // retain it rather than inferring the old search isochrone's sampling time.
+  vm.runInContext(`
+    makeWaypointInfo = () => '';
+    var refinedMarker = { bindTooltip() {} };
+    addWaypointInfo(refinedMarker, new Date('${base}'), {
+      time: '2026-10-31T21:12:00Z', 'wind-cycle': '${base}',
+      'wind-model': 'NOAA-GFS-WIND', 'wind-time': '2026-10-31T21:10:00Z'
+    });
+  `, ui);
+  await vm.runInContext('onMarkerClicked(refinedMarker)', ui);
+  assert.equal(vm.runInContext('routeWindSelection.cycle', ui), base);
+  assert.equal(vm.runInContext('routeWindSelection.sampleTime.toISOString()', ui), '2026-10-31T21:10:00.000Z');
   const magnitude = vm.runInContext('interpolatePoint(10, -10, 0, 0, 0.5).magnitude', context);
   assert.equal(magnitude, 10);
   console.log('Recorded-cycle wind replay, preceding-isochrone inference, sample time and failure tests passed.');

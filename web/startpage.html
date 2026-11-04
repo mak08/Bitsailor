@@ -53,11 +53,14 @@
               <div class="welcome">
                 <h2>Bitsailor is back!</h2>
                 <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
-                <p><b>Please find the <a href="router-fw.html?v=router-explicit-replay-20261103">Router</a> page</b> <a href="router-fw.html?v=router-explicit-replay-20261103" target=_blank><b>here</b></a></p>
+                <p><b>Please find the <a href="router-fw.html?v=router-marker-controls-20261104">Router</a> page</b> <a href="router-fw.html?v=router-marker-controls-20261104" target=_blank><b>here</b></a></p>
               </div>
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
                 <ul>
+                  <li><b>2026-11-04 &ndash; Route fine-tuning</b><br>
+                    Automatic fine-tuning can reduce TWA oscillation using whole-degree TWA or heading commands, preserving tacks and gybes without a later ETA.
+                  </li>
                   <li><b>2026-11-01 &ndash; Secondary forecast model</b><br>
                     Routes can now switch forecast models after 6, 12 or 24 hours &ndash; for example, from NOAA-GFS to ECMWF-IFS. See the Usage tab for details.
                   </li>
@@ -118,6 +121,8 @@
                 <li>For two forecast models, set <b>Switch after</b> to 6, 12 or 24 hours from departure and choose the second model under <b>Then</b>. Leave it <b>Off</b> for one model.</li>
                 <li>Click <b>Execute</b>. Enable <b>Display tracks</b> for alternative paths.</li>
               </ol>
+
+              <p><b>Route fine-tuning:</b> After routing, the optimizer tries whole-degree TWA and fixed-heading segments to reduce unnecessary commands. Heading segments are checked against changing wind every minute. Tack and gybe order is preserved, and the final ETA cannot increase. Duration-limited routes instead seek greater distance from the start at the same final time. If no valid improvement is found, the original route is retained. Check <b>Fine-tuning</b> below the route statistics and hover over the result for details.</p>
 
               <h3>Waypoints, gates and races</h3>
               <ul>

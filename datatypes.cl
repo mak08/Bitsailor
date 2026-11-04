@@ -89,7 +89,8 @@ continues to after the gate; it is used to choose between several crossings."
           (routestats-calctime thing)
           (format-datetime nil (routestats-start thing))))
 
-(defstruct routeinfo status best polars options stats tracks isochrones forecast-model requested-cycle initial-cycle)
+(defstruct routeinfo status best polars options stats tracks isochrones forecast-model requested-cycle initial-cycle
+  original-best twa-segments fine-tuning steering-segments)
 
 ;;; Write a compact routeinfo representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routeinfo) stream)
@@ -129,7 +130,8 @@ continues to after the gate; it is used to choose between several crossings."
   wave-factor)
 
 (defstruct trackpoint
-  time position heading dtf speed sail crntdir crntspd twd tws twa wave-height wave-dir wave-factor)
+  time position heading dtf speed sail crntdir crntspd twd tws twa wave-height wave-dir wave-factor
+  wind-cycle wind-model wind-time control-mode control-value)
 
 ;;; Convert a predecessor-chain point for output, using SUCCESSOR for the outgoing leg's heading,
 ;;; speed, sail and waves.

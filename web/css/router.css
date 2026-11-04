@@ -536,6 +536,9 @@ input[type=checkbox] {
 	align-self: flex-start;
 }
 
+.statistics-fine-tuning-label { grid-row: 27; grid-column: 1; }
+.statistics-fine-tuning { grid-row: 27; grid-column: 2/7; font-size: 90%; }
+
 /* Download */
 /* Separate row for schedule download */
 .route-label {

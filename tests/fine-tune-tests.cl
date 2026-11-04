@@ -22,6 +22,8 @@
          (routing (make-routing :start origin :dest (make-latlng :lat 0d0 :lng 2d0)
                     :starttime start :polars polars :stepmax 3600))
          (*fine-tune-max-seconds* 60d0)
+         (*fine-tune-heading-enabled* nil)
+         (*fine-tune-outward-enabled* nil)
          (*fine-tune-weather* (make-hash-table :test #'equal))
          (*fine-tune-evaluations* 0)
          (*fine-tune-started* (get-internal-real-time)))
@@ -58,6 +60,9 @@
                 *fine-tune-endpoint-tolerance*))
     (assert (fine-check-manoeuvres raw track))
     (assert (routeinfo-twa-segments info))
+    (assert (fine-integer-plan-p track))
+    (assert (< (abs (- (reduce #'+ (routeinfo-twa-segments info) :key #'twa-segment-duration)
+                        (timestamp-difference (trackpoint-time end) (trackpoint-time (first track))))) 1d-5))
     (assert (routeinfo-original-best info))))
 
 ;;; Check the motivating jitter, tack/gybe constraints, genuine rotating-wind TWA sailing,
@@ -70,7 +75,13 @@
             (raw (routeinfo-best info)))
        (fine-tune-route routing info)
        (fine-test-check raw info)
-       (assert (= (length (routeinfo-twa-segments info)) 1)))))
+       ;; The application accepts integer TWA only. Fitting 107°/108° durations
+       ;; must improve on 105°/110° without rounding a continuous solution.
+       (assert (<= (length (routeinfo-twa-segments info)) 2))
+       (assert (some (lambda (segment) (not (zerop (mod (twa-segment-twa segment) 5))))
+                     (routeinfo-twa-segments info)))
+       (assert (< (fine-distance (trackpoint-position (car (last raw)))
+                                (trackpoint-position (car (last (routeinfo-best info))))) 0.02d0)))))
   (dolist (angles '((45d0 50d0 :tack) (125d0 130d0 :gybe)))
     (call-with-fine-test
      (lambda (routing)
@@ -89,6 +100,16 @@
             (raw (routeinfo-best info)) (*fine-tune-max-evaluations* 0))
        (fine-tune-route routing info)
        (assert (eq raw (routeinfo-best info))))))
+  ;; A legacy fractional reference must not become an allegedly executable
+  ;; integer plan by rounding, or by accepting a slower endpoint-closing route.
+  (call-with-fine-test
+   (lambda (routing)
+     (let* ((info (fine-test-route routing (list (cons 107.5d0 1920d0))))
+            (raw (routeinfo-best info)))
+       (fine-tune-route routing info)
+       (assert (eq raw (routeinfo-best info)))
+       (assert (not (routeinfo-twa-segments info)))
+       (assert (not (fine-tuning-integer-controls (routeinfo-fine-tuning info)))))))
   ;; A smoother arc which misses a short required gate must be rolled back as a
   ;; whole route, even though it closes at the final endpoint and avoids land.
   (call-with-fine-test

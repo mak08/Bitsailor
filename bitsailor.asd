@@ -22,6 +22,7 @@
                (:file "simulation")
                (:file "waypoints")
                (:file "gate-search")
+               (:file "fine-tune")
                (:file "json")
                (:file "status")
                (:file "http-api")

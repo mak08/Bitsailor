@@ -21,7 +21,7 @@ function exportRoute ( routeInfo, format='gpx', sailNames) {
 /// CSV export
 
 function writeRouteCSV (stream, routeInfo, sailNames) {
-    stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD;Penalty;P.Time;Energy;DTF(nm)\n';
+    stream.s += 'Time;Position;TWA;Sail;Speed(kn);Heading;TWS(kn);TWD;Penalty;P.Time;Energy;DTF(nm);Control;Command\n';
     for (const routePoint of routeInfo.best) {
         writePointCSV(stream, routePoint, sailNames);
     }
@@ -38,6 +38,8 @@ function writePointCSV (stream, routePoint, sailNames) {
     stream.s += ';' + Util.ms2knots(routePoint.tws).toFixed(2);
     stream.s += ';' + routePoint.twd.toFixed(1);
     stream.s += ';' + Util.m2nm(routePoint.dtf).toFixed(2);
+    const command = steeringControl(routePoint);
+    stream.s += ';' + command.mode + ';' + command.value;
     stream.s += '\n';
 }
 
@@ -76,6 +78,7 @@ function writePathAsRoute (stream, routeInfo) {
 }
 
 function writePoint (stream, routePoint, type='trkpt') {
+    const command = steeringControl(routePoint);
     stream.s += `      <${type}\n`;
     stream.s += `        lat="${routePoint.position.lat}"\n`;
     stream.s += `        lon="${routePoint.position.lng}">\n`;
@@ -86,31 +89,56 @@ function writePoint (stream, routePoint, type='trkpt') {
     stream.s += `          <gpxsrx:sail>${routePoint.sail}</gpxsrx:sail>\n`;
     stream.s += `          <gpxsrx:tws>${routePoint.tws}</gpxsrx:tws>\n`;
     stream.s += `          <gpxsrx:twd>${routePoint.twd}</gpxsrx:twd>\n`;
+    stream.s += `          <gpxsrx:controlMode>${command.mode}</gpxsrx:controlMode>\n`;
+    stream.s += `          <gpxsrx:controlValue>${command.value}</gpxsrx:controlValue>\n`;
     stream.s += `        </extensions>\n`;
-    stream.s += `        <name>TWA:${routePoint.twa} Sail:${routePoint.sail}</name>\n`;
+    stream.s += `        <name>${command.mode}:${command.value} Sail:${routePoint.sail}</name>\n`;
     stream.s += `      </${type}>\n`;
 }
 
 export {
     exportRoute,
-    exportSchedule
+    exportSchedule,
+    steeringControl
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/// Schedule CSV export (timestamp,TWA,<twa> only, on TWA changes)
+/// Schedule CSV export: distinguish fixed compass HDG from signed TWA commands.
+
+function steeringControl(point) {
+    const heading = point['control-mode'] === 'heading';
+    return { mode: heading ? 'HDG' : 'TWA',
+        // Lisp NIL is serialized as false, so only a numeric value is a command.
+        value: Number.isFinite(point['control-value']) ? point['control-value']
+            : (heading ? point.heading : point.twa) };
+}
 
 function exportSchedule(routeInfo) {
     const stream = { s: '' };
     if (!routeInfo || !Array.isArray(routeInfo.best) || routeInfo.best.length === 0) {
         return stream.s;
     }
-    let lastTWA = undefined;
-    for (const rp of routeInfo.best) {
-        const curTWA = rp.twa;
-        if (lastTWA === undefined || curTWA !== lastTWA) {
-            let fwTWA = - curTWA;
-            stream.s += formatTimestampCSV(rp.time) + ',TWA,' + fwTWA + '\n';
-            lastTWA = curTWA;
+    let previous;
+    const plan = routeInfo['steering-segments'];
+    if (Array.isArray(plan) && plan.length) {
+        let time = new Date(plan[0]['start-time']).getTime();
+        for (const segment of plan) {
+            const command = { mode: segment.mode === 'heading' ? 'HDG' : 'TWA', value: segment.value };
+            if (!previous || previous.mode !== command.mode || previous.value !== command.value) {
+                stream.s += formatTimestampCSV(new Date(time)) + ',' + command.mode + ','
+                    + (command.mode === 'TWA' ? -command.value : command.value) + '\n';
+            }
+            previous = command;
+            time += Number(segment.duration) * 1000;
+        }
+    } else {
+        for (const rp of routeInfo.best.slice(0, -1)) {
+            const command = steeringControl(rp);
+            if (!previous || previous.mode !== command.mode || previous.value !== command.value) {
+                stream.s += formatTimestampCSV(rp.time) + ',' + command.mode + ','
+                    + (command.mode === 'TWA' ? -command.value : command.value) + '\n';
+            }
+            previous = command;
         }
     }
     return stream.s;

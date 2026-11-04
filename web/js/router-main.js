@@ -2,7 +2,7 @@
 /// BitSailor Router VR UI (Leaflet/OpenStreetMap version)
 
 import * as Util from './Util.js';
-import * as GPX from './GPX.js';
+import * as GPX from './GPX.js?v=router-marker-controls-20261104';
 import GribCache from './GribCache.js?v=router-forecast-selection-20261103';
 import PolarManager from './PolarManager.js';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
@@ -1064,7 +1064,8 @@ function onMapRightClick(event) {
 
 function onMarkerClicked(marker) {
     twaAnchor = marker;
-    return syncRouteWind(precedingIsochrone(marker.time), new Date(marker.time));
+    return syncRouteWind(marker.windForecast || precedingIsochrone(marker.time),
+        new Date(marker.time), marker.windTime || new Date(marker.time));
 }
 
 function getBoatPosition (event) {
@@ -1411,9 +1412,6 @@ function createBestRouteMarkerAndCopies(entry, icon, startTime) {
     const lat = entry.position.lat;
     const baseLng = wrapLon180(entry.position.lng);
 
-    // Build tooltip once
-    const tooltipHtml = makeWaypointInfo(startTime, entry);
-
     // Base marker (interactive)
     const baseMarker = L.marker([lat, baseLng], {
         icon: icon,
@@ -1429,8 +1427,7 @@ function createBestRouteMarkerAndCopies(entry, icon, startTime) {
         draggable: false
     }).addTo(map);
     addMarkerListener(leftMarker);
-    leftMarker.bindTooltip(tooltipHtml, { permanent: false });
-    leftMarker.time = entry.time;
+    addWaypointInfo(leftMarker, startTime, entry);
     trackMarkers.unshift(leftMarker);
 
     // Right world copy (+360)
@@ -1439,12 +1436,44 @@ function createBestRouteMarkerAndCopies(entry, icon, startTime) {
         draggable: false
     }).addTo(map);
     addMarkerListener(rightMarker);
-    rightMarker.bindTooltip(tooltipHtml, { permanent: false });
-    rightMarker.time = entry.time;
+    addWaypointInfo(rightMarker, startTime, entry);
     trackMarkers.unshift(rightMarker);
 }
 
+function displayFineTuning(data) {
+    const label = document.getElementById('lb_fine_tuning');
+    if (!label) return;
+    const report = data['fine-tuning'];
+    if (!report) {
+        label.textContent = 'Not run; reload server';
+        label.title = 'This response has no fine-tuning report.';
+        return;
+    }
+    if (report['twa-step'] !== 1) {
+        label.textContent = 'Older solver; reload server';
+    } else if (report.status === 'optimized' && report.objective === 'origin-distance') {
+        label.textContent = `Progress +${(report['distance-gain'] || 0).toFixed(1)} m`;
+    } else if (report.status === 'optimized') {
+        label.textContent = `1°: ${report['original-changes']} → ${report['optimized-changes']} changes${report['heading-segments'] ? ' (HDG)' : ''}`;
+    } else {
+        label.textContent = report.reason === 'disabled' ? 'Disabled' : 'Original route retained';
+    }
+    const details = [report.reason, `${report.evaluations || 0} trial integrations`];
+    if (report.objective === 'origin-distance') {
+        details.push('Fixed final time; maximize distance from route origin');
+        details.push(`${report['original-changes']} → ${report['optimized-changes']} command changes`);
+        if (typeof report['optimized-origin-distance'] === 'number')
+            details.push(`Origin distance ${report['optimized-origin-distance'].toFixed(1)} m`);
+    }
+    if (report['heading-enabled'] === true) details.push(`${report['heading-segments'] || 0} fixed-heading segments`);
+    if (report['failed-window']) details.push(`failed window ${report['failed-window']}`);
+    if (typeof report['endpoint-error'] === 'number') details.push(`endpoint error ${report['endpoint-error'].toFixed(3)} m`);
+    if (report['integer-controls'] === false) details.push('Returned original controls include fractional TWA');
+    label.title = details.join('; ');
+}
+
 function displayRouting(data) {
+    displayFineTuning(data);
     var best = data.best;
 
     createIsochrones(data.isochrones);
@@ -1485,8 +1514,11 @@ function displayRouting(data) {
     // Duplicate best-route markers across world copies
     const baseTime = new Date(best[0].time);
     for (var i = 0; i < best.length; i++) {
+        const command = GPX.steeringControl(best[i]);
+        const previous = i > 0 ? GPX.steeringControl(best[i - 1]) : null;
         if (i == 0 || i == best.length - 1
-            || best[i].twa != best[i - 1].twa
+            || command.mode !== previous.mode
+            || command.value !== previous.value
             || best[i].sail != best[i - 1].sail) {
             createBestRouteMarkerAndCopies(best[i], markerIcon, baseTime);
         }
@@ -1614,6 +1646,10 @@ function addWaypointInfo(trackMarker, startTime, point) {
     // trackMarker.bindPopup(popupContent);
     trackMarker.bindTooltip(popupContent, {"permanent": false});
     trackMarker.time = point.time;
+    trackMarker.windForecast = point['wind-cycle'] ? {
+        cycle: point['wind-cycle'], 'forecast-model': point['wind-model'], time: point.time
+    } : null;
+    trackMarker.windTime = point['wind-time'] || null;
 }
 
 function makeWaypointInfo(startTime, point) {
@@ -1646,6 +1682,10 @@ function makeWaypointInfo(startTime, point) {
     result += "<b> TWA</b>: " + point.twa.toFixed(1);
     result += "<b> HDG</b>: " + point.heading.toFixed(1) + "°  " + sailNames[point.sail];
     result += "<br>";
+    if (point['control-mode']) {
+        const mode = point['control-mode'] === 'heading' ? 'HDG' : 'TWA';
+        result += `<b>Command</b>: ${mode} ${point['control-value']}°<br>`;
+    }
 
     result += "<hr>";
     result += "<b>Wind</b>: " + Util.ms2knots(point.tws).toFixed(2) + "kts / " + point.twd.toFixed(0) + "°<br>";

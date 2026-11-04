@@ -257,5 +257,23 @@ cache.drawWind = async () => {};
   assert.equal(vm.runInContext('routeWindSelection.sampleTime.toISOString()', ui), '2026-10-31T21:10:00.000Z');
   const magnitude = vm.runInContext('interpolatePoint(10, -10, 0, 0, 0.5).magnitude', context);
   assert.equal(magnitude, 10);
+  vm.runInContext('displayFineTuning({})', ui);
+  assert.match(node('lb_fine_tuning').textContent, /Not run/);
+  vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized', 'twa-step': 1,
+    'integer-controls': true, 'original-changes': 91, 'optimized-changes': 84,
+    reason: 'validated', evaluations: 2287}})`, ui);
+  assert.match(node('lb_fine_tuning').textContent, /91 → 84/);
+  vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'unchanged', 'twa-step': 1,
+    reason: 'window could not be re-sailed within constraints', evaluations: 520,
+    'failed-window': 34, 'endpoint-error': 0.5225}})`, ui);
+  assert.match(node('lb_fine_tuning').textContent, /Original route retained/);
+  assert.match(node('lb_fine_tuning').title, /window 34.*0\.522/);
+  vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized', 'twa-step': 1,
+    objective: 'origin-distance', 'distance-gain': 12.345, 'optimized-origin-distance': 12000,
+    'original-changes': 15, 'optimized-changes': 0}})`, ui);
+  assert.match(node('lb_fine_tuning').textContent, /Progress \+12.3 m/);
+  assert.match(node('lb_fine_tuning').title, /Fixed final time/);
+  vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized'}})`, ui);
+  assert.match(node('lb_fine_tuning').textContent, /Older solver/);
   console.log('Recorded-cycle wind replay, preceding-isochrone inference, sample time and failure tests passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

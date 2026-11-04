@@ -234,9 +234,10 @@
   (bordeaux-threads:with-lock-held (+last-request-lock+)
     (setf *last-request*
           (push (list (local-time:now) 'get-route) *last-request*)))
-  (if (routing-waypoints routing)
-      (get-route-via-waypoints routing)
-      (values (get-route-leg routing))))
+  (fine-tune-route routing
+    (if (routing-waypoints routing)
+        (get-route-via-waypoints routing)
+        (get-route-leg routing))))
 
 (defun get-route-leg (routing)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and

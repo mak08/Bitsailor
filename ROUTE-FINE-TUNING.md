@@ -72,6 +72,42 @@ its proprietary interpolation, integration or control-update timing exactly.
 Change counts now measure **command mode/value changes**. A constant heading
 with varying measured TWA is one command, not repeated TWA instructions.
 
+## Broader route approximation
+
+A second pass, enabled by `*fine-tune-approximation-enabled*`, also considers
+same-tack stretches with gradual TWA changes. It approximates them with integer
+TWA or heading commands within a 1 nautical mile (1852 m) lateral corridor,
+configured by `*fine-tune-approximation-limit*`. This is separate from the
+conservative pass's 500 m corridor and the 1 m endpoint acceptance tolerance.
+Manoeuvres retain the conservative position/time limits.
+
+Windows are at most approximately an hour, preferring existing command boundaries
+as rejoin anchors. They split at manoeuvres and requested point waypoints. Broad
+intermediate anchors stay fixed: a heading may deviate between anchors and use
+up to two corrective TWA segments, but must close at the original position and
+timestamp. The heading portion may occupy as little as 25% of the window,
+compared with the conservative fit's 75%. Pure heading or TWA fits remain
+available. This allows a useful half-hour projection plus correction within a
+longer window without accumulating displacement through the remaining route.
+
+All heading steps and boundaries retain the one-minute wind, VMG and TWA-range
+checks. Actual sailed segments are checked for land and ordered targets.
+Completed routes cannot arrive later than the conservative incumbent.
+Duration-limited routes must retain their final timestamp, preserve origin
+progress and finish no farther from the destination; greater origin radius
+alone is insufficient. The final free endpoint still uses these checks.
+
+The conservative incumbent reserves up to 1000 of the route's 3000 trial
+integrations (at most half for smaller budgets) for this broader pass, and uses
+at most half of the route's trial wall-clock budget. The broader pass can use
+all remaining evaluations/time. Both passes share the existing overall caps;
+failed broad fits retain the incumbent. Set
+`*fine-tune-approximation-evaluations*` to change the reserved evaluations.
+
+The report adds `approximation`, `corridor-limit`, and original/optimized
+destination distances in metres. Hover over the Fine-tuning result to see when
+the broader corridor was used.
+
 ## Objective and hard constraints
 
 Completed (`reached`) routes retain their geographic endpoint and may never
@@ -246,6 +282,8 @@ budget-limited result. The algorithm does not retain a tree of trial routes.
 
 All operational parameters are listed on the Status tab. Set
 `router::*fine-tune-enabled*` to NIL to disable the pass. Other settings are
+`*fine-tune-approximation-enabled*`, `*fine-tune-approximation-limit*`,
+`*fine-tune-approximation-evaluations*`,
 `*fine-tune-outward-enabled*`, `*fine-tune-heading-enabled*`, `*fine-tune-heading-evaluations*`,
 `*fine-tune-step*`, `*fine-tune-window*`, `*fine-tune-angle-limit*`,
 `*fine-tune-position-limit*`, `*fine-tune-time-limit*`,
@@ -293,8 +331,8 @@ sbcl --noinform --non-interactive \
   --eval '(ql:quickload "bitsailor")' \
   --load tests/gate-search-tests.cl --load tests/fine-tune-tests.cl \
   --load tests/fine-heading-tests.cl --load tests/fine-progress-tests.cl \
-  --load tests/fine-balance-tests.cl \
-  --eval '(progn (router::test-fine-tuning) (router::test-fine-tune-physics) (router::test-fine-heading) (router::test-fine-progress) (router::test-fine-balance))'
+  --load tests/fine-balance-tests.cl --load tests/fine-approximation-tests.cl \
+  --eval '(progn (router::test-fine-tuning) (router::test-fine-tune-physics) (router::test-fine-heading) (router::test-fine-progress) (router::test-fine-balance) (router::test-fine-approximation))'
 ```
 
 Physical fixtures use real interpolation and constant polars, with constant and
@@ -357,3 +395,12 @@ later, much larger displacement and still retain the original route. The new
 1 m default therefore removes an overly strict early rejection without treating
 large errors as acceptable. All routing/fine-tuning regression suites pass with
 the 1 m default.
+
+The Class 40 example departing `(48.13676668, -5.43672370)` on November 4 at
+20:09 UTC was run offline with waves and the local NOAA-GFS 12Z forecast. The
+broader pass reduced 79 command changes to 56, including HDG 160 from 21:08 to
+about 21:40:49, followed by corrective TWA commands. It retained the original
+November 5 20:00 UTC final horizon and did not increase destination distance.
+Three heading segments were accepted, within the shared 3000-trial budget.
+The live service was unavailable; this validates the local dataset, not an
+identical reproduction of the screenshot.

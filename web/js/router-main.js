@@ -1465,6 +1465,7 @@ function displayFineTuning(data) {
         if (typeof report['optimized-origin-distance'] === 'number')
             details.push(`Origin distance ${report['optimized-origin-distance'].toFixed(1)} m`);
     }
+    if (report.approximation === true) details.push(`Route approximation; lateral limit ${(report['corridor-limit'] / 1852).toFixed(1)} nm`);
     if (report['heading-enabled'] === true) details.push(`${report['heading-segments'] || 0} fixed-heading segments`);
     if (report['failed-window']) details.push(`failed window ${report['failed-window']}`);
     if (typeof report['endpoint-error'] === 'number') details.push(`endpoint error ${report['endpoint-error'].toFixed(3)} m`);

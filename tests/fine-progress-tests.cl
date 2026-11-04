@@ -61,7 +61,8 @@
             (info (fine-test-route routing
                     (loop repeat 8 append (list (cons 105d0 120d0) (cons 110d0 120d0)))))
             (optimizer (symbol-function 'fine-optimize-window)))
-       (setf (routeinfo-status info) "max_duration")
+       (setf (routeinfo-status info) "max_duration"
+             (routing-dest routing) (add-distance-exact (routing-start routing) 100000d0 107.5d0))
        (call-with-gate-test-functions
         (list (cons 'fine-optimize-window
                     (lambda (&rest args)

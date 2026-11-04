@@ -1,0 +1,51 @@
+;;; Load after gate-search-tests.cl and fine-tune-tests.cl.
+(in-package :bitsailor)
+
+;;; Gradual TWA changes can be replaced by a heading and correction tails,
+;;; without confusing a wider lateral corridor with relaxed target closure.
+(defun test-fine-approximation ()
+  (call-with-fine-test
+   (lambda (routing)
+     (let* ((info (fine-test-route routing
+                    (loop for angle in '(110d0 105d0 100d0 95d0)
+                          append (loop repeat 5 collect (cons angle 60d0)))))
+            (raw (routeinfo-best info))
+            (*fine-tune-approximation* t) (*fine-tune-heading-enabled* t)
+            (*fine-tune-heading-evaluations* 500)
+            (*fine-tune-position-limit* 1852d0)
+            (candidate (fine-optimize-window routing raw (routing-start routing) nil)))
+       (assert (not (fine-heading-stretch-p raw)))
+       (assert (fine-heading-eligible-p raw))
+       (format t "~&Approximation: ~a -> ~a changes, plan=~s~%" (fine-changes raw)
+               (and candidate (fine-changes candidate)) (and candidate (fine-steering-segments candidate)))
+       (assert candidate)
+       (assert (< (fine-changes candidate) (fine-changes raw)))
+       (assert (some (lambda (p) (string= (fine-command-mode p) "heading")) candidate))
+       (assert (fine-valid-window-p raw candidate))
+       (assert (timestamp= (trackpoint-time (car (last candidate))) (trackpoint-time (car (last raw)))))
+       (call-with-gate-test-functions
+        (list (cons 'approach-blocked-p (lambda (&rest args) (declare (ignore args)) t)))
+        (lambda () (assert (null (fine-optimize-window routing raw (routing-start routing) nil)))))
+       ;; Requested points remain hard window boundaries with the broad corridor.
+       (let ((anchor (nth 10 raw)))
+         (setf (routing-waypoints routing) (list (trackpoint-position anchor)))
+         (assert (some (lambda (w) (timestamp= (trackpoint-time (car (last w))) (trackpoint-time anchor)))
+                       (fine-approximation-windows routing raw))))))
+   t)
+  ;; Greater origin distance alone must not accept a worse destination distance.
+  (let* ((origin (make-latlng :lat 0d0 :lng 0d0))
+         (*fine-tune-progress-origin* origin)
+         (time (parse-datetime "2026-11-04T20:09:00Z"))
+         (end-time (fine-time+ time 600d0))
+         (dest (add-distance-exact origin 20000d0 0d0))
+         (old (add-distance-exact origin 10000d0 0d0))
+         (bad (add-distance-exact origin 11000d0 20d0))
+         (routing (make-routing :start origin :dest dest))
+         (a (make-trackpoint :time time :position origin :twa 90d0))
+         (b (make-trackpoint :time end-time :position old :twa 90d0))
+         (c (make-trackpoint :time end-time :position bad :twa 90d0)))
+    (assert (> (course-distance origin bad) (course-distance origin old)))
+    (assert (> (course-distance dest bad) (course-distance dest old)))
+    (let ((*fine-tune-position-limit* 10000d0))
+      (assert (not (fine-result-valid-p routing (list a b) (list a c) t)))))
+  (format t "~&Monotone heading approximation and destination-distance safeguards passed.~%"))

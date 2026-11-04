@@ -74,9 +74,9 @@ The startpage and router use explicit query-string revisions to prevent browsers
 | Reference | Revision |
 | --- | --- |
 | Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-marker-controls-20261104` |
-| Router main script | `?v=router-marker-controls-20261104` |
-| Router stylesheet | `?v=router-marker-controls-20261104` |
+| Router links on the startpage | `router-fw.html?v=router-approximation-20261104` |
+| Router main script | `?v=router-approximation-20261104` |
+| Router stylesheet | `?v=router-approximation-20261104` |
 | Router import of `GribCache.js` | `?v=router-forecast-selection-20261103` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
@@ -149,6 +149,14 @@ The first step is shortened to align to a ten-minute boundary. Later step durati
 ## TWA Fine-Tuning
 
 After the full route search, `get-route` calls `fine-tune-route` in [fine-tune.cl](fine-tune.cl). It fits up to three explicitly typed integer TWA/compass-heading segments in short anchored windows by solving durations, re-sailing them in the forecast with polar, current and wave effects. A–B–A correction patterns can cancel a smoothed prefix’s error in following segments before rejoining the original anchor. Trial steps default to one minute; heading replay always checks at least every minute and at each command endpoint. Target order, land clearance and the original tack/gybe sequence are checked. Computed anchors may advance away from the original route start with at most 500 m lateral deviation; backward movement retains the 500 m distance bound. Manoeuvre times stay within five minutes. Requested point waypoints remain fixed. Completed routes retain their endpoint and cannot arrive later; a closed-anchor incumbent protects earlier improvements. Duration-limited routes instead maximize origin distance at the identical final timestamp, preserving their originally passed target prefix. Only a completed route’s last window can shorten its duration. Failed fits retain original controls, and failed final validation restores the original route.
+
+A broader approximation pass also tries gradual same-tack stretches with a 1 nm
+lateral corridor. Command boundaries provide fixed rejoin anchors; integer
+heading/TWA commands and correction tails must preserve those anchors and times.
+The conservative pass reserves trial work for this pass within the shared caps.
+Finished-route ETA cannot worsen, and duration-limited routes cannot finish
+farther from the destination at the same final time. Manoeuvre, land and target
+checks remain enforced. The Fine-tuning tooltip reports the broader corridor.
 
 The response supplies the general `steering-segments` mode/value plan (`twa-segments` remains available for pure-TWA plans) and a `fine-tuning` report; accepted replay replaces `best` and retains `original-best`. Refined points carry their own wind cycle/model/sample time for map inspection. Search isochrones remain the original frontier. Settings and bounded trial budgets appear on the Status tab. See [ROUTE-FINE-TUNING.md](ROUTE-FINE-TUNING.md) for the objective, shooting algorithm, tolerances and tests.
 

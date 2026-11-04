@@ -270,9 +270,11 @@ cache.drawWind = async () => {};
   assert.match(node('lb_fine_tuning').title, /window 34.*0\.522/);
   vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized', 'twa-step': 1,
     objective: 'origin-distance', 'distance-gain': 12.345, 'optimized-origin-distance': 12000,
+    approximation: true, 'corridor-limit': 1852,
     'original-changes': 15, 'optimized-changes': 0}})`, ui);
   assert.match(node('lb_fine_tuning').textContent, /Progress \+12.3 m/);
   assert.match(node('lb_fine_tuning').title, /Fixed final time/);
+  assert.match(node('lb_fine_tuning').title, /lateral limit 1.0 nm/);
   vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized'}})`, ui);
   assert.match(node('lb_fine_tuning').textContent, /Older solver/);
   console.log('Recorded-cycle wind replay, preceding-isochrone inference, sample time and failure tests passed.');

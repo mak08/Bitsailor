@@ -4,6 +4,12 @@
 
 (defparameter *fine-tune-enabled* t "Apply bounded steering post-processing to reached/max_duration routes.")
 (defparameter *fine-tune-outward-enabled* t "Allow computed anchors to advance within a bounded lateral corridor.")
+(defparameter *fine-tune-rolling-enabled* t "Try overlapping windows while retaining validated improvements.")
+(defparameter *fine-tune-rolling-horizons* '(14400d0 7200d0 3600d0 1800d0) "Rolling window horizons, seconds.")
+(defparameter *fine-tune-rolling-stride* 1800d0 "Additional rolling starts between command boundaries, seconds.")
+(defparameter *fine-tune-rolling-position-limit* 9260d0 "Rolling lateral corridor, metres (five nautical miles).")
+(defparameter *fine-tune-rolling-window-evaluations* 480 "Base trial integrations per rolling window.")
+(defparameter *fine-tune-mark-tolerance* 0.01d0 "Numerical tolerance for requested point/gate touches, metres.")
 (defvar *fine-tune-progress-origin* nil)
 (defvar *fine-tune-outward-window* nil)
 (defvar *fine-tune-suffix-only* nil)
@@ -25,18 +31,19 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 (defparameter *fine-tune-fit-tolerance* 0.01d0 "Internal shooting closure tolerance in metres, tighter than validation.")
 (defparameter *fine-tune-max-window-evaluations* 240 "Maximum trial integrations spent on one window.")
 (defvar *fine-tune-local-limit* nil)
-(defparameter *fine-tune-max-evaluations* 3000 "Maximum trial integrations per route.")
-(defparameter *fine-tune-max-seconds* 10d0 "Wall-clock trial budget; checked between integrations.")
+(defparameter *fine-tune-max-evaluations* 12000 "Maximum trial integrations per route.")
+(defparameter *fine-tune-max-seconds* 30d0 "Wall-clock trial budget; checked between integrations.")
 (defvar *fine-tune-evaluations* 0)
 (defvar *fine-tune-started* 0)
+(defparameter *fine-tune-weather-cache-limit* 4096 "Maximum exact-time parameter-cache entries per pass.")
 (defvar *fine-tune-weather* nil)
 
 (defstruct twa-segment start-time end-time twa duration)
 (defstruct steering-segment mode value start-time end-time duration)
 (defstruct fine-tuning status reason evaluations original-changes optimized-changes
   original-arrival optimized-arrival max-manoeuvre-distance max-manoeuvre-seconds
-  (twa-step 1) integer-controls windows optimized-windows failed-window endpoint-error heading-segments heading-enabled
-  objective original-origin-distance optimized-origin-distance distance-gain outward-anchors approximation corridor-limit original-destination-distance optimized-destination-distance)
+  (twa-step 1) integer-controls minute-controls (command-time-step 60) windows optimized-windows failed-window endpoint-error heading-segments heading-enabled
+  objective original-origin-distance optimized-origin-distance distance-gain outward-anchors approximation corridor-limit original-destination-distance optimized-destination-distance rolling-windows rolling-improvements rolling-evaluations rolling-position-limit mark-tolerance)
 (defstruct fine-manoeuvre time position kind)
 
 ;;; Convert seconds, including fractions, without rounding manoeuvres to routing steps.
@@ -190,11 +197,17 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 (defun fine-weather (routing time)
   (let ((key (list (timestamp-to-unix time) (nsec-of time))))
     (or (gethash key *fine-tune-weather*)
-        (setf (gethash key *fine-tune-weather*)
-              (list (routing-wind-params routing time)
-                    (when (routing-currents routing) (get-params (routing-currents routing) time))
-                    (when (routing-use-waves routing) (get-params 'cl-weather:gfswave-combined time))
-                    (when (routing-use-waves routing) (get-direction-params 'cl-weather:gfswave-combined time)))))))
+        (let ((params (list (routing-wind-params routing time)
+                            (when (routing-currents routing) (get-params (routing-currents routing) time))
+                            (when (routing-use-waves routing) (get-params 'cl-weather:gfswave-combined time))
+                            (when (routing-use-waves routing) (get-direction-params 'cl-weather:gfswave-combined time)))))
+          ;; Fractional shooting probes create many unique times. Keep this
+          ;; scratch cache bounded; decoded GRIB fields remain shared upstream.
+          (when (plusp *fine-tune-weather-cache-limit*)
+            (when (>= (hash-table-count *fine-tune-weather*) *fine-tune-weather-cache-limit*)
+              (clrhash *fine-tune-weather*))
+            (setf (gethash key *fine-tune-weather*) params))
+          params))))
 
 ;;; Advance TWA or (:HEADING compass-degrees), using local wind, polars, waves and current.
 ;;; Heading mode derives physical TWA anew; stored ground course includes current drift.
@@ -290,6 +303,48 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
         always (and (numberp (fine-command-value a))
                     (= (fine-command-value a) (round (fine-command-value a))))))
 
+;;; Only command starts/changes are actions; samples and arrival events may be fractional.
+(defun fine-minute-plan-p (track)
+  (let ((previous nil))
+    (loop for (a b) on track while b
+          for command = (list (fine-command-mode a) (fine-command-value a))
+          always (or (not (timestamp< (trackpoint-time a) (trackpoint-time b)))
+                     (prog1 (or (equalp previous command) (routing-minute-p (trackpoint-time a)))
+                       (setf previous command))))))
+
+;;; Enumerate nearby absolute minute boundaries, then actually re-sail each plan.
+;;; Continuous shooting is a guide only: rounding its output is never acceptance.
+(defun fine-minute-candidates (routing track)
+  (when track
+    (when (fine-minute-plan-p track) (return-from fine-minute-candidates (list track)))
+    (let* ((segments (fine-steering-segments track))
+           (start (trackpoint-time (first track)))
+           (end (trackpoint-time (car (last track))))
+           (start-pos (trackpoint-position (first track)))
+           (result nil))
+      (unless (and (routing-minute-p start) (<= (length segments) 3))
+        (return-from fine-minute-candidates nil))
+      (labels ((replay (remaining time controls)
+                 (when (fine-budget-p)
+                   (let* ((segment (first remaining))
+                          (command (if (string= (steering-segment-mode segment) "heading")
+                                       (list :heading (steering-segment-value segment))
+                                       (steering-segment-value segment))))
+                     (if (null (rest remaining))
+                         (when (timestamp< time end)
+                           (let ((candidate (fine-replay routing start-pos start
+                                              (reverse (cons (cons command (timestamp-difference end time)) controls)))))
+                             (when candidate (push candidate result))))
+                         (let* ((boundary (steering-segment-end-time segment))
+                                (upper (routing-minute-ceiling boundary))
+                                (lower (routing-time+ upper -60)))
+                           (dolist (next (remove-duplicates (list lower upper) :test #'timestamp=))
+                             (when (and (timestamp< time next) (timestamp< next end))
+                               (replay (rest remaining) next
+                                       (cons (cons command (timestamp-difference next time)) controls))))))))))
+        (replay segments start nil))
+      (nreverse result))))
+
 ;;; Position on a reference route at TIME, used only for a corridor test, never for sailing.
 (defun fine-reference-position (points time)
   (loop for (a b) on points while b
@@ -304,7 +359,7 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 
 ;;; Validate all simulated segments and the time-aligned original-route corridor.
 (defun fine-valid-window-p (reference candidate)
-  (and candidate
+  (and candidate (fine-minute-plan-p candidate)
        (if *fine-tune-outward-window* (fine-outward-endpoint-p reference candidate)
            (<= (fine-distance (trackpoint-position (car (last reference)))
                               (trackpoint-position (car (last candidate)))) *fine-tune-endpoint-tolerance*))
@@ -523,7 +578,7 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 ;;; Fit integer TWA values by solving durations. Intermediate windows keep their
 ;;; total time; a third integer segment supplies the second degree of freedom.
 ;;; Final windows can adjust both duration and split, but can never finish later.
-(defun fine-optimize-window (routing reference pos finalp)
+(defun fine-optimize-window (routing reference pos finalp &optional validator)
   (let* ((controls (fine-controls reference))
          (time (trackpoint-time (first reference)))
          (target (trackpoint-position (car (last reference))))
@@ -539,8 +594,10 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
          (*fine-tune-local-limit* (+ *fine-tune-evaluations* *fine-tune-max-window-evaluations*
                                     (if heading-p *fine-tune-heading-evaluations* 0))))
     (when (or (null controls) (> (length events) 1)) (return-from fine-optimize-window nil))
-    (labels ((consider (track)
+    (labels ((consider-one (track)
                (when (and (fine-valid-window-p reference track)
+                          (or (not (some (lambda (p) (string= (fine-command-mode p) "heading")) track))
+                              (fine-heading-range-p reference track))
                           (timestamp<= (trackpoint-time (car (last track)))
                                        (trackpoint-time (car (last reference)))))
                  (let ((value (fine-window-score reference track)))
@@ -552,8 +609,14 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
                                  (and (timestamp= (trackpoint-time (car (last track)))
                                                   (trackpoint-time (car (last best))))
                                       (< value score))))
+                     (when (and validator (not (funcall validator track)))
+                       (return-from consider-one nil))
                      (setf best track score value))
                    t)))
+             (consider (track)
+               (let ((accepted nil))
+                 (dolist (candidate (fine-minute-candidates routing track) accepted)
+                   (when (consider-one candidate) (setf accepted t)))))
              (triple (a b c f g)
                (when (and (fine-budget-p) (/= a b) (/= b c))
                  (consider (fine-shoot routing pos time target
@@ -578,6 +641,25 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
           (triple low high low 0.2d0 0.2d0)
           (triple high low high 0.2d0 0.2d0)))
       (when heading-p (fine-try-heading routing reference pos finalp #'consider))
+      ;; Include direct minute-lattice seeds, especially the original coarse
+      ;; angles, so a solver that needs fractional switches is not the only path.
+      (unless event
+        (let* ((mean (/ (loop for c in controls sum (* (car c) (cdr c))) duration))
+               (low (round (reduce #'min controls :key #'car)))
+               (high (round (reduce #'max controls :key #'car))))
+          (dolist (pair (remove-duplicates (list (list low high) (list high low)
+                                                (list (floor mean) (ceiling mean))
+                                                (list (ceiling mean) (floor mean))) :test #'equal))
+            (destructuring-bind (a b) pair
+              (when (and (/= a b) (member a left) (member b right))
+                (let* ((fraction (max 0d0 (min 1d0 (/ (- mean b) (- a b)))))
+                       (upper (routing-minute-ceiling (fine-time+ time (* duration fraction)))))
+                  (dolist (boundary (list (routing-time+ upper -60) upper))
+                    (let ((first-duration (timestamp-difference boundary time)))
+                      (when (and (fine-budget-p) (< 0d0 first-duration duration))
+                        (consider (fine-replay routing pos time
+                                    (list (cons (float a 1d0) first-duration)
+                                          (cons (float b 1d0) (- duration first-duration))))))))))))))
       ;; Single integer-TWA segments are considered directly, never by rounding a fit.
       (unless event
         (dolist (a left)
@@ -682,8 +764,25 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
         (setf remaining (nthcdr end remaining))))
     (nreverse result)))
 
-;;; Verify ordered targets over actual segments. Touches within closure tolerance count;
-;;; multiple gates in one segment must occur in the requested spatial order.
+;;; Locate a requested point on the sailed segment using the same wrapped
+;;; local segment geometry as gate intersections. A touch need not be a wind
+;;; sample or a command time; it must still be within the centimetre mark bound.
+(defun fine-mark-fraction (target from to)
+  (let* ((scale (* 6371000d0 (cos (/ (+ (latlng-latr from) (latlng-latr to)) 2d0))))
+         (x (* scale (rad (normalize-angle (- (latlng-lng to) (latlng-lng from))))))
+         (y (* 6371000d0 (- (latlng-latr to) (latlng-latr from))))
+         (px (* scale (rad (normalize-angle (- (latlng-lng target) (latlng-lng from))))))
+         (py (* 6371000d0 (- (latlng-latr target) (latlng-latr from))))
+         (length2 (+ (* x x) (* y y))))
+    (if (< length2 1d-12)
+        (when (<= (fine-distance target from) *fine-tune-mark-tolerance*) 0d0)
+        (let* ((fraction (/ (+ (* px x) (* py y)) length2))
+               (clipped (max 0d0 (min 1d0 fraction)))
+               (dx (- px (* clipped x))) (dy (- py (* clipped y))))
+          (when (<= (+ (* dx dx) (* dy dy)) (expt *fine-tune-mark-tolerance* 2)) clipped)))))
+
+;;; Verify ordered point/gate touches using the independent mark tolerance;
+;;; touches between samples count without introducing a command or a snap.
 (defun fine-target-progress (routing track)
   (let ((targets (copy-list (routing-waypoints routing))))
     (loop for (a b) on track while b do
@@ -693,26 +792,39 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
             (if (gate-p target)
                 (let ((hit (gate-crossing target from to)))
                   (cond ((and hit (>= hit fraction)) (setf fraction hit) (pop targets))
-                        ((and (<= fraction 0d0) (<= (gate-stage-distance target from) *fine-tune-endpoint-tolerance*))
+                        ((and (<= fraction 0d0) (<= (gate-stage-distance target from) *fine-tune-mark-tolerance*))
                          (pop targets))
-                        ((<= (gate-stage-distance target to) *fine-tune-endpoint-tolerance*)
+                        ((<= (gate-stage-distance target to) *fine-tune-mark-tolerance*)
                          (setf fraction 1d0) (pop targets))
                         (t (return))))
-                (if (<= (fine-distance target to) *fine-tune-endpoint-tolerance*)
-                    (progn (setf fraction 1d0) (pop targets)) (return)))))))
+                (let ((hit (fine-mark-fraction target from to)))
+                  (if (and hit (>= hit fraction))
+                      (progn (setf fraction hit) (pop targets)) (return))))))))
     (- (length (routing-waypoints routing)) (length targets))))
 
 ;;; Completed routes require every target; partial routes retain at least their original prefix.
 (defun fine-check-targets (routing track &optional required)
   (>= (fine-target-progress routing track) (or required (length (routing-waypoints routing)))))
 
+;;; Partial routes must retain every passed mark and not retreat from the next
+;;; required target merely to gain distance toward the final destination.
+(defun fine-mark-progress-safe-p (routing original track)
+  (let* ((old (fine-target-progress routing original))
+         (new (fine-target-progress routing track))
+         (next (nth old (routing-waypoints routing))))
+    (and (>= new old)
+         (or (> new old) (null next)
+             (<= (gate-stage-distance next (trackpoint-position (car (last track))))
+                 (gate-stage-distance next (trackpoint-position (car (last original)))))))))
+
 ;;; Validate the original terminal constraint or the fixed-horizon radial objective.
 (defun fine-result-valid-p (routing original track partialp)
-  (and (fine-integer-plan-p track)
+  (and (fine-integer-plan-p track) (fine-minute-plan-p track)
        (fine-check-targets routing track
          (if partialp (fine-target-progress routing original) (length (routing-waypoints routing))))
        (if partialp
            (and (timestamp= (trackpoint-time (car (last track))) (trackpoint-time (car (last original))))
+                (fine-mark-progress-safe-p routing original track)
                 (multiple-value-bind (gain along lateral)
                     (fine-progress-offset (trackpoint-position (car (last original)))
                                           (trackpoint-position (car (last track))))
@@ -743,15 +855,16 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
                    :original-origin-distance (when original (course-distance (routing-start routing) (trackpoint-position (car (last original)))))
                    :heading-enabled *fine-tune-heading-enabled* :heading-segments 0
                    :windows 0 :optimized-windows 0 :integer-controls (fine-integer-plan-p original)
+                   :minute-controls (fine-minute-plan-p original) :mark-tolerance *fine-tune-mark-tolerance*
                    :original-changes (fine-changes original) :optimized-changes (fine-changes original)
                    :original-arrival (when original (trackpoint-time (car (last original))))
                    :optimized-arrival (when original (trackpoint-time (car (last original)))))))
     (setf (fine-tuning-optimized-destination-distance report) (fine-tuning-original-destination-distance report)
           (fine-tuning-optimized-origin-distance report) (fine-tuning-original-origin-distance report)
           (fine-tuning-distance-gain report) (when original 0d0))
-    (setf (routeinfo-twa-segments info) (when (fine-integer-plan-p original) (fine-segments original))
+    (setf (routeinfo-twa-segments info) (when (and (fine-integer-plan-p original) (fine-minute-plan-p original)) (fine-segments original))
           (routeinfo-fine-tuning info) report
-          (routeinfo-steering-segments info) (when (fine-integer-plan-p original) (fine-steering-segments original)))
+          (routeinfo-steering-segments info) (when (and (fine-integer-plan-p original) (fine-minute-plan-p original)) (fine-steering-segments original)))
     (unless (and *fine-tune-enabled* (or (string= (routeinfo-status info) "reached")
                         (and partialp *fine-tune-outward-enabled*)) (rest original))
       (setf (fine-tuning-reason report)
@@ -828,12 +941,13 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
         (setf (routeinfo-best info) original
               (routeinfo-stats info) original-stats
               (routeinfo-original-best info) nil
-              (routeinfo-twa-segments info) (when (fine-integer-plan-p original) (fine-segments original))
-              (routeinfo-steering-segments info) (when (fine-integer-plan-p original) (fine-steering-segments original))
+              (routeinfo-twa-segments info) (when (and (fine-integer-plan-p original) (fine-minute-plan-p original)) (fine-segments original))
+              (routeinfo-steering-segments info) (when (and (fine-integer-plan-p original) (fine-minute-plan-p original)) (fine-steering-segments original))
               (fine-tuning-status report) "unchanged"
               (fine-tuning-reason report) "post-processing unavailable")))
     (setf (fine-tuning-evaluations report) *fine-tune-evaluations*
           (fine-tuning-integer-controls report) (fine-integer-plan-p (routeinfo-best info))
+          (fine-tuning-minute-controls report) (fine-minute-plan-p (routeinfo-best info))
           (fine-tuning-optimized-changes report) (fine-changes (routeinfo-best info))
           (fine-tuning-optimized-arrival report) (when original (trackpoint-time (car (last (routeinfo-best info))))))
     (setf (fine-tuning-optimized-destination-distance report)
@@ -848,11 +962,11 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 ;;; anchors for completed routes, or an unchanged prefix plus a refined final window
 ;;; for partial routes. Compare by ETA/steering or fixed-horizon origin distance.
 ;;; Both passes share the existing route-level evaluation/time budgets.
-(defun fine-tune-route (routing info)
+(defun fine-tune-initial-route (routing info)
   (unless (and *fine-tune-enabled* *fine-tune-outward-enabled*
                (member (routeinfo-status info) '("reached" "max_duration") :test #'string=)
                (rest (routeinfo-best info)))
-    (return-from fine-tune-route (fine-tune-route-pass routing info)))
+    (return-from fine-tune-initial-route (fine-tune-route-pass routing info)))
   (let* ((started (get-internal-real-time))
          (search-seconds (routestats-calctime (routeinfo-stats info)))
          (partialp (string= (routeinfo-status info) "max_duration"))
@@ -907,5 +1021,189 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
           (+ search-seconds (/ (- (get-internal-real-time) started) internal-time-units-per-second)))
     (when (>= (fine-tuning-evaluations (routeinfo-fine-tuning info)) *fine-tune-max-evaluations*)
       (setf (fine-tuning-reason (routeinfo-fine-tuning info)) "trial budget reached"))
+    (bt:with-lock-held (+last-routestats-lock+) (setf *last-routestats* (routeinfo-stats info)))
+    info))
+
+;;; Spread early rolling work over the route instead of exhausting the budget
+;;; near departure. Remaining starts are visited by successively bisecting time.
+(defun fine-spread-starts (starts)
+  (when starts
+    (let ((result (list (first starts))) (queue (when (rest starts) (list (rest starts)))))
+      (loop while queue do
+        (let* ((group (pop queue)) (middle (floor (length group) 2)))
+          (push (nth middle group) result)
+          (when (plusp middle) (setf queue (append queue (list (subseq group 0 middle)))))
+          (when (< (1+ middle) (length group))
+            (setf queue (append queue (list (nthcdr (1+ middle) group)))))))
+      (nreverse result))))
+
+;;; Overlapping horizons may move computational rejoin anchors, but never skip a
+;;; requested point mark or include more than one original tack/gybe.
+(defun fine-rolling-specs (routing track)
+  (let* ((points (coerce track 'vector)) (n (length points)) (starts nil)
+         (last-time nil) (seen (make-hash-table :test #'equal)) (result nil))
+    (loop for i below (1- n) for p = (aref points i) do
+      (when (and (routing-minute-p (trackpoint-time p))
+                 (or (null last-time)
+                     (>= (timestamp-difference (trackpoint-time p) last-time) *fine-tune-rolling-stride*)
+                     (and (> i 0) (or (not (string= (fine-command-mode (aref points (1- i))) (fine-command-mode p)))
+                                      (/= (fine-command-value (aref points (1- i))) (fine-command-value p))))))
+        (push i starts) (setf last-time (trackpoint-time p))))
+    (dolist (i (fine-spread-starts (nreverse starts)))
+      (let ((hard (1- n)) (events 0))
+        (loop for j from (1+ i) below n do
+          (let ((p (aref points j)) (previous (aref points (1- j))))
+            (when (minusp (* (trackpoint-twa previous) (trackpoint-twa p))) (incf events))
+            (when (or (> events 1)
+                      (some (lambda (target) (and (not (gate-p target))
+                                               (<= (fine-distance target (trackpoint-position p))
+                                                   *fine-tune-endpoint-tolerance*)))
+                            (routing-waypoints routing)))
+              (setf hard j) (return))))
+        (dolist (horizon *fine-tune-rolling-horizons*)
+          (let ((end i) (time (trackpoint-time (aref points i))))
+            (loop for j from (1+ i) to hard
+                  while (<= (timestamp-difference (trackpoint-time (aref points j)) time) horizon)
+                  do (when (or (= j hard) (routing-minute-p (trackpoint-time (aref points j)))) (setf end j)))
+            (when (> end i)
+              (let ((key (list i end)))
+                (unless (gethash key seen)
+                  (setf (gethash key seen) t)
+                  (push (list (trackpoint-time (aref points i)) (trackpoint-time (aref points end))) result))))))))
+    (nreverse result)))
+
+;;; Replace one stretch and physically re-sail its entire suffix. Prefix points
+;;; are unchanged; no junction positions or times are snapped back to reference.
+(defun fine-replay-patch (routing track start end candidate)
+  (if (= end (1- (length track)))
+      (append (subseq track 0 start) candidate)
+      (let* ((endpoint (car (last candidate)))
+             (suffix (fine-replay routing (trackpoint-position endpoint) (trackpoint-time endpoint)
+                                 (fine-controls (nthcdr end track)) :step nil)))
+        (when suffix
+          (append (subseq track 0 start) (butlast candidate) suffix)))))
+
+;;; Compare complete executable routes, never just a local smoothing score.
+(defun fine-route-better-p (routing reference candidate incumbent partialp)
+  (let* ((end (car (last candidate))) (old (car (last incumbent)))
+         (time (trackpoint-time end)) (old-time (trackpoint-time old)))
+    (if partialp
+        (let ((distance (course-distance (routing-dest routing) (trackpoint-position end)))
+              (old-distance (course-distance (routing-dest routing) (trackpoint-position old)))
+              (radius (course-distance (routing-start routing) (trackpoint-position end)))
+              (old-radius (course-distance (routing-start routing) (trackpoint-position old))))
+          (and (fine-mark-progress-safe-p routing incumbent candidate)
+               (timestamp= time old-time) (<= distance old-distance) (>= radius old-radius)
+               (or (> radius (+ old-radius *fine-tune-fit-tolerance*))
+                   (< distance (- old-distance *fine-tune-fit-tolerance*))
+                   (< (fine-window-score reference candidate) (fine-window-score reference incumbent)))))
+        (or (timestamp< time old-time)
+            (and (timestamp= time old-time)
+                 (< (fine-window-score reference candidate) (fine-window-score reference incumbent)))))))
+
+;;; Keep every accepted patch as an incumbent. A failed later window or forecast
+;;; leaves it intact; marks, manoeuvres, land and the terminal objective are global.
+(defun fine-tune-rolling (routing info)
+  (let* ((reference (or (routeinfo-original-best info) (routeinfo-best info)))
+         (incumbent (routeinfo-best info))
+         (partialp (string= (routeinfo-status info) "max_duration"))
+         (*fine-tune-progress-origin* (routing-start routing))
+         (*fine-tune-approximation* t) (*fine-tune-weather* (make-hash-table :test #'equal))
+         (*fine-tune-position-limit* *fine-tune-rolling-position-limit*)
+         (*fine-tune-manoeuvre-limit* (or *fine-tune-manoeuvre-limit* 500d0))
+         (*fine-tune-max-window-evaluations* *fine-tune-rolling-window-evaluations*)
+         (*fine-tune-started* (get-internal-real-time)) (*fine-tune-evaluations* 0)
+         (specs (fine-rolling-specs routing incumbent))
+         (visited 0) (improved 0) (report (copy-fine-tuning (routeinfo-fine-tuning info))))
+    (dolist (spec specs)
+      (unless (fine-budget-p) (return))
+      (let* ((start (position (first spec) incumbent :key #'trackpoint-time :test #'timestamp=))
+             (end (or (position (second spec) incumbent :key #'trackpoint-time :test #'timestamp=)
+                      (when (timestamp> (second spec) (trackpoint-time (car (last incumbent))))
+                        (1- (length incumbent))))))
+        (when (and start end (< start end))
+          (let* ((window (subseq incumbent start (1+ end)))
+                 (finalp (= end (1- (length incumbent))))
+                 (*fine-tune-outward-window* (fine-free-anchor-p routing window finalp partialp))
+                 (validated nil))
+            (when (or (plusp (fine-changes window)) finalp)
+              (incf visited)
+              (handler-case
+                  (let ((candidate
+                          (fine-optimize-window routing window (trackpoint-position (first window))
+                                                (and finalp (not partialp))
+                            (lambda (patch)
+                              (let ((whole (fine-replay-patch routing incumbent start end patch)))
+                                (when (and whole
+                                           (let ((*fine-tune-outward-window* partialp)) (fine-valid-window-p reference whole))
+                                           (fine-result-valid-p routing reference whole partialp)
+                                           (fine-route-better-p routing reference whole incumbent partialp))
+                                  (setf validated whole) t))))))
+                    (when candidate
+                      (setf incumbent validated)
+                      (incf improved)))
+                (error (e) (log2:debug "Rolling fine-tuning retained incumbent: ~a" e))))))))
+    (when (plusp improved)
+      (multiple-value-bind (valid space seconds) (fine-check-manoeuvres reference incumbent)
+        (assert valid)
+        (setf (routeinfo-original-best info) reference (routeinfo-best info) incumbent
+              (routeinfo-twa-segments info) (fine-segments incumbent)
+              (routeinfo-steering-segments info) (fine-steering-segments incumbent)
+              (fine-tuning-status report) "optimized"
+              (fine-tuning-reason report) "validated rolling windows"
+              (fine-tuning-failed-window report) nil (fine-tuning-endpoint-error report) nil
+              (fine-tuning-max-manoeuvre-distance report) space
+              (fine-tuning-max-manoeuvre-seconds report) seconds
+              (fine-tuning-approximation report) t
+              (fine-tuning-corridor-limit report) *fine-tune-position-limit*)))
+    (incf (fine-tuning-evaluations report) *fine-tune-evaluations*)
+    (incf (fine-tuning-windows report) visited)
+    (incf (fine-tuning-optimized-windows report) improved)
+    (setf (fine-tuning-rolling-windows report) visited
+          (fine-tuning-rolling-improvements report) improved
+          (fine-tuning-rolling-evaluations report) *fine-tune-evaluations*
+          (fine-tuning-rolling-position-limit report) *fine-tune-position-limit*
+          (fine-tuning-mark-tolerance report) *fine-tune-mark-tolerance*
+          (fine-tuning-optimized-changes report) (fine-changes incumbent)
+          (fine-tuning-optimized-arrival report) (trackpoint-time (car (last incumbent)))
+          (fine-tuning-integer-controls report) (fine-integer-plan-p incumbent)
+          (fine-tuning-minute-controls report) (fine-minute-plan-p incumbent)
+          (fine-tuning-heading-segments report) (count "heading" (fine-steering-segments incumbent) :key #'steering-segment-mode :test #'string=)
+          (fine-tuning-optimized-origin-distance report) (course-distance (routing-start routing) (trackpoint-position (car (last incumbent))))
+          (fine-tuning-optimized-destination-distance report) (course-distance (routing-dest routing) (trackpoint-position (car (last incumbent))))
+          (fine-tuning-distance-gain report) (- (fine-tuning-optimized-origin-distance report) (fine-tuning-original-origin-distance report))
+          (routeinfo-fine-tuning info) report)
+    (unless (fine-budget-p) (setf (fine-tuning-reason report) "trial budget reached"))
+    info))
+
+;;; Preserve the previous three-thousand-trial incumbent, then spend the enlarged
+;;; remaining shared budget on rolling windows. No trial can worsen that incumbent.
+(defun fine-tune-route (routing info)
+  (let* ((started (get-internal-real-time))
+         (search-seconds (routestats-calctime (routeinfo-stats info)))
+         (max-evaluations *fine-tune-max-evaluations*) (max-seconds *fine-tune-max-seconds*))
+    (let ((*fine-tune-max-evaluations* (if *fine-tune-rolling-enabled* (min 3000 max-evaluations) max-evaluations))
+          (*fine-tune-max-seconds* (if *fine-tune-rolling-enabled* (min 10d0 max-seconds) max-seconds)))
+      (fine-tune-initial-route routing info))
+    (let* ((used (fine-tuning-evaluations (routeinfo-fine-tuning info)))
+           (remaining-seconds (- max-seconds (/ (- (get-internal-real-time) started) internal-time-units-per-second))))
+      (when (and *fine-tune-enabled* *fine-tune-rolling-enabled* (rest (routeinfo-best info))
+                 (member (routeinfo-status info) '("reached" "max_duration") :test #'string=)
+                 (< used max-evaluations) (> remaining-seconds 0d0))
+        (let ((*fine-tune-max-evaluations* (- max-evaluations used))
+              (*fine-tune-max-seconds* remaining-seconds)
+              (*fine-tune-manoeuvre-limit* *fine-tune-position-limit*))
+          (handler-case
+              (let ((candidate (copy-routeinfo info)))
+                (fine-tune-rolling routing candidate)
+                (setf (routeinfo-best info) (routeinfo-best candidate)
+                      (routeinfo-original-best info) (routeinfo-original-best candidate)
+                      (routeinfo-twa-segments info) (routeinfo-twa-segments candidate)
+                      (routeinfo-steering-segments info) (routeinfo-steering-segments candidate)
+                      (routeinfo-fine-tuning info) (routeinfo-fine-tuning candidate)))
+            (error (e) (log2:warning "Rolling fine-tuning retained initial route: ~a" e))))))
+    (setf (routeinfo-stats info) (get-statistics (routeinfo-best info)
+                               (+ search-seconds (/ (- (get-internal-real-time) started) internal-time-units-per-second))
+                               (routestats-steps (routeinfo-stats info)) (routestats-points (routeinfo-stats info))))
     (bt:with-lock-held (+last-routestats-lock+) (setf *last-routestats* (routeinfo-stats info)))
     info))

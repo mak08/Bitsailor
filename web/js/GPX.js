@@ -125,6 +125,7 @@ function exportSchedule(routeInfo) {
         for (const segment of plan) {
             const command = { mode: segment.mode === 'heading' ? 'HDG' : 'TWA', value: segment.value };
             if (!previous || previous.mode !== command.mode || previous.value !== command.value) {
+                requireMinuteCommand(time);
                 stream.s += formatTimestampCSV(new Date(time)) + ',' + command.mode + ','
                     + (command.mode === 'TWA' ? -command.value : command.value) + '\n';
             }
@@ -135,6 +136,7 @@ function exportSchedule(routeInfo) {
         for (const rp of routeInfo.best.slice(0, -1)) {
             const command = steeringControl(rp);
             if (!previous || previous.mode !== command.mode || previous.value !== command.value) {
+                requireMinuteCommand(new Date(rp.time).getTime());
                 stream.s += formatTimestampCSV(rp.time) + ',' + command.mode + ','
                     + (command.mode === 'TWA' ? -command.value : command.value) + '\n';
             }
@@ -142,6 +144,12 @@ function exportSchedule(routeInfo) {
         }
     }
     return stream.s;
+}
+
+// Reject stale/off-grid plans rather than rounding an unvalidated command time.
+function requireMinuteCommand(time) {
+    if (!Number.isFinite(time) || time % 60000 !== 0)
+        throw new Error('This route contains off-minute commands. Recompute the route before exporting a schedule.');
 }
 
 function formatTimestampCSV(isoOrDate) {

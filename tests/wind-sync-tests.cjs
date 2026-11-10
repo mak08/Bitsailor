@@ -200,6 +200,7 @@ cache.drawWind = async () => {};
     getRoute();
   `, ui);
   assert.equal(request.pathname, '/function/router.getRoute');
+  assert.deepEqual(request.searchParams.getAll('stepper'), ['standard']);
   assert.equal(request.searchParams.has('cycle'), false);
   const waypoints = request.searchParams.get('waypoints').split('~').map(p => p.split(',').map(Number));
   assert.equal(waypoints.length, 2);
@@ -210,7 +211,9 @@ cache.drawWind = async () => {};
   assert.deepEqual(request.searchParams.getAll('useWaves'), ['true']);
   assert.equal(request.searchParams.get('forecast_switch_hours'), 'off');
   node('sel_secondary_forecast_model').value = 'ECMWF-IFS-WIND';
+  node('cb_hires_stepper').checked = true;
   vm.runInContext(`settings.forecast_switch_hours = '12'; getRoute();`, ui);
+  assert.deepEqual(request.searchParams.getAll('stepper'), ['hires']);
   assert.deepEqual(request.searchParams.getAll('secondary_forecast_model'), ['ECMWF-IFS-WIND']);
   assert.deepEqual(request.searchParams.getAll('forecast_switch_hours'), ['12']);
   assert.equal(request.searchParams.get('startTime'), '2026-10-31T22:14');
@@ -271,11 +274,18 @@ cache.drawWind = async () => {};
   vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized', 'twa-step': 1,
     objective: 'origin-distance', 'distance-gain': 12.345, 'optimized-origin-distance': 12000,
     approximation: true, 'corridor-limit': 1852,
+    'rolling-windows': 33, 'rolling-improvements': 3, 'rolling-evaluations': 9000, 'rolling-position-limit': 9260,
     'original-changes': 15, 'optimized-changes': 0}})`, ui);
   assert.match(node('lb_fine_tuning').textContent, /Progress \+12.3 m/);
   assert.match(node('lb_fine_tuning').title, /Fixed final time/);
   assert.match(node('lb_fine_tuning').title, /lateral limit 1.0 nm/);
+  assert.match(node('lb_fine_tuning').title, /3\/33 rolling windows improved/);
+  assert.match(node('lb_fine_tuning').title, /rolling corridor 5.0 nm/);
   vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'optimized'}})`, ui);
   assert.match(node('lb_fine_tuning').textContent, /Older solver/);
+  vm.runInContext(`displayFineTuning({'fine-tuning': {status: 'unchanged', 'twa-step': 1,
+    'minute-controls': false}})`, ui);
+  assert.match(node('lb_fine_tuning').textContent, /Off-minute route/);
+  assert.match(node('lb_fine_tuning').title, /schedule export unavailable/);
   console.log('Recorded-cycle wind replay, preceding-isochrone inference, sample time and failure tests passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

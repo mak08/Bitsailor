@@ -14,7 +14,7 @@ for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListen
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'router-approximation-20261104';
+const revision = 'router-rolling-fit-20261107';
 const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));
@@ -93,10 +93,14 @@ function testRaceDuration() {
   const options = [...selectHTML.matchAll(/<option value="(\d+)"([^>]*)>/g)]
     .map(([, value, attrs]) => ({ value, defaultSelected: attrs.includes('selected') }));
   const selector = { options };
+  const stepper = { checked: false };
+  const savedValues = new Map();
+  const storage = { setItem: (key, value) => savedValues.set(key, value) };
   const context = vm.createContext({
     PolarManager: class {},
-    document: { getElementById: id => id === 'sel_duration' ? selector : null, querySelectorAll: () => [] },
-    window: {}, localStorage: { setItem() {} }
+    URL, document: { URL: 'http://localhost/router-fw.html',
+      getElementById: id => id === 'sel_duration' ? selector : id === 'cb_hires_stepper' ? stepper : null, querySelectorAll: () => [] },
+    window: { localStorage: storage }, localStorage: storage
   });
   const run = code => vm.runInContext(code, context);
   run(main.slice(0, bootstrapAt));
@@ -113,6 +117,21 @@ function testRaceDuration() {
   assert.equal(run('races[0].settings.duration'), 432000);
   run('applyRaceSettings(races[0])');
   assert.equal(selector.value, '120');
+  run("restoreStepper('hires')");
+  assert.equal(stepper.checked, true);
+  assert.equal(run('settings.stepper'), 'hires');
+  run("restoreStepper('unknown')");
+  assert.equal(stepper.checked, false);
+  stepper.checked = true;
+  run('onSetStepper({ target: document.getElementById("cb_hires_stepper") })');
+  assert.equal(savedValues.get('xx.stepper'), 'hires');
+  assert.equal(run('races[0].settings.stepper'), 'hires');
+  run('captureAllRaceSettings()');
+  assert.equal(run('races[0].settings.stepper'), 'hires');
+  run('restoreStepper("standard"); applyRaceSettings(races[0])');
+  assert.equal(stepper.checked, true);
+  run('applyRaceSettings({ settings: {} })');
+  assert.equal(stepper.checked, false); // Older races default to standard.
 }
 (async () => {
   testRaceDuration();

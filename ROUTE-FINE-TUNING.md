@@ -12,6 +12,35 @@ Heading mode holds the compass command and recomputes physical TWA from the wind
 Both use the selected polar sail/speed, waves and currents. A fixed compass
 heading is not a fixed course over ground when current causes drift.
 
+## Command times
+
+Commands may start or change only on **full UTC minutes**, including zero
+nanoseconds. Request departures are rounded forward to the next full minute.
+Hires search takes a short alignment step when needed (including a fractional
+remainder after an internal event), then samples on the minute. Its later
+standard schedule is based on that aligned clock.
+
+Continuous duration shooting remains an internal guide. Its neighboring absolute
+minute switch times are enumerated and each plan is re-sailed through the actual
+forecast before acceptance. Direct minute-grid TWA seeds are also tried. Merely
+rounding timestamps in the response or schedule is forbidden: changing a switch
+changes the sailed path, which must still pass all position, land, target,
+manoeuvre and no-later-ETA checks. A 1 cm continuous fit does not imply a feasible
+minute-grid fit; the re-sailed candidate uses the 1 m acceptance limit.
+
+The terminal arrival is an event, not an instruction, and may retain fractional
+seconds. A last segment may therefore have a fractional duration, but every
+actual command start is a full minute. Intermediate weather samples and gate
+touches are likewise not automatically command changes.
+
+The response reports `command-time-step = 60` and `minute-controls`. If an
+unmodified/raw route has off-minute commands that cannot be corrected safely,
+its executable segment plans are empty and the UI marks the schedule unavailable.
+Schedule export rejects such a route (including old cached responses) rather than
+silently rounding it. Fewer smoothing fits may be feasible under this constraint.
+Historical measurements below that used fractional switch durations describe
+the earlier continuous-duration version, not executable current schedules.
+
 ## Integer TWA controls
 
 The target application accepts whole-degree TWA only. Fine-tuning therefore tries
@@ -97,7 +126,7 @@ Duration-limited routes must retain their final timestamp, preserve origin
 progress and finish no farther from the destination; greater origin radius
 alone is insufficient. The final free endpoint still uses these checks.
 
-The conservative incumbent reserves up to 1000 of the route's 3000 trial
+Within the initial stage, the conservative incumbent reserves up to 1000 of its 3000 trial
 integrations (at most half for smaller budgets) for this broader pass, and uses
 at most half of the route's trial wall-clock budget. The broader pass can use
 all remaining evaluations/time. Both passes share the existing overall caps;
@@ -107,6 +136,54 @@ failed broad fits retain the incumbent. Set
 The report adds `approximation`, `corridor-limit`, and original/optimized
 destination distances in metres. Hover over the Fine-tuning result to see when
 the broader corridor was used.
+
+## Rolling windows and larger budgets
+
+After the existing initial pass, `fine-tune-rolling` attempts overlapping windows
+of 30 minutes, one hour, two hours and four hours. Starts include command changes
+and additional half-hour positions. Early work is spread across the route by
+bisecting the start list, instead of consuming the entire budget near departure.
+Explicit point marks stop a window; at most one tack/gybe is included. Gate
+intersections and all target order are checked on the complete sailed trajectory.
+
+The rolling corridor defaults to **5 nm** (9260 m). This permits larger deviations
+between rejoin anchors, while the conservative manoeuvre limits remain in force.
+Fixed rejoin endpoints still close within 1 m. Required point marks and numerical
+gate touches have a separate **1 cm** tolerance (`*fine-tune-mark-tolerance*`),
+independent of both corridor width and rejoin tolerance. Point touches along a
+sailed segment count even between wind samples; they need not issue a command.
+Explicit mark anchor times are retained in fitting; no point is moved or snapped
+to make a candidate pass.
+
+Each locally competitive patch re-sails the **entire remaining route** from its
+actual endpoint, preserving original control step lengths when replaying that
+suffix. A mismatch is not repaired by copying old coordinates. The whole route
+must satisfy ordered marks, land clearance, minute-only integer commands, the
+original manoeuvre sequence and final-time/distance constraints. Completed routes
+cannot arrive later than the incumbent. Partial routes retain their final time,
+may not lose origin progress or increase destination distance, may not retreat
+from the next outstanding mark or lose newly passed marks, and compare
+progress before steering simplicity. Every accepted patch becomes the incumbent;
+a later failed window, forecast or exhausted budget cannot discard it.
+
+Defaults are now **12,000 trial integrations / 30 seconds** for all stages.
+The initial implementation retains its previous maximum 3000 trials / 10 seconds;
+rolling uses the remaining budget. Each rolling window has a base budget of 480
+trials, plus the existing heading allowance. Continuous duration fitting remains
+only a seed for re-sailed full-minute schedules; extra budget does not relax the
+command grid or the target constraints.
+
+The exact-time weather-parameter scratch cache is capped at 4096 entries and
+cleared when full. Decoded GRIB arrays remain shared upstream. Only the current
+validated full-route candidate is retained per window. This avoids memory growing
+with every fractional Newton probe when larger windows/budgets are enabled.
+
+New settings on Status are `*fine-tune-rolling-enabled*`,
+`*fine-tune-rolling-horizons*`, `*fine-tune-rolling-stride*`,
+`*fine-tune-rolling-position-limit*`, `*fine-tune-rolling-window-evaluations*`,
+`*fine-tune-mark-tolerance*` and `*fine-tune-weather-cache-limit*`.
+The report and Fine-tuning tooltip include rolling windows attempted/improved and
+trial counts. The report also identifies the rolling corridor and mark tolerance.
 
 ## Objective and hard constraints
 
@@ -144,8 +221,8 @@ Every published candidate must satisfy:
 - At each sample time, the reference position defines a great-circle ray from
   the original route start. A candidate may advance along this ray without a
   longitudinal cap, provided its absolute cross-track distance is at most
-  `*fine-tune-position-limit*` (500 m). Backward displacement retains the old
-  500 m great-circle distance bound. Along-track projection distinguishes the
+  the active corridor: conservative 500 m, initial approximation 1 nm, or rolling
+  5 nm. Backward displacement uses the same active distance bound. Along-track projection distinguishes the
   forward ray from the opposite half of its great circle, including at the date
   line. Near the origin the ordinary distance bound applies. Time-aligned
   reference interpolation wraps longitude; it is used only to measure deviation.
@@ -157,8 +234,9 @@ Every published candidate must satisfy:
 - All originally passed targets remain passed in order; completed routes must
   pass every requested target. Unreached targets do not invalidate partial routes. Gate crossings within one
   segment must follow their spatial order; touches within the closure tolerance
-  count. Point waypoints are window boundaries and must still be reached within
-  that same numerical tolerance.
+  count. Required point marks and numerical gate touches use a separate 1 cm
+  bound. Explicit point anchors stop fitting windows; segment touches are checked
+  even between sampled points.
 - Completed routes retain the final geographic endpoint within the closure
   tolerance and cannot arrive later, including when the search stopped slightly
   beyond the destination. Partial routes retain the exact final timestamp and
@@ -212,7 +290,9 @@ Originally the three-angle generator always chose different first/last edge
 angles, accidentally omitting these correction patterns. The new trials share
 the existing budgets and use the same integer controls and hard checks.
 
-Finite-difference, damped shooting solves continuous **durations**, not angles.
+Finite-difference, damped shooting solves continuous **durations**, not angles,
+as seeds for neighboring minute-grid schedules. Only a re-sailed minute schedule
+can be accepted.
 One-parameter fits minimize endpoint residual but must still actually close;
 two-parameter fits use a Newton solve for the two endpoint coordinates. There
 are at most eight iterations per trial. Fitting closes to 1 cm internally,
@@ -226,21 +306,22 @@ without discarding a useful fit. No snapping or extra final leg is introduced.
 Increasing it permits a different rejoin/final position at the same clock time,
 which can make an apparent ETA gain partly reflect a shorter trip. For scale,
 1 m is 0.1 seconds of sailing at 10 m/s. The independent corridor, land and
-manoeuvre checks still apply. This parameter is also used for requested point
-waypoints and numerical gate touches, so large values weaken those requirements
-as well. It should not be enlarged to hide an infeasible continuation.
+manoeuvre checks still apply. Requested point marks and numerical gate touches now use the independent
+1 cm `*fine-tune-mark-tolerance*`, so enlarging a rejoin or corridor tolerance
+does not weaken those requirements. It should not be enlarged to hide an infeasible continuation.
 
 The original continuous implementation failed the supplied November 4 Atlantic
 case at window 34: accumulated replay error reached 0.522 m against the 0.5 m
 limit. Its response reported 520 evaluations and `unchanged`, explaining why
 new controls were not visible. It did run; it then rolled the entire result back.
 
-Each window has a 240-integration budget, in addition to the whole-route budget.
+Each initial-pass window has a 240-integration budget, in addition to the whole-route budget.
 Only a few two-control trials are attempted in fixed-time windows, reserving
 work for the three-control fits that rotating wind often needs. Trial integration
 uses at most 60-second steps by default and splits exactly at control boundaries and the
 absolute forecast-model switch. Parameters are cached by exact sample timestamp;
-weather is still interpolated at each trial position.
+weather is still interpolated at each trial position. The scratch parameter cache
+is bounded by `*fine-tune-weather-cache-limit*`.
 
 Intermediate window times stay fixed. This remains a bounded local refinement,
 not a search for the globally fastest manoeuvre schedule.
@@ -274,7 +355,7 @@ valid suffix-only improvement survives instead of rolling everything back.
 Both passes share the same route-level budgets. No-op baseline replay is not
 reported as an optimization.
 
-Trial work is bounded by 3,000 integrations and 10 wall-clock seconds, checked
+Total trial work is bounded by 12,000 integrations and 30 wall-clock seconds, checked
 between integrations. These are trial budgets, not a hard interruption of an
 individual GRIB load or the baseline replay/validation. After budget exhaustion,
 remaining windows can retain their original controls. A report identifies a
@@ -296,11 +377,11 @@ All operational parameters are listed on the Status tab. Set
 The response adds:
 
 - `steering-segments`: the general executable plan, with `mode` (`twa` or
-  `heading`), integer `value`, `start-time`, `end-time` and fractional-second
-  `duration`.
+  `heading`), integer `value`, minute-aligned `start-time`, `end-time` and
+  `duration`. Only the final arrival duration may be fractional.
 - `twa-segments`: for backward compatibility, pure-TWA plans only; empty for
   mixed/heading routes. Compact controls with `start-time`, `end-time`, signed integer `twa` and `duration` in seconds.
-  Consecutive equal angles are coalesced; the `duration` field preserves fractional seconds even if the displayed timestamps are rounded. This is the executable integer-TWA plan. If an unmodified legacy route has fractional controls and cannot be converted safely, this field is empty rather than publishing it as an executable integer plan.
+  Consecutive equal angles are coalesced; the `duration` field preserves a fractional final arrival without creating an off-minute command. This is the executable integer-TWA plan. If an unmodified legacy route has fractional controls and cannot be converted safely, this field is empty rather than publishing it as an executable integer plan.
 - `original-best`: the original track when an optimized track was accepted.
 - `fine-tuning`: outcome/reason, evaluation count, original/optimized change
   counts and arrival times, `objective` (`earliest-arrival` or `origin-distance`),
@@ -332,7 +413,8 @@ sbcl --noinform --non-interactive \
   --load tests/gate-search-tests.cl --load tests/fine-tune-tests.cl \
   --load tests/fine-heading-tests.cl --load tests/fine-progress-tests.cl \
   --load tests/fine-balance-tests.cl --load tests/fine-approximation-tests.cl \
-  --eval '(progn (router::test-fine-tuning) (router::test-fine-tune-physics) (router::test-fine-heading) (router::test-fine-progress) (router::test-fine-balance) (router::test-fine-approximation))'
+  --load tests/minute-command-tests.cl --load tests/fine-rolling-tests.cl \
+  --eval '(progn (router::test-fine-tuning) (router::test-fine-tune-physics) (router::test-fine-heading) (router::test-fine-progress) (router::test-fine-balance) (router::test-fine-approximation) (router::test-minute-commands) (router::test-fine-rolling))'
 ```
 
 Physical fixtures use real interpolation and constant polars, with constant and
@@ -404,3 +486,39 @@ November 5 20:00 UTC final horizon and did not increase destination distance.
 Three heading segments were accepted, within the shared 3000-trial budget.
 The live service was unavailable; this validates the local dataset, not an
 identical reproduction of the screenshot.
+
+Minute-command regressions cover fractional hires alignment, integer-minute
+switches, re-sailing rather than relabelling, rejection of rounded plans that
+miss their anchors, and fractional arrival events. The Class 40 replay retained
+its original 80 minute-aligned segments after this constraint was introduced;
+the previous fractional-switch approximation was not published.
+
+## Rolling comparison (November 7, 2026)
+
+`diagnostics/fine-tune-rolling.cl` searches once and compares tuners against the
+same raw result. A Class 40 example, departing November 4 at 20:09 UTC from
+`(48.13676668, -5.43672370)` toward `(44.08758503, -2.44923810)`, used local
+NOAA-GFS 12Z wind with **waves off** (archived wave fields were unavailable).
+All variants retained the November 5 20:00 UTC horizon.
+
+| Variant | Command changes | Trials | Remaining distance (m) | Fine-tuning seconds |
+| --- | ---: | ---: | ---: | ---: |
+| Previous 3000-trial pass | 68 | 3000 | 121530.348 | 0.31 |
+| Budget increased alone | 68 | 3180 | 121530.348 | 0.31 |
+| Rolling, 500 m corridor | 68 | 12000 | 121529.629 | 1.91 |
+| One-hour rolling, 5 nm | 60 | 12000 | 121529.642 | 1.33 |
+| Multi-horizon rolling, 5 nm (default) | 62 | 12000 | 121529.128 | 1.99 |
+
+Increasing budget alone did not repair later replay rejection. Wider rolling
+windows preserved valid improvements. Larger horizons did not always minimize
+command count: the default partial-route objective prioritizes progress, and the
+multi-horizon result finished farther ahead. This is a heuristic, not a global
+optimum or a promise of fewer commands on every request.
+
+A second, GFS-only wind replay of the IMOCA Atlantic route from
+`(43.25324, -41.04627)` toward `(16.21465649, -61.56925077)`, departing November 4
+at 19:08 UTC, retained 81 changes and its November 8 19:30 UTC arrival in both
+variants. The new pass tried 12000 integrations without a feasible improvement.
+Tests additionally demonstrate 31 to 3 changes through an exact intermediate
+point, retention after later failures, ordered segment touches and bounded cache
+size.

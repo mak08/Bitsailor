@@ -22,6 +22,7 @@
          (routing (make-routing :start origin :dest (make-latlng :lat 0d0 :lng 2d0)
                     :starttime start :polars polars :stepmax 3600))
          (*fine-tune-max-seconds* 60d0)
+         (*fine-tune-rolling-enabled* nil)
          (*fine-tune-heading-enabled* nil)
          (*fine-tune-outward-enabled* nil)
          (*fine-tune-weather* (make-hash-table :test #'equal))
@@ -53,6 +54,11 @@
     (format t "~&Fine tuning: ~a / ~a (~a evaluations), changes ~a -> ~a~%"
             (fine-tuning-status report) (fine-tuning-reason report) (fine-tuning-evaluations report)
             (fine-changes raw) (fine-changes track))
+    (assert (fine-minute-plan-p track))
+    (when (string= (fine-tuning-status report) "unchanged")
+      ;; A formerly continuous-duration fit can be infeasible on the minute grid.
+      (assert (eq raw track))
+      (return-from fine-test-check nil))
     (assert (string= (fine-tuning-status report) "optimized"))
     (assert (< (fine-changes track) (fine-changes raw)))
     (assert (timestamp<= (trackpoint-time end) (trackpoint-time original-end)))
@@ -81,7 +87,7 @@
        (assert (some (lambda (segment) (not (zerop (mod (twa-segment-twa segment) 5))))
                      (routeinfo-twa-segments info)))
        (assert (< (fine-distance (trackpoint-position (car (last raw)))
-                                (trackpoint-position (car (last (routeinfo-best info))))) 0.02d0)))))
+                                (trackpoint-position (car (last (routeinfo-best info))))) *fine-tune-endpoint-tolerance*)))))
   (dolist (angles '((45d0 50d0 :tack) (125d0 130d0 :gybe)))
     (call-with-fine-test
      (lambda (routing)

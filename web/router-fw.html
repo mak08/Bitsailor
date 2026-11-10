@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css?v=router-approximation-20261104">
+	<link rel="stylesheet" href="css/router.css?v=router-rolling-fit-20261107">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js?v=router-approximation-20261104"></script>
+	<script type="module" src="js/router-main.js?v=router-rolling-fit-20261107"></script>
 
 </head>
 
@@ -135,6 +135,9 @@
 			<div class="duration-label">
 				<label>Duration</label>
 			</div>
+            <div class="stepper-selector" title="Hi-res: 1-minute search steps for the first 8 hours, then standard steps">
+                <label><input type="checkbox" id="cb_hires_stepper" aria-label="High-resolution stepper: 1 minute for the first 8 hours">Hi-res</label>
+            </div>
 			<div class="duration-selector">
 				<select id="sel_duration" name="duration">
 					<option value="12">12 hours</option>

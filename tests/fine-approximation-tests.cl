@@ -4,6 +4,16 @@
 ;;; Gradual TWA changes can be replaced by a heading and correction tails,
 ;;; without confusing a wider lateral corridor with relaxed target closure.
 (defun test-fine-approximation ()
+  (let ((weather (symbol-function 'fine-test-weather)))
+    (call-with-gate-test-functions
+     (list (cons 'fine-test-weather
+                 (lambda (start time grid rotating)
+                   (declare (ignore rotating))
+                   ;; 0,5,10,15-degree wind on five-minute blocks: gradual
+                   ;; TWA instructions describe an exact, executable HDG 110.
+                   (funcall weather start
+                            (fine-time+ start (* 500d0 (floor (timestamp-difference time start) 300d0))) grid t))))
+     (lambda ()
   (call-with-fine-test
    (lambda (routing)
      (let* ((info (fine-test-route routing
@@ -19,6 +29,7 @@
        (format t "~&Approximation: ~a -> ~a changes, plan=~s~%" (fine-changes raw)
                (and candidate (fine-changes candidate)) (and candidate (fine-steering-segments candidate)))
        (assert candidate)
+       (assert (fine-minute-plan-p candidate))
        (assert (< (fine-changes candidate) (fine-changes raw)))
        (assert (some (lambda (p) (string= (fine-command-mode p) "heading")) candidate))
        (assert (fine-valid-window-p raw candidate))
@@ -32,6 +43,7 @@
          (assert (some (lambda (w) (timestamp= (trackpoint-time (car (last w))) (trackpoint-time anchor)))
                        (fine-approximation-windows routing raw))))))
    t)
+     )))
   ;; Greater origin distance alone must not accept a worse destination distance.
   (let* ((origin (make-latlng :lat 0d0 :lng 0d0))
          (*fine-tune-progress-origin* origin)

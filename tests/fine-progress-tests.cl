@@ -99,7 +99,9 @@
       (setf (trackpoint-time c) (trackpoint-time b)
             (routing-waypoints routing) (list reference))
       (assert (not (fine-free-anchor-p routing raw t t)))
-      (assert (not (fine-result-valid-p routing raw candidate t)))
+      ;; Continuing along the same sailed segment still touches the required
+      ;; point exactly, even when it is not a wind sample endpoint.
+      (assert (fine-result-valid-p routing raw candidate t))
       ;; A partial route must retain gates it had already touched, even though
       ;; later targets can remain unvisited.
       (let ((centre (add-distance-exact origin 5000d0 90d0)))

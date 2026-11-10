@@ -63,6 +63,16 @@ Selecting an isochrone displays the recorded model/cycle at `wind-time`; the sel
 
 Route inspection locks the wind source and cycle. Neither retries nor the periodic update check silently substitute a newer run. The model selector, cycle/date label, wind timestamp and slider update to match the replayed forecast. Changing the forecast model explicitly leaves route inspection mode. The header identifies recorded wind or reports that the recorded forecast is unavailable. Older responses without sufficient provenance require recomputation.
 
+Live `router.getServerSettings` metadata advertises the newest completely
+downloaded cycle per source, checking the nominal run and up to eleven earlier
+runs with the existing filesystem/download-completeness checks. Scheduled paths
+alone are not proof of availability. A source without a complete run retains its
+name with an empty path list. The browser does not guess a run from the clock.
+The ten-minute refresh retains its displayed cycle and cache until the new wind
+loads successfully; background load failures are quiet and keep the working
+preview. Recorded selections and newer user wind requests take precedence over
+an in-flight metadata refresh.
+
 For archived runs, `router.getServerSettings?forecast_model=...&cycle=...` returns paths for that exact model and cycle. `loadForecastCycle` caches these metadata requests separately from the current preview settings. The metadata endpoint does not promise the archived files still exist: missing GRIBs remain visible errors. Cache keys use the exact source run hour rather than rounding to a six-hour boundary.
 
 `GribCache.update` loads both bracketing fields before publishing its cycle/time to mouse lookups; failed updates preserve the previous valid state. Retries preserve the requested cycle and sampling time. Browser wind speed now interpolates scalar corner magnitudes separately from U/V, matching the weather library's interpolation policy rather than taking the magnitude of the interpolated vector.
@@ -74,9 +84,9 @@ The startpage and router use explicit query-string revisions to prevent browsers
 | Reference | Revision |
 | --- | --- |
 | Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-approximation-20261104` |
-| Router main script | `?v=router-approximation-20261104` |
-| Router stylesheet | `?v=router-approximation-20261104` |
+| Router links on the startpage | `router-fw.html?v=router-rolling-fit-20261107` |
+| Router main script | `?v=router-rolling-fit-20261107` |
+| Router stylesheet | `?v=router-rolling-fit-20261107` |
 | Router import of `GribCache.js` | `?v=router-forecast-selection-20261103` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
@@ -142,13 +152,33 @@ The route search in [simulation.cl](simulation.cl) proceeds as follows:
 4. Reject positions outside the routing box or fan. Keep the best candidate in an angular bucket, preferring the point with the greatest distance from the start along its origin bearing. Each routepoint retains its predecessor, allowing final path reconstruction.
 5. Filter the new frontier for land crossings, then test whether any candidate has reached or passed the destination distance within 1.5 degrees of the destination bearing. An empty frontier terminates as `no_route`; exhausting the duration terminates as `max_duration`.
 
-The first step is shortened to align to a ten-minute boundary. Later step durations grow with forecast horizon: approximately two minutes initially, then ten, fifteen, and thirty minutes. The isochrone capacity is bounded by `*max-iso-points*` (1500 by default). At completion, the engine selects the frontier point nearest the destination and follows predecessor links to produce the route. Hourly frontiers are retained for the UI, and every generated step is retained in the `best` track.
+The standard stepper shortens its first step to align to a ten-minute boundary. After the initial alignment step, two-minute steps end on the last ten-minute grid point no later than two hours from the original departure. Later steps use ten, fifteen, and thirty minutes, retaining the existing later-horizon thresholds. Point-waypoint legs do not restart the two-minute phase. The isochrone capacity is bounded by `*max-iso-points*` (1500 by default). At completion, the engine selects the frontier point nearest the destination and follows predecessor links to produce the route. Hourly frontiers are retained for the UI, and every generated step is retained in the `best` track.
+
+`stepper=standard` (the default) or `stepper=hires` selects the search schedule.
+Request departures are rounded forward to a full UTC minute.
+`make-routing-stepper` dispatches to `make-stepper` or `make-hires-stepper` in
+both single-leg and gate routing. Hires uses 60-second steps for the first eight
+hours from the original departure, then rejoins the standard timestamp
+grid based on a minute-aligned clock. Off-minute internal starts take a short
+alignment step, including fractional seconds where necessary. The join step and forecast-model switch steps can be shorter. The original
+departure is stored in `routing-stepper-starttime` and copied through point-waypoint
+legs, so their eight-hour period does not restart. Invalid API values return 400.
+The **Hi-res** checkbox beside Duration persists in browser settings and saved
+races; older requests and races default to Standard. This selects search
+integration steps independently of the fine-tuner's one-minute replay steps.
+
 
 `get-route-leg` also maintains `max-dist`, a per-leg array of radial high-water marks indexed by absolute bearing from the leg start. Unlike the next frontier, it persists across steps: a candidate must exceed both its current-step bucket winner and the historical radius. Marks are updated before land filtering and are not rolled back when a winner is blocked. This suppresses inward or repeated expansion but can discard useful detours; it is a pruning heuristic, not an earliest-arrival proof. See [MAX-DIST.md](diagnostics/MAX-DIST.md) for indexing, update order, examples and the distinction from gate-search history.
 
 ## TWA Fine-Tuning
 
 After the full route search, `get-route` calls `fine-tune-route` in [fine-tune.cl](fine-tune.cl). It fits up to three explicitly typed integer TWA/compass-heading segments in short anchored windows by solving durations, re-sailing them in the forecast with polar, current and wave effects. A–B–A correction patterns can cancel a smoothed prefix’s error in following segments before rejoining the original anchor. Trial steps default to one minute; heading replay always checks at least every minute and at each command endpoint. Target order, land clearance and the original tack/gybe sequence are checked. Computed anchors may advance away from the original route start with at most 500 m lateral deviation; backward movement retains the 500 m distance bound. Manoeuvre times stay within five minutes. Requested point waypoints remain fixed. Completed routes retain their endpoint and cannot arrive later; a closed-anchor incumbent protects earlier improvements. Duration-limited routes instead maximize origin distance at the identical final timestamp, preserving their originally passed target prefix. Only a completed route’s last window can shorten its duration. Failed fits retain original controls, and failed final validation restores the original route.
+
+Fine-tuning command changes must occur on full UTC minutes. Continuous shooting
+only seeds neighboring minute-grid switch times; those schedules are re-sailed
+and validated before publication. Arrival timestamps may still be fractional.
+`minute-controls` and `command-time-step` report this contract. Uncorrectable raw
+plans have no executable segments, and schedule export refuses off-minute changes.
 
 A broader approximation pass also tries gradual same-tack stretches with a 1 nm
 lateral corridor. Command boundaries provide fixed rejoin anchors; integer
@@ -157,6 +187,18 @@ The conservative pass reserves trial work for this pass within the shared caps.
 Finished-route ETA cannot worsen, and duration-limited routes cannot finish
 farther from the destination at the same final time. Manoeuvre, land and target
 checks remain enforced. The Fine-tuning tooltip reports the broader corridor.
+
+The rolling stage then tries overlapping 30-minute to four-hour windows, with
+starts at command changes and half-hour intervals spread over the route. It uses
+a 5 nm lateral corridor, while explicit point marks remain hard window boundaries
+and all requested touches are checked to 1 cm independently of rejoin tolerances.
+Each competitive patch physically re-sails its complete suffix and is retained
+only after whole-route validation. Later failures retain earlier valid patches.
+The initial pass keeps its 3000-trial/10-second cap; the overall cap is now 12000
+trials/30 seconds, with the remainder available to rolling windows. Exact-time
+weather parameters use a bounded 4096-entry scratch cache; decoded GRIB fields
+remain shared. New budgets, horizons and tolerances are listed on Status, and
+rolling attempts/improvements appear in the Fine-tuning tooltip.
 
 The response supplies the general `steering-segments` mode/value plan (`twa-segments` remains available for pure-TWA plans) and a `fine-tuning` report; accepted replay replaces `best` and retains `original-best`. Refined points carry their own wind cycle/model/sample time for map inspection. Search isochrones remain the original frontier. Settings and bounded trial budgets appear on the Status tab. See [ROUTE-FINE-TUNING.md](ROUTE-FINE-TUNING.md) for the objective, shooting algorithm, tolerances and tests.
 

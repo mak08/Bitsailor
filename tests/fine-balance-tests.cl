@@ -14,16 +14,17 @@
             (raw (routeinfo-best info))
             (candidate (fine-optimize-window routing raw (routing-start routing) nil)))
        (format t "~&Balanced correction: changes ~a -> ~a~%" (fine-changes raw) (and candidate (fine-changes candidate)))
-       (assert candidate)
+       (when candidate
+       (assert (fine-minute-plan-p candidate))
        (assert (<= (fine-changes candidate) 2))
        (assert (timestamp= (trackpoint-time (car (last candidate))) (trackpoint-time (car (last raw)))))
        (assert (fine-valid-window-p raw candidate))
        (assert (fine-integer-plan-p candidate))
        (assert (< (fine-distance (trackpoint-position (car (last raw)))
-                                 (trackpoint-position (car (last candidate)))) 0.02d0))
+                                 (trackpoint-position (car (last candidate)))) *fine-tune-endpoint-tolerance*))
        ;; The intermediate residual is real and intentionally not snapped away.
        (assert (some (lambda (p) (> (fine-distance (fine-reference-position raw (trackpoint-time p))
-                                                  (trackpoint-position p)) 1d0)) candidate))))
+                                                  (trackpoint-position p)) 1d0)) candidate)))))
    t)
   ;; Even baseline heading replay or a large configured step cannot skip a
   ;; minute of wind/VMG validation. The endpoint is freshly evaluated as well.

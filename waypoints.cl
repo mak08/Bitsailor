@@ -154,6 +154,8 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
 ;;; Route consecutive gate groups between point waypoints, concatenate results and stop on failure
 ;;; or duration exhaustion.
 (defun get-route-via-waypoints (routing)
+  (unless (routing-stepper-starttime routing)
+    (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
   (let* ((targets (group-gate-targets routing))
          (total (routing-stepmax routing))
          (start-time (parse-datetime-local (routing-starttime routing)))

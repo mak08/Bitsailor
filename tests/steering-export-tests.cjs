@@ -14,8 +14,8 @@ const best = [0, 120, 240, 360].map((s, i) => ({
 }));
 assert.equal(ctx.exportSchedule({ best }), '2026-11-04 12:00:00,HDG,110\n');
 assert.equal(ctx.exportSchedule({ best, 'steering-segments': [
-  { mode: 'heading', value: 110, 'start-time': time, duration: 120.25 },
-  { mode: 'twa', value: -105, 'start-time': 'ignored', duration: 59.75 },
+  { mode: 'heading', value: 110, 'start-time': time, duration: 120 },
+  { mode: 'twa', value: -105, 'start-time': 'ignored', duration: 60 },
   { mode: 'heading', value: 111, 'start-time': 'ignored', duration: 60 }
 ] }), '2026-11-04 12:00:00,HDG,110\n2026-11-04 12:02:00,TWA,105\n2026-11-04 12:03:00,HDG,111\n');
 // Preserve legacy TWA polarity; a terminal sample has no outgoing command.
@@ -41,3 +41,15 @@ ctx.writePoint(rawStream, raw[0], 'rtept');
 assert.match(rawStream.s, /<gpxsrx:controlValue>105<\/gpxsrx:controlValue>/);
 assert.equal(ctx.steeringControl({ twa: 5, 'control-mode': 'twa', 'control-value': 0 }).value, 0);
 console.log('Unoptimized Lisp false metadata and zero-degree command export tests passed.');
+
+assert.throws(() => ctx.exportSchedule({ best, 'steering-segments': [
+  { mode: 'heading', value: 110, 'start-time': time, duration: 120.25 },
+  { mode: 'twa', value: 105, duration: 60 }
+] }), /off-minute commands/);
+assert.throws(() => ctx.exportSchedule({ best: [
+  { time: '2026-11-04T12:00:01Z', twa: 105 }, { time, twa: 105 }
+] }), /off-minute commands/);
+// A fractional arrival emits no new command.
+assert.equal(ctx.exportSchedule({ best, 'steering-segments': [
+  { mode: 'heading', value: 110, 'start-time': time, duration: 120.25 }
+] }), '2026-11-04 12:00:00,HDG,110\n');

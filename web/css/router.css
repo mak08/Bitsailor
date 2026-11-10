@@ -344,6 +344,14 @@ input[type=checkbox] {
 
 }
 
+.stepper-selector {
+    grid-row: 7;
+    grid-column: 2/4;
+    white-space: nowrap;
+}
+.stepper-selector label { cursor: pointer; }
+.stepper-selector input { margin: 3px 2px 0 0; }
+
 .duration-selector {
 	grid-row: 7;
 	grid-column: 4/7;

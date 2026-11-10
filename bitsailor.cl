@@ -150,10 +150,25 @@
 
 (defstruct server-settings datasources)
 
-;;; Wrap the weather library's datasource metadata in the server-settings response structure.
+;;; Publish only a completely downloaded cycle for each live preview source.
+;;; Weather-library metadata describes scheduled paths, not file availability.
+;;; Exact/recorded-cycle queries remain unfiltered in GETSERVERSETTINGS.
 (defun get-server-settings ()
   (make-server-settings
-   :datasources (cl-weather:datasource-info)))
+   :datasources
+   (loop for nominal in (cl-weather:datasource-info)
+         for name = (cl-weather::datasource-info-name nominal)
+         collect
+         (or (loop with cycle = (cl-weather:current-cycle name)
+                   repeat 12 do
+                     (multiple-value-bind (present total) (cycle-download-count (list name) cycle)
+                       (when (and present total (> total 0) (= present total))
+                         (return (cl-weather::datasource-info-for-cycle name cycle))))
+                     (setf cycle (cl-weather::previous-cycle name cycle)))
+             ;; Keep the model selectable, but never advertise missing paths.
+             (let ((empty (cl-weather::copy-datasource-info nominal)))
+               (setf (cl-weather::datasource-info-gribpaths empty) nil)
+               empty)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;

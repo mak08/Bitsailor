@@ -35,6 +35,9 @@ continues to after the gate; it is used to choose between several crossings."
   ;; buffer for TWA angles plus 2 best VMG angles
   twa-angles
   stepmax
+  (stepper :standard)
+  ;; Original departure survives copies for later point-waypoint legs.
+  stepper-starttime
   (fan *max-angle*)
   options
   starttime

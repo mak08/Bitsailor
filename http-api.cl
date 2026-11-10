@@ -126,6 +126,7 @@
                                               (|secondary_forecast_model| nil)
                                               (|forecast_switch_hours| nil)
                                               (|cycle| nil)
+                                              (|stepper| nil)
                                               |slat|
                                               |slon|
                                               |dlat|
@@ -164,6 +165,7 @@
                                   :secondary-forecast-model (parse-secondary-model |secondary_forecast_model| |forecast_switch_hours|)
                                   :forecast-switch-hours (parse-forecast-switch-hours |forecast_switch_hours|)
                                   :cycle (parse-routing-cycle |cycle| forecast-model)
+                                  :stepper (parse-routing-stepper |stepper|)
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :starttime |startTime|
                                   :stepmax (if duration-supplied-p
@@ -411,6 +413,12 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
 
 ;;; Helper functions
 
+;;; Accept only the two public step schedules; older requests default to standard.
+(defun parse-routing-stepper (value)
+  (cond ((or (null value) (string= value "") (string-equal value "standard")) :standard)
+        ((string-equal value "hires") :hires)
+        (t (error 'request-error :message "stepper must be standard or hires"))))
+
 ;;; Build routing inputs, polar cache and search bounds; cap duration in seconds at *MAX-ROUTE-
 ;;; HOURS*.
 (defun get-routing-presets (&key
@@ -424,6 +432,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               (starttime nil)
                               (options)
                               (stepmax (* 24 60 60))
+                              (stepper :standard)
                               (slat)
                               (slon)
                               (dlat)
@@ -435,6 +444,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
            (or options
                '("hull" "foil" "winch" "heavy" "light" "reach")))
          (cpolars (get-combined-polars polars-id (encode-options options))))
+    (when starttime (setf starttime (routing-minute-ceiling (parse-datetime-local starttime))))
     (make-routing
      :fan *max-angle*
      :start start
@@ -442,6 +452,8 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :box (make-routing-box start dest)
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
+     :stepper stepper
+     :stepper-starttime (when starttime (parse-datetime-local starttime))
      :options options
      :polars cpolars
      :use-waves use-waves

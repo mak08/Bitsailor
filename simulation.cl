@@ -96,7 +96,7 @@
      (routepoint (or routepoint null))
      (left double-float)
      (right double-float)
-     (step-size fixnum)
+     (step-size real)
      (step-time local-time:timestamp)
      (params cl-weather::params)
      (current (or null cl-weather::params))
@@ -155,7 +155,7 @@
                             (multiple-value-bind (speed sail)
                                 (twa-boatspeed polars wind-speed (normalize-angle twa))
                               (declare (double-float speed)
-                                       (integer step-size))
+                                       (real step-size))
                               (let* ((heading (twa-heading wind-dir twa))
                                      (wave-factor
                                        (if wave-height
@@ -231,6 +231,9 @@
 ;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
 ;;; engine.
 (defun get-route (routing)
+  (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
+  (unless (routing-stepper-starttime routing)
+    (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
   (bordeaux-threads:with-lock-held (+last-request-lock+)
     (setf *last-request*
           (push (list (local-time:now) 'get-route) *last-request*)))
@@ -282,8 +285,8 @@ the selected gate crossing, or the final frontier point nearest the destination.
           ;; See diagnostics/MAX-DIST.md for indexing and pruning limitations.
           (max-dist (make-array *max-iso-points* :initial-element 0d0))
           (min-angle (/ 360d0 *max-iso-points*))
-          ;; The first step-size and when we apply it is important - brings step-time to mod 10min
-          (stepper (make-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)))
+          ;; Standard aligns its first step to ten minutes; hires starts with one minute.
+          (stepper (make-routing-stepper routing start-time))
           ;; Sample weather at the start of each step before advancing step-time.
           (wind-source (routing-model-at routing start-time)
                        (routing-model-at routing step-time))
@@ -299,8 +302,8 @@ the selected gate crossing, or the final frontier point nearest the destination.
                         (when currents (get-params currents step-time)))
           (step-size (funcall stepper)
                      (funcall stepper))
-          (step-time (adjust-timestamp start-time (:offset :sec step-size))
-                     (adjust-timestamp step-time (:offset :sec step-size)))
+          (step-time (routing-time+ start-time step-size)
+                     (routing-time+ step-time step-size))
           (stepsum 0 (+ stepsum step-size))
           ;; The initial isochrone is just the start point, heading towards destination
           (isochrone
@@ -337,7 +340,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
                                :isochrones (prepare-routepoints isochrones))
                best-rp))))
       
-      (declare (fixnum max-points step-size stepsum pointnum)
+      (declare (fixnum max-points pointnum) (real step-size stepsum)
                (special next-isochrone))
       (declare (vector next-isochrone))
       (declare (special max-dist min-angle))
@@ -453,13 +456,29 @@ the selected gate crossing, or the final frontier point nearest the destination.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Stepping
 
+;;; Test exact UTC minute boundaries, including timestamp nanoseconds.
+(defun routing-minute-p (time)
+  (and (zerop (mod (timestamp-to-unix time) 60)) (zerop (nsec-of time))))
+
+;;; Round a departure or schedule boundary forward to a complete UTC minute.
+(defun routing-minute-ceiling (time)
+  (if (routing-minute-p time) time
+      (unix-to-timestamp (* 60 (1+ (floor (timestamp-to-unix time) 60))))))
+
+;;; Advance a search clock without dropping subsecond alignment remainders.
+(defun routing-time+ (time seconds)
+  (adjust-timestamp time (:offset :nsec (round (* seconds 1000000000)))))
+
 ;;; Return a closure yielding step seconds and the next timestamp, initially aligning to ten
-;;; minutes and then increasing step size with horizon.
-(defun make-stepper (start-time step-max &optional switch-time)
+;;; minutes and then increasing step size with horizon. The two-minute phase ends
+;;; on the last ten-minute grid point no later than two hours from ORIGIN.
+(defun make-stepper (start-time step-max &optional switch-time (origin start-time))
   (let* ((step-time
            start-time)
          (start-seconds
            (timestamp-to-unix start-time))
+         (two-minute-until
+           (* 600 (floor (+ (timestamp-to-unix origin) 7200) 600)))
          (start
           (* 600 (ceiling start-seconds 600)))
          (hour-fill
@@ -477,7 +496,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
                 (t
                  (let ((delta-t
                          (- (timestamp-to-unix step-time) start)))
-                   (cond ((< delta-t (+ hour-fill-2 (* 12 600)))
+                   (cond ((< (timestamp-to-unix step-time) two-minute-until)
                           120)
                          ((< delta-t (+ hour-fill-2 (* 72 600)))
                           600)
@@ -496,6 +515,36 @@ the selected gate crossing, or the final frontier point nearest the destination.
         (setf step-time (adjust-timestamp step-time (:offset :sec step-size)))
         (values step-size
                 step-time)))))
+
+;;; Yield one-minute steps for the first eight hours from the original departure.
+;;; Afterwards rejoin the unchanged standard stepper's timestamps, shortening only
+;;; the join step if the eight-hour cutoff is between standard grid points.
+(defun make-hires-stepper (start-time step-max &optional switch-time (origin start-time))
+  (let* ((aligned-start (routing-minute-ceiling start-time))
+         (aligned-switch (when switch-time (routing-minute-ceiling switch-time)))
+         (standard (make-stepper aligned-start step-max aligned-switch (routing-minute-ceiling origin)))
+         (time start-time) (standard-time aligned-start)
+         (cutoff (routing-minute-ceiling (adjust-timestamp origin (:offset :hour 8)))))
+    (lambda ()
+      (let ((dt
+              (if (timestamp< time cutoff)
+                  (let ((next (if (routing-minute-p time) (routing-time+ time 60)
+                                  (routing-minute-ceiling time))))
+                    (timestamp-difference next time))
+                  (progn
+                    (loop while (timestamp<= standard-time time) do
+                      (setf standard-time (nth-value 1 (funcall standard))))
+                    (timestamp-difference standard-time time)))))
+        (setf time (routing-time+ time dt))
+        (values (if (= dt (round dt)) (round dt) dt) time)))))
+
+;;; Select the request's schedule consistently in single-leg and gate searches.
+(defun make-routing-stepper (routing start-time)
+  (ecase (routing-stepper routing)
+    (:standard (make-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)
+                             (or (routing-stepper-starttime routing) start-time)))
+    (:hires (make-hires-stepper start-time (routing-stepmax routing) (routing-forecast-switch-time routing)
+                               (or (routing-stepper-starttime routing) start-time)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Speed

@@ -237,12 +237,14 @@
   (bordeaux-threads:with-lock-held (+last-request-lock+)
     (setf *last-request*
           (push (list (local-time:now) 'get-route) *last-request*)))
-  (fine-tune-route routing
-    (if (routing-waypoints routing)
-        (get-route-via-waypoints routing)
-        (get-route-leg routing))))
+  (if (routing-reverse-percent routing)
+      (route-with-reverse-search routing)
+      (fine-tune-route routing
+        (if (routing-waypoints routing)
+            (get-route-via-waypoints routing)
+            (get-route-leg routing)))))
 
-(defun get-route-leg (routing)
+(defun get-route-leg (routing &optional observe-step)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and
 the selected gate crossing, or the final frontier point nearest the destination."
   (let* ((start-pos (routing-start routing))
@@ -291,17 +293,17 @@ the selected gate crossing, or the final frontier point nearest the destination.
           (wind-source (routing-model-at routing start-time)
                        (routing-model-at routing step-time))
           (params-wind (routing-wind-params routing start-time)
-                       (routing-wind-params routing step-time))
+                       (unless (and observe-step reached) (routing-wind-params routing step-time)))
           (initial-cycle (cl-weather:uv-cycle (params-fc1 params-wind)))
           (wind-time start-time step-time)
           (params-wave (when waves (get-params 'cl-weather:gfswave-combined start-time))
-                       (when waves (get-params 'cl-weather:gfswave-combined step-time)))
+                       (when (and waves (not (and observe-step reached))) (get-params 'cl-weather:gfswave-combined step-time)))
           (params-wave-dir (when waves (get-direction-params 'cl-weather:gfswave-combined start-time))
-                           (when waves (get-direction-params 'cl-weather:gfswave-combined step-time)))
+                           (when (and waves (not (and observe-step reached))) (get-direction-params 'cl-weather:gfswave-combined step-time)))
           (params-curnt (when currents (get-params currents start-time))
-                        (when currents (get-params currents step-time)))
+                        (when (and currents (not (and observe-step reached))) (get-params currents step-time)))
           (step-size (funcall stepper)
-                     (funcall stepper))
+                     (if (and reached observe-step) step-size (funcall stepper)))
           (step-time (routing-time+ start-time step-size)
                      (routing-time+ step-time step-size))
           (stepsum 0 (+ stepsum step-size))
@@ -371,6 +373,8 @@ the selected gate crossing, or the final frontier point nearest the destination.
            (setf reached (if gate
                              (and (setf gate-hit (best-gate-crossing)) t)
                              (reached candidate start-pos dest-heading distance)))
+           (when observe-step
+             (funcall observe-step wind-time step-time (list params-wind params-curnt params-wave params-wave-dir) candidate max-dist stepper))
            (unless reached
              (setf isochrone candidate))
            (log2:trace-more "Isochrone ~a at ~a, ~a points" stepnum (format-datetime nil step-time) (length isochrone))
@@ -385,7 +389,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
                                                                         (cl-weather:uv-cycle
                                                                          (params-fc1 params-wind)))
                                                   3600)
-                                         :path (extract-points isochrone))))
+                                         :path (extract-points (if observe-step candidate isochrone)))))
                (push iso isochrones)))))
         (when reached
           (log2:trace "Reached destination at ~a" step-time))))))
@@ -593,16 +597,15 @@ the selected gate crossing, or the final frontier point nearest the destination.
     :for i = (separate-isochrones isochrone)
     :append i))
 
-;;; Split an ordered routepoint vector at bearing gaps; the current loop omits its final vector
-;;; element.
+;;; Split an ordered routepoint vector at bearing gaps, retaining both endpoints.
 (defun separate-isochrones (isochrone)
   (do* ((path (isochrone-path isochrone))
         (index 0 (1+ index))
         (previous nil point)
-        (point (aref path index) (aref path index))
+        (point nil)
         (current-path nil)
         (isochrones nil))
-       ((>= index (1- (length path)))
+       ((>= index (length path))
         (cons (make-isochrone :time (isochrone-time isochrone) :wind-time (isochrone-wind-time isochrone)
                               :forecast-model (isochrone-forecast-model isochrone)
                               :center (isochrone-center isochrone)
@@ -610,6 +613,7 @@ the selected gate crossing, or the final frontier point nearest the destination.
                               :offset (isochrone-offset isochrone)
                               :path current-path)
               isochrones))
+      (setf point (aref path index))
       (cond
         ((or (null previous)
              (let ((angle (abs (- (routepoint-origin-angle point)

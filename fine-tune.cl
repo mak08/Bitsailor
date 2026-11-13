@@ -211,13 +211,13 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
 
 ;;; Advance TWA or (:HEADING compass-degrees), using local wind, polars, waves and current.
 ;;; Heading mode derives physical TWA anew; stored ground course includes current drift.
-(defun fine-sail-step (routing pos time seconds control)
-  (destructuring-bind (wind current wave wave-dir) (fine-weather routing time)
+(defun fine-sail-step (routing pos time seconds control &key (weather (fine-weather routing time)))
+  (destructuring-bind (wind current wave wave-dir) weather
     (let ((lat (latlng-lat pos)) (lon (latlng-lng pos)) (polars (routing-polars routing)))
       (with-bindings
           (((twd tws) (interpolate-uv lat lon wind))
-           ((twa) (values (if (consp control) (heading-twa twd (second control)) control)))
            ((up down) (best-vmg polars tws))
+           ((twa) (values (if (consp control) (heading-twa twd (second control)) control)))
            ((speed sail) (twa-boatspeed polars tws twa))
            ((cd cs cu cv) (if current (interpolate-uv lat lon current) (values 0d0 0d0 0d0 0d0)))
            ((height direction) (if (and wave wave-dir)

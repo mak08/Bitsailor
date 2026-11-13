@@ -98,9 +98,12 @@ cache.drawWind = async () => {};
   // Before the first isochrone, use the route's initial actual cycle.
   await vm.runInContext(`onMarkerClicked({ time: '2026-10-31T13:15:00Z' })`, ui);
   assert.equal(attempts.at(-1)[0], '2026-10-31T06:00:00.000Z');
-  // Isochrone sampling time is distinct from its endpoint/selection time.
+  // Clicking a frontier displays wind at its timestamp, preserving its actual forecast run.
   await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1, 'wind-time': '2026-10-31T20:50:00Z' })`, ui);
-  assert.equal(attempts.at(-1)[1], '2026-10-31T20:50:00.000Z');
+  assert.equal(attempts.at(-1)[1], '2026-10-31T21:00:00.000Z');
+  await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', time: '2026-10-31T22:00:00Z', kind: 'reverse', 'wind-time': '2026-10-31T21:30:00Z' })`, ui);
+  assert.equal(attempts.at(-1)[1], '2026-10-31T22:00:00.000Z');
+  await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1 })`, ui);
   assert.equal(node('ir_index').value, 15);
   assert.equal(vm.runInContext('routeWindSelection.time.toISOString()', ui), '2026-10-31T21:00:00.000Z');
   ui.GribCache = class {

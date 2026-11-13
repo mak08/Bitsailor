@@ -23,6 +23,7 @@
                (:file "waypoints")
                (:file "gate-search")
                (:file "fine-tune")
+               (:file "reverse-routing")
                (:file "json")
                (:file "status")
                (:file "http-api")

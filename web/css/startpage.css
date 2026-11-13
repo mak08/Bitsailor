@@ -221,6 +221,10 @@ div.fixed {
 
 #area_news {
 	width: 100em;
+	min-width: 0;
+	max-height: 70vh;
+	box-sizing: border-box;
+	overflow-y: auto;
 }
 
 #race_list {

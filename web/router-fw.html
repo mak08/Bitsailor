@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css?v=router-rolling-fit-20261107">
+	<link rel="stylesheet" href="css/router.css?v=router-iso-wind-time-20261113">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js?v=router-rolling-fit-20261107"></script>
+	<script type="module" src="js/router-main.js?v=router-iso-wind-time-20261113"></script>
 
 </head>
 
@@ -219,7 +219,13 @@
 				<input id="cb_displaytracks" name="displaytracks" type="checkbox" />
 			</div>
 
-			<div class="execute-button">
+			<div class="reverse-controls">
+                <label>Reverse routing<input id="cb_reverse" type="checkbox"></label>
+                <label>Extra time <input id="reverse_percent" type="number" min="0" step="1" value="20" aria-label="Extra time in per mille" required disabled>‰</label>
+            </div>
+            <output id="reverse_status" aria-live="polite"></output>
+
+            <div class="execute-button">
 				<button id="bt_getroute"
 					style="width:300px; text-align:center; font-size:100%; font-weight:bold;">Execute</button>
 			</div>

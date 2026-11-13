@@ -127,6 +127,7 @@
                                               (|forecast_switch_hours| nil)
                                               (|cycle| nil)
                                               (|stepper| nil)
+                                              (|reverse| nil) (|reverse_percent| nil)
                                               |slat|
                                               |slon|
                                               |dlat|
@@ -166,6 +167,7 @@
                                   :forecast-switch-hours (parse-forecast-switch-hours |forecast_switch_hours|)
                                   :cycle (parse-routing-cycle |cycle| forecast-model)
                                   :stepper (parse-routing-stepper |stepper|)
+                                  :reverse-percent (parse-reverse-options |reverse| |reverse_percent|)
                                   :options (cl-utilities:split-sequence #\, |options|)
                                   :starttime |startTime|
                                   :stepmax (if duration-supplied-p
@@ -176,6 +178,8 @@
                                   :dlat (read-arg |dlat| 'double-float)
                                   :dlon (read-arg |dlon| 'double-float))))
       (setf (routing-waypoints routing) (parse-waypoints |waypoints|))
+      (when (and (routing-reverse-percent routing) (routing-waypoints routing))
+        (error 'request-error :message "Reverse routing requires a route without waypoints or gates"))
       (when (cl-map:point-on-land-p (routing-start routing))
         (error 'request-error :message "Start point is on land"))
       (dolist (waypoint (routing-waypoints routing))
@@ -413,6 +417,21 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
 
 ;;; Helper functions
 
+(defun parse-reverse-options (enabled percent)
+  "Return the passage-time allowance, or NIL for an ordinary request."
+  (unless (member enabled '(nil "true" "false") :test #'equalp)
+    (error 'request-error :message "reverse must be true or false"))
+  (let ((value (if percent
+                   (and (plusp (length percent))
+                        (cl-ppcre:scan "\\A[+]?(?:[0-9]+(?:[.][0-9]*)?|[.][0-9]+)(?:[eE][+-]?[0-9]+)?\\z" percent)
+                        (let ((*read-eval* nil) (*read-default-float-format* 'double-float))
+                          (multiple-value-bind (n end) (ignore-errors (read-from-string percent))
+                            (and (realp n) (= end (length percent)) n))))
+                   2d0)))
+    (unless (and value (<= 0 value most-positive-double-float))
+      (error 'request-error :message "reverse_percent must be a finite nonnegative percentage"))
+    (when (equalp enabled "true") (coerce value 'double-float))))
+
 ;;; Accept only the two public step schedules; older requests default to standard.
 (defun parse-routing-stepper (value)
   (cond ((or (null value) (string= value "") (string-equal value "standard")) :standard)
@@ -433,6 +452,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               (options)
                               (stepmax (* 24 60 60))
                               (stepper :standard)
+                              reverse-percent
                               (slat)
                               (slon)
                               (dlat)
@@ -453,6 +473,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :stepper stepper
+     :reverse-percent reverse-percent
      :stepper-starttime (when starttime (parse-datetime-local starttime))
      :options options
      :polars cpolars

@@ -59,7 +59,7 @@ Failed settings, polars or initial wind loading is reported in the router header
 
 The response includes `forecast-model`, `requested-cycle` (false when omitted) and `initial-cycle` (the actual initial wind cycle). Each isochrone retains the actual `cycle` from the loaded wind fields, its endpoint `time`, `wind-time` (the start-of-step sampling timestamp), and `forecast-model`. These fields survive display fragmentation. Sampling time and endpoint time are distinct: the route advances a step using wind sampled at its beginning.
 
-Selecting an isochrone displays the recorded model/cycle at `wind-time`; the selected isochrone remains highlighted at its endpoint time. Selecting a trackpoint infers the cycle/model from the latest preceding isochrone, regardless of response ordering or stage, and requests wind at the trackpoint time. Before the first saved isochrone, it uses the response's `initial-cycle`. This is the adopted inference rule, not per-trackpoint provenance; it cannot distinguish cycle changes between saved hourly isochrones. Marker copies in adjacent map worlds carry the same timestamp.
+Selecting a forward or reverse isochrone displays the recorded model/cycle at its `time`, matching the frontier timestamp and bottom status bar. The `wind-time` field remains integration provenance. Selecting a trackpoint infers the cycle/model from the latest preceding isochrone, regardless of response ordering or stage, and requests wind at the trackpoint time. Before the first saved isochrone, it uses the response's `initial-cycle`. This is the adopted inference rule, not per-trackpoint provenance; it cannot distinguish cycle changes between saved hourly isochrones. Marker copies in adjacent map worlds carry the same timestamp.
 
 Route inspection locks the wind source and cycle. Neither retries nor the periodic update check silently substitute a newer run. The model selector, cycle/date label, wind timestamp and slider update to match the replayed forecast. Changing the forecast model explicitly leaves route inspection mode. The header identifies recorded wind or reports that the recorded forecast is unavailable. Older responses without sufficient provenance require recomputation.
 
@@ -84,9 +84,9 @@ The startpage and router use explicit query-string revisions to prevent browsers
 | Reference | Revision |
 | --- | --- |
 | Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-rolling-fit-20261107` |
-| Router main script | `?v=router-rolling-fit-20261107` |
-| Router stylesheet | `?v=router-rolling-fit-20261107` |
+| Router links on the startpage | `router-fw.html?v=router-iso-wind-time-20261113` |
+| Router main script | `?v=router-iso-wind-time-20261113` |
+| Router stylesheet | `?v=router-iso-wind-time-20261113` |
 | Router import of `GribCache.js` | `?v=router-forecast-selection-20261103` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
@@ -169,6 +169,18 @@ integration steps independently of the fine-tuner's one-minute replay steps.
 
 
 `get-route-leg` also maintains `max-dist`, a per-leg array of radial high-water marks indexed by absolute bearing from the leg start. Unlike the next frontier, it persists across steps: a candidate must exceed both its current-step bucket winner and the historical radius. Marks are updated before land filtering and are not rolled back when a winner is blocked. This suppresses inward or repeated expansion but can discard useful detours; it is a pruning heuristic, not an earliest-arrival proof. See [MAX-DIST.md](diagnostics/MAX-DIST.md) for indexing, update order, examples and the distinction from gate-search history.
+
+## Reverse routing
+
+For a start-to-finish route, `reverse=true` enables the optional second pass in [reverse-routing.cl](reverse-routing.cl). `reverse_percent` defaults to 2 and accepts zero. The UI displays whole per mille, with a default of 20‰ and increments of 1‰ (0.1 percentage points), and converts the value to percent for the API. The deadline is the verified forward ETA plus this percentage of elapsed passage time. The API rejects intermediate points and gates. The reverse interval from departure to deadline is bounded by the configured maximum route hours. A partial forward search or an unsuccessful exact finish returns its forward track with a reason in `reverse-routing.status`.
+
+The forward leg records the actual step boundaries and source cycles for wind, current and both wave fields. The finish tries direct and two-board approaches from recent predecessors with the enabled physics, retains the earliest land-clear mark touch within 1 cm, and constrains fine-tuning to preserve that touch. The forward frontier continues on its original clock when the deadline extends beyond the last search step. The return pass reopens the recorded forecast runs and calls the shared frontier expander with negative elapsed time. Weather is sampled once per frontier point at the earlier interval time. Each TWA reverses the full ground displacement, including current, while wave effects use the physical sailing heading. This is an explicit integration approximation in spatially varying weather. Both VMG samples and the configured TWA grid are available on both tacks. The reverse bearing fan extends 90° either side of the line from the destination to the start.
+
+The destination is available again at every step boundary, including after a temporarily empty frontier. Each step retains the outermost predecessor in each destination bearing bucket and then removes land-blocked winners, using the same winner-only pruning policy as single-leg forward routing. This approximates arrival by the deadline and can miss an interior alternative. The reverse search retains the current frontier, compact comparison positions and cycle timestamps. It discards predecessor candidates after each step.
+
+At a common UTC timestamp the server projects both fronts about the start, preserving radius and bearing. Adjacent occupied forward buckets bound angular sectors. Reverse line segments are clipped to those sectors before display; a gap or coastline splits the line. Reverse display sections also split when adjacent points are separated by more than four step distances and four angular bucket spacings, preventing spokes from old fronts to nearby finish seeds. The first step, ten-minute boundaries in the first hour and then hourly boundaries are sampled. A route contained in one step gets a midpoint comparison. Forward comparison lines are returned in `isochrones`; reverse lines and candidate overlaps are separate arrays inside `reverse-routing`, alongside baseline, deadline, step and candidate counts. The comparison allows a 0.1 m coordinate tolerance so an equal-time tangency remains visible. A highlight indicates a place to investigate. Only replaying an individual track through it can establish that track's ETA.
+
+Expansion costs O(B × A) per time step for B buckets and A signed TWA samples. With a fixed TWA grid this is linear in bucket count. Weather is interpolated once per active frontier point. Land filtering tests at most one winner per bucket, with additional map-tile checks for segments spanning tiles. On the archived Class 40 fixture from 46°N, 8°W to 44°N, 9.5°W departing 4 November at 20:09 UTC, the reverse overlay took 3.25 seconds for 190 steps and 5.16 million candidates. The complete request took about 14 seconds, compared with 227 seconds for the initial inverse-solving implementation. These local measurements used GFS wind, a vector coastline and 1% slack, with waves and currents disabled. Exact finishing produced the same baseline ETA.
 
 ## TWA Fine-Tuning
 

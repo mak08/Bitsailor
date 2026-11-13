@@ -36,6 +36,8 @@ continues to after the gate; it is used to choose between several crossings."
   twa-angles
   stepmax
   (stepper :standard)
+  ;; NIL disables the reverse pass. Zero requests equal passage time.
+  reverse-percent
   ;; Original departure survives copies for later point-waypoint legs.
   stepper-starttime
   (fan *max-angle*)
@@ -93,7 +95,7 @@ continues to after the gate; it is used to choose between several crossings."
           (format-datetime nil (routestats-start thing))))
 
 (defstruct routeinfo status best polars options stats tracks isochrones forecast-model requested-cycle initial-cycle
-  original-best twa-segments fine-tuning steering-segments)
+  original-best twa-segments fine-tuning steering-segments reverse-routing)
 
 ;;; Write a compact routeinfo representation to STREAM for printing and diagnostics.
 (defmethod print-object ((thing routeinfo) stream)

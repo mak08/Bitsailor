@@ -483,8 +483,18 @@ function buildRouteSegments() {
     return segments;
 }
 
-// Redraw both route lines after start, destination or waypoints changed
+function updateReverseControls() {
+    const toggle = document.getElementById('cb_reverse');
+    const percent = document.getElementById('reverse_percent');
+    toggle.disabled = waypointMarkers.length > 0;
+    if (toggle.disabled) toggle.checked = false;
+    percent.disabled = !toggle.checked;
+    toggle.title = toggle.disabled ? 'Remove all waypoints and gates to use reverse routing' : '';
+}
+
+// Redraw both route lines after start, destination or waypoints change.
 function redrawRouteLines() {
+    updateReverseControls();
     if (!startMarker || !destinationMarker) return;
     drawRouteLine();
     if (courseGCLine) {
@@ -676,6 +686,8 @@ function setUp(getVMG) {
 
     // Connect option selectors
     document.getElementById("sel_duration").addEventListener("change",onSetDuration);
+    document.getElementById("cb_reverse").addEventListener("change", updateReverseControls);
+    updateReverseControls();
     restoreStepper(localStorage.getItem('xx.stepper'));
     document.getElementById("cb_hires_stepper").addEventListener("change", onSetStepper);
     document.getElementById("cb_displaywind").addEventListener("change",onDisplaywind);
@@ -943,12 +955,14 @@ function syncRouteWind(iso, time, sampleTime = time) {
         return Promise.resolve(false);
     }
     routeWindSelection = { cycle, model, time: new Date(time), sampleTime: new Date(sampleTime),
-        isochrone: iso, stage: iso?.stage };
+        isochrone: iso, stage: iso?.stage, kind: iso?.kind };
     return getWind(cycle, routeWindSelection.sampleTime);
 }
 
 function onSelectIsochrone(isochrone) {
-    return syncRouteWind(isochrone, isochroneTime(isochrone), isochrone['wind-time'] || isochroneTime(isochrone));
+    // The frontier timestamp is the requested display time. WIND-TIME records
+    // the integration sample used to produce it, which can be one step earlier.
+    return syncRouteWind(isochrone, isochroneTime(isochrone));
 }
 
 function onDisplaywind(event) {
@@ -979,9 +993,11 @@ function onAdjustIndex(event) {
     const time = getOffsetTime(ir_index.value);
     if (routeWindSelection) {
         const stage = routeWindSelection.stage;
-        const atTime = (routeInfo.isochrones || []).filter(iso => isochroneTime(iso).getTime() === time.getTime());
+        const kind = routeWindSelection.kind;
+        const source = kind ? routeInfo['reverse-routing']?.[kind === 'reverse' ? 'isochrones' : 'overlap'] : routeInfo.isochrones;
+        const atTime = (source || []).filter(iso => isochroneTime(iso).getTime() === time.getTime());
         const iso = atTime.find(iso => iso.stage === stage) || atTime[0];
-        if (iso) return onSelectIsochrone(iso);
+        if (iso) return onSelectIsochrone(kind ? { ...iso, kind } : iso);
         // Between isochrones, keep browsing the recorded run without highlighting a line.
         routeWindSelection = { ...routeWindSelection, isochrone: null, time, sampleTime: time };
     }
@@ -1304,6 +1320,9 @@ function makeQuery(object) {
 }
 
 function getRoute() {
+    const reverse = !waypointMarkers.length && document.getElementById('cb_reverse')?.checked;
+    const percent = document.getElementById('reverse_percent');
+    if (reverse && !percent.reportValidity()) return;
     setBusyCursor();
     var bt_execute = document.getElementById("bt_getroute");
     bt_execute.disabled = true;
@@ -1336,6 +1355,10 @@ function getRoute() {
     routingSettings.currents = currentInput?.value !== 'NONE' ? currentInput?.value : undefined;
     const wavesInput = document.getElementById('cb_waves');
     if (wavesInput) routingSettings.useWaves = wavesInput.checked ? 'true' : 'false';
+    if (reverse) {
+        routingSettings.reverse = 'true';
+        routingSettings.reverse_percent = String(Number(percent.value) / 10);
+    }
     var query = makeQuery(routingSettings);
     query += `&startTime=${startTime}`;
     query += `&slat=${startPos.lat}&slon=${startPos.lng}&dlat=${destPos.lat}&dlon=${destPos.lng}`;
@@ -1483,6 +1506,22 @@ function displayRouting(data) {
     var best = data.best;
 
     createIsochrones(data.isochrones);
+    const analysis = data['reverse-routing'];
+    if (analysis) {
+        createIsochrones(analysis.isochrones, 'reverse');
+        createIsochrones(analysis.overlap, 'overlap');
+    }
+    const reverseStatus = document.getElementById('reverse_status');
+    const reasons = { 'forward-unreached': 'destination was not reached',
+        'exact-finish-unavailable': 'exact finish unavailable', 'empty-frontier': 'frontier exhausted',
+        'coverage-unavailable': 'forecast or search coverage unavailable',
+        'forecast-unavailable': 'forecast unavailable at ' + (analysis?.['incomplete-at'] || ''),
+        'deadline-outside-horizon': 'deadline exceeds forecast search horizon' };
+    if (reverseStatus) reverseStatus.textContent = analysis
+        ? (analysis.status === 'complete' ? 'Purple dashed: reverse front. Green: candidate overlap.'
+            : 'Reverse routing: ' + (reasons[analysis.status] || analysis.status))
+            + (analysis.deadline ? ' Deadline ' + new Date(analysis.deadline).toISOString().slice(0, 19) + ' UTC.' : '')
+        : '';
 
     startMarker.time = best[0].time;
 
@@ -1563,35 +1602,40 @@ function setupCanvas() {
     return mapCanvas;
 }
 
-function createIsochrones(isochrones) {
+function createIsochrones(isochrones, kind) {
     var c = new Date(currentCycle);
     for (var i = 0; i < isochrones.length; i++) {
         const isoData = isochrones[i];
-        const style = getIsoStyle(isoData, c);
+        const style = getIsoStyle(isoData, c, kind);
 
         const points = isoData.path.map(p => [p.lat, wrapLon180(p.lng)]);
-        let segments = splitPathAtAntimeridian(points);
+        let segments = points.length === 1 ? [points] : splitPathAtAntimeridian(points);
         // Previously: segments = segmentsWithWorldCopies(segments);
         // Now: always provide ±360 copies so fully-east (or west) isochrones render on adjacent worlds
         segments = segmentsWithWorldTriplicate(segments);
 
         for (const seg of segments) {
-            const isoLayer = L.polyline(seg, {
+            const options = {
                 color: style.color,
                 weight: style.weight,
                 dashArray: style.dashArray,
                 opacity: 0.8
-            }).addTo(map);
+            };
+            const isoLayer = (seg.length === 1
+                ? L.circleMarker(seg[0], { ...options, radius: kind === 'overlap' ? 3 : 1 })
+                : L.polyline(seg, options)).addTo(map);
+            isoLayer.kind = kind;
             addInfo(isoLayer, isoData.cycle, isoData.offset, isoData.stage, isoData);
             const stageLabel = Number.isInteger(isoData.stage)
                 ? ` · ${isoData.stage} gates crossed in this group` : '';
-            isoLayer.bindTooltip(`${isochroneTime(isoData).toISOString().slice(0, 16)} UTC${stageLabel}`);
+            const forecast = kind ? ` · ${kind} · ${isoData['forecast-model']} ${new Date(isoData.cycle).toISOString().slice(0, 13)}Z` : '';
+            isoLayer.bindTooltip(`${isochroneTime(isoData).toISOString().slice(0, 16)} UTC${forecast}${stageLabel}`);
             routeIsochrones.push(isoLayer);
         }
     }
 }
 
-function getIsoStyle(isochrone, availableCycle) {
+function getIsoStyle(isochrone, availableCycle, kind = isochrone.kind) {
     var c = availableCycle;
     var d = new Date(isochrone.cycle);
     var i = isochroneTime(isochrone);
@@ -1599,9 +1643,12 @@ function getIsoStyle(isochrone, availableCycle) {
     var weight = (h % 6) ? 1 : 3;
     var color;
     const selected = routeWindSelection?.isochrone;
-    if (selected && i.getTime() === isochroneTime(selected).getTime() && selected.stage === isochrone.stage) {
+    if (selected && i.getTime() === isochroneTime(selected).getTime() && selected.stage === isochrone.stage && selected.kind === kind) {
         color = '#ffffff';
         weight = 3;
+    } else if (kind === 'reverse' || kind === 'overlap') {
+        color = kind === 'reverse' ? '#7d358f' : '#007c46';
+        weight = kind === 'reverse' ? 2 : 5;
     } else {
         if (d < c) {
             color = (h % 12) ? '#D0a0b0' : '#D080a0';
@@ -1609,7 +1656,7 @@ function getIsoStyle(isochrone, availableCycle) {
             color = (h % 12) ? '#8080a0' : '#000000';
         }
     }
-    const dashArray = Number.isInteger(isochrone.stage) && isochrone.stage > 0
+    const dashArray = kind === 'reverse' ? '5 4' : Number.isInteger(isochrone.stage) && isochrone.stage > 0
         ? (isochrone.stage % 2 ? '8 4' : '2 4') : null;
     return { "color": color, "weight": weight, "dashArray": dashArray };
 }

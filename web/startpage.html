@@ -6,7 +6,7 @@
     <title>Bitsailor :: FairWinds Edition</title>
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
-    <link rel="stylesheet" href="css/startpage.css?v=e97e6be">
+    <link rel="stylesheet" href="css/startpage.css?v=news-reverse-20261113">
     <script type="module" src="js/startpage.js?v=e97e6be"></script>
     <script type="module" src="js/polars-viewer.js"></script>
     
@@ -53,11 +53,14 @@
               <div class="welcome">
                 <h2>Bitsailor is back!</h2>
                 <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
-                <p><b>Please find the <a href="router-fw.html?v=router-rolling-fit-20261107">Router</a> page</b> <a href="router-fw.html?v=router-rolling-fit-20261107" target=_blank><b>here</b></a></p>
+                <p><b>Please find the <a href="router-fw.html?v=router-iso-wind-time-20261113">Router</a> page</b> <a href="router-fw.html?v=router-iso-wind-time-20261113" target=_blank><b>here</b></a></p>
               </div>
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
                 <ul>
+                  <li><b>2026-11-13 &ndash; Reverse routing</b><br>
+                    Explore alternative passages with reverse isochrones and highlighted overlaps. Choose the extra time allowed; the default is 20‰ (2%). See Usage for details.
+                  </li>
                   <li><b>2026-11-04 &ndash; Route fine-tuning</b><br>
                     Automatic fine-tuning can reduce TWA oscillation using whole-degree TWA or heading commands, preserving tacks and gybes without a later ETA.
                   </li>
@@ -119,6 +122,7 @@
                 <li>Drag the start and finish flags, or right-click the map to set either position. To use your boat’s NMEA position and time, enter the host and port, click <b>Update</b> and check the timestamp.</li>
                 <li>Choose <b>Polars</b>, <b>Model</b> and <b>Duration</b> (12 hours to 12 days). Check <b>Hi-res</b> for 1-minute search steps during the first 8 hours, then standard steps. Set currents and waves as needed. Leave <b>Start time</b> unchecked to depart now, or enter a UTC departure.</li>
                 <li>For two forecast models, set <b>Switch after</b> to 6, 12 or 24 hours from departure and choose the second model under <b>Then</b>. Leave it <b>Off</b> for one model.</li>
+                <li>For a route without waypoints or gates, select <b>Reverse routing</b> to explore nearby alternatives. Extra time defaults to 20‰ (2%) of passage duration and adjusts in steps of 1‰ (0.1%). Purple dashed lines show the reverse front at each time. Green highlights show where it overlaps the forward search. Click a line to inspect its wind.</li>
                 <li>Click <b>Execute</b>. Enable <b>Display tracks</b> for alternative paths.</li>
               </ol>
 

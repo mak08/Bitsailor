@@ -1,10 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// BitSailor Router VR UI (Leaflet/OpenStreetMap version)
 
-import * as Util from './Util.js';
+import * as Util from './Util.js?v=xhr-retry-20261115';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
 import GribCache from './GribCache.js?v=router-forecast-selection-20261103';
-import PolarManager from './PolarManager.js';
+import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
 // Global variables
@@ -1103,7 +1103,7 @@ function getBoatPosition (event) {
         function (data) {
             console.log(data);
             if (data) {
-                let gprmc = JSON.parse(data.response);
+                let gprmc = Util.parseJSONResponse(data);
                 var startPos = {
                     "lat": gprmc.position.lat,
                     "lng": gprmc.position.lng
@@ -1118,9 +1118,8 @@ function getBoatPosition (event) {
                 alert('No position update');
             }
         },
-        function (response) {
-            console.log(response.statusText);
-            alert('Could not get boat position: ' + response.statusText);
+        function (response, cause) {
+            alert('Could not get boat position: ' + Util.requestErrorText(response, cause));
         });
 }
 
@@ -1332,6 +1331,7 @@ function getRoute() {
     mapMenu.style.display = "none";
 
     var pgGetRoute = document.getElementById("pg_getroute");
+    pgGetRoute.title = '';
     pgGetRoute.value = 5;
 
     var selDuration = document.getElementById('sel_duration');
@@ -1371,10 +1371,13 @@ function getRoute() {
         query += `&sail=${sailInput.value}`;
     }
 
-    Util.doGET(
+    Util.doGETJSON(
         "/function/router.getRoute" + query,
-        function (data) {
-            routeInfo = JSON.parse(data.response);
+        function (result) {
+            if (!Array.isArray(result?.best) || !result.best.length || !Array.isArray(result.isochrones)) {
+                throw new Error('Invalid route response: missing track or isochrones');
+            }
+            routeInfo = result;
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
             routeWindSelection = null;
@@ -1384,13 +1387,13 @@ function getRoute() {
             bt_execute.disabled = false;
             restoreCursor();
         },
-        function (response) {
+        function (response, cause) {
             bt_execute.disabled = false;
             restoreCursor();
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
-            alert(`Request\n${response.responseURL}\n\nreturned\n\n ${response.status} - ${response.responseText || response.statusText}`);
-        });
+            alert(`Request\n${response.responseURL}\n\nreturned\n\n ${Util.requestErrorText(response, cause)}`);
+        }, undefined, { onRetry: () => { pgGetRoute.title = 'Incomplete response; retrying the same route once'; } });
 }
 
 

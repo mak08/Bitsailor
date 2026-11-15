@@ -192,14 +192,22 @@
       
       (setf (http-header response :|Content-Type|)
             "application/json")
+      (setf (http-header response :|Cache-Control|) "no-store"
+            (http-header response :|Vary|) "Accept-Encoding"
+            ;; Temporary diagnostic for truncated gzip route responses.
+            (http-header response :|Content-Encoding|) "identity")
       (let ((routeinfo
               (get-route routing)))
         (log2:info "Status ~a ~a"
                    (routeinfo-status routeinfo)
                    (routeinfo-stats routeinfo))
-        (values
-         (with-output-to-string (s)
-           (json s routeinfo)))))))
+        (let ((bytes (babel:string-to-octets
+                       (with-output-to-string (s) (json s routeinfo)) :encoding :utf-8)))
+          ;; Kept separate from Content-Length, which may describe a gzip body.
+          (setf (http-header response :|X-Route-Bytes|) (length bytes))
+          (log2:info "Serialized route response: ~d UTF-8 bytes" (length bytes))
+          bytes)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Commands

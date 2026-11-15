@@ -1,0 +1,46 @@
+;;; Load after gate-search-tests.cl.
+(in-package :bitsailor)
+
+(defun test-route-response ()
+  "The public route handler returns complete UTF-8 JSON with a byte-counted HTTP body."
+  (let* ((request (make-instance 'polarcl::http-basic))
+         (response (make-instance 'polarcl::http-response :request request :status-code 200 :status-text "OK"))
+         (routing (make-routing :start (make-latlng :lat 0d0 :lng 1d0)
+                                :dest (make-latlng :lat 0d0 :lng 2d0))))
+    (setf (http-header request :accept-encoding) "gzip, deflate")
+    (call-with-gate-test-functions
+     (list (cons 'get-routing-presets (lambda (&rest args) (declare (ignore args)) routing))
+           (cons 'cl-map:point-on-land-p (lambda (&rest args) (declare (ignore args)) nil))
+           (cons 'get-route (lambda (r) (declare (ignore r))
+                             (make-routeinfo :status "reached" :polars "Route à São Miguel"))))
+     (lambda ()
+       (let* ((bytes (|getRoute| nil request response :|polarsId| "fixture"))
+              (text (babel:octets-to-string bytes :encoding :utf-8)))
+         (assert (typep bytes '(vector (unsigned-byte 8))))
+         (assert (> (length bytes) (length text)))
+         (assert (= (length bytes) (http-header response :|X-Route-Bytes|)))
+         (assert (equal "no-store" (http-header response :|Cache-Control|)))
+         (assert (char= (char text (1- (length text))) #\}))
+         (setf (http-body response) bytes)
+         (assert (= (length bytes) (http-header response :|Content-Length|)))
+         (assert (equal "identity" (http-header response :|Content-Encoding|)))
+         (assert (equalp bytes (polarcl::body response)))))))
+  (format t "~&Route UTF-8 response and HTTP byte length passed.~%"))
+
+(defun test-http-body-write-count ()
+  "Do not report a completed HTTP body when the stream writer returns a short count."
+  (let ((payload (babel:string-to-octets "São Miguel" :encoding :utf-8)))
+    (call-with-gate-test-functions
+     (list (cons 'mbedtls:write-to-stream (lambda (stream bytes)
+                                         (declare (ignore stream))
+                                         (assert (equalp bytes payload))
+                                         (length bytes))))
+     (lambda () (assert (= (length payload) (polarcl::write-body nil "São Miguel")))))
+    (call-with-gate-test-functions
+     (list (cons 'mbedtls:write-to-stream (lambda (stream bytes)
+                                         (declare (ignore stream))
+                                         (1- (length bytes)))))
+     (lambda ()
+       (assert (handler-case (progn (polarcl::write-body nil payload) nil)
+                 (mbedtls:stream-write-error () t))))))
+  (format t "~&HTTP body write count checks passed.~%"))

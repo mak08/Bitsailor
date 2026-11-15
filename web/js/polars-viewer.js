@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// Polar diagram viewer (Polars tab of the start page)
 
-import * as Util from './Util.js';
+import * as Util from './Util.js?v=xhr-retry-20261115';
 
 (function () {
     const canvas = document.getElementById('polar');
@@ -25,7 +25,7 @@ import * as Util from './Util.js';
     function loadPolarsList() {
         Util.doGET('/function/router.getPolarsList',
             (xhr) => {
-                const list = JSON.parse(xhr.responseText);
+                const list = Util.parseJSONResponse(xhr);
                 list.forEach(entry => {
                     const option = document.createElement('option');
                     option.value = entry.id;
@@ -34,13 +34,13 @@ import * as Util from './Util.js';
                 });
                 if (list.length > 0) loadPolar(select.value);
             },
-            () => console.error('Could not load polars list'));
+            (xhr, cause) => { select.title = 'Could not load polars list: ' + Util.requestErrorText(xhr, cause); });
     }
 
     function loadPolar(id) {
         Util.doGET(`/polars/${encodeURIComponent(id)}.json`,
             (xhr) => {
-                const data = JSON.parse(xhr.responseText).data_json;
+                const data = Util.parseJSONResponse(xhr).data_json;
                 polar = { twa: data.twa, tws: data.tws, table: data.table };
                 slider.min = polar.tws[0];
                 slider.max = polar.tws[polar.tws.length - 1];
@@ -48,7 +48,7 @@ import * as Util from './Util.js';
                 buildTable();
                 draw();
             },
-            () => console.error('Could not load polars ' + id));
+            (xhr, cause) => { vmgBox.textContent = 'Could not load polars ' + id + ': ' + Util.requestErrorText(xhr, cause); });
     }
 
     // Index i and fraction f such that value lies between axis[i] and axis[i+1] (clamped)

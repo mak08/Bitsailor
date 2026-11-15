@@ -284,9 +284,11 @@ An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
               (get-route-via-waypoints routing)
               (get-route-leg routing))))))
 
-(defun get-route-leg (routing &optional observe-step)
+(defun get-route-leg (routing &optional observe-step exact-arrival)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and
-the selected gate crossing, or the final frontier point nearest the destination."
+the selected gate crossing, or the final frontier point nearest the destination.
+OBSERVE-STEP receives each surviving frontier. EXACT-ARRIVAL can require a local
+physical finish before accepting the usual radial arrival criterion."
   (let* ((start-pos (routing-start routing))
          (destination (normalized-destination routing))
          (distance (course-distance start-pos destination))
@@ -413,6 +415,8 @@ the selected gate crossing, or the final frontier point nearest the destination.
            (setf reached (if gate
                              (and (setf gate-hit (best-gate-crossing)) t)
                              (reached candidate start-pos dest-heading distance)))
+           (when (and reached exact-arrival)
+             (setf reached (funcall exact-arrival isochrone candidate)))
            (when observe-step
              (funcall observe-step wind-time step-time (list params-wind params-curnt params-wave params-wave-dir) candidate max-dist stepper))
            (unless reached

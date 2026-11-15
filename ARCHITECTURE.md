@@ -84,9 +84,9 @@ The startpage and router use explicit query-string revisions to prevent browsers
 | Reference | Revision |
 | --- | --- |
 | Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-iso-wind-time-20261113` |
-| Router main script | `?v=router-iso-wind-time-20261113` |
-| Router stylesheet | `?v=router-iso-wind-time-20261113` |
+| Router links on the startpage | `router-fw.html?v=router-xhr-retry-20261115` |
+| Router main script | `?v=router-xhr-retry-20261115` |
+| Router stylesheet | `?v=router-xhr-retry-20261115` |
 | Router import of `GribCache.js` | `?v=router-forecast-selection-20261103` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
@@ -176,7 +176,7 @@ integration steps independently of the fine-tuner's one-minute replay steps.
 
 For a start-to-finish route, `reverse=true` enables the optional second pass in [reverse-routing.cl](reverse-routing.cl). `reverse_percent` defaults to 2 and accepts zero. The UI displays whole per mille, with a default of 20‰ and increments of 1‰ (0.1 percentage points), and converts the value to percent for the API. The deadline is the verified forward ETA plus this percentage of elapsed passage time. The API rejects intermediate points and gates. The reverse interval from departure to deadline is bounded by the configured maximum route hours. A partial forward search or an unsuccessful exact finish returns its forward track with a reason in `reverse-routing.status`.
 
-The forward leg records the actual step boundaries and source cycles for wind, current and both wave fields. The finish tries direct and two-board approaches from recent predecessors with the enabled physics, retains the earliest land-clear mark touch within 1 cm, and constrains fine-tuning to preserve that touch. The forward frontier continues on its original clock when the deadline extends beyond the last search step. The return pass reopens the recorded forecast runs and calls the shared frontier expander with negative elapsed time. Weather is sampled once per frontier point at the earlier interval time. Each TWA reverses the full ground displacement, including current, while wave effects use the physical sailing heading. This is an explicit integration approximation in spatially varying weather. Both VMG samples and the configured TWA grid are available on both tacks. The reverse bearing fan extends 90° either side of the line from the destination to the start.
+The forward leg records the actual step boundaries and source cycles for wind, current and both wave fields. The finish tries direct and two-board approaches from the closest points on the two frontiers bounding the arrival step, with at most thirty minutes of one-minute approach samples per attempt. If no exact approach succeeds, the normal stepper continues the forward search. It retains the earliest land-clear mark touch within 1 cm, and constrains fine-tuning to preserve that touch. The forward frontier continues on its original clock when the deadline extends beyond the last search step. The return pass reopens the recorded forecast runs and calls the shared frontier expander with negative elapsed time. Weather is sampled once per frontier point at the earlier interval time. Each TWA reverses the full ground displacement, including current, while wave effects use the physical sailing heading. This is an explicit integration approximation in spatially varying weather. Both VMG samples and the configured TWA grid are available on both tacks. The reverse bearing fan extends 90° either side of the line from the destination to the start.
 
 The destination is available again at every step boundary, including after a temporarily empty frontier. Each step retains the outermost predecessor in each destination bearing bucket and then removes land-blocked winners, using the same winner-only pruning policy as single-leg forward routing. This approximates arrival by the deadline and can miss an interior alternative. The reverse search retains the current frontier, compact comparison positions and cycle timestamps. It discards predecessor candidates after each step.
 
@@ -284,3 +284,19 @@ timestamp, retained across point and gate legs. Steps end at the switch boundary
 wind sampled at or after it uses the secondary source. An explicit primary cycle
 is not forwarded to a different secondary model. Each isochrone records the model
 and actual cycle used for its step, preserving wind replay provenance.
+
+
+## Routing response failures
+
+`Util.doGET` accepts only 2xx responses and delivers network errors, aborts, timeouts and success-callback failures to the caller's error handler once. Request options are assigned after opening the XHR. Query parameters are encoded and appended to existing queries. JSON consumers use `parseJSONResponse`, which reports the received character count on parse failure. The route error path restores Execute, the cursor and progress timer. A response is parsed and checked before replacing the displayed route.
+
+`getRoute` finishes serialization and returns UTF-8 octets to PolarCL so Content-Length measures bytes, including uncompressed Unicode labels. In the auxiliary `cl-mbedtls` system, HTTP and HTTPS writers use bounded 16 KiB blocks, continue after partial sends and retry WANT_READ/WANT_WRITE. Previously a short send raised an error and closed the connection. Combined with the old XHR status-zero success path, an interrupted response could reach JSON.parse. The reported cold-start failure has not been reproduced with its original response body, so its precise trigger remains unconfirmed.
+
+
+The route handler adds `X-Route-Bytes` with the uncompressed UTF-8 size and logs that size after serialization. The client compares this with the decoded text's UTF-8 length before parsing, independently of gzip Content-Length. Error messages include the expected and received lengths, encoding and HTTP length. For the reported 15 November GFS/waves request, the cutoff at 2,281,472 characters matches a prefix of the successful 3,778,714-byte response, ending inside an isochrone point's `lng` key at a 4 KiB boundary. An isolated cold Lisp run and isolated servers' first uncompressed and gzip responses produced valid complete JSON. The gzip test returned 388,598 compressed bytes decoding to the expected 3,778,714 UTF-8 bytes. The exact browser-side trigger remains unconfirmed.
+
+
+Following another browser cutoff with gzip, route XHR uses `responseType: arraybuffer` and explicit UTF-8 decoding. Route responses carry `Cache-Control: no-store`. Compression is temporarily disabled specifically for getRoute by setting `Content-Encoding: identity`; PolarCL respects a handler's identity encoding when assigning either a string or vector response body. Other endpoints retain their normal compression. Restore route compression by removing the identity header once the browser failure is isolated. A raw gzip capture of the later failing request was complete and checksum-valid, containing all 3,717,215 decoded bytes, so the precise cause remains unconfirmed.
+
+
+The cutoff also occurred with identity encoding, so gzip is excluded as the sole cause. A delayed-response test with a slow reader received the complete body. PolarCL now checks the count returned by the body writer and logs completed large-body writes separately from serialization. Socket errors include the accepted offset and expected total. Route JSON requests retry the identical URL once only when the decoded byte count fails integrity validation. A second incomplete response is reported normally. Application errors and other HTTP/transport failures do not trigger this retry. The underlying intermittent cutoff remains unconfirmed.

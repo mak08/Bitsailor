@@ -1,51 +1,114 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// No JQuery
 
-function doGET (url, success, error, queryParams, requestParams = {"responseType": ""}) {
-    var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function ( ){
-        if ( xhr.readyState == 4 ) {
-            if ( xhr.status < 400 )  {
-                success(xhr);
-            } else {
-                error(xhr);
-            }
+// Deliver each request once, including transport failures and callback exceptions.
+function doGET(url, success, error, queryParams, requestParams = {}) {
+    const xhr = new XMLHttpRequest();
+    let completed = false;
+    function fail(cause) {
+        xhr.errorMessage = cause.message;
+        console.error('GET failed', xhr.responseURL || url, cause);
+        try {
+            if (error) error(xhr, cause);
+        } catch (callbackError) {
+            console.error('GET error callback failed', callbackError);
         }
     }
-    
-    xhr.onerror = function (e) {
-        console.error(xhr.statusText);
-        alert(xhr.statusText);
+    function transportFailure(message) {
+        if (completed) return;
+        completed = true;
+        fail(new Error(message));
+    }
+    xhr.onload = function () {
+        if (completed) return;
+        completed = true;
+        if (xhr.status < 200 || xhr.status >= 300) {
+            fail(new Error('HTTP ' + xhr.status + ' ' + xhr.statusText));
+            return;
+        }
+        try {
+            const result = success(xhr);
+            if (result && typeof result.then === 'function') result.catch(fail);
+        } catch (cause) {
+            fail(cause);
+        }
     };
-
-    for (const p in requestParams) {
-        xhr[p] = requestParams[p];
-    }
-    
-    xhr.open("GET", url + makeQuery(queryParams), true);
-
+    xhr.onerror = () => transportFailure('Network error or incomplete response');
+    xhr.ontimeout = () => transportFailure('Request timed out');
+    xhr.onabort = () => transportFailure('Request aborted');
     try {
+        const query = makeQuery(queryParams);
+        const hash = url.indexOf('#');
+        const base = hash < 0 ? url : url.slice(0, hash);
+        const fragment = hash < 0 ? '' : url.slice(hash);
+        xhr.open('GET', base + (query ? (base.includes('?') ? '&' : '?') + query : '') + fragment, true);
+        for (const [key, value] of Object.entries(requestParams)) xhr[key] = value;
         xhr.send(null);
-    } catch (e) {
-        alert("XHR Exception - check console");
-        console.error(e);
-    }
-}
-
-
-function makeQuery (object) {
-    var s = "";
-    for (const m in object) {
-        if (s == "") {
-            s = "?";
-        } else {
-            s += "&";
+    } catch (cause) {
+        if (!completed) {
+            completed = true;
+            fail(cause);
         }
-        s += `${ m }=${ object[m]}`;
     }
-    return s;
+    return xhr;
 }
 
+function makeQuery(object) {
+    return Object.entries(object || {})
+        .filter(([, value]) => value !== undefined && value !== null)
+        .map(([key, value]) => encodeURIComponent(key) + '=' + encodeURIComponent(value))
+        .join('&');
+}
+
+class IncompleteResponseError extends Error {}
+
+// Retry an incomplete JSON transfer once, keeping the original URL and query.
+function doGETJSON(url, success, error, queryParams, requestParams = {}) {
+    const { onRetry, ...xhrParams } = requestParams;
+    function send(retried) {
+        doGET(url, xhr => success(parseJSONResponse(xhr), xhr), (xhr, cause) => {
+            if (!retried && cause instanceof IncompleteResponseError) {
+                console.warn('Retrying incomplete JSON response once', url, cause);
+                if (onRetry) onRetry();
+                send(true);
+            } else if (error) {
+                error(xhr, cause);
+            }
+        }, queryParams, { responseType: 'arraybuffer', ...xhrParams });
+    }
+    send(false);
+}
+
+function parseJSONResponse(xhr) {
+    const binary = xhr.responseType === 'arraybuffer';
+    const text = binary ? new TextDecoder('utf-8', { fatal: true }).decode(xhr.response)
+        : xhr.responseText || xhr.response || '';
+    const expected = xhr.getResponseHeader?.('X-Route-Bytes');
+    const received = binary ? xhr.response.byteLength : new TextEncoder().encode(text).length;
+    const encoding = xhr.getResponseHeader?.('Content-Encoding') || 'identity';
+    const wireLength = xhr.getResponseHeader?.('Content-Length') || 'unknown';
+    if (expected && Number(expected) !== received) {
+        throw new IncompleteResponseError('Incomplete route response: received ' + received + ' of ' + expected
+            + ' UTF-8 bytes (HTTP Content-Length ' + wireLength + ', encoding ' + encoding + ')');
+    }
+    try {
+        return JSON.parse(text);
+    } catch (cause) {
+        throw new Error('Invalid JSON response (' + text.length + ' characters, ' + received
+            + ' UTF-8 bytes received; expected ' + (expected || 'unknown')
+            + '; HTTP Content-Length ' + wireLength + ', encoding ' + encoding + '): '
+            + cause.message, { cause });
+    }
+}
+
+// Bound error text so an HTML error page or large invalid response cannot flood a dialog.
+function requestErrorText(xhr, cause) {
+    const reason = cause?.message || xhr.errorMessage || xhr.statusText || 'Request failed';
+    const body = xhr.responseType === 'arraybuffer' && xhr.response
+        ? new TextDecoder().decode(xhr.response.slice(0, 1200))
+        : (!xhr.responseType || xhr.responseType === 'text') ? xhr.responseText : '';
+    return reason + (body && xhr.status >= 400 ? '\n' + body.slice(0, 1200) : '');
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 /// Geo math
@@ -450,6 +513,9 @@ function MD5 (string) {
 export {
     MD5,
     doGET,
+    doGETJSON,
+    requestErrorText,
+    parseJSONResponse,
     linear,
     addDistance,
     gcAngle,

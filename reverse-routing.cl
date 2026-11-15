@@ -148,12 +148,13 @@
           (setf pos end last sample time (routing-time+ time dt)))))))
 
 (defun reverse-best-finish (routing rp)
-  "Rank feasible direct and both VMG tack orders from recent forward predecessors."
+  "Try a finish from RP within thirty minutes, retaining its coarse forward prefix."
   (let* ((target (routing-dest routing))
-         (until (routing-time+ (routing-starttime routing) (routing-stepmax routing)))
+         (until (timestamp-minimum
+                  (routing-time+ (routepoint-time rp) 1800)
+                  (routing-time+ (routing-starttime routing) (routing-stepmax routing))))
          (best nil))
-    (loop for point = rp then (routepoint-predecessor point) while point
-          repeat (1+ *approach-lookback*) do
+    (let ((point rp))
       (let ((pos (routepoint-position point)))
         (multiple-value-bind (twd tws) (wind-at routing pos (routepoint-time point))
           (multiple-value-bind (up down) (best-vmg (routing-polars routing) tws)
@@ -448,18 +449,28 @@
     (error "Reverse routing requires a route without waypoints or gates"))
   (let* ((run (make-reverse-run)) (percent (routing-reverse-percent routing))
          (report (make-reverse-result :status "forward-unreached" :percent percent))
+         (finish nil)
          (*fine-tune-weather* (make-hash-table :test #'equal)) (*fine-tune-weather-cache-limit* 8))
-    (multiple-value-bind (info best)
-        (get-route-leg routing (lambda (start end weather frontier history stepper)
-                                 (reverse-save-step run routing start end weather frontier history stepper)))
-      (when (string= (routeinfo-status info) "reached")
-        (setf (reverse-result-status report) "exact-finish-unavailable")
-        (handler-case
-            (let ((track (reverse-best-finish routing best)))
-              (when track
-                (setf (routeinfo-best info) track
-                      (reverse-result-baseline report) (trackpoint-time (car (last track))))))
-          (error (e) (log2:warning "Exact finish unavailable: ~a" e))))
+    (let ((info
+            (get-route-leg routing
+              (lambda (start end weather frontier history stepper)
+                (reverse-save-step run routing start end weather frontier history stepper))
+              (lambda (previous candidate)
+                ;; The coarse search keeps going until a local exact finish succeeds.
+                ;; Try the nearest point on both sides of the arrival step. Neither
+                ;; attempt may replace more than thirty minutes with minute samples.
+                (dolist (front (list previous candidate))
+                  (let* ((point (best-point front (routing-dest routing)))
+                         (track (handler-case (reverse-best-finish routing point)
+                                  (error (e) (log2:warning "Exact finish unavailable: ~a" e) nil))))
+                    (when (and track (or (null finish)
+                                         (timestamp< (trackpoint-time (car (last track)))
+                                                     (trackpoint-time (car (last finish))))))
+                      (setf finish track))))
+                finish))))
+      (when finish
+        (setf (routeinfo-best info) finish
+              (reverse-result-baseline report) (trackpoint-time (car (last finish)))))
       (let ((*fine-tune-endpoint-tolerance* (if (reverse-result-baseline report)
                                                 (max 0d0 (- *fine-tune-mark-tolerance*
                                                   (fine-distance (trackpoint-position (car (last (routeinfo-best info))))

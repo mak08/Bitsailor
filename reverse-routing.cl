@@ -20,13 +20,16 @@
 
 (defun reverse-weather (routing time cycles)
   "Reopen the wind, current, height and direction runs actually used by the forward interval."
-  (loop for cycle in cycles
-        for source in (list (routing-model-at routing time) (routing-currents routing)
-                            'cl-weather:gfswave-combined 'cl-weather:gfswave-combined)
-        for i from 0 collect
-          (when cycle
-            (funcall (if (= i 3) #'cl-weather::get-direction-params-for-cycle #'cl-weather::get-params-for-cycle)
-                     source time :cycle (cl-weather::make-cycle% :timestamp cycle)))))
+  (append
+   (loop for cycle in cycles
+         for source in (list (routing-model-at routing time) (routing-currents routing))
+         collect (when cycle
+                   (cl-weather::get-params-for-cycle source time
+                     :cycle (cl-weather::make-cycle% :timestamp cycle))))
+   (if (third cycles)
+       (multiple-value-list (routing-wave-params routing time
+                              :cycle (cl-weather::make-cycle% :timestamp (third cycles)) :fallback nil))
+       (list nil nil))))
 
 (defun reverse-blocked-p (a b)
   "Check the whole sailed or displayed segment across map tiles, including the date line."

@@ -7,7 +7,7 @@
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
     <link rel="stylesheet" href="css/startpage.css?v=news-reverse-20261113">
-    <script type="module" src="js/startpage.js?v=e97e6be"></script>
+    <script type="module" src="js/startpage.js?v=status-grid-resolution-20261115"></script>
     <script type="module" src="js/polars-viewer.js?v=xhr-retry-20261115"></script>
     
   </head>
@@ -53,7 +53,7 @@
               <div class="welcome">
                 <h2>Bitsailor is back!</h2>
                 <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
-                <p><b>Please find the <a href="router-fw.html?v=router-ecmwf-currents-20261115">Router</a> page</b> <a href="router-fw.html?v=router-ecmwf-currents-20261115" target=_blank><b>here</b></a></p>
+                <p><b>Please find the <a href="router-fw.html?v=router-current-sources-20261115">Router</a> page</b> <a href="router-fw.html?v=router-current-sources-20261115" target=_blank><b>here</b></a></p>
               </div>
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
@@ -219,11 +219,12 @@
             </div>
             <section class="status-section">
               <h3>Forecast cache by cycle</h3>
-              <div class="status-table-wrap"><table id="status-cache-groups"><thead><tr><th>Source</th><th>Cycle (UTC)</th><th>Resolution</th><th>Entries</th><th>Decoded memory</th></tr></thead><tbody></tbody></table></div>
+              <p class="status-note">Resolution is GRIB grid spacing in degrees (longitude × latitude when different). — means unavailable.</p>
+              <div class="status-table-wrap"><table id="status-cache-groups"><thead><tr><th>Source</th><th>Resolution</th><th>Cycle (UTC)</th><th>Entries</th><th>Decoded memory</th></tr></thead><tbody></tbody></table></div>
             </section>
             <section class="status-section">
               <h3>Forecast downloads</h3>
-              <div class="status-table-wrap"><table id="tb_downloads"><thead><tr><th>Source</th><th>Completed cycle (UTC)</th><th>In progress</th></tr></thead><tbody></tbody></table></div>
+              <div class="status-table-wrap"><table id="tb_downloads"><thead><tr><th>Source</th><th>Resolution</th><th>Completed cycle (UTC)</th><th>In progress</th></tr></thead><tbody></tbody></table></div>
             </section>
             <section class="status-section">
               <h3>Last routing</h3>

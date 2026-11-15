@@ -83,6 +83,8 @@ Wind arrows use approximately 21 px spacing, half the former number per screen a
 
 Current-display samples are additionally checked against the router's vector coastline or configured land bitmap. A coarse GRIB cell can straddle the coast: zeroing its missing land nodes still allows bilinear interpolation to return nonzero flow at an inland position. Such land-centred arrows are suppressed after interpolation. This display mask does not shift the sampled coordinates or change routing physics.
 
+The retired Fairwinds East Australia source is removed from downloads, metadata and Status; API requests naming it return HTTP 400. Saved race selections for unavailable sources fall back to NONE. The English Channel source still uses the working Fairwinds GRIB. Direct official IBI access is feasible via authenticated NetCDF/Zarr downloads and an ingestion/conversion step; see [IBI-CURRENTS.md](diagnostics/IBI-CURRENTS.md) for verified datasets, access requirements and integration work.
+
 `GribCache.update` loads both bracketing fields before publishing its cycle/time to mouse lookups; failed updates preserve the previous valid state. Retries preserve the requested cycle and sampling time. Browser wind speed now interpolates scalar corner magnitudes separately from U/V, matching the weather library's interpolation policy rather than taking the magnitude of the interpolated vector.
 
 ### Versioned URLs
@@ -91,11 +93,12 @@ The startpage and router use explicit query-string revisions to prevent browsers
 
 | Reference | Revision |
 | --- | --- |
-| Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-ecmwf-currents-20261115` |
-| Router main script | `?v=router-ecmwf-currents-20261115` |
-| Router stylesheet | `?v=router-ecmwf-currents-20261115` |
-| Router import of `GribCache.js` | `?v=router-ecmwf-currents-20261115` |
+| Startpage stylesheet | `?v=news-reverse-20261113` |
+| Startpage main script | `?v=status-grid-resolution-20261115` |
+| Router links on the startpage | `router-fw.html?v=router-current-sources-20261115` |
+| Router main script | `?v=router-current-sources-20261115` |
+| Router stylesheet | `?v=router-current-sources-20261115` |
+| Router import of `GribCache.js` | `?v=router-current-sources-20261115` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
 The browser caches resources by URL, including the query string. A new revision therefore requests a different resource URL and bypasses the older cached entry. PolarCL separates the query parameters from the request path, so it still serves the same underlying file. These revision strings are manually maintained identifiers, not automatically generated hashes or file-content selectors.
@@ -276,6 +279,8 @@ in time-varying weather.
 ## Status and memory reporting
 
 The startpage Status tab polls `router.getStatistics` every minute and supports manual refresh. [status.cl](status.cl) supplies the current operational configuration, raw/combined polar and race cache counts, SBCL dynamic-heap usage/limit, and unique decoded forecast-array bytes grouped by source, cycle and resolution. Snapshots hold the forecast-cache lock while examining metadata; they never scan array elements or force garbage collection. Heap usage can include reclaimable garbage and excludes native allocations. Forecast byte counts exclude headers and metadata.
+
+Both forecast tables place Resolution immediately after Source and report actual GRIB grid increments in degrees, rather than datasource filename-resolution defaults. Cache groups use their decoded grid metadata; download rows inspect the first available file header from the displayed completed/in-progress cycle without decoding forecast arrays. Different longitude/latitude spacing is shown separately, and missing metadata is shown as unavailable. The Fairwinds current regions have separate download rows so their differing grid sizes and availability remain visible.
 
 The explicit settings inventory includes routing, gate, point-approach, service and path settings. It excludes transient state, locks and credentials. Configuration values are read when requested so overrides appear immediately. Legacy top-level statistics fields remain available. The UI retains previous values and displays a stale-data message on refresh failure. Tests are in `tests/status-tests.cl` and `tests/status-ui-tests.cjs`.
 

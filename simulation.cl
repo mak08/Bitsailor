@@ -34,7 +34,7 @@
 
 (defun current-source-for-model (source model)
   "Replace an enabled Fairwinds source with global IFS currents for ECMWF winds."
-  (if (and (member source '(cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia
+  (if (and (member source '(cl-weather::fw-current-agulhas
                             cl-weather::fw-current-english-channel))
            (member model '(cl-weather::ecmwf-ifs-wind cl-weather::ecmwf-ifs-wind-aws
                            cl-weather::ecmwf-aifs-wind)))

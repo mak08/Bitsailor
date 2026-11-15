@@ -115,6 +115,15 @@
           cycle)
       (error () (error 'request-error :message "Invalid forecast cycle; use an ISO UTC source run time")))))
 
+(defun parse-current-source (value)
+  "Accept supported current sources or NONE; reject retired sources in saved API requests."
+  (unless (or (null value) (string= value "") (string-equal value "NONE"))
+    (let ((source (read-arg value 'symbol 'cl-weather)))
+      (unless (member source '(cl-weather:ecmwf-ifs-current cl-weather::fw-current-agulhas
+                               cl-weather::fw-current-english-channel))
+        (error 'request-error :message "Unsupported current source; choose IFS, Agulhas or English Channel (IBI)"))
+      source)))
+
 ;;; Parse routing query arguments, validate start/waypoints, run the router and serialize JSON;
 ;;; request errors map to 400 and other errors to 500.
 (defun |getRoute| (handler request response &key
@@ -153,7 +162,7 @@
            (return-from |getRoute| (format nil "~a" e)))))
 
     (let* ((*read-default-float-format* 'double-float)
-           (currents (read-arg |currents| 'symbol 'cl-weather))
+           (currents (parse-current-source |currents|))
            (forecast-model (let ((model (read-arg |forecast_model|)))
                              (if (and model (not (string= model "")))
                                  (read-arg |forecast_model| 'symbol 'cl-weather)
@@ -306,7 +315,7 @@ routing, then mask arrow centres against the router's coastline geometry."
   (setf (http-header response :|Content-Type|) "application/json"
         (http-header response :|Cache-Control|) "no-store")
   (handler-case
-      (let* ((source (current-source-for-model (read-arg |source| 'symbol 'cl-weather)
+      (let* ((source (current-source-for-model (parse-current-source |source|)
                         (read-arg |forecast_model| 'symbol 'cl-weather)))
              (time (handler-case (local-time:parse-timestring (decode-uri-component |time|))
                      (error () (error 'request-error :message "Invalid current display time"))))
@@ -316,8 +325,7 @@ routing, then mask arrow centres against the router's coastline geometry."
              (east (read-arg |east| 'double-float))
              (columns (parse-integer |columns|))
              (rows (parse-integer |rows|)))
-        (unless (and (member source '(cl-weather:ecmwf-ifs-current cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia
-                                     cl-weather::fw-current-english-channel))
+        (unless (and source
                      (<= -85.051129d0 south north 85.051129d0)
                      (< south north) (< west east) (<= (- east west) 1080d0)
                      (<= 1 columns 256) (<= 1 rows 256) (<= (* columns rows) 32768))
@@ -358,6 +366,7 @@ routing, then mask arrow centres against the router's coastline geometry."
 
 (defstruct downloadstatus
   name
+  resolution
   ;; Base time of the newest cycle that was downloaded completely, or NIL
   completed
   ;; Base time of a newer cycle with a partial download, or NIL
@@ -372,7 +381,8 @@ routing, then mask arrow centres against the router's coastline geometry."
     ("IFS currents" cl-weather:ecmwf-ifs-current)
     ("AROME" cl-weather::arome-wind)
     ("Fairwinds waves" cl-weather::gfswave-combined)
-    ("Fairwinds currents" cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia cl-weather::fw-current-english-channel))
+    ("Fairwinds Agulhas" cl-weather::fw-current-agulhas)
+    ("Fairwinds English Channel (IBI)" cl-weather::fw-current-english-channel))
   "Display name and the datasources that make up each download indicator")
 
 (defun cycle-download-count (ids cycle)
@@ -419,6 +429,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                        total all))))
             (setf cycle (cl-weather:previous-cycle (first ids) cycle)))
       (make-downloadstatus :name name :completed completed :progress progress
+                           :resolution (download-grid-resolution (first ids) (or completed progress))
                            :progress-done done :progress-total total))))
 
 (defstruct (routerstatus (:constructor routerstatus

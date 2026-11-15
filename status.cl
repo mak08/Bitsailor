@@ -6,6 +6,38 @@
 (defstruct memorystatus heap-used heap-limit forecast-bytes forecast-entries groups)
 (defstruct cachestatus polars combined-polars races)
 
+(defun status-grid-resolution (info)
+  "Describe actual GRIB longitude/latitude increments in degrees, without filename hints."
+  (when info
+    (let ((dx (cl-weather::gribinfo-i-inc info)) (dy (cl-weather::gribinfo-j-inc info)))
+      (when (and (plusp dx) (plusp dy))
+        (flet ((decimal (value)
+                 (string-right-trim "." (string-right-trim "0" (format nil "~,6f" value)))))
+          (if (< (abs (- dx dy)) 1d-9) (decimal dx)
+              (format nil "~a x ~a" (decimal dx) (decimal dy))))))))
+
+(defun status-file-resolution (path)
+  "Read only the first GRIB message's grid header, without decoding forecast arrays."
+  (ignore-errors
+    (cl-eccodes:with-c-file (file (namestring path) "rb")
+      (unless (cffi:null-pointer-p file)
+        (let ((handle (cl-eccodes:codes-grib-handle-new-from-file file)))
+          (unless (cffi:null-pointer-p handle)
+            (unwind-protect
+                 (status-grid-resolution (cl-weather::read-message-info handle))
+              (cl-eccodes:codes-handle-delete handle))))))))
+
+(defun download-grid-resolution (id timestamp)
+  "Read an available file from the displayed download cycle; unknown grids remain unknown."
+  (when timestamp
+    (ignore-errors
+      (let* ((source (cl-weather::get-datasource id (cl-weather::make-cycle% :timestamp timestamp)))
+             (paths (remove-duplicates
+                      (mapcar (lambda (step) (cl-weather::local-pathname source step))
+                              (cl-weather::schedule-steps (cl-weather::schedule source))) :test #'equal)))
+        (loop for path in paths
+              thereis (and (probe-file path) (status-file-resolution path)))))))
+
 ;;; Escape configuration text, including quotes, backslashes and control characters, for JSON.
 (defun write-status-json-string (stream value)
   (write-char #\" stream)
@@ -103,11 +135,15 @@
       (setf entries (hash-table-count cl-weather::*forecast-ht*))
       (maphash
        (lambda (key forecast)
-         (let* ((group-key (list (second key) (fourth key) (third key) (fifth key)))
+         (let* ((resolution (status-grid-resolution
+                             (typecase forecast
+                               (cl-weather::uv (cl-weather::uv-info forecast))
+                               (cl-weather::gribmessage (cl-weather::gribmessage-info forecast)))))
+                (group-key (list (second key) (fourth key) (third key) resolution))
                 (group (or (gethash group-key groups)
                            (setf (gethash group-key groups)
                              (make-forecastcachegroup :source (second key) :date (fourth key)
-                               :run (third key) :resolution (fifth key) :entries 0 :bytes 0)))))
+                               :run (third key) :resolution resolution :entries 0 :bytes 0)))))
            (incf (forecastcachegroup-entries group))
            (dolist (array (typecase forecast
                            (cl-weather::uv (list (cl-weather::uv-u-array forecast)

@@ -27,34 +27,40 @@
         return timestamp ? `${timestamp.substring(0, 10)} ${timestamp.substring(11, 13)}Z` : null;
     }
 
+    function formatResolution(value) {
+        if (typeof value !== 'string' || !value) return '—';
+        return value.replace(/p/g, '.').split(' x ').map(spacing => `${spacing}°`).join(' × ');
+    }
+
     function renderDownloads (tbody, downloads) {
         if (!tbody) return;
         tbody.replaceChildren();
         const sources = Array.isArray(downloads) ? downloads : [];
         if (!sources.length) {
             const cell = tbody.insertRow().insertCell();
-            cell.colSpan = 3;
+            cell.colSpan = 4;
             cell.textContent = 'Download status unavailable.';
         }
         for (const d of sources) {
             const row = tbody.insertRow();
-            const cells = [row.insertCell(), row.insertCell(), row.insertCell()];
+            const cells = [row.insertCell(), row.insertCell(), row.insertCell(), row.insertCell()];
             cells.forEach(c => c.style.padding = '2px 8px');
 
             cells[0].textContent = d.name;
+            cells[1].textContent = formatResolution(d.resolution);
 
             const completed = formatCycle(d.completed);
-            cells[1].textContent = completed ? `\u25CF ${completed}` : '\u25CF none';
-            cells[1].style.color = completed ? 'darkgreen' : 'darkred';
+            cells[2].textContent = completed ? `\u25CF ${completed}` : '\u25CF none';
+            cells[2].style.color = completed ? 'darkgreen' : 'darkred';
 
             const progress = formatCycle(d.progress);
             if (progress) {
                 const pct = d["progress-total"] > 0
                     ? Math.round(100 * d["progress-done"] / d["progress-total"]) : 0;
-                cells[2].textContent = `\u25D0 ${progress} (${d["progress-done"]}/${d["progress-total"]}, ${pct}%)`;
-                cells[2].style.color = 'darkorange';
+                cells[3].textContent = `\u25D0 ${progress} (${d["progress-done"]}/${d["progress-total"]}, ${pct}%)`;
+                cells[3].style.color = 'darkorange';
             } else {
-                cells[2].textContent = '-';
+                cells[3].textContent = '-';
             }
         }
     }
@@ -104,7 +110,7 @@
         text('status-polars-cache', `${number(status.caches?.polars)} / ${number(status.caches?.['combined-polars'])}`);
         text('status-races-cache', number(status.caches?.races));
         tableRows('status-cache-groups', (Array.isArray(memory.groups) ? memory.groups : []).map(g => [
-            g.source, `${g.date} ${String(g.run).padStart(2, '0')}Z`, g.resolution, number(g.entries), formatBytes(g.bytes)
+            g.source, formatResolution(g.resolution), `${g.date} ${String(g.run).padStart(2, '0')}Z`, number(g.entries), formatBytes(g.bytes)
         ]), 'No decoded forecasts cached.');
         tableRows('status-parameters', (Array.isArray(status.parameters) ? status.parameters : []).map(p => [p.group, p.name, p.value]), 'Configuration unavailable. Reload the updated server.');
         const details = document.getElementById('status-last-route');

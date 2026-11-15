@@ -3,8 +3,8 @@
 
 import * as Util from './Util.js?v=xhr-retry-20261115';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
-import GribCache from './GribCache.js?v=router-ecmwf-currents-20261115';
-import CurrentLayer from './CurrentLayer.js?v=router-ecmwf-currents-20261115';
+import GribCache from './GribCache.js?v=router-current-sources-20261115';
+import CurrentLayer from './CurrentLayer.js?v=router-current-sources-20261115';
 import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
@@ -401,7 +401,11 @@ function applyRaceSettings(race) {
     settings.secondary_forecast_model = race.settings.secondary_forecast_model || 'ECMWF-IFS-WIND';
     settings.forecast_switch_hours = race.settings.forecast_switch_hours || 'off';
     updateSecondaryControls();
-    if (race.settings.current) { const sc = document.getElementById('sel_currents'); if (sc) { sc.value = race.settings.current; } }
+    if (race.settings.current) {
+        const sc = document.getElementById('sel_currents');
+        if (sc) sc.value = Array.from(sc.options).some(option => option.value === race.settings.current)
+            ? race.settings.current : 'NONE';
+    }
     if (race.settings.useWaves !== undefined) { const cb = document.getElementById('cb_waves'); if (cb) { cb.checked = !!race.settings.useWaves; settings.useWaves = !!race.settings.useWaves; } }
   restoreRaceDuration(race.settings.duration);
   restoreStepper(race.settings.stepper);

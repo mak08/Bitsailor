@@ -216,12 +216,12 @@
                  (declare (ignore timestamp args))
                  (case model
                    (:test-current (cl-weather::make-params :fc0 flow :fc1 flow))
-                   (cl-weather:gfswave-combined (cl-weather::make-params :fc0 height :fc1 height))
                    (t wind))))
-         (cons 'get-direction-params
+         (cons 'routing-wave-params
                (lambda (&rest args)
                  (declare (ignore args))
-                 (cl-weather::make-params :fc0 direction :fc1 direction))))
+                 (values (cl-weather::make-params :fc0 height :fc1 height)
+                         (cl-weather::make-params :fc0 direction :fc1 direction)))))
         (lambda ()
           (multiple-value-bind (sample endpoint)
               (fine-sail-step routing (routing-start routing) time 100d0 90d0)

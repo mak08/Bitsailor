@@ -32,6 +32,23 @@
         (get-params model time :cycle (routing-cycle routing))
         (get-params model time))))
 
+(defun current-source-for-model (source model)
+  "Replace an enabled Fairwinds source with global IFS currents for ECMWF winds."
+  (if (and (member source '(cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia
+                            cl-weather::fw-current-english-channel))
+           (member model '(cl-weather::ecmwf-ifs-wind cl-weather::ecmwf-ifs-wind-aws
+                           cl-weather::ecmwf-aifs-wind)))
+      'cl-weather:ecmwf-ifs-current source))
+
+(defun routing-current-source (routing time)
+  "Resolve currents at the active leg time, including a secondary wind-model switch."
+  (current-source-for-model (routing-currents routing) (routing-model-at routing time)))
+
+(defun routing-current-params (routing time)
+  "Load the effective current forecast; NONE remains disabled."
+  (let ((source (routing-current-source routing time)))
+    (when source (get-params source time))))
+
 ;; Bound once per request, shared by all legs, replays and the reverse pass.
 (defvar *routing-wave-state* nil)
 
@@ -311,7 +328,7 @@ physical finish before accepting the usual radial arrival criterion."
                 (routing-fan routing)
                 left
                 right)
-    (log2:info "Using currents ~a" currents)
+    (log2:info "Using currents ~a (selected ~a)" (routing-current-source routing start-time) currents)
     (do* ( ;; Iteration stops when destination was reached
           (reached nil)
           (error nil)
@@ -342,8 +359,8 @@ physical finish before accepting the usual radial arrival criterion."
                          (multiple-value-list (routing-wave-params routing step-time))))
           (params-wave (first wave-params) (first wave-params))
           (params-wave-dir (second wave-params) (second wave-params))
-          (params-curnt (when currents (get-params currents start-time))
-                        (when (and currents (not (and observe-step reached))) (get-params currents step-time)))
+          (params-curnt (routing-current-params routing start-time)
+                        (unless (and observe-step reached) (routing-current-params routing step-time)))
           (step-size (funcall stepper)
                      (if (and reached observe-step) step-size (funcall stepper)))
           (step-time (routing-time+ start-time step-size)

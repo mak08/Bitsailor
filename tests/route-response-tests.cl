@@ -20,6 +20,7 @@
          (assert (> (length bytes) (length text)))
          (assert (= (length bytes) (http-header response :|X-Route-Bytes|)))
          (assert (equal "no-store" (http-header response :|Cache-Control|)))
+         (assert (search "\"isochrones\": []" text))
          (assert (char= (char text (1- (length text))) #\}))
          (setf (http-body response) bytes)
          (assert (= (length bytes) (http-header response :|Content-Length|)))

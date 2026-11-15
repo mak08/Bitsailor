@@ -78,6 +78,7 @@
 (register-function "router.getServerSettings" :authorizer (constantly t))
 (register-function "router.getPolarsList" :authorizer (constantly t))
 (register-function "router.getRoute" :authorizer (constantly t))
+(register-function "router.getCurrentField" :authorizer (constantly t))
 (register-function "router.getStatistics" :authorizer (constantly t))
 (register-function "router.getBoatPosition" :authorizer (constantly t))
 

@@ -50,6 +50,7 @@ cache.drawWind = async () => {};
   const node = id => { if (!nodes.has(id)) nodes.set(id, {}); return nodes.get(id); };
   let refreshed = 0, failDisplay = false;
   const attempts = [];
+  const currentUpdates = [];
   const alerts = [];
   const ui = vm.createContext({
     console: { error() {} }, Date, PolarManager: class {},
@@ -58,10 +59,15 @@ cache.drawWind = async () => {};
   });
   vm.runInContext(main.slice(0, main.lastIndexOf('// Initialize everything when the page loads')), ui);
   ui.attempts = attempts;
+  ui.currentUpdates = currentUpdates;
+  node('sel_currents').value = 'FW-CURRENT-ENGLISH-CHANNEL';
+  node('cb_displaywind').checked = true;
   ui.shouldFail = () => failDisplay;
   vm.runInContext(`
     currentCycle = '${base}';
     windReady = true;
+    currentLayer = { clear() {}, update: (_, time, source, enabled) =>
+        currentUpdates.push([time.toISOString(), source, enabled]) };
     ir_index = document.getElementById('ir_index');
     getMapBounds = () => ({});
     updateIsochrones = () => {};
@@ -103,6 +109,7 @@ cache.drawWind = async () => {};
   assert.equal(attempts.at(-1)[1], '2026-10-31T21:00:00.000Z');
   await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', time: '2026-10-31T22:00:00Z', kind: 'reverse', 'wind-time': '2026-10-31T21:30:00Z' })`, ui);
   assert.equal(attempts.at(-1)[1], '2026-10-31T22:00:00.000Z');
+  assert.deepEqual(Array.from(currentUpdates.at(-1)), ['2026-10-31T22:00:00.000Z', 'FW-CURRENT-ENGLISH-CHANNEL', true]);
   await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1 })`, ui);
   assert.equal(node('ir_index').value, 15);
   assert.equal(vm.runInContext('routeWindSelection.time.toISOString()', ui), '2026-10-31T21:00:00.000Z');

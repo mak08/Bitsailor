@@ -3,7 +3,8 @@
 
 import * as Util from './Util.js?v=xhr-retry-20261115';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
-import GribCache from './GribCache.js?v=router-forecast-selection-20261103';
+import GribCache from './GribCache.js?v=router-ecmwf-currents-20261115';
+import CurrentLayer from './CurrentLayer.js?v=router-ecmwf-currents-20261115';
 import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
@@ -35,6 +36,8 @@ let currentCycle = null;
 let routeWindSelection = null;
 let gribCache = null;
 let gribCacheModel = null;
+let currentLayer = null;
+let currentDisplayTime = null;
 
 let sailNames = ["Jib", "Spi", "Stay", "LJ", "C0", "HG", "LG"];
 let settings = {
@@ -972,6 +975,7 @@ function onDisplaywind(event) {
         updateMap()
     } else {
         document.getElementById("wind-canvas").style.display = "none";
+        currentLayer?.clear();
     }
 }
 
@@ -1036,6 +1040,7 @@ function onSetCurrents(event) {
     // Persist globally as a fallback and per-race for specificity
     storeValue('current', current);
     captureRaceSettings('current', current);
+    if (currentDisplayTime) updateCurrentDisplay(currentDisplayTime);
 }
 
 async function onSetForecastModel(event) {
@@ -1318,6 +1323,15 @@ function makeQuery(object) {
     return s;
 }
 
+function validateRouteResponse(result) {
+    // Older servers serialize an empty Lisp isochrone list as false.
+    if (result?.isochrones === false) result.isochrones = [];
+    if (!Array.isArray(result?.best) || !result.best.length || !Array.isArray(result.isochrones)) {
+        throw new Error('Invalid route response: missing track or isochrones');
+    }
+    return result;
+}
+
 function getRoute() {
     const reverse = !waypointMarkers.length && document.getElementById('cb_reverse')?.checked;
     const percent = document.getElementById('reverse_percent');
@@ -1374,10 +1388,7 @@ function getRoute() {
     Util.doGETJSON(
         "/function/router.getRoute" + query,
         function (result) {
-            if (!Array.isArray(result?.best) || !result.best.length || !Array.isArray(result.isochrones)) {
-                throw new Error('Invalid route response: missing track or isochrones');
-            }
-            routeInfo = result;
+            routeInfo = validateRouteResponse(result);
             window.clearInterval(timer);
             pgGetRoute.value = pgGetRoute.max;
             routeWindSelection = null;
@@ -1580,19 +1591,26 @@ function displayRouting(data) {
 
 function setupCanvas() {
     var mapCanvas = document.getElementById('wind-canvas');
+    const currentCanvas = document.getElementById('current-canvas');
+    const canvases = [mapCanvas, currentCanvas];
+    currentLayer = new CurrentLayer(currentCanvas, document.getElementById('current-legend'));
     // Host the canvas in a Leaflet pane between tiles (200) and vector overlays (400),
     // so isochrones, markers and popups are drawn above the wind.
     const windPane = map.createPane('windPane');
     windPane.style.zIndex = 250;
     windPane.style.pointerEvents = 'none';
-    windPane.appendChild(mapCanvas);
+    canvases.forEach(canvas => windPane.appendChild(canvas));
     const container = map.getContainer();
     const fitCanvas = () => {
-        mapCanvas.style.width = container.clientWidth + 'px';
-        mapCanvas.style.height = container.clientHeight + 'px';
+        canvases.forEach(canvas => {
+            canvas.style.width = container.clientWidth + 'px';
+            canvas.style.height = container.clientHeight + 'px';
+            canvas.width = container.clientWidth * 6;
+            canvas.height = container.clientHeight * 6;
+        });
     };
     // While dragging, the canvas moves with the map pane; snap it back to the viewport once the move ends.
-    const realign = () => L.DomUtil.setPosition(mapCanvas, map.containerPointToLayerPoint([0, 0]));
+    const realign = () => canvases.forEach(canvas => L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0])));
     fitCanvas();
     realign();
     map.on('moveend zoomend viewreset', realign);
@@ -1883,8 +1901,16 @@ async function redrawWindByOffset(offset) {
 
 let windRequestVersion = 0;
 
+function updateCurrentDisplay(time) {
+    if (!currentLayer) return;
+    const source = document.getElementById('sel_currents')?.value;
+    const enabled = document.getElementById('cb_displaywind')?.checked;
+    return currentLayer.update(getMapBounds(), time, source, enabled, gribCacheModel || settings.forecast_model);
+}
+
 async function getWind(cycle, time, candidateModel, { quiet = false } = {}) {
     const version = ++windRequestVersion;
+    currentLayer?.clear();
     const isCurrent = () => version === windRequestVersion;
     const selection = candidateModel ? null : routeWindSelection;
     const model = candidateModel || selection?.model || settings.forecast_model;
@@ -1927,6 +1953,8 @@ async function getWind(cycle, time, candidateModel, { quiet = false } = {}) {
         }
         updateCycleDisplay(model, usedCycle, time, Boolean(selection));
         updateIsochrones();
+        currentDisplayTime = new Date(time);
+        updateCurrentDisplay(currentDisplayTime);
         return true;
     } catch (error) {
         if (isCurrent()) {

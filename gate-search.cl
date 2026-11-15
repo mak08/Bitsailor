@@ -363,7 +363,7 @@ turn at the intersection and sail the remaining time toward that target."
                      (time (routing-time+ start-time elapsed))
                      (end-time (routing-time+ time dt))
                      (wind (routing-wind-params routing time))
-                     (current (when (routing-currents routing) (get-params (routing-currents routing) time)))
+                     (current (routing-current-params routing time))
                      (wave-params (multiple-value-list (routing-wave-params routing time)))
                      (wave (first wave-params))
                      (wave-dir (second wave-params))

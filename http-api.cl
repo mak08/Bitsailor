@@ -201,6 +201,9 @@
         (log2:info "Status ~a ~a"
                    (routeinfo-status routeinfo)
                    (routeinfo-stats routeinfo))
+        ;; Routes finishing before the next hour legitimately have no isochrones.
+        ;; A vector serializes as [] even when empty; Lisp NIL serializes as false.
+        (setf (routeinfo-isochrones routeinfo) (coerce (routeinfo-isochrones routeinfo) 'vector))
         (let ((bytes (babel:string-to-octets
                        (with-output-to-string (s) (json s routeinfo)) :encoding :utf-8)))
           ;; Kept separate from Content-Length, which may describe a gzip body.
@@ -265,6 +268,67 @@
       (format nil "~a" (message condition)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Current display
+
+(defstruct current-field source time cycle columns rows vectors)
+
+(defun current-display-field (source time north south west east columns rows)
+  "Sample regional currents at viewport cell centres in Web Mercator.
+Vectors are east/north flow components in m/s; zero vectors cover calm or
+out-of-domain cells and land. Use the same temporal/spatial interpolation as
+routing, then mask arrow centres against the router's coastline geometry."
+  (let* ((params (get-params source time))
+         (top (log (tan (+ (/ pi 4) (/ (rad north) 2)))))
+         (bottom (log (tan (+ (/ pi 4) (/ (rad south) 2)))))
+         (vectors (make-array (* rows columns))))
+    (dotimes (row rows)
+      (let* ((y (+ top (* (/ (+ row 0.5d0) rows) (- bottom top))))
+             (lat (deg (- (* 2 (atan (exp y))) (/ pi 2)))))
+        (dotimes (column columns)
+          (let ((lon (normalize-angle (+ west (* (/ (+ column 0.5d0) columns) (- east west))))))
+            (multiple-value-bind (direction speed u v) (interpolate-uv lat lon params)
+              (declare (ignore direction speed))
+              ;; Zeroing missing GRIB nodes does not stop bilinear interpolation
+              ;; from spreading an offshore vector inland across a coastal cell.
+              (when (and (or (/= u 0d0) (/= v 0d0))
+                         (let ((position (make-latlng :lat lat :lng lon)))
+                           (if *use-bitmap* (bm-is-land position)
+                               (cl-map:point-on-land-p position))))
+                (setf u 0d0 v 0d0))
+              (setf (aref vectors (+ (* row columns) column)) (vector u v)))))))
+    (make-current-field :source source :time time
+                        :cycle (cl-weather:uv-cycle (params-fc1 params))
+                        :columns columns :rows rows :vectors vectors)))
+
+(defun |getCurrentField| (handler request response &key |source| |forecast_model| |time| |north| |south| |west| |east| |columns| |rows|)
+  "Return a bounded viewport current grid for the selected source and display time."
+  (declare (ignore handler request))
+  (setf (http-header response :|Content-Type|) "application/json"
+        (http-header response :|Cache-Control|) "no-store")
+  (handler-case
+      (let* ((source (current-source-for-model (read-arg |source| 'symbol 'cl-weather)
+                        (read-arg |forecast_model| 'symbol 'cl-weather)))
+             (time (handler-case (local-time:parse-timestring (decode-uri-component |time|))
+                     (error () (error 'request-error :message "Invalid current display time"))))
+             (north (read-arg |north| 'double-float))
+             (south (read-arg |south| 'double-float))
+             (west (read-arg |west| 'double-float))
+             (east (read-arg |east| 'double-float))
+             (columns (parse-integer |columns|))
+             (rows (parse-integer |rows|)))
+        (unless (and (member source '(cl-weather:ecmwf-ifs-current cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia
+                                     cl-weather::fw-current-english-channel))
+                     (<= -85.051129d0 south north 85.051129d0)
+                     (< south north) (< west east) (<= (- east west) 1080d0)
+                     (<= 1 columns 256) (<= 1 rows 256) (<= (* columns rows) 32768))
+          (error 'request-error :message "Invalid current source, viewport or grid size"))
+        (with-output-to-string (s)
+          (json s (current-display-field source time north south west east columns rows))))
+    ((or request-error parse-error type-error) (e)
+      (setf (status-code response) 400)
+      (format nil "~a" e))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Polars
 
 ;;; Serialize the available polar IDs and labels for the browser.
@@ -305,6 +369,7 @@
   '(("GFS" cl-weather::noaa-gfs-wind)
     ("IFS" cl-weather::ecmwf-ifs-wind)
     ("AIFS-SINGLE" cl-weather::ecmwf-aifs-wind)
+    ("IFS currents" cl-weather:ecmwf-ifs-current)
     ("AROME" cl-weather::arome-wind)
     ("Fairwinds waves" cl-weather::gfswave-combined)
     ("Fairwinds currents" cl-weather::fw-current-agulhas cl-weather::fw-current-east-australia cl-weather::fw-current-english-channel))

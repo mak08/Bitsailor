@@ -207,10 +207,22 @@ button:active {
 	justify-self: start;
 }
 
-#wind-canvas {
+#wind-canvas, #current-canvas {
     position: absolute;
     top: 0;
     left: 0;
+    pointer-events: none;
+}
+
+#current-legend {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    z-index: 450;
+    padding: 5px 8px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #003091;
+    font-size: 12px;
     pointer-events: none;
 }
 

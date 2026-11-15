@@ -198,7 +198,7 @@ Fine-tuning tries integer TWA values independently of the search's *TWA-STEPS*."
   (let ((key (list (timestamp-to-unix time) (nsec-of time))))
     (or (gethash key *fine-tune-weather*)
         (let ((params (list* (routing-wind-params routing time)
-                            (when (routing-currents routing) (get-params (routing-currents routing) time))
+                            (routing-current-params routing time)
                             (multiple-value-list (routing-wave-params routing time)))))
           ;; Fractional shooting probes create many unique times. Keep this
           ;; scratch cache bounded; decoded GRIB fields remain shared upstream.

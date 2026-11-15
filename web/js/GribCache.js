@@ -194,8 +194,10 @@ export default class GribCache {
         let rect = canvas.getBoundingClientRect();
         // Only draw if canvas is displayed (wind display enabled)
         if (rect) {
-            let STEPS_X = floor(rect.width/15);
-            let STEPS_Y = floor(rect.height/15);
+            // sqrt(2) wider spacing halves the number of arrows per screen area.
+            const spacing = 15 * Math.SQRT2;
+            let STEPS_X = Math.max(1, floor(rect.width/spacing));
+            let STEPS_Y = Math.max(1, floor(rect.height/spacing));
             
             // Keep the displayed forecast intact until the entire new frame is ready.
             const frame = canvas.cloneNode(false);

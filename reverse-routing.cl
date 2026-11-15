@@ -22,7 +22,7 @@
   "Reopen the wind, current, height and direction runs actually used by the forward interval."
   (append
    (loop for cycle in cycles
-         for source in (list (routing-model-at routing time) (routing-currents routing))
+         for source in (list (routing-model-at routing time) (routing-current-source routing time))
          collect (when cycle
                    (cl-weather::get-params-for-cycle source time
                      :cycle (cl-weather::make-cycle% :timestamp cycle))))

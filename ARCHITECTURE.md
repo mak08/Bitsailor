@@ -32,7 +32,7 @@ The router configuration supplies filesystem locations, map selection, weather s
 
 ## HTTP And Browser Boundary
 
-PolarCL's `/function` prefix uses query-function dispatch. The current browser UI uses five registered functions: `router.getRoute`, `router.getBoatPosition`, `router.getPolarsList`, `router.getServerSettings`, and `router.getStatistics`. Query keys are passed to the Lisp function as keyword arguments. Request validation errors from `|getRoute|` are returned as HTTP 400; other errors are logged and returned as HTTP 500.
+PolarCL's `/function` prefix uses query-function dispatch. The current browser UI uses six registered functions: `router.getRoute`, `router.getBoatPosition`, `router.getPolarsList`, `router.getServerSettings`, `router.getCurrentField`, and `router.getStatistics`. Query keys are passed to the Lisp function as keyword arguments. Request validation errors from `|getRoute|` are returned as HTTP 400; other errors are logged and returned as HTTP 500.
 
 The router page is [web/router-fw.html](web/router-fw.html), driven by [web/js/router-main.js](web/js/router-main.js). Its route request sends `startTime`, start and destination latitude/longitude, `polarsId`, enabled polar `options`, `duration`, and the selected `forecast_model`, `currents`, and `useWaves` values. The response contains:
 
@@ -75,6 +75,14 @@ an in-flight metadata refresh.
 
 For archived runs, `router.getServerSettings?forecast_model=...&cycle=...` returns paths for that exact model and cycle. `loadForecastCycle` caches these metadata requests separately from the current preview settings. The metadata endpoint does not promise the archived files still exist: missing GRIBs remain visible errors. Cache keys use the exact source run hour rather than rounding to a six-hour boundary.
 
+Wind arrows use approximately 21 px spacing, half the former number per screen area. With Display wind enabled and a Currents source selected, `CurrentLayer.js` overlays shaft-and-head arrows at similar density. `router.getCurrentField` samples currents using the same `get-params` and `interpolate-uv` calls as routing, once per viewport grid at the displayed wind timestamp. It returns east/north flow vectors, effective source, actual cycle and time. Cell centres follow Web Mercator spacing; calm/out-of-domain vectors are omitted. Arrows range from small light blue to large dark blue at 3 kn or more. Current-source changes, map movement and time synchronization redraw the overlay. Disabling wind or selecting NONE clears it and cancels pending requests. Obsolete responses cannot restore a cleared layer. Load failures clear the layer and display an unavailable legend while wind remains usable. The overlay uses current-source automatic cycle selection and fallback; historical current-cycle provenance is not stored in route responses.
+
+`cl-weather:ecmwf-ifs-current` downloads global surface currents (`sve`, eastward, and `svn`, northward, both m/s) by byte range from the IFS atmospheric GRIB files. Its 0.25° fields have a separate `ifs-current` local cache, using IFS cycle/step schedules: 3-hour steps through 144 h, then 6-hour steps through 360 h for 00/12Z runs; 06/18Z runs end at 144 h. Current bitmap missing values are zeroed as vector pairs before interpolation. The source participates in normal automatic downloads, server metadata and Status caching indicators. See the [ECMWF open-data parameter list](https://www.ecmwf.int/en/forecasts/datasets/open-data).
+
+`routing-current-source` replaces an enabled Fairwinds current source with IFS currents whenever `routing-model-at` selects IFS or AIFS wind. The same IFS current product serves both wind models. Resolution happens per sample timestamp, preserving the configured primary/secondary wind switch in forward routing, gates, fine-tuning and reverse replay. NONE remains disabled; explicitly selecting IFS currents also works with non-ECMWF wind. The current-display request passes its displayed wind model to the server for the same substitution, and its legend identifies the effective source.
+
+Current-display samples are additionally checked against the router's vector coastline or configured land bitmap. A coarse GRIB cell can straddle the coast: zeroing its missing land nodes still allows bilinear interpolation to return nonzero flow at an inland position. Such land-centred arrows are suppressed after interpolation. This display mask does not shift the sampled coordinates or change routing physics.
+
 `GribCache.update` loads both bracketing fields before publishing its cycle/time to mouse lookups; failed updates preserve the previous valid state. Retries preserve the requested cycle and sampling time. Browser wind speed now interpolates scalar corner magnitudes separately from U/V, matching the weather library's interpolation policy rather than taking the magnitude of the interpolated vector.
 
 ### Versioned URLs
@@ -84,10 +92,10 @@ The startpage and router use explicit query-string revisions to prevent browsers
 | Reference | Revision |
 | --- | --- |
 | Startpage stylesheet and main script | `?v=e97e6be` |
-| Router links on the startpage | `router-fw.html?v=router-xhr-retry-20261115` |
-| Router main script | `?v=router-xhr-retry-20261115` |
-| Router stylesheet | `?v=router-xhr-retry-20261115` |
-| Router import of `GribCache.js` | `?v=router-forecast-selection-20261103` |
+| Router links on the startpage | `router-fw.html?v=router-ecmwf-currents-20261115` |
+| Router main script | `?v=router-ecmwf-currents-20261115` |
+| Router stylesheet | `?v=router-ecmwf-currents-20261115` |
+| Router import of `GribCache.js` | `?v=router-ecmwf-currents-20261115` |
 | Both imports of `ServerSettings.js`, from the router and GRIB cache | `?v=router-forecast-contract-20261031` |
 
 The browser caches resources by URL, including the query string. A new revision therefore requests a different resource URL and bypasses the older cached entry. PolarCL separates the query parameters from the request path, so it still serves the same underlying file. These revision strings are manually maintained identifiers, not automatically generated hashes or file-content selectors.

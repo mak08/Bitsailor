@@ -38,6 +38,7 @@
    "getServerSettings"
    "removeSession"
    "getRoute"
+   "getCurrentField"
    "getBoatPosition"
    ;; Main 
    "START-ROUTER"

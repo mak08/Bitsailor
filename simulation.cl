@@ -32,6 +32,45 @@
         (get-params model time :cycle (routing-cycle routing))
         (get-params model time))))
 
+;; Bound once per request, shared by all legs, replays and the reverse pass.
+(defvar *routing-wave-state* nil)
+
+(defun routing-wave-params (routing time &key cycle (fallback t))
+  "Return height and direction from one cycle, or NIL beyond its forecast horizon.
+Warn once per request. A later out-of-range probe never disables earlier valid
+samples: fine-tuning and reverse routing deliberately revisit earlier times.
+An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
+  (unless (routing-use-waves routing)
+    (return-from routing-wave-params (values nil nil)))
+  (let* ((state (or *routing-wave-state* (make-hash-table :test #'equal)))
+         (source 'cl-weather:gfswave-combined)
+         (requested (or cycle (cl-weather::timestamp-cycle source time)))
+         (key (list (timestamp-to-unix (cl-weather:cycle-timestamp requested)) fallback))
+         (selected (or (gethash key state) requested)))
+    (labels ((sample (run)
+               (let* ((datasource (cl-weather::get-datasource source run))
+                      (base (cl-weather:cycle-timestamp run))
+                      (end (routing-time+ base (* 3600 (cl-weather::maxstep datasource)))))
+                 (if (timestamp> time end)
+                     (progn
+                       (unless (gethash :warned state)
+                         (setf (gethash :warned state) t)
+                         (log2:warning "Wave forecast ends at ~a; omitting waves beyond that time" end))
+                       (values nil nil))
+                     ;; There is no hour-zero field in the combined file.
+                     ;; Hold the first frame before hour 6 rather than extrapolate.
+                     (let ((sample-time (if (< (timestamp-difference time base) 21600)
+                                            (routing-time+ base 21600) time)))
+                       (values (cl-weather::get-params-for-cycle source sample-time :cycle run)
+                               (cl-weather::get-direction-params-for-cycle source sample-time :cycle run)))))))
+      (handler-case (sample selected)
+        (cl-weather::missing-forecast (e)
+          (if (and fallback (eq selected requested))
+              (let ((previous (cl-weather:previous-cycle source requested)))
+                (setf (gethash key state) previous)
+                (sample previous))
+              (error e)))))))
+
 ;;; Return best boat speed in m/s and sail index for wind speed in m/s and signed TWA in degrees.
 (defun-t twa-boatspeed double-float ((polars cpolars) (wind-speed double-float) (twa double-float))
   (destructuring-bind (speed sail)
@@ -231,18 +270,19 @@
 ;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
 ;;; engine.
 (defun get-route (routing)
-  (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
-  (unless (routing-stepper-starttime routing)
-    (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
-  (bordeaux-threads:with-lock-held (+last-request-lock+)
-    (setf *last-request*
-          (push (list (local-time:now) 'get-route) *last-request*)))
-  (if (routing-reverse-percent routing)
-      (route-with-reverse-search routing)
-      (fine-tune-route routing
-        (if (routing-waypoints routing)
-            (get-route-via-waypoints routing)
-            (get-route-leg routing)))))
+  (let ((*routing-wave-state* (make-hash-table :test #'equal)))
+    (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
+    (unless (routing-stepper-starttime routing)
+      (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
+    (bordeaux-threads:with-lock-held (+last-request-lock+)
+      (setf *last-request*
+            (push (list (local-time:now) 'get-route) *last-request*)))
+    (if (routing-reverse-percent routing)
+        (route-with-reverse-search routing)
+        (fine-tune-route routing
+          (if (routing-waypoints routing)
+              (get-route-via-waypoints routing)
+              (get-route-leg routing))))))
 
 (defun get-route-leg (routing &optional observe-step exact-arrival)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and
@@ -254,7 +294,6 @@ physical finish before accepting the usual radial arrival criterion."
          (distance (course-distance start-pos destination))
          (polars (routing-polars routing))
          (currents (routing-currents routing))
-         (waves (routing-use-waves routing))
          (dest-heading (normalize-heading (course-angle start-pos destination)))
          (left (normalize-heading (coerce (- dest-heading (routing-fan routing)) 'double-float)))
          (right (normalize-heading (coerce (+ dest-heading (routing-fan routing)) 'double-float)))
@@ -298,10 +337,11 @@ physical finish before accepting the usual radial arrival criterion."
                        (unless (and observe-step reached) (routing-wind-params routing step-time)))
           (initial-cycle (cl-weather:uv-cycle (params-fc1 params-wind)))
           (wind-time start-time step-time)
-          (params-wave (when waves (get-params 'cl-weather:gfswave-combined start-time))
-                       (when (and waves (not (and observe-step reached))) (get-params 'cl-weather:gfswave-combined step-time)))
-          (params-wave-dir (when waves (get-direction-params 'cl-weather:gfswave-combined start-time))
-                           (when (and waves (not (and observe-step reached))) (get-direction-params 'cl-weather:gfswave-combined step-time)))
+          (wave-params (multiple-value-list (routing-wave-params routing start-time))
+                       (unless (and observe-step reached)
+                         (multiple-value-list (routing-wave-params routing step-time))))
+          (params-wave (first wave-params) (first wave-params))
+          (params-wave-dir (second wave-params) (second wave-params))
           (params-curnt (when currents (get-params currents start-time))
                         (when (and currents (not (and observe-step reached))) (get-params currents step-time)))
           (step-size (funcall stepper)

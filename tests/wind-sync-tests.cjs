@@ -184,7 +184,7 @@ cache.drawWind = async () => {};
   // New routing requests must not inherit the old cycle being inspected above.
   // Exercise the real request builder, retaining ordered point waypoints.
   let request;
-  ui.Util = { doGET: url => { request = new URL(url, 'http://localhost'); } };
+  ui.Util = { doGETJSON: url => { request = new URL(url, 'http://localhost'); } };
   ui.window = { setInterval() { return 1; } };
   node('mapMenu').style = {};
   node('sel_duration').value = 96;

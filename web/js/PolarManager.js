@@ -2,7 +2,7 @@
 /// Polar Data Management for BitSailor
 /// Handles loading and format detection for polar data
 
-import * as Util from './Util.js';
+import * as Util from './Util.js?v=xhr-retry-20261115';
 import VRPolarAnalyzer from './VRPolarAnalyzer.js';
 import FWPolarAnalyzer from './FWPolarAnalyzer.js';
 
@@ -39,7 +39,7 @@ export default class PolarManager {
             Util.doGET(`/polars/${encodeURIComponent(polarId)}.json`,
                 (request) => {
                     try {
-                        const data = JSON.parse(request.responseText);
+                        const data = Util.parseJSONResponse(request);
                         if (data) {
                             let analyzer = this._createAnalyzer(data);
                             this._analyzerCache.set(polarId, analyzer);
@@ -53,9 +53,9 @@ export default class PolarManager {
                         this._loadPromises.delete(polarId);
                     }
                 },
-                (request) => {
+                (request, cause) => {
                     this._loadPromises.delete(polarId);
-                    reject(new Error(request.responseText || "Failed to load polars"));
+                    reject(new Error(Util.requestErrorText(request, cause)));
                 }
             );
         });

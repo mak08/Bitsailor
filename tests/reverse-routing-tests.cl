@@ -147,3 +147,20 @@
          (assert (= 2 (length paths)))
          (assert (every (lambda (line) (= 2 (length (isochrone-path line)))) paths))
          (assert (null overlap)))))))
+
+(defun test-reverse-finish-step-bound ()
+  "A long standard passage retains half-hour steps up to its short exact approach."
+  (let* ((info (reverse-test-passage 0d0 :distance 600000d0 :duration 150000 :stepper :standard))
+         (track (routeinfo-best info))
+         (end (trackpoint-time (car (last track))))
+         (tail (member-if (lambda (p)
+                            (> (timestamp-difference (trackpoint-time p)
+                                                     (trackpoint-time (first track))) 86400))
+                          track)))
+    (assert (string= "complete" (reverse-result-status (routeinfo-reverse-routing info))))
+    (assert (some (lambda (pair) (= 1800 (timestamp-difference (trackpoint-time (second pair))
+                                                             (trackpoint-time (first pair)))))
+                  (loop for (a b) on tail while b collect (list a b))))
+    (loop for (a b) on tail while b
+          when (<= (timestamp-difference (trackpoint-time b) (trackpoint-time a)) 60)
+            do (assert (<= (timestamp-difference end (trackpoint-time a)) 1800)))))

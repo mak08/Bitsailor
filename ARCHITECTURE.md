@@ -47,6 +47,23 @@ The UI draws `best`, optional `tracks`, and hourly `isochrones` on the map. `sta
 
 ## Browser Startup And Asset Versioning
 
+`SlidingPanels.js` manages nonmodal drawers over the full-width map. Routing
+opens at the upper left by default, with Execute/progress first. Races/NMEA uses
+the lower-left third, Settings the upper right, and TWA the lower-right third
+below the Route Info tab. Depth clearance shares the same drawer styling at the
+lower left. One drawer per side is open at a time; maps narrower than 760 px use
+one overall. Edge tabs, close buttons and Escape provide manual control, and
+closed contents are inert. Route statistics, fine-tuning, downloads and reverse
+messages remain together in Route Info, which opens after a successful route
+response. The top/bottom status bars stay outside the drawers. Map appearance
+and depth controls bind to static drawer markup instead of creating Leaflet boxes.
+Drawer focus changes use `preventScroll`, and the outer map frame uses
+`overflow: clip` so focus during a slide animation cannot shift the whole map.
+The initial start is 46°05′N 001°25′W and destination 38°21′N 26°26′W.
+The map fits the destination and Göteborg (57°40′N 12°E), using fractional zoom
+and desktop padding for the open Routing drawer. This framing is applied only
+during map creation, so it does not reset subsequent panning or zooming.
+
 The router initializes once at `DOMContentLoaded`, or immediately if the DOM is already ready when its module executes. It does not wait for the window's full `load` event. `setupPage` initializes the map, controls, default sail options, markers and wind canvas before requesting data. A guard prevents repeated initialization from attaching duplicate handlers or creating duplicate markers.
 
 `loadPageData` starts the polars-list and server-settings requests together and waits for both to settle. It then populates forecast/current controls, chooses the initial forecast cycle and enables wind drawing when server settings are available. Earlier map events are ignored by `updateMap` until the wind inputs and forecast slider are ready. Polars selection restores an existing or saved selection when the returned list contains it. Settings and polars fetches request cache revalidation and have a 15-second timeout.
@@ -142,7 +159,7 @@ The engine advances forecast parameters to each new simulation time. An explicit
 Wind arrows retain the Beaufort palette with 72% fill opacity and no outlines.
 Current arrows have a 10 CSS-pixel minimum
 length, opaque blue strokes and white halos; size and darkness still encode speed.
-`MapAppearance.js` adds an optional, browser-persisted **Muted map** control that
+`MapAppearance.js` binds the optional, browser-persisted **Muted map** switch in Settings, which
 desaturates and lightens only Leaflet's base tile pane. Weather, depth and route
 overlay colours are unaffected, and arrow density is unchanged.
 

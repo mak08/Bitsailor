@@ -33,21 +33,18 @@ assert.equal(draw(NaN).fills.length, 0);
 const classes = new Set(), storage = new Map([['xx.mutedMap', 'true']]);
 let change, controlInput;
 const map = {getContainer: () => ({classList: {toggle(name, on) {on ? classes.add(name) : classes.delete(name);}}})};
-const L = {control: () => ({addTo() {this.onAdd();}}),
-    DomUtil: {create() {controlInput = {checked: false, addEventListener(_type, callback) {change = callback;}};
-        return {querySelector: () => controlInput};}},
-    DomEvent: {disableClickPropagation() {}, disableScrollPropagation() {}}};
+controlInput = {checked: false, addEventListener(_type, callback) {change = callback;}};
 context.localStorage = {getItem: key => storage.get(key), setItem: (key, value) => storage.set(key, value)};
 vm.runInContext(fs.readFileSync('web/js/MapAppearance.js', 'utf8').replace('export default ', '')
-    + '\nglobalThis.appearance = addMapAppearanceControl;', context);
-context.appearance(map, L);
+    + '\nglobalThis.appearance = bindMapAppearance;', context);
+context.appearance(map, controlInput);
 assert.ok(classes.has('muted-map'));
 assert.equal(controlInput.checked, true);
 controlInput.checked = false; change();
 assert.equal(classes.has('muted-map'), false);
 assert.equal(storage.get('xx.mutedMap'), 'false');
 context.localStorage = {getItem() {throw Error('blocked');}, setItem() {throw Error('blocked');}};
-context.appearance(map, L);
+context.appearance(map, controlInput);
 controlInput.checked = true; change();
 assert.ok(classes.has('muted-map'));
 console.log('Weak wind/current contrast and map appearance tests passed.');

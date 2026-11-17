@@ -14,7 +14,7 @@ for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListen
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'wind-fill-20261117';
+const revision = 'atlantic-defaults-20261117';
 const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));
@@ -133,7 +133,39 @@ function testRaceDuration() {
   run('applyRaceSettings({ settings: {} })');
   assert.equal(stepper.checked, false); // Older races default to standard.
 }
+function testInitialRoute() {
+  const markers = [], fits = [], input = {};
+  let width = 1280, copies = 0, redraws = 0;
+  const testMap = {getSize: () => ({x: width}), fitBounds: (bounds, options) => fits.push({bounds, options})};
+  const utilContext = vm.createContext({});
+  vm.runInContext(fs.readFileSync('web/js/Util.js', 'utf8').replace(/export\s*\{[^}]*\}/, ''), utilContext);
+  const c = vm.createContext({PolarManager: class {}, testMap,
+    Util: {formatPosition: utilContext.formatPosition},
+    document: {getElementById: id => id === 'routing-panel' ? {getBoundingClientRect: () => ({width: 340})} : input},
+    L: {icon: x => x, marker: (position, options) => {
+      const marker = {position, options, getLatLng: () => ({lat: position[0], lng: position[1]}),
+        on() {}, addTo(m) {assert.equal(m, testMap); return marker;}};
+      markers.push(marker); return marker;
+    }}, copied: () => copies++, redrawn: () => redraws++});
+  vm.runInContext(main.slice(0, bootstrapAt), c);
+  vm.runInContext('map = testMap; updateRouteMarkerCopies = copied; redrawRouteLines = redrawn; initializeRouteMarkers(); fitInitialMapView();', c);
+  assert.ok(Math.abs(markers[0].position[0] - 46.08333333333333) < 1e-10);
+  assert.ok(Math.abs(markers[0].position[1] + 1.41666666666667) < 1e-10);
+  assert.ok(Math.abs(markers[1].position[0] - 38.35) < 1e-10);
+  assert.ok(Math.abs(markers[1].position[1] + 26.4333333333333) < 1e-10);
+  assert.equal(input.value, '46°05\'00"N 1°25\'00"W');
+  assert.equal(copies, 2); assert.equal(redraws, 1);
+  assert.equal(fits[0].bounds[0], markers[1].position);
+  assert.ok(Math.abs(fits[0].bounds[1][0] - (57 + 40 / 60)) < 1e-10);
+  assert.equal(fits[0].bounds[1][1], 12);
+  assert.equal(fits[0].options.paddingTopLeft[0], 364);
+  assert.equal(fits[0].options.animate, false);
+  width = 600; vm.runInContext('fitInitialMapView()', c);
+  assert.equal(fits[1].options.paddingTopLeft[0], 24);
+  assert.equal(utilContext.formatPosition(57 + 40 / 60, 12), '57°40\'00"N 12°00\'00"E');
+}
 (async () => {
+  testInitialRoute();
   testRaceDuration();
   await scenario('loading', false);
   await scenario('complete', false);

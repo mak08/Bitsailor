@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css?v=weather-contrast-20261117">
+	<link rel="stylesheet" href="css/router.css?v=drawer-focus-20261117">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js?v=wind-fill-20261117"></script>
+	<script type="module" src="js/router-main.js?v=atlantic-defaults-20261117"></script>
 
 </head>
 
@@ -68,80 +68,19 @@
 				</form>
 			</div>
 		</div>
-		<div id="map-container" style="width: 100%; height: 100%; margin: 0; padding: 0;">
-			<div class="map" id="map">
-				<canvas id="wind-canvas" style="pointer-events:none;"></canvas>
-				<canvas id="current-canvas" style="pointer-events:none;display:none;"></canvas>
-                <div id="current-legend" hidden aria-live="polite"></div>
-			</div>
-		</div>
-
-		<div class="controls" id="controls">
-
-			<div class="position-label">
-				<label>Start position</label>
-			</div>
-			<div class="position-input">
-				<input id="tb_position" name="position" type="text" placeholder="Lat, Lon" />
-			</div>
-
-			<div class="position-set">
-				<button id="bt_position">Set</button>
-			</div>
-
-
-			<div class="delayed-label">
-				<label>Start time:</label>
-			</div>
-			<div class="delayed-cb">
-				<input id="cb_startdelayed" name="startdelayed" type="checkbox" />
-			</div>
-			<div class="delayed-entry">
-				<input id="tb_starttime" name="starttime" type="datetime-local" />
-			</div>
-
-			<div class="nmea-label-host">
-				<label>NMEA host</label>
-			</div>
-			<div class="nmea-host">
-				<input id="tb_nmeahost" name="nmeahost" type="text" maxlength="40" value="nmea.fairwinds.world" />
-			</div>
-
-			<div class="nmea-label-port">
-				<label>NMEA port</label>
-			</div>
-			<div class="nmea-port">
-				<input id="tb_nmeaport" name="nmeaport" type="text" maxlength="5" placeholder="10000" />
-			</div>
-
-			<div class="nmea-update">
-				<button id="bt_nmeaupdate">Update</button>
-			</div>
-
-			<div class=race-selector-label>
-				<label for="sel_race" style="display:block; margin-top:4px;">Races</label>
-			</div>
-			<div class="race-selector">
-				<select id="sel_race" style="width:100%;"></select>
-			</div>
-
-			<div class="course-label">
-				<label></label>
-			</div>
-			<div class="course-bt">
-				<button id="bt_setcourse" style="width:90px; text-align:center; font-size:90%;">Import</button>
-				<button id="bt_removerace" style="width:90px; text-align:center; font-size:90%;">Remove</button>
-			</div>
-
-
-			<div class="duration-label">
-				<label>Duration</label>
-			</div>
-            <div class="stepper-selector" title="Hi-res: 1-minute search steps for the first 8 hours, then standard steps">
-                <label><input type="checkbox" id="cb_hires_stepper" aria-label="High-resolution stepper: 1 minute for the first 8 hours">Hi-res</label>
-            </div>
-			<div class="duration-selector">
-				<select id="sel_duration" name="duration">
+<div id="map-container"><div class="map" id="map"><canvas id="wind-canvas" style="pointer-events:none;"></canvas><canvas id="current-canvas" style="pointer-events:none;display:none;"></canvas><div id="current-legend" hidden aria-live="polite"></div></div>
+<div class="drawer drawer-left drawer-routing" data-panel="routing" data-side="left" data-open-default>
+    <button id="bt_routing_toggle" class="drawer-tab" type="button" aria-controls="routing-panel" aria-expanded="false" aria-label="Open Routing">Routing</button>
+    <aside id="routing-panel" class="sliding-panel" aria-labelledby="routing-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="routing-title">Routing</h2><button id="bt_routing_close" class="drawer-close" type="button" aria-label="Close Routing">×</button></header>
+        <div class="drawer-content">
+<button id="bt_getroute" class="execute-button" type="button">Execute</button>
+<progress id="pg_getroute" max="300" value="0" aria-label="Routing progress"></progress>
+<div class="form-row"><label for="sel_polars">Polars</label><select id="sel_polars" name="polars"></select></div>
+<div class="form-row"><label for="tb_position">Start position</label><div class="field-inline"><input id="tb_position" name="position" type="text" placeholder="Lat, Lon"><button id="bt_position" type="button">Set</button></div></div>
+<div class="form-field"><label class="check-label"><input id="cb_startdelayed" name="startdelayed" type="checkbox">Start time (UTC)</label><input id="tb_starttime" name="starttime" type="datetime-local" aria-label="Start time in UTC"></div>
+<div class="reverse-controls"><label class="check-label">Reverse routing<input id="cb_reverse" type="checkbox"></label><label>Extra time <input id="reverse_percent" type="number" min="0" step="1" value="20" aria-label="Extra time in per mille" required disabled>‰</label></div>
+<div class="form-row"><label for="sel_duration">Duration</label><div class="field-inline duration-controls"><select id="sel_duration" name="duration">
 					<option value="12">12 hours</option>
 					<option value="24">1 day</option>
 					<option value="48">2 days</option>
@@ -157,171 +96,100 @@
 				<option value="336">14 days</option>
 			<option value="360">15 days</option>
 			-->
-				</select>
-			</div>
-
-			<div class="polars-label">
-				<label>Polars</label>
-			</div>
-
-			<div class="polars-selector">
-				<select id="sel_polars" name="polars">
-				</select>
-			</div>
-
-			<div class="forecast-model-label">
-				<label>Model</label>
-			</div>
-
-			<div class="forecast-model-selector">
-				<select id="sel_forecast_model" name="forecast_model">
-				</select>
-			</div>
-
-            <div class="secondary-model-label"><label for="sel_secondary_forecast_model">Then</label></div>
-            <div class="secondary-model-selector">
-                <select id="sel_secondary_forecast_model" name="secondary_forecast_model"></select>
-            </div>
-            <div class="forecast-switch-label">Switch after</div>
-            <div class="forecast-switch-toggle" role="group" aria-label="Hours after route departure">
-                <label><input type="radio" name="forecast_switch_hours" value="off" checked>Off</label>
-                <label><input type="radio" name="forecast_switch_hours" value="6">6 h</label>
-                <label><input type="radio" name="forecast_switch_hours" value="12">12 h</label>
-                <label><input type="radio" name="forecast_switch_hours" value="24">24 h</label>
-            </div>
-
-			<div class="currents-label">
-				<label>Currents</label>
-			</div>
-
-			<div class="currents-selector">
-				<select id="sel_currents" name="currents" title="ECMWF wind models use global IFS surface currents when currents are enabled.">
-				</select>
-			</div>
-
-			<div class="waves-label">
-				<label for="cb_waves">Waves</label>
-			</div>
-
-			<div class="waves-checkbox">
-				<input id="cb_waves" name="waves" type="checkbox" checked="true" />
-			</div>
-
-			<div class="displaywind-label">
-				<label>Display wind</label>
-			</div>
-			<div class="displaywind-checkbox">
-				<input id="cb_displaywind" name="displaywind" type="checkbox" checked="true" />
-			</div>
-
-			<div class="displaytracks-label">
-				<label>Display tracks</label>
-			</div>
-			<div class="displaytracks-checkbox">
-				<input id="cb_displaytracks" name="displaytracks" type="checkbox" />
-			</div>
-
-			<div class="reverse-controls">
-                <label>Reverse routing<input id="cb_reverse" type="checkbox"></label>
-                <label>Extra time <input id="reverse_percent" type="number" min="0" step="1" value="20" aria-label="Extra time in per mille" required disabled>‰</label>
-            </div>
-            <output id="reverse_status" aria-live="polite"></output>
-
-            <div class="execute-button">
-				<button id="bt_getroute"
-					style="width:300px; text-align:center; font-size:100%; font-weight:bold;">Execute</button>
-			</div>
-			<div class="progress-bar">
-				<progress id="pg_getroute" style="width:300px" max="300" value="0"></progress>
-			</div>
-
-			<div class="current-twa-label">
-				<label>TWA</label>
-			</div>
-			<div class="current-twa">
-				<nobr><label id="lb_twa">&lt;No route marker selected&gt;</label></nobr>
-			</div>
-
-			<div class="current-heading-label">
-				<label>Heading</label>
-			</div>
-			<div class="current-heading">
-				<nobr><label id="lb_twa_heading">-.-.-.-</label></nobr>
-			</div>
-
-			<div class="statistics-label">
-				<label>Route Info</label>
-			</div>
-
-			<div class="route-label">
-				<label>Route</label>
-			</div>
-			<div class="download-button">
-				<button id="bt_downloadroute">Download</button>
-				<label for="rb_gpx">GPX</label>
-				<input type="radio" name="exportformat" id="rb_gpx" value="gpx" checked />
-				<label for="rb_csv">CSV</label>
-				<input type="radio" name="exportformat" id="rb_csv" value="csv" />
-			</div>
-			<div class="schedule-label">
-				<label>Schedule</label>
-			</div>
-			<div class="download-schedule">
-				<button id="bt_downloadschedule">Download</button>
-			</div>
-
-			<div class="statistics-from-label">
-				<label>Start</label>
-			</div>
-			<div class="statistics-from">
-				<label id="lb_from">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-duration-label">
-				<label>Duration</label>
-			</div>
-			<div class="statistics-duration">
-				<label id="lb_duration">-.-.-.-</label>
-			</div>
-
-
-			<div class="statistics-min-wind-label">
-				<label>Wind</label>
-			</div>
-			<div class="statistics-min-wind">
-				<label id="lb_minwind">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-min-twa-label">
-				<label>TWA</label>
-			</div>
-			<div class="statistics-min-twa">
-				<label id="lb_mintwa">-.-.-.-</label>
-			</div>
-
-			<div class="statistics-polars-label">
-				<label>Polars</label>
-			</div>
-			<div class="statistics-polars">
-				<label id="lb_polars">---</label>
-			</div>
-
-			<div class="statistics-fine-tuning-label">Fine-tuning</div>
-			<div class="statistics-fine-tuning" id="lb_fine_tuning" role="status">Not run</div>
-
-
-
-			<!--
-			<div class="statistics-maxspeed-label">
-			  <label>Max speed</label>
-			</div>
-			<div class="statistics-maxspeed">
-			  <label id="lb_maxspeed">---</label>
-			</div>
-			-->
-
-		</div>
-
+				</select><label class="check-label" title="1-minute search steps for the first 8 hours, then standard steps"><input type="checkbox" id="cb_hires_stepper" aria-label="High-resolution stepper: 1 minute for the first 8 hours">Hi-res</label></div></div>
+<fieldset class="model-controls"><legend>Models</legend>
+    <div class="form-row"><label for="sel_forecast_model">Model</label><select id="sel_forecast_model" name="forecast_model"></select></div>
+    <div class="form-row"><label for="sel_secondary_forecast_model">Then</label><select id="sel_secondary_forecast_model" name="secondary_forecast_model"></select></div>
+    <div class="form-field"><span>Switch after</span><div class="forecast-switch-toggle" role="group" aria-label="Hours after route departure">
+        <label><input type="radio" name="forecast_switch_hours" value="off" checked>Off</label>
+        <label><input type="radio" name="forecast_switch_hours" value="6">6 h</label>
+        <label><input type="radio" name="forecast_switch_hours" value="12">12 h</label>
+        <label><input type="radio" name="forecast_switch_hours" value="24">24 h</label>
+    </div></div>
+</fieldset>
+<div class="form-row"><label for="sel_currents">Currents</label><select id="sel_currents" name="currents" title="ECMWF wind models use global IFS surface currents when currents are enabled."></select></div>
+<label class="check-label"><input id="cb_waves" name="waves" type="checkbox" checked>Waves</label></div>
+    </aside>
+</div>
+<div class="drawer drawer-left drawer-races" data-panel="races" data-side="left">
+    <button id="bt_races_toggle" class="drawer-tab" type="button" aria-controls="races-panel" aria-expanded="false" aria-label="Open Races / NMEA">Races / NMEA</button>
+    <aside id="races-panel" class="sliding-panel" aria-labelledby="races-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="races-title">Races / NMEA</h2><button id="bt_races_close" class="drawer-close" type="button" aria-label="Close Races / NMEA">×</button></header>
+        <div class="drawer-content">
+<div class="form-row"><label for="sel_race">Races</label><select id="sel_race"></select></div>
+<div class="field-inline race-actions"><button id="bt_setcourse" type="button">Import</button><button id="bt_removerace" type="button">Remove</button></div>
+<div class="form-row"><label for="tb_nmeahost">NMEA host</label><input id="tb_nmeahost" name="nmeahost" type="text" maxlength="40" value="nmea.fairwinds.world"></div>
+<div class="form-row"><label for="tb_nmeaport">NMEA port</label><div class="field-inline"><input id="tb_nmeaport" name="nmeaport" type="text" maxlength="5" placeholder="10000"><button id="bt_nmeaupdate" type="button">Update</button></div></div></div>
+    </aside>
+</div>
+<div class="drawer drawer-left drawer-depth" data-panel="depth" data-side="left">
+    <button id="bt_depth_toggle" class="drawer-tab" type="button" aria-controls="depth-panel" aria-expanded="false" aria-label="Open Depth clearance · LAT">Depth</button>
+    <aside id="depth-panel" class="sliding-panel" aria-labelledby="depth-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="depth-title">Depth clearance · LAT</h2><button id="bt_depth_close" class="drawer-close" type="button" aria-label="Close Depth clearance · LAT">×</button></header>
+        <div class="drawer-content">
+<label class="check-label"><input type="checkbox" class="depth-enabled">Show Channel depths</label>
+<div class="form-row"><label for="depth-draft">Draft (m)</label><input id="depth-draft" class="depth-draft" type="number" min="0" max="30" step="0.1" value="2"></div>
+<div class="form-row"><label for="depth-margin">Clearance (m)</label><input id="depth-margin" class="depth-margin" type="number" min="0" max="30" step="0.1" value="0.5"></div>
+<button type="button" class="depth-channel">View Channel</button>
+<p class="depth-status" aria-live="polite">Overlay off</p><p class="depth-probe">Move the pointer over the map for cell depth.</p>
+<p class="drawer-help"><span class="depth-red">■</span> Below required depth · ▧ Missing/extrapolated<br>Unshaded within coverage: meets depth threshold.<br>Channel coverage: 48–52°N, 6.375°W–3.5°E.</p>
+<p class="drawer-help">Static LAT; no tide allowance. ~115 m north–south cells. Regional planning only. EMODnet data must not be used for navigation or safety at sea. Routing does not use depths.</p>
+<a href="https://emodnet.ec.europa.eu/en/bathymetry" target="_blank" rel="noopener">EMODnet DTM 2024</a></div>
+    </aside>
+</div>
+<div class="drawer drawer-right drawer-settings" data-panel="settings" data-side="right">
+    <button id="bt_settings_toggle" class="drawer-tab" type="button" aria-controls="settings-panel" aria-expanded="false" aria-label="Open Settings">Settings</button>
+    <aside id="settings-panel" class="sliding-panel" aria-labelledby="settings-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="settings-title">Settings</h2><button id="bt_settings_close" class="drawer-close" type="button" aria-label="Close Settings">×</button></header>
+        <div class="drawer-content">
+<label class="check-label"><input id="cb_displaywind" name="displaywind" type="checkbox" checked>Display wind</label>
+<label class="check-label"><input id="cb_displaytracks" name="displaytracks" type="checkbox">Display tracks</label>
+<label class="check-label" title="Reduce base-map colour and contrast to emphasise weather and routes"><input id="cb_muted_map" type="checkbox">Muted map</label></div>
+    </aside>
+</div>
+<div class="drawer drawer-right drawer-route-info" data-panel="route-info" data-side="right">
+    <button id="bt_route_info_toggle" class="drawer-tab" type="button" aria-controls="route-info-panel" aria-expanded="false" aria-label="Open Route Info">Route Info</button>
+    <aside id="route-info-panel" class="sliding-panel" aria-labelledby="route-info-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="route-info-title">Route Info</h2><button id="bt_route_info_close" class="drawer-close" type="button" aria-label="Close Route Info">×</button></header>
+        <div class="drawer-content"><dl class="route-info-statistics">
+                        <dt>Start</dt><dd id="lb_from">—</dd>
+                        <dt>Duration</dt><dd id="lb_duration">—</dd>
+                        <dt>Wind</dt><dd id="lb_minwind">—</dd>
+                        <dt>TWA</dt><dd id="lb_mintwa">—</dd>
+                        <dt>Polars</dt><dd id="lb_polars">—</dd>
+                        <dt>Fine-tuning</dt><dd id="lb_fine_tuning" role="status">Not run</dd>
+                    </dl>
+                    <div class="route-info-downloads">
+                        <div class="route-info-download-row">
+                            <span>Route</span>
+                            <div>
+                                <label for="rb_gpx">GPX</label>
+                                <input type="radio" name="exportformat" id="rb_gpx" value="gpx" checked>
+                                <label for="rb_csv">CSV</label>
+                                <input type="radio" name="exportformat" id="rb_csv" value="csv">
+                                <button id="bt_downloadroute" type="button" aria-label="Download route">Download</button>
+                            </div>
+                        </div>
+                        <div class="route-info-download-row">
+                            <span>Schedule</span>
+                            <button id="bt_downloadschedule" type="button" aria-label="Download schedule">Download</button>
+                        </div>
+                    </div>
+                    <div id="route-info-extra">
+                        <output id="reverse_status" aria-live="polite"></output>
+                    </div></div>
+    </aside>
+</div>
+<div class="drawer drawer-right drawer-twa" data-panel="twa" data-side="right">
+    <button id="bt_twa_toggle" class="drawer-tab" type="button" aria-controls="twa-panel" aria-expanded="false" aria-label="Open TWA tool">TWA tool</button>
+    <aside id="twa-panel" class="sliding-panel" aria-labelledby="twa-title" aria-hidden="true" inert>
+        <header class="drawer-header"><h2 id="twa-title">TWA tool</h2><button id="bt_twa_close" class="drawer-close" type="button" aria-label="Close TWA tool">×</button></header>
+        <div class="drawer-content">
+<p class="drawer-help">Select a route point, then click the map to compare TWA and fixed-heading tracks.</p>
+<dl class="tool-readouts"><dt>TWA</dt><dd id="lb_twa">&lt;No route marker selected&gt;</dd><dt>Heading</dt><dd id="lb_twa_heading">—</dd></dl></div>
+    </aside>
+</div>
+</div>
 		<div class="footer">
 			<strong>Wind scale (Bft)</strong>
 			<div class="legend">

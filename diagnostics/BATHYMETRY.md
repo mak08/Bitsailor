@@ -1,7 +1,7 @@
 # Channel LAT depth overlay
 
-The router map has an optional **Depth clearance · LAT** control at the bottom
-left. Draft defaults to 2 m, clearance to 0.5 m; both accept 0–30 m. The overlay
+The router map has an optional **Depth clearance · LAT** drawer, opened with the
+**Depth** tab at the lower left. Draft defaults to 2 m, clearance to 0.5 m; both accept 0–30 m. The overlay
 is initially off and independent of wind, currents and forecast time. Red means
 the recorded cell minimum is below draft plus clearance. Grey hatching means
 missing or extrapolated data, including uncertainty propagated at coarse zoom.

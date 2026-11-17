@@ -246,6 +246,10 @@ function toDMS(number) {
         cs = cs - 100;
         s = s + 1;
     }
+    // Longitude wrapping can put an exact minute just below its boundary.
+    // Carry rounded seconds/minutes rather than displaying values such as 24′60″.
+    if (s >= 60) { s -= 60; m += 1; }
+    if (m >= 60) { m -= 60; g += 1; }
     return {
         "u": u,
         "g": g,

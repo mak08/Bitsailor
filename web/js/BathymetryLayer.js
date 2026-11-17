@@ -82,50 +82,29 @@ export default class BathymetryLayer {
         this.tiles.on('load', () => { this.loading = false; this.updateStatus(); });
         this.outline = L.rectangle([[48, -6.375], [52, 3.5]], {
             pane: 'depthPane', color: '#666', weight: 1, dashArray: '5 5', fill: false, interactive: false});
-        const control = L.control({position: 'bottomleft'});
-        control.onAdd = () => {
-            const box = L.DomUtil.create('div', 'depth-control leaflet-control');
-            box.innerHTML = `<details><summary>Depth clearance · LAT</summary>
-                <label><input type="checkbox" class="depth-enabled"> Show Channel depths</label>
-                <label>Draft <input class="depth-draft" type="number" min="0" max="30" step="0.1" value="2"> m</label>
-                <label>Clearance <input class="depth-margin" type="number" min="0" max="30" step="0.1" value="0.5"> m</label>
-                <button type="button" class="depth-channel">View Channel</button>
-                <p class="depth-status" aria-live="polite">Overlay off</p>
-                <p class="depth-probe">Move the pointer over the map for cell depth.</p>
-                <p><span class="depth-red">■</span> Below required depth · ▧ Missing/extrapolated<br>
-                Unshaded within coverage: meets depth threshold.<br>
-                Channel coverage: 48–52°N, 6.375°W–3.5°E.</p>
-                <p>Static LAT; no tide allowance. ~115 m north–south cells.<br>
-                Regional planning only. EMODnet data must not be used<br>for navigation or safety at sea. Routing does not use depths.</p>
-                <a href="https://emodnet.ec.europa.eu/en/bathymetry" target="_blank" rel="noopener">EMODnet DTM 2024</a>
-                </details>`;
-            L.DomEvent.disableClickPropagation(box);
-            L.DomEvent.disableScrollPropagation(box);
-            this.status = box.querySelector('.depth-status');
-            this.probe = box.querySelector('.depth-probe');
-            const enabled = box.querySelector('.depth-enabled');
-            const draft = box.querySelector('.depth-draft'), margin = box.querySelector('.depth-margin');
-            const update = () => {
-                if (!draft.checkValidity() || !margin.checkValidity() || draft.value === '' || margin.value === '') {
-                    enabled.checked = false;
-                    this.setEnabled(false);
-                    this.status.textContent = 'Enter draft and clearance between 0 and 30 m';
-                    return;
-                }
-                this.required = Number(draft.value) + Number(margin.value);
-                this.setEnabled(enabled.checked);
-            };
-            enabled.addEventListener('change', update);
-            draft.addEventListener('change', update);
-            margin.addEventListener('change', update);
-            box.querySelector('.depth-channel').addEventListener('click', () => {
-                enabled.checked = true;
-                update();
-                map.fitBounds([[48, -6.375], [52, 3.5]], {maxZoom: 8});
-            });
-            return box;
+        const box = document.getElementById('depth-panel');
+        this.status = box.querySelector('.depth-status');
+        this.probe = box.querySelector('.depth-probe');
+        const enabled = box.querySelector('.depth-enabled');
+        const draft = box.querySelector('.depth-draft'), margin = box.querySelector('.depth-margin');
+        const update = () => {
+            if (!draft.checkValidity() || !margin.checkValidity() || draft.value === '' || margin.value === '') {
+                enabled.checked = false;
+                this.setEnabled(false);
+                this.status.textContent = 'Enter draft and clearance between 0 and 30 m';
+                return;
+            }
+            this.required = Number(draft.value) + Number(margin.value);
+            this.setEnabled(enabled.checked);
         };
-        control.addTo(map);
+        enabled.addEventListener('change', update);
+        draft.addEventListener('change', update);
+        margin.addEventListener('change', update);
+        box.querySelector('.depth-channel').addEventListener('click', () => {
+            enabled.checked = true;
+            update();
+            map.fitBounds([[48, -6.375], [52, 3.5]], {maxZoom: 8});
+        });
         map.on('zoomend', () => this.updateStatus());
         map.on('mousemove', event => this.inspect(event.latlng));
     }

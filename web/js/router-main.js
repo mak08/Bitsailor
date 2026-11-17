@@ -1,16 +1,23 @@
 ////////////////////////////////////////////////////////////////////////////////
 /// BitSailor Router VR UI (Leaflet/OpenStreetMap version)
 
-import * as Util from './Util.js?v=xhr-retry-20261115';
+import * as Util from './Util.js?v=position-defaults-20261117';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
 import GribCache from './GribCache.js?v=wind-fill-20261117';
 import CurrentLayer from './CurrentLayer.js?v=weather-contrast-20261117';
-import addMapAppearanceControl from './MapAppearance.js?v=weather-contrast-20261117';
-import BathymetryLayer from './BathymetryLayer.js?v=depth-lat-20261117';
+import bindMapAppearance from './MapAppearance.js?v=ui-drawers-20261117';
+import setupSlidingPanels from './SlidingPanels.js?v=drawer-focus-20261117';
+import BathymetryLayer from './BathymetryLayer.js?v=ui-drawers-20261117';
 import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
 // Global variables
+const INITIAL_ROUTE = {
+    start: [46 + 5 / 60, -(1 + 25 / 60)],
+    destination: [38 + 21 / 60, -(26 + 26 / 60)],
+    northEast: [57 + 40 / 60, 12] // Göteborg frames the initial North Atlantic view.
+};
+
 let map = null;
 let startMarker = null;
 let destinationMarker = null;
@@ -57,6 +64,7 @@ let polarManager = new PolarManager();
 let selectedCursor = 'crosshair';
 let geometry = {};
 let routeInfo = {};
+let routeInfoPanel = null;
 
 let courseGateLayers = []; // layers created by GPX import (markers + polylines)
 
@@ -731,15 +739,12 @@ function setUp(getVMG) {
 
     ir_index = document.getElementById("ir_index");
 
-    startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 0, 45, 16, -10);
-    destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png', 0, 32, 10, -10);
-
-    // Ensure world copies exist initially
-    updateRouteMarkerCopies(startMarker);
-    updateRouteMarkerCopies(destinationMarker);
+    initializeRouteMarkers();
 
     // Wind canvas
     let canvas = setupCanvas();
+    const panels = setupSlidingPanels(document.getElementById('map-container'));
+    routeInfoPanel = panels.get('route-info');
     new BathymetryLayer(map, L);
 
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
@@ -754,25 +759,44 @@ function setUp(getVMG) {
 function initMap() {
     if (!map) {
         map = L.map('map', {
-            center: [49.187, 8.473],
-            zoom: 5,
+            zoomSnap: 0.1,
             minZoom: 3,
             maxZoom: 14,
             doubleClickZoom: false,
             dragging: true,
             zoomControl: true,
         });
+        fitInitialMapView();
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
-        addMapAppearanceControl(map, L);
+        bindMapAppearance(map, document.getElementById('cb_muted_map'));
     }
     return map;
 }
 
-function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0) {
-    const marker = L.marker([0, 0], {
+// Leave room for the initially open Routing drawer on desktop screens. Fractional
+// zoom fits the two reference corners without the large margins of integer zoom.
+function fitInitialMapView() {
+    const drawerWidth = map.getSize().x >= 760
+        ? document.getElementById('routing-panel').getBoundingClientRect().width : 0;
+    map.fitBounds([INITIAL_ROUTE.destination, INITIAL_ROUTE.northEast], {
+        paddingTopLeft: [drawerWidth + 24, 24], paddingBottomRight: [24, 24], animate: false
+    });
+}
+
+function initializeRouteMarkers() {
+    startMarker = initMarker('start', 'Start', 'img/start_45x32.png', 0, 45, 16, -10, INITIAL_ROUTE.start);
+    destinationMarker = initMarker('dest', 'Destination', 'img/finish_32x20.png', 0, 32, 10, -10, INITIAL_ROUTE.destination);
+    updateRouteMarkerCopies(startMarker);
+    updateRouteMarkerCopies(destinationMarker);
+    updateStartPositionDisplay(startMarker.getLatLng());
+    redrawRouteLines();
+}
+
+function initMarker(type, title, url, iconX=0, iconY=0, popupX=0, popupY=0, position=[0, 0]) {
+    const marker = L.marker(position, {
         title: title,
         icon: L.icon({
             iconUrl: url,
@@ -1403,6 +1427,7 @@ function getRoute() {
             setModelHeading(false);
             clearRoute();
             displayRouting(routeInfo);
+            routeInfoPanel?.open();
             bt_execute.disabled = false;
             restoreCursor();
         },

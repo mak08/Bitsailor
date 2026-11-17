@@ -270,7 +270,9 @@ export default class GribCache {
         ctx.lineTo(18 * 6, 0);
         ctx.lineTo(-15 * 6, -12 * 6);
         ctx.closePath()
-        ctx.globalAlpha = 0.72;
+        // Display opacity belongs to the canvas, so the slider can composite
+        // this bitmap without recalculating arrows or multiplying opacity twice.
+        ctx.globalAlpha = 1;
         ctx.fill();
         ctx.restore();
     }

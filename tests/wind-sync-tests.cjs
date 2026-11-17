@@ -61,7 +61,7 @@ cache.drawWind = async () => {};
   ui.attempts = attempts;
   ui.currentUpdates = currentUpdates;
   node('sel_currents').value = 'FW-CURRENT-ENGLISH-CHANNEL';
-  node('cb_displaywind').checked = true;
+  node('cb_displaycurrents').checked = true;
   ui.shouldFail = () => failDisplay;
   vm.runInContext(`
     currentCycle = '${base}';

@@ -78,7 +78,7 @@ const placement = {
                       'bt_position', 'cb_startdelayed', 'tb_starttime', 'sel_duration', 'cb_hires_stepper',
                       'sel_forecast_model', 'sel_secondary_forecast_model', 'sel_currents', 'cb_waves'],
     'races-panel': ['sel_race', 'bt_setcourse', 'bt_removerace', 'tb_nmeahost', 'tb_nmeaport', 'bt_nmeaupdate'],
-    'settings-panel': ['cb_displaywind', 'cb_displaytracks', 'cb_muted_map'],
+    'settings-panel': ['ir_wind_opacity', 'wind_opacity_value', 'cb_displaycurrents', 'cb_displaytracks', 'cb_muted_map'],
     'twa-panel': ['lb_twa', 'lb_twa_heading'],
     'depth-panel': ['depth-draft', 'depth-margin']
 };

@@ -3,7 +3,7 @@
 
 import * as Util from './Util.js?v=position-defaults-20261117';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
-import GribCache from './GribCache.js?v=wind-fill-20261117';
+import GribCache from './GribCache.js?v=weather-controls-20261118';
 import CurrentLayer from './CurrentLayer.js?v=weather-contrast-20261117';
 import bindMapAppearance from './MapAppearance.js?v=ui-drawers-20261117';
 import setupSlidingPanels from './SlidingPanels.js?v=drawer-focus-20261117';
@@ -707,7 +707,9 @@ function setUp(getVMG) {
     updateReverseControls();
     restoreStepper(localStorage.getItem('xx.stepper'));
     document.getElementById("cb_hires_stepper").addEventListener("change", onSetStepper);
-    document.getElementById("cb_displaywind").addEventListener("change",onDisplaywind);
+    document.getElementById("ir_wind_opacity").addEventListener("input", onWindOpacity);
+    onWindOpacity();
+    document.getElementById("cb_displaycurrents").addEventListener("change", onDisplayCurrents);
     document.getElementById("cb_displaytracks").addEventListener("change",onDisplayTracks);
 
 
@@ -1000,15 +1002,18 @@ function onSelectIsochrone(isochrone) {
     return syncRouteWind(isochrone, isochroneTime(isochrone));
 }
 
-function onDisplaywind(event) {
-    var cbDisplaywind = document.getElementById("cb_displaywind");
-    if (cbDisplaywind.checked) {
-        document.getElementById("wind-canvas").style.display = "block";
-        updateMap()
-    } else {
-        document.getElementById("wind-canvas").style.display = "none";
-        currentLayer?.clear();
-    }
+// Composite the existing bitmap: slider changes never redraw or fetch forecasts.
+function onWindOpacity() {
+    const slider = document.getElementById('ir_wind_opacity');
+    const percent = Math.max(0, Math.min(100, Number(slider.value)));
+    document.getElementById('wind-canvas').style.opacity = String(percent / 100);
+    document.getElementById('wind_opacity_value').textContent = `${percent}%`;
+    slider.setAttribute('aria-valuetext', percent ? `${percent}%` : '0% (hidden)');
+}
+
+function onDisplayCurrents() {
+    if (!document.getElementById('cb_displaycurrents').checked) currentLayer?.clear();
+    else if (currentDisplayTime) updateCurrentDisplay(currentDisplayTime);
 }
 
 function onDisplayTracks(event) {
@@ -1937,7 +1942,7 @@ let windRequestVersion = 0;
 function updateCurrentDisplay(time) {
     if (!currentLayer) return;
     const source = document.getElementById('sel_currents')?.value;
-    const enabled = document.getElementById('cb_displaywind')?.checked;
+    const enabled = document.getElementById('cb_displaycurrents')?.checked;
     return currentLayer.update(getMapBounds(), time, source, enabled, gribCacheModel || settings.forecast_model);
 }
 

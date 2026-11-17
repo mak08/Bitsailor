@@ -22,7 +22,7 @@ function draw(speed) {
 }
 const light = draw(1), strong = draw(20);
 assert.equal(light.fills[0].colour, '#00ffff'); // Beaufort palette retained.
-assert.ok(light.fills[0].opacity >= 0.7);
+assert.equal(light.fills[0].opacity, 1); // The canvas applies the user-selected opacity once.
 assert.equal(light.strokes.length, 0);
 assert.equal(strong.strokes.length, 0);
 assert.equal(light.rotations[0], Math.PI * 2); // Existing wind direction convention.
@@ -48,3 +48,39 @@ context.appearance(map, controlInput);
 controlInput.checked = true; change();
 assert.ok(classes.has('muted-map'));
 console.log('Weak wind/current contrast and map appearance tests passed.');
+
+// Opacity changes composite the same bitmap; wind visibility and current
+// requests must remain independent, including at 0% and after an off/on cycle.
+const nodes = {
+    ir_wind_opacity: {value: '50', setAttribute(name, value) {this[name] = value;}},
+    wind_opacity_value: {}, 'wind-canvas': {style: {}},
+    cb_displaycurrents: {checked: true}, sel_currents: {value: 'ECMWF-IFS-CURRENT'}
+};
+let clears = 0; const updates = [];
+const ui = vm.createContext({Math, Number, String,
+    document: {getElementById: id => nodes[id]},
+    currentLayer: {clear() {clears++;}, update(...args) {updates.push(args);}},
+    currentDisplayTime: new Date('2026-11-18T00:00:00Z'),
+    getMapBounds: () => ({}), gribCacheModel: 'NOAA-GFS-WIND', settings: {},
+    updateMap() {throw Error('Opacity must not trigger a map redraw');},
+    fetch() {throw Error('Opacity must not trigger a forecast request');}
+});
+const main = fs.readFileSync('web/js/router-main.js', 'utf8');
+for (const name of ['onWindOpacity', 'onDisplayCurrents', 'updateCurrentDisplay']) {
+    const start = main.indexOf(`function ${name}(`);
+    vm.runInContext(main.slice(start, main.indexOf('\n}', start) + 2), ui);
+}
+ui.onWindOpacity(); assert.equal(nodes['wind-canvas'].style.opacity, '0.5');
+for (let percent = 0; percent <= 100; percent += 10) {
+    nodes.ir_wind_opacity.value = String(percent); ui.onWindOpacity();
+    assert.equal(Number(nodes['wind-canvas'].style.opacity), percent / 100);
+    assert.equal(nodes.wind_opacity_value.textContent, `${percent}%`);
+}
+assert.equal(clears, 0); assert.equal(updates.length, 0);
+nodes.ir_wind_opacity.value = '0'; ui.onWindOpacity();
+assert.equal(nodes.cb_displaycurrents.checked, true);
+ui.onDisplayCurrents(); assert.equal(updates[0][3], true);
+nodes.cb_displaycurrents.checked = false; ui.onDisplayCurrents(); assert.equal(clears, 1);
+nodes.ir_wind_opacity.value = '100'; ui.onWindOpacity();
+assert.equal(updates.length, 1); assert.equal(nodes.cb_displaycurrents.checked, false);
+console.log('Composited wind opacity and independent current visibility passed.');

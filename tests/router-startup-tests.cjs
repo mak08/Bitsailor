@@ -14,11 +14,11 @@ for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListen
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'atlantic-defaults-20261117';
+const revision = 'weather-controls-20261118';
 const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));
-assert.ok(routerSource.includes('./GribCache.js?v=wind-fill-20261117'));
+assert.ok(routerSource.includes('./GribCache.js?v=weather-controls-20261118'));
 for (const source of [routerSource, gribSource]) {
   assert.ok(source.includes(`./ServerSettings.js?v=${forecastRevision}`));
 }

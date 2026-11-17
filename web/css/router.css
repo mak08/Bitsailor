@@ -35,6 +35,7 @@ label { font-size: 90%; }
     overflow: clip; --drawer-width: min(340px, calc(100% - 44px)); }
 #map { position: relative; z-index: 1; height: 100%; width: 100%; margin: 0; padding: 0; border-radius: 0; overflow: hidden; }
 #wind-canvas, #current-canvas { position: absolute; top: 0; left: 0; pointer-events: none; }
+#wind-canvas { opacity: .5; transition: opacity 100ms linear; }
 #current-legend { position: absolute; right: 44px; top: 8px; z-index: 450; padding: 5px 8px;
     background: rgba(255,255,255,.88); color: #003091; font-size: 12px; pointer-events: none; }
 .muted-map .leaflet-tile-pane { filter: saturate(.25) contrast(.88) brightness(1.08); }
@@ -89,6 +90,9 @@ label { font-size: 90%; }
 .field-inline { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .field-inline > input, .field-inline > select { flex: 1; width: 0; }
 .check-label { display: inline-flex; align-items: center; gap: 8px; }
+.wind-opacity-control { display: grid; grid-template-columns: max-content minmax(0, 1fr) 4ch; gap: 10px; align-items: center; }
+.drawer-content input[type=range] { min-height: 24px; padding: 0; border: 0; background: transparent; accent-color: #288bd2; }
+#wind_opacity_value { text-align: right; font-variant-numeric: tabular-nums; }
 .execute-button { width: 100%; font-weight: bold; }
 #pg_getroute { width: 100%; height: 10px; }
 .reverse-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -117,5 +121,5 @@ label { font-size: 90%; }
 .depth-status, .depth-probe { font-size: 13px; line-height: 1.4; }
 .depth-red { color: #dc2323; }
 @media (prefers-reduced-motion: reduce) {
-    .sliding-panel, .drawer-open .sliding-panel, .drawer-tab { transition: none; }
+    .sliding-panel, .drawer-open .sliding-panel, .drawer-tab, #wind-canvas { transition: none; }
 }

@@ -92,7 +92,7 @@ an in-flight metadata refresh.
 
 For archived runs, `router.getServerSettings?forecast_model=...&cycle=...` returns paths for that exact model and cycle. `loadForecastCycle` caches these metadata requests separately from the current preview settings. The metadata endpoint does not promise the archived files still exist: missing GRIBs remain visible errors. Cache keys use the exact source run hour rather than rounding to a six-hour boundary.
 
-Wind arrows use approximately 21 px spacing, half the former number per screen area. With Display wind enabled and a Currents source selected, `CurrentLayer.js` overlays shaft-and-head arrows at similar density. `router.getCurrentField` samples currents using the same `get-params` and `interpolate-uv` calls as routing, once per viewport grid at the displayed wind timestamp. It returns east/north flow vectors, effective source, actual cycle and time. Cell centres follow Web Mercator spacing; calm/out-of-domain vectors are omitted. Arrows range from small light blue to large dark blue at 3 kn or more. Current-source changes, map movement and time synchronization redraw the overlay. Disabling wind or selecting NONE clears it and cancels pending requests. Obsolete responses cannot restore a cleared layer. Load failures clear the layer and display an unavailable legend while wind remains usable. The overlay uses current-source automatic cycle selection and fallback; historical current-cycle provenance is not stored in route responses.
+Wind arrows use approximately 21 px spacing, half the former number per screen area. With the Currents display checkbox enabled and a current source selected, `CurrentLayer.js` overlays shaft-and-head arrows at similar density. `router.getCurrentField` samples currents using the same `get-params` and `interpolate-uv` calls as routing, once per viewport grid at the displayed wind timestamp. It returns east/north flow vectors, effective source, actual cycle and time. Cell centres follow Web Mercator spacing; calm/out-of-domain vectors are omitted. Arrows range from small light blue to large dark blue at 3 kn or more. Current-source changes, map movement and time synchronization redraw the overlay. Disabling Currents or selecting NONE clears it and cancels pending requests. Obsolete responses cannot restore a cleared layer. Load failures clear the layer and display an unavailable legend while wind remains usable. The overlay uses current-source automatic cycle selection and fallback; historical current-cycle provenance is not stored in route responses.
 
 `cl-weather:ecmwf-ifs-current` downloads global surface currents (`sve`, eastward, and `svn`, northward, both m/s) by byte range from the IFS atmospheric GRIB files. Its 0.25° fields have a separate `ifs-current` local cache, using IFS cycle/step schedules: 3-hour steps through 144 h, then 6-hour steps through 360 h for 00/12Z runs; 06/18Z runs end at 144 h. Current bitmap missing values are zeroed as vector pairs before interpolation. The source participates in normal automatic downloads, server metadata and Status caching indicators. See the [ECMWF open-data parameter list](https://www.ecmwf.int/en/forecasts/datasets/open-data).
 
@@ -156,7 +156,12 @@ The engine advances forecast parameters to each new simulation time. An explicit
 
 ## Map And Land-Avoidance Contract
 
-Wind arrows retain the Beaufort palette with 72% fill opacity and no outlines.
+Wind arrows retain the Beaufort palette with no outlines. Settings provides a
+0–100% wind-opacity slider in 10% steps, initially 50%, and a separate Currents
+checkbox. Arrow bitmaps are rendered opaque; CSS opacity and a short transition
+composite the wind canvas without redraws or forecast requests on slider input.
+Zero opacity retains the bitmap, forecast inspection and current display. Current
+visibility depends only on its own checkbox and the selected routing current source.
 Current arrows have a 10 CSS-pixel minimum
 length, opaque blue strokes and white halos; size and darkness still encode speed.
 `MapAppearance.js` binds the optional, browser-persisted **Muted map** switch in Settings, which

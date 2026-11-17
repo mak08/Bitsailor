@@ -14,7 +14,7 @@ for (const [, id] of setup.matchAll(/getElementById\("([^"]+)"\)\.addEventListen
 }
 const routerSource = fs.readFileSync('web/js/router-main.js', 'utf8');
 const gribSource = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const revision = 'router-current-sources-20261115';
+const revision = 'depth-lat-20261117';
 const forecastRevision = 'router-forecast-contract-20261031';
 assert.ok(html.includes(`js/router-main.js?v=${revision}`));
 assert.ok(fs.readFileSync('web/startpage.html', 'utf8').includes(`router-fw.html?v=${revision}`));

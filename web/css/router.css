@@ -657,3 +657,12 @@ input[type=checkbox] {
 .reverse-controls input { margin: 0; }
 .reverse-controls input[type=number] { width: 5ch; }
 #reverse_status { grid-row: 31; grid-column: 1 / -1; }
+
+.depth-control { background: rgba(255,255,255,.94); color: #222; padding: 7px 10px;
+    border-radius: 4px; box-shadow: 0 1px 5px #888; font-size: 12px;
+    max-width: calc(100vw - 50px); max-height: 45vh; overflow: auto; }
+.depth-control summary { cursor: pointer; font-weight: bold; }
+.depth-control label { display: block; margin-top: 5px; }
+.depth-control input[type=number] { width: 6ch; color: #222; background: white; }
+.depth-control p { margin: 6px 0; line-height: 1.4; }
+.depth-red { color: #dc2323; }

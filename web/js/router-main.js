@@ -5,6 +5,7 @@ import * as Util from './Util.js?v=xhr-retry-20261115';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
 import GribCache from './GribCache.js?v=router-current-sources-20261115';
 import CurrentLayer from './CurrentLayer.js?v=router-current-sources-20261115';
+import BathymetryLayer from './BathymetryLayer.js?v=depth-lat-20261117';
 import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
 
@@ -738,6 +739,7 @@ function setUp(getVMG) {
 
     // Wind canvas
     let canvas = setupCanvas();
+    new BathymetryLayer(map, L);
 
     document.getElementById("tb_position").addEventListener("keyup", function (event) {
         if (event.keyCode === 13) {

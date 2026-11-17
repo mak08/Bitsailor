@@ -139,6 +139,15 @@ The engine advances forecast parameters to each new simulation time. An explicit
 
 ## Map And Land-Avoidance Contract
 
+The browser's optional `BathymetryLayer.js` adds a static Channel LAT depth-clearance
+overlay below weather and route layers. Offline `tools/build-bathymetry.py` converts
+EMODnet DTM 2024 E4 minimum cell depths (`-elevation_max`) and extrapolation flags
+to locally served compressed native-grid chunks. Draft plus clearance sets the
+red-shading threshold; missing/extrapolated cells are hatched. Coarse display
+pixels retain minimum depths rather than averaging. This visualization does not
+change routing or apply tides. Generated data is deployed separately from Git;
+see [bathymetry setup and data contract](diagnostics/BATHYMETRY.md).
+
 The engine and API use `cl-geomath` latitude/longitude values in degrees. `cl-map` opens the configured vector dataset through GDAL/OGR; the layer must have a spatial index. The map package exposes `point-on-land-p`, `intersects-land-p`, and `bm-is-land`.
 
 `point-on-land-p` first consults a cached 0.1-degree tile, then checks candidate polygons with OGR when the tile may contain land. `intersects-land-p` similarly uses a tile quick check before testing the segment against intersecting polygons. The vector segment check assumes both endpoints are in the same tile. If bitmap mode is selected, route filtering calls `bm-is-land` on each candidate endpoint instead of testing the segment; bitmap resolution is determined by the loaded raster dimensions.

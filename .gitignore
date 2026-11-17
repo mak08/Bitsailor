@@ -19,3 +19,5 @@
 local
 local/*
 /API_KEY.txt
+/web/bathymetry/
+__pycache__/

@@ -139,6 +139,13 @@ The engine advances forecast parameters to each new simulation time. An explicit
 
 ## Map And Land-Avoidance Contract
 
+Wind arrows retain the Beaufort palette with 72% fill opacity and no outlines.
+Current arrows have a 10 CSS-pixel minimum
+length, opaque blue strokes and white halos; size and darkness still encode speed.
+`MapAppearance.js` adds an optional, browser-persisted **Muted map** control that
+desaturates and lightens only Leaflet's base tile pane. Weather, depth and route
+overlay colours are unaffected, and arrow density is unchanged.
+
 The browser's optional `BathymetryLayer.js` adds a static Channel LAT depth-clearance
 overlay below weather and route layers. Offline `tools/build-bathymetry.py` converts
 EMODnet DTM 2024 E4 minimum cell depths (`-elevation_max`) and extrapolation flags

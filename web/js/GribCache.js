@@ -202,7 +202,7 @@ export default class GribCache {
             // Keep the displayed forecast intact until the entire new frame is ready.
             const frame = canvas.cloneNode(false);
             var ctx = frame.getContext("2d");
-            ctx.globalAlpha = 0.3;
+            ctx.globalAlpha = 1;
             
             // Draw wind arrows are at evenly spaced map points
             // Needed to transform Map points to Canvas points (origin (N,W) = (0,0))
@@ -253,6 +253,7 @@ export default class GribCache {
     }
 
     drawWindArrow(ctx, x, y, direction, speed) {
+        if (!Number.isFinite(direction) || !Number.isFinite(speed) || speed <= 0) return;
         direction = direction + 90;
         if (direction > 360) {
             direction = direction - 360;
@@ -260,7 +261,6 @@ export default class GribCache {
         ctx.save();
         ctx.beginPath();
         ctx.fillStyle = colors[ms2bf(speed)];
-        ctx.strokeStyle = colors[ms2bf(speed)];
         ctx.translate(x , y);
         ctx.rotate((direction*Math.PI/180));
         var scale = (speed>0)?0.5 + speed/50:0;
@@ -270,8 +270,8 @@ export default class GribCache {
         ctx.lineTo(18 * 6, 0);
         ctx.lineTo(-15 * 6, -12 * 6);
         ctx.closePath()
+        ctx.globalAlpha = 0.72;
         ctx.fill();
-        ctx.stroke();
         ctx.restore();
     }
     

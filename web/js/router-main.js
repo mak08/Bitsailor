@@ -3,8 +3,9 @@
 
 import * as Util from './Util.js?v=xhr-retry-20261115';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
-import GribCache from './GribCache.js?v=router-current-sources-20261115';
-import CurrentLayer from './CurrentLayer.js?v=router-current-sources-20261115';
+import GribCache from './GribCache.js?v=wind-fill-20261117';
+import CurrentLayer from './CurrentLayer.js?v=weather-contrast-20261117';
+import addMapAppearanceControl from './MapAppearance.js?v=weather-contrast-20261117';
 import BathymetryLayer from './BathymetryLayer.js?v=depth-lat-20261117';
 import PolarManager from './PolarManager.js?v=xhr-retry-20261115';
 import { loadServerSettings, reloadServerSettings, getServerSettings } from './ServerSettings.js?v=router-forecast-contract-20261031';
@@ -765,6 +766,7 @@ function initMap() {
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
+        addMapAppearanceControl(map, L);
     }
     return map;
 }

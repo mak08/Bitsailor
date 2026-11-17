@@ -59,7 +59,7 @@ export default class CurrentLayer {
                 this.#legend.hidden = false;
                 const usedSource = field.source || source;
                 this.#legend.textContent = `${String(usedSource).toUpperCase().includes('IFS-CURRENT') ? 'IFS currents' : 'Currents'}: → weak  ⟶ strong`;
-                this.#legend.title = `${usedSource} · ${field.time} · cycle ${field.cycle}. Light blue/small: weak; dark blue/large: strong (3 kn and above).`;
+                this.#legend.title = `${usedSource} · ${field.time} · cycle ${field.cycle}. Blue/small: weak; dark blue/large: strong (3 kn and above). White halos improve contrast.`;
             }
         } catch (error) {
             if (version !== this.#version || error.name === 'AbortError') return;
@@ -77,16 +77,15 @@ export default class CurrentLayer {
         const speed = Math.hypot(u, v);
         if (speed < 0.01) return; // Calm and cells outside regional forecast coverage.
         const strength = Math.min(1, speed * 1.943844 / 3);
-        const length = 6 + 12 * strength;
-        const head = 2.5 + 2 * strength;
-        const weak = [137, 211, 255], strong = [0, 48, 145];
+        const length = 10 + 8 * strength;
+        const head = 3.5 + strength;
+        const weak = [40, 139, 210], strong = [0, 48, 145];
         const color = weak.map((component, i) => Math.round(component + strength * (strong[i] - component)));
         ctx.save();
         ctx.translate(x, y);
         // Canvas Y points south; GRIB U/V point east/north. This is flow direction.
         ctx.rotate(Math.atan2(-v, u));
-        ctx.strokeStyle = `rgb(${color.join(',')})`;
-        ctx.lineWidth = 1.2 + 0.6 * strength;
+        const width = 1.6 + 0.5 * strength;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
@@ -95,6 +94,13 @@ export default class CurrentLayer {
         ctx.moveTo(length / 2 - head, -head * 0.65);
         ctx.lineTo(length / 2, 0);
         ctx.lineTo(length / 2 - head, head * 0.65);
+        ctx.globalAlpha = 0.95;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = width + 2;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = `rgb(${color.join(',')})`;
+        ctx.lineWidth = width;
         ctx.stroke();
         ctx.restore();
     }

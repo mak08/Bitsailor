@@ -9,7 +9,7 @@ function canvas() {
         translate() {}, rotate(a) { commands.push(['rotate', a]); }, beginPath() {},
         moveTo(x, y) { commands.push(['move', x, y]); },
         lineTo(x, y) { commands.push(['line', x, y]); },
-        stroke() { commands.push(['stroke', this.strokeStyle]); },
+        stroke() { commands.push(['stroke', this.strokeStyle, this.lineWidth, this.globalAlpha]); },
         drawImage(frame) { frames.push(frame); } };
     const result = { width: 1800, height: 1200, style: {},
         getBoundingClientRect: () => ({width: 300, height: 200}),
@@ -56,7 +56,13 @@ const time = '2026-11-15T20:00:00Z';
     assert.equal(arrow(0, -1).find(c => c[0] === 'rotate')[1], Math.PI / 2); // South
     const weak = arrow(0.1, 0), strong = arrow(2, 0);
     assert.ok(strong.find(c => c[0] === 'line')[1] > weak.find(c => c[0] === 'line')[1]);
-    assert.notEqual(strong.find(c => c[0] === 'stroke')[1], weak.find(c => c[0] === 'stroke')[1]);
+    assert.notEqual(strong.filter(c => c[0] === 'stroke').at(-1)[1], weak.filter(c => c[0] === 'stroke').at(-1)[1]);
+    assert.ok(weak.find(c => c[0] === 'line')[1] >= 5); // At least 10 CSS px long.
+    const strokes = weak.filter(c => c[0] === 'stroke');
+    assert.equal(strokes[0][1], '#ffffff');
+    assert.ok(strokes[0][2] > strokes[1][2]);
+    assert.ok(strokes[1][2] >= 1.6);
+    assert.equal(strokes[1][3], 1);
     assert.equal(arrow(0, 0).length, 0);
     assert.equal(arrow(NaN, 1).length, 0);
     await layer.update(bounds, time, 'FW-CURRENT-ENGLISH-CHANNEL', false);

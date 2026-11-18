@@ -1,9 +1,12 @@
-// Current arrows use the router's regional GRIB interpolation, sampled at screen-cell centres.
+import {sharedGribCache} from './GribCache.js?v=shared-grib-cache-20261118';
+
+// Download/cache GRIBs once and sample screen-cell centres in the browser.
 export default class CurrentLayer {
     #canvas;
     #legend;
     #version = 0;
     #request;
+    #cache = sharedGribCache;
 
     constructor(canvas, legend) {
         this.#canvas = canvas;
@@ -30,27 +33,28 @@ export default class CurrentLayer {
         const spacing = 15 * Math.SQRT2; // Same density as wind, half its former density.
         const columns = Math.max(1, Math.min(256, Math.floor(rect.width / spacing)));
         const rows = Math.max(1, Math.min(128, Math.floor(rect.height / spacing)));
-        const query = new URLSearchParams({ source, time: new Date(time).toISOString(),
-            north: Math.min(85.05112878, bounds.north), south: Math.max(-85.05112878, bounds.south),
-            west: bounds.west, east: bounds.east, columns, rows });
         try {
-            const response = await fetch(`/function/router.getCurrentField?${query}`, { signal: request.signal });
-            if (!response.ok) throw new Error(`Current forecast: HTTP ${response.status}`);
-            const field = await response.json();
+            const field = await this.#cache.fields(source, time, {signal: request.signal});
             if (version !== this.#version) return;
-            if (field.columns !== columns || field.rows !== rows || !Array.isArray(field.vectors)
-                || field.vectors.length !== columns * rows) throw new Error('Invalid current field');
             const frame = this.#canvas.cloneNode(false);
             const ctx = frame.getContext('2d');
             const scaleX = frame.width / rect.width;
             const scaleY = frame.height / rect.height;
             ctx.scale(scaleX, scaleY);
-            field.vectors.forEach(([u, v], index) => {
-                const column = index % columns;
-                const row = Math.floor(index / columns);
-                this.drawArrow(ctx, (column + 0.5) * rect.width / columns,
-                               (row + 0.5) * rect.height / rows, u, v);
-            });
+            const north = Math.min(85.05112878, bounds.north);
+            const south = Math.max(-85.05112878, bounds.south);
+            const mercator = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+            const top = mercator(north), bottom = mercator(south);
+            for (let row = 0; row < rows; row++) {
+                const y = top + (row + 0.5) / rows * (bottom - top);
+                const lat = (2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180 / Math.PI;
+                for (let column = 0; column < columns; column++) {
+                    const lon = bounds.west + (column + 0.5) / columns * (bounds.east - bounds.west);
+                    const {u, v} = field.sample(lat, lon);
+                    this.drawArrow(ctx, (column + 0.5) * rect.width / columns,
+                        (row + 0.5) * rect.height / rows, u, v);
+                }
+            }
             if (version !== this.#version) return;
             this.#canvas.style.display = 'block';
             this.#canvas.getContext('2d').drawImage(frame, 0, 0);
@@ -58,7 +62,7 @@ export default class CurrentLayer {
                 this.#legend.hidden = false;
                 const usedSource = field.source || source;
                 this.#legend.textContent = `${String(usedSource).toUpperCase().includes('IFS-CURRENT') ? 'IFS currents' : 'Currents'}: → weak  ⟶ strong`;
-                this.#legend.title = `${usedSource} · ${field.time} · cycle ${field.cycle}. Blue/small: weak; dark blue/large: strong (3 kn and above). White halos improve contrast.`;
+                this.#legend.title = `${usedSource} · ${field.time} · cycle ${field.cycle}. Blue/small: weak; dark blue/large: strong (3 kn and above). White halos improve contrast. Missing GRIB nodes contribute zero flow; coastal interpolation may extend slightly inland.`;
             }
         } catch (error) {
             if (version !== this.#version || error.name === 'AbortError') return;

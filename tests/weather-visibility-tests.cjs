@@ -2,13 +2,13 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const context = vm.createContext({Math, loadServerSettings() {}});
+const context = vm.createContext({Math, sharedGribCache: {}, loadServerSettings() {}});
 vm.runInContext(fs.readFileSync('web/js/colors.js', 'utf8').replace(/export\s*\{[^}]*\}/, ''), context);
-vm.runInContext(fs.readFileSync('web/js/GribCache.js', 'utf8')
+vm.runInContext(fs.readFileSync('web/js/WindLayer.js', 'utf8')
     .replace(/^import .*;[ \t]*\n/gm, '')
-    .replace('export default class GribCache', 'class GribCache')
-    + '\nglobalThis.GribCache = GribCache;', context);
-const wind = new context.GribCache({});
+    .replace('export default class WindLayer', 'class WindLayer')
+    + '\nglobalThis.WindLayer = WindLayer;', context);
+const wind = new context.WindLayer({});
 function draw(speed) {
     const strokes = [], fills = [], rotations = [];
     const ctx = {save() {}, restore() {}, beginPath() {}, translate() {},
@@ -57,7 +57,7 @@ const nodes = {
     cb_displaycurrents: {checked: true}, sel_currents: {value: 'ECMWF-IFS-CURRENT'}
 };
 let clears = 0; const updates = [];
-const ui = vm.createContext({Math, Number, String,
+const ui = vm.createContext({Math, sharedGribCache: {}, Number, String,
     document: {getElementById: id => nodes[id]},
     currentLayer: {clear() {clears++;}, update(...args) {updates.push(args);}},
     currentDisplayTime: new Date('2026-11-18T00:00:00Z'),

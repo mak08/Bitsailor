@@ -3,8 +3,8 @@
 
 import * as Util from './Util.js?v=position-defaults-20261117';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
-import GribCache from './GribCache.js?v=weather-controls-20261118';
-import CurrentLayer from './CurrentLayer.js?v=independent-currents-20261118';
+import WindLayer from './WindLayer.js?v=shared-grib-cache-20261118';
+import CurrentLayer from './CurrentLayer.js?v=shared-grib-cache-20261118';
 import bindMapAppearance from './MapAppearance.js?v=ui-drawers-20261117';
 import setupSlidingPanels from './SlidingPanels.js?v=drawer-focus-20261117';
 import BathymetryLayer from './BathymetryLayer.js?v=ui-drawers-20261117';
@@ -1953,7 +1953,7 @@ async function getWind(cycle, time, candidateModel, { quiet = false } = {}) {
     const selection = candidateModel ? null : routeWindSelection;
     const model = candidateModel || selection?.model || settings.forecast_model;
     const cache = model === gribCacheModel ? gribCache
-        : new GribCache(document.getElementById('wind-canvas'), model);
+        : new WindLayer(document.getElementById('wind-canvas'), model);
     if (selection) cycle = selection.cycle;
     const bounds = getMapBounds();
     let usedCycle = cycle;

@@ -20,17 +20,18 @@ function canvas() {
 let pending;
 const context = vm.createContext({ AbortController, URLSearchParams, Date, Math,
     console: {error() {}},
-    fetch: async (url, options) => {
-        const query = new URL(url, 'http://localhost').searchParams;
-        calls.push({query, options});
-        if (pending) await pending;
-        return {ok: true, json: async () => ({columns: +query.get('columns'), rows: +query.get('rows'),
-            vectors: Array.from({length: +query.get('columns') * +query.get('rows')}, () => [1, 0]),
-            source: query.get('source'),
-            time: query.get('time'), cycle: '2026-11-15T00:00:00Z'})};
+    fetch: () => { throw Error('Current rendering must not request server-sampled fields'); },
+    sharedGribCache: {
+        async fields(source, time, {signal}) {
+            const call = {source, time, signal, samples: []}; calls.push(call);
+            if (pending) await pending;
+            return {source, time: new Date(time).toISOString(), cycle: '2026-11-15T00:00:00Z',
+                sample(lat, lon) {call.samples.push({lat, lon}); return {u:1,v:0};}};
+        }
     }
 });
 vm.runInContext(fs.readFileSync('web/js/CurrentLayer.js', 'utf8')
+    .replace(/^import .*;[ \t]*\n/gm, '')
     .replace('export default class CurrentLayer', 'class CurrentLayer') + '\nglobalThis.CurrentLayer = CurrentLayer;', context);
 const display = canvas(), legend = {};
 const layer = new context.CurrentLayer(display, legend);
@@ -38,16 +39,16 @@ const bounds = {north: 50, south: 49, west: -3, east: -1};
 const time = '2026-11-15T20:00:00Z';
 (async () => {
     // The wind grid should contain about half as many arrows as the old 15 px grid.
-    const windContext = vm.createContext({Math, loadServerSettings() {},
+    const windContext = vm.createContext({Math, sharedGribCache: {}, loadServerSettings() {},
         L: {latLng: (lat, lng) => ({lat, lng})}});
-    vm.runInContext(fs.readFileSync('web/js/GribCache.js', 'utf8')
+    vm.runInContext(fs.readFileSync('web/js/WindLayer.js', 'utf8')
         .replace(/^import .*;[ \t]*\n/gm, '')
-        .replace('export default class GribCache', 'class GribCache') + '\nglobalThis.GribCache = GribCache;', windContext);
-    const wind = new windContext.GribCache(display);
+        .replace('export default class WindLayer', 'class WindLayer') + '\nglobalThis.WindLayer = WindLayer;', windContext);
+    const wind = new windContext.WindLayer(display);
     let cells;
-    wind.drawMap = async (_ctx, _map, _cycle, _offset, _time, dx, dy) => { cells = 1 / dx / dy; };
+    wind.drawMap = async (_ctx, _map, _field, dx, dy) => { cells = 1 / dx / dy; };
     await wind.drawWind({north: 1, south: 0, west: 0, east: 1,
-        map: {project: p => ({x: p.lng, y: -p.lat})}}, null, 0, null, display, () => false);
+        map: {project: p => ({x: p.lng, y: -p.lat})}}, null, display, () => false);
     assert.ok(cells / (Math.floor(300 / 15) * Math.floor(200 / 15)) > 0.45);
     assert.ok(cells / (Math.floor(300 / 15) * Math.floor(200 / 15)) < 0.55);
     const arrow = (u, v) => { const c = canvas().getContext(); layer.drawArrow(c, 0, 0, u, v); return c.commands; };
@@ -70,11 +71,13 @@ const time = '2026-11-15T20:00:00Z';
     assert.equal(calls.length, 0);
     await layer.update(bounds, time, 'FW-CURRENT-ENGLISH-CHANNEL', true, 'ECMWF-AIFS-WIND');
     assert.equal(calls.length, 1);
-    assert.equal(+calls[0].query.get('columns'), Math.floor(300 / (15 * Math.SQRT2)));
-    assert.equal(+calls[0].query.get('rows'), Math.floor(200 / (15 * Math.SQRT2)));
-    assert.equal(calls[0].query.get('time'), new Date(time).toISOString());
-    assert.equal(calls[0].query.get('forecast_model'), null);
-    assert.equal(calls[0].query.get('source'), 'FW-CURRENT-ENGLISH-CHANNEL');
+    assert.equal(calls[0].source, 'FW-CURRENT-ENGLISH-CHANNEL');
+    assert.equal(calls[0].time, time);
+    const columns = Math.floor(300 / (15 * Math.SQRT2));
+    const rows = Math.floor(200 / (15 * Math.SQRT2));
+    assert.equal(calls[0].samples.length, columns * rows);
+    assert.ok(calls[0].samples.every(p => p.lat > bounds.south && p.lat < bounds.north
+        && p.lon > bounds.west && p.lon < bounds.east));
     assert.equal(frames.length, 1);
     assert.equal(legend.hidden, false);
     assert.match(legend.title, /FW-CURRENT-ENGLISH-CHANNEL/);
@@ -83,7 +86,7 @@ const time = '2026-11-15T20:00:00Z';
     pending = new Promise(r => { resolve = r; });
     const loading = layer.update(bounds, time, 'FW-CURRENT-ENGLISH-CHANNEL', true);
     layer.clear(); resolve(); await loading;
-    assert.equal(calls[1].options.signal.aborted, true);
+    assert.equal(calls[1].signal.aborted, true);
     assert.equal(frames.length, 1);
     assert.equal(legend.hidden, true);
     assert.equal(display.style.display, 'none');

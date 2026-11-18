@@ -2,46 +2,63 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const rawCache = fs.readFileSync('web/js/GribCache.js', 'utf8');
-const cacheSource = rawCache.replace(/^import .*;[ \t]*\n/gm, '').replace('export default class GribCache', 'class GribCache');
+const strip = path => fs.readFileSync(path, 'utf8').replace(/^import .*;[ \t]*\n/gm, '')
+  .replace('export default class', 'class').replace('export function', 'function').replace('export const', 'const');
+const cacheSource = strip('web/js/GribCache.js') + '\n' + strip('web/js/WindLayer.js');
 const main = fs.readFileSync('web/js/router-main.js', 'utf8').replace(/^import .*;[ \t]*\n/gm, '');
 const base = '2026-10-31T06:00:00Z';
 const later = '2026-10-31T12:00:00Z';
 let fail = false;
 const paths = [0, 3, 6, 9, 12, 15, 18].map(step => ({ date: '20261031', run: 6, step, path: `test-${step}` }));
 const context = vm.createContext({
-  console: { error() {} }, Date,
+  console: { error() {} }, Date, AbortSignal,
   loadServerSettings: async () => {}, ensureServerSettings: async () => {},
   loadForecastCycle: async () => ({ datasources: [] }),
-  getServerSettings: () => ({ datasources: [{ name: 'NOAA-GFS-WIND', gribpaths: paths }] }),
+  getServerSettings: () => ({ datasources: [{ name: 'NOAA-GFS-WIND', datakind:'wind', gribpaths: paths }] }),
   fetch: async () => ({ ok: !fail, status: 500, statusText: 'An error occurred', arrayBuffer: async () => new ArrayBuffer(1) }),
-  decodeGRIB2ArrayBuffer: () => ({}),
+  decodeGRIB2ArrayBuffer: (data, options) => {
+    const bytes = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+    const code = bytes[0], run = Math.floor(code / 20), step = code % 20;
+    const message = number => ({discipline:0,totalLength:1,
+      PRODUCT_DEFINITION_SECTION:{parameterCategory:2,parameterNumber:number,forecastTime:step,indicatorOfUnitOfTimeRange:1},
+      GRID_DEFINITION_SECTION:{gridDefinitionTemplateNumber:0,Ni:2,Nj:2,scanningMode:64,
+        iDirectionIncrement:1000000,jDirectionIncrement:1000000,latitudeOfFirstGridPoint:0,longitudeOfFirstGridPoint:0},
+      DATA_SECTION:{data:Float32Array.from([10,10,10,10])},
+      timestamp:()=>`2026-10-31T${String(run).padStart(2,'0')}:00:00Z`});
+    return {messages: options?.decodeData === false ? [message(2),message(3)] : [message(2)]};
+  },
 });
+context.ensureServerSettings = async () => context.getServerSettings();
+context.fetch = async path => {
+  const step = +path.split('-').at(-1), code = 6 * 20 + step;
+  return {ok:!fail,status:500,statusText:'An error occurred',arrayBuffer:async()=>Uint8Array.from([code,code]).buffer};
+};
 vm.runInContext(cacheSource, context);
-const cache = vm.runInContext('new GribCache(null)', context);
+const cache = vm.runInContext('new WindLayer(null)', context);
 cache.drawWind = async () => {};
 (async () => {
   // A failed update must leave the previous valid cycle/time available to hover lookups.
   await cache.update({}, new Date(base), new Date('2026-10-31T09:00:00Z'));
   const seen = [];
+  const originalWindData = cache.windDataMagnitude.bind(cache);
   cache.windDataMagnitude = async (cycle, time) => { seen.push([cycle.toISOString(), time.toISOString()]); return {}; };
   await assert.rejects(cache.update({}, new Date(later), new Date('2026-10-31T21:00:00Z')), /No metadata/);
   await cache.getWind(0, 0);
   assert.deepEqual(seen[0], ['2026-10-31T06:00:00.000Z', '2026-10-31T09:00:00.000Z']);
   fail = true;
-  await assert.rejects(cache.getGribCached(new Date(base), 18), /HTTP 500.*test-18/);
+  await assert.rejects(originalWindData(new Date(base), new Date('2026-11-01T00:00:00Z'), 0, 0), /HTTP 500.*test-18/);
   fail = false;
-  await cache.getGribCached(new Date(base), 18); // Failed in-flight entries must be retryable.
+  await originalWindData(new Date(base), new Date('2026-11-01T00:00:00Z'), 0, 0); // Failed in-flight entries must be retryable.
 
   // Explicit archived metadata is loaded separately and its exact paths are fetched.
   const archivedRequests = [];
   context.loadForecastCycle = async (model, cycle) => {
     assert.equal(model, 'NOAA-GFS-WIND');
     assert.equal(cycle.toISOString(), '2026-10-31T12:00:00.000Z');
-    return { datasources: [{ name: model, gribpaths: paths.map(p => ({ ...p, run: 12, path: `archive-${p.step}` })) }] };
+    return { datasources: [{ name: model, datakind:'wind', gribpaths: paths.map(p => ({ ...p, run: 12, path: `archive-${p.step}` })) }] };
   };
-  context.fetch = async path => { archivedRequests.push(path); return { ok: true, arrayBuffer: async () => new ArrayBuffer(1) }; };
-  const archived = vm.runInContext('new GribCache(null)', context);
+  context.fetch = async path => { archivedRequests.push(path); return {ok:true,arrayBuffer:async()=>Uint8Array.from([249,249]).buffer}; };
+  const archived = vm.runInContext('new WindLayer(null)', context);
   archived.drawWind = async () => {};
   await archived.update({}, new Date(later), new Date('2026-10-31T21:00:00Z'));
   assert.deepEqual(archivedRequests, ['/weather/archive-9']);
@@ -53,7 +70,7 @@ cache.drawWind = async () => {};
   const currentUpdates = [];
   const alerts = [];
   const ui = vm.createContext({
-    console: { error() {} }, Date, PolarManager: class {},
+    console: { error() {} }, Date, AbortSignal, PolarManager: class {},
     document: { getElementById: node }, alert: message => alerts.push(message),
     reloadServerSettings: async () => { refreshed++; },
   });
@@ -113,7 +130,7 @@ cache.drawWind = async () => {};
   await vm.runInContext(`onSelectIsochrone({ cycle: '${base}', offset: 15, stage: 1 })`, ui);
   assert.equal(node('ir_index').value, 15);
   assert.equal(vm.runInContext('routeWindSelection.time.toISOString()', ui), '2026-10-31T21:00:00.000Z');
-  ui.GribCache = class {
+  ui.WindLayer = class {
     constructor(canvas, model) { this.model = model; }
     async update() {}
   };
@@ -168,7 +185,7 @@ cache.drawWind = async () => {};
   const stored = [];
   ui.storeValue = (...entry) => stored.push(entry);
   ui.localStorage = { setItem() {} };
-  ui.GribCache = class {
+  ui.WindLayer = class {
     constructor(canvas, model) { this.model = model; }
     async update() { if (this.model === 'AROME') throw new Error('missing forecast'); }
   };
@@ -240,7 +257,7 @@ cache.drawWind = async () => {};
   assert.deepEqual(stored, [['forecast_model', 'ECMWF-IFS-WIND']]);
   // A slower failed switch must not undo a newer successful choice or show a stale error.
   let rejectSlow;
-  ui.GribCache = class {
+  ui.WindLayer = class {
     constructor(canvas, model) { this.model = model; }
     async update() {
       if (this.model === 'AROME') await new Promise((_, reject) => { rejectSlow = reject; });
@@ -268,7 +285,7 @@ cache.drawWind = async () => {};
   await vm.runInContext('onMarkerClicked(refinedMarker)', ui);
   assert.equal(vm.runInContext('routeWindSelection.cycle', ui), base);
   assert.equal(vm.runInContext('routeWindSelection.sampleTime.toISOString()', ui), '2026-10-31T21:10:00.000Z');
-  const magnitude = vm.runInContext('interpolatePoint(10, -10, 0, 0, 0.5).magnitude', context);
+  const magnitude = vm.runInContext(`sampleField({grid:{gridDefinitionTemplateNumber:0,Ni:2,Nj:2,scanningMode:64,latitudeOfFirstGridPoint:0,longitudeOfFirstGridPoint:0,iDirectionIncrement:1000000,jDirectionIncrement:1000000},u:[10,-10,10,-10],v:[0,0,0,0]},0.5,0.5,'wind').magnitude`, context);
   assert.equal(magnitude, 10);
   vm.runInContext('displayFineTuning({})', ui);
   assert.match(node('lb_fine_tuning').textContent, /Not run/);

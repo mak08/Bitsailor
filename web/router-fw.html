@@ -78,7 +78,7 @@
 <progress id="pg_getroute" max="300" value="0" aria-label="Routing progress"></progress>
 <div class="form-row"><label for="sel_polars">Polars</label><select id="sel_polars" name="polars"></select></div>
 <div class="form-row"><label for="tb_position">Start position</label><div class="field-inline"><input id="tb_position" name="position" type="text" placeholder="Lat, Lon"><button id="bt_position" type="button">Set</button></div></div>
-<div class="form-field"><label class="check-label"><input id="cb_startdelayed" name="startdelayed" type="checkbox">Start time (UTC)</label><input id="tb_starttime" name="starttime" type="datetime-local" aria-label="Start time in UTC"></div>
+<div class="form-field"><label class="check-label">Use fixed start time (UTC)<input id="cb_startdelayed" name="startdelayed" type="checkbox"></label><input id="tb_starttime" name="starttime" type="datetime-local" aria-label="Start time in UTC"></div>
 <div class="reverse-controls"><label class="check-label">Reverse routing<input id="cb_reverse" type="checkbox"></label><label>Extra time <input id="reverse_percent" type="number" min="0" step="1" value="20" aria-label="Extra time in per mille" required disabled>‰</label></div>
 <div class="form-row"><label for="sel_duration">Duration</label><div class="field-inline duration-controls"><select id="sel_duration" name="duration">
 					<option value="12">12 hours</option>
@@ -108,7 +108,7 @@
     </div></div>
 </fieldset>
 <div class="form-row"><label for="sel_currents">Currents</label><select id="sel_currents" name="currents" title="ECMWF wind models use global IFS surface currents when currents are enabled."></select></div>
-<label class="check-label"><input id="cb_waves" name="waves" type="checkbox" checked>Waves</label></div>
+<label class="check-label">Waves<input id="cb_waves" name="waves" type="checkbox" checked></label></div>
     </aside>
 </div>
 <div class="drawer drawer-left drawer-races" data-panel="races" data-side="left">

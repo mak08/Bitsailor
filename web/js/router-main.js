@@ -4,7 +4,7 @@
 import * as Util from './Util.js?v=position-defaults-20261117';
 import * as GPX from './GPX.js?v=router-minute-commands-20261104';
 import GribCache from './GribCache.js?v=weather-controls-20261118';
-import CurrentLayer from './CurrentLayer.js?v=weather-contrast-20261117';
+import CurrentLayer from './CurrentLayer.js?v=independent-currents-20261118';
 import bindMapAppearance from './MapAppearance.js?v=ui-drawers-20261117';
 import setupSlidingPanels from './SlidingPanels.js?v=drawer-focus-20261117';
 import BathymetryLayer from './BathymetryLayer.js?v=ui-drawers-20261117';
@@ -1943,7 +1943,7 @@ function updateCurrentDisplay(time) {
     if (!currentLayer) return;
     const source = document.getElementById('sel_currents')?.value;
     const enabled = document.getElementById('cb_displaycurrents')?.checked;
-    return currentLayer.update(getMapBounds(), time, source, enabled, gribCacheModel || settings.forecast_model);
+    return currentLayer.update(getMapBounds(), time, source, enabled);
 }
 
 async function getWind(cycle, time, candidateModel, { quiet = false } = {}) {

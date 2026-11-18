@@ -2,7 +2,7 @@
 (in-package :bitsailor)
 
 (defun test-ecmwf-currents ()
-  "Check ocean parameter selection, paths, schedules and model-dependent physics."
+  "Check ocean parameter selection, paths, schedules and independent current selection."
   (let* ((time (parse-datetime "2026-11-15T12:00:00Z"))
          (cycle (cl-weather::make-cycle% :timestamp time))
          (source (cl-weather::get-datasource 'cl-weather:ecmwf-ifs-current cycle))
@@ -32,11 +32,11 @@
                      (cl-weather::get-datasource 'cl-weather:ecmwf-ifs-current
                        (cl-weather::make-cycle% :timestamp (routing-time+ time 21600))))))
     (assert (eq (routing-current-source routing time) 'cl-weather::fw-current-english-channel))
-    (assert (eq (routing-current-source routing switch) 'cl-weather:ecmwf-ifs-current))
+    (assert (eq (routing-current-source routing switch) 'cl-weather::fw-current-english-channel))
     (call-with-gate-test-functions
      (list (cons 'current-display-field
                  (lambda (selected &rest args) (declare (ignore args))
-                   (assert (eq selected 'cl-weather:ecmwf-ifs-current))
+                   (assert (eq selected 'cl-weather::fw-current-english-channel))
                    (make-current-field :source selected :vectors #()))))
      (lambda ()
        (let* ((request (make-instance 'polarcl::http-basic))
@@ -45,9 +45,15 @@
             :|forecast_model| "ECMWF-AIFS-WIND" :|time| "2026-11-15T20:00:00Z"
             :|north| "50" :|south| "49" :|west| "-3" :|east| "-1" :|columns| "2" :|rows| "2")
          (assert (= 200 (status-code response))))))
-    (dolist (model '(cl-weather::ecmwf-ifs-wind cl-weather::ecmwf-aifs-wind))
-      (assert (eq (current-source-for-model 'cl-weather::fw-current-agulhas model)
-                  'cl-weather:ecmwf-ifs-current)))
+    ;; Every selectable source survives every wind model and the model switch.
+    (dolist (selected '(nil cl-weather::fw-current-english-channel
+                       cl-weather::fw-current-agulhas cl-weather:ecmwf-ifs-current))
+      (setf (routing-currents routing) selected)
+      (dolist (model '(cl-weather:noaa-gfs-wind cl-weather::ecmwf-ifs-wind
+                       cl-weather::ecmwf-aifs-wind))
+        (setf (routing-forecast-model routing) model)
+        (assert (eq (routing-current-source routing time) selected))
+        (assert (eq (routing-current-source routing switch) selected))))
     (setf (routing-currents routing) nil)
     (assert (null (routing-current-source routing switch)))
     (assert (null (routing-current-params routing switch)))
@@ -59,7 +65,7 @@
        (lambda ()
          (assert (eq :current (routing-current-params routing time)))
          (assert (eq :current (routing-current-params routing switch)))
-         (assert (equal '(cl-weather:ecmwf-ifs-current cl-weather::fw-current-english-channel) calls)))))
+         (assert (equal '(cl-weather::fw-current-english-channel cl-weather::fw-current-english-channel) calls)))))
     ;; Synthetic ECMWF bitmap values must not produce thousand-knot currents.
     (let ((field (cl-weather::make-uv :info (cl-weather::make-gribinfo :missing-value 9999d0)
                    :u-array (make-array 3 :element-type 'double-float :initial-contents '(1d0 9999d0 3d0))

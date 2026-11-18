@@ -32,20 +32,13 @@
         (get-params model time :cycle (routing-cycle routing))
         (get-params model time))))
 
-(defun current-source-for-model (source model)
-  "Replace an enabled Fairwinds source with global IFS currents for ECMWF winds."
-  (if (and (member source '(cl-weather::fw-current-agulhas
-                            cl-weather::fw-current-english-channel))
-           (member model '(cl-weather::ecmwf-ifs-wind cl-weather::ecmwf-ifs-wind-aws
-                           cl-weather::ecmwf-aifs-wind)))
-      'cl-weather:ecmwf-ifs-current source))
-
 (defun routing-current-source (routing time)
-  "Resolve currents at the active leg time, including a secondary wind-model switch."
-  (current-source-for-model (routing-currents routing) (routing-model-at routing time)))
+  "Return the selected current source independently of the wind model."
+  (declare (ignore time))
+  (routing-currents routing))
 
 (defun routing-current-params (routing time)
-  "Load the effective current forecast; NONE remains disabled."
+  "Load the selected current forecast; NONE remains disabled."
   (let ((source (routing-current-source routing time)))
     (when source (get-params source time))))
 

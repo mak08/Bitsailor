@@ -18,7 +18,7 @@ export default class CurrentLayer {
         if (this.#legend) this.#legend.hidden = true;
     }
 
-    async update(bounds, time, source, enabled, forecastModel) {
+    async update(bounds, time, source, enabled) {
         this.clear();
         if (!enabled || !source || source === 'NONE') return;
         const version = this.#version;
@@ -33,7 +33,6 @@ export default class CurrentLayer {
         const query = new URLSearchParams({ source, time: new Date(time).toISOString(),
             north: Math.min(85.05112878, bounds.north), south: Math.max(-85.05112878, bounds.south),
             west: bounds.west, east: bounds.east, columns, rows });
-        if (forecastModel) query.set('forecast_model', forecastModel);
         try {
             const response = await fetch(`/function/router.getCurrentField?${query}`, { signal: request.signal });
             if (!response.ok) throw new Error(`Current forecast: HTTP ${response.status}`);

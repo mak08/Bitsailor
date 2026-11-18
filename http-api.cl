@@ -311,12 +311,11 @@ routing, then mask arrow centres against the router's coastline geometry."
 
 (defun |getCurrentField| (handler request response &key |source| |forecast_model| |time| |north| |south| |west| |east| |columns| |rows|)
   "Return a bounded viewport current grid for the selected source and display time."
-  (declare (ignore handler request))
+  (declare (ignore handler request |forecast_model|))
   (setf (http-header response :|Content-Type|) "application/json"
         (http-header response :|Cache-Control|) "no-store")
   (handler-case
-      (let* ((source (current-source-for-model (parse-current-source |source|)
-                        (read-arg |forecast_model| 'symbol 'cl-weather)))
+      (let* ((source (parse-current-source |source|))
              (time (handler-case (local-time:parse-timestring (decode-uri-component |time|))
                      (error () (error 'request-error :message "Invalid current display time"))))
              (north (read-arg |north| 'double-float))

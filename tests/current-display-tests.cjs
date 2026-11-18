@@ -26,7 +26,7 @@ const context = vm.createContext({ AbortController, URLSearchParams, Date, Math,
         if (pending) await pending;
         return {ok: true, json: async () => ({columns: +query.get('columns'), rows: +query.get('rows'),
             vectors: Array.from({length: +query.get('columns') * +query.get('rows')}, () => [1, 0]),
-            source: query.get('forecast_model')?.startsWith('ECMWF') ? 'ECMWF-IFS-CURRENT' : query.get('source'),
+            source: query.get('source'),
             time: query.get('time'), cycle: '2026-11-15T00:00:00Z'})};
     }
 });
@@ -73,10 +73,11 @@ const time = '2026-11-15T20:00:00Z';
     assert.equal(+calls[0].query.get('columns'), Math.floor(300 / (15 * Math.SQRT2)));
     assert.equal(+calls[0].query.get('rows'), Math.floor(200 / (15 * Math.SQRT2)));
     assert.equal(calls[0].query.get('time'), new Date(time).toISOString());
-    assert.equal(calls[0].query.get('forecast_model'), 'ECMWF-AIFS-WIND');
+    assert.equal(calls[0].query.get('forecast_model'), null);
+    assert.equal(calls[0].query.get('source'), 'FW-CURRENT-ENGLISH-CHANNEL');
     assert.equal(frames.length, 1);
     assert.equal(legend.hidden, false);
-    assert.match(legend.textContent, /IFS currents/);
+    assert.match(legend.title, /FW-CURRENT-ENGLISH-CHANNEL/);
     // A disabled/changed source invalidates an in-flight response.
     let resolve;
     pending = new Promise(r => { resolve = r; });

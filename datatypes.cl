@@ -51,6 +51,7 @@ continues to after the gate; it is used to choose between several crossings."
   gate
   waypoints
   dest
+  (use-box t)
   box
   %dist)
 

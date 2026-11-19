@@ -28,6 +28,8 @@
 
 (defparameter *disable-nmea*  nil)
 (defparameter *max-angle* 120)
+(defparameter *search-box-margin-factor* 0.2d0 "Cross-track padding as a fraction of great-circle route length.")
+(defparameter *search-box-min-margin* 10d0 "Minimum search-box padding in latitude degrees.")
 (defparameter *max-iso-points* 1500)
 (defparameter *max-route-hours* (* 24 12))
 

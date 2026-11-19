@@ -53,7 +53,7 @@ let settings = {
     "duration": 345600,
     "stepper": "standard",
     "polarsId": undefined,
-    "useWaves": true,
+    "useWaves": false,
     "forecast_model": "NOAA-GFS-WIND",
     "secondary_forecast_model": "ECMWF-IFS-WIND",
     "forecast_switch_hours": "off",
@@ -374,7 +374,7 @@ function captureAllRaceSettings() {
     const forecastModelSel = document.getElementById('sel_forecast_model');
     const forecastModel = forecastModelSel ? forecastModelSel.value : settings.forecast_model;
     const wavesSel = document.getElementById('cb_waves');
-    const useWaves = wavesSel ? wavesSel.checked : true;
+    const useWaves = wavesSel ? wavesSel.checked : false;
 
     race.settings = {
         start: startPos ? { lat: startPos.lat, lng: startPos.lng } : undefined,
@@ -1399,6 +1399,7 @@ function getRoute() {
     // the server's source-specific current cycle and availability fallback.
     const { cycle: ignoredCycle, ...routingSettings } = settings;
     // Merge control values before serialization so every parameter occurs once.
+    routingSettings.search_box = document.getElementById('cb_search_box')?.checked === false ? 'false' : 'true';
     routingSettings.fine_tune = document.getElementById('cb_fine_tune')?.checked ? 'true' : 'false';
     routingSettings.stepper = document.getElementById('cb_hires_stepper')?.checked ? 'hires' : 'standard';
     routingSettings.forecast_model = document.getElementById('sel_forecast_model')?.value || settings.forecast_model;

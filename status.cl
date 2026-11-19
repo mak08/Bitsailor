@@ -69,6 +69,8 @@
       ("Routing" "*max-iso-points*" "points per stage")
       ("Routing" "*max-route-hours*" "hours")
       ("Routing" "*twa-steps*" "degrees; NIL uses polar samples")
+      ("Routing" "*search-box-margin-factor*" "fraction of route length")
+      ("Routing" "*search-box-min-margin*" "minimum latitude padding, degrees")
       ("Routing" "*use-bitmap*" "bitmap land checks")
       ("Routing" "*tracks*" "alternative track output")
       ("Gates" "*gate-bucket-width*" "degrees, minimum bucket width")

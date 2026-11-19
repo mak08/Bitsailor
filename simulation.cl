@@ -165,7 +165,7 @@ An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
             (current-pos (the latlng (routepoint-position routepoint)))
             (lat (latlng-lat current-pos))
             (lng (latlng-lng current-pos))
-            (box (the box (routing-box routing)))
+            (box (routing-box routing))
             (twa-angles (the (array double-float (*))
                              (routing-twa-angles routing))))
        (with-bindings
@@ -186,7 +186,7 @@ An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
                         curnt-dir curnt-speed curnt-u curnt-v)
                   (type (or null double-float) wave-height wave-direction)
                   (type (array double-float (*)) twa-angles)
-                  (type box box))
+                  (type (or null box) box))
          (let ((vmg-pos (length twa-angles)))
            (declare (fixnum vmg-pos))
            (setf (aref twa-angles (- vmg-pos 1)) (vmg-twa up-vmg))
@@ -249,33 +249,59 @@ An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
                    (add-point twa))
            :finally (return added)))))))
 
-(defstruct box north south west east antimed-p)
+(defstruct box north south west east antimed-p all-longitudes)
 
-;;; Build a latitude/longitude search box around both endpoints, adding degree margins and
-;;; handling antimeridian crossings.
-(defun make-routing-box (start dest &key (lat-margin 10d0) (lon-margin 10d0))
-  (let* ((lat-min (min (latlng-lat start) (latlng-lat dest)))
-         (lat-max (max (latlng-lat start) (latlng-lat dest)))
-         (lon-min (min (latlng-lng start) (latlng-lng dest)))
-         (lon-max (max (latlng-lng start) (latlng-lng dest)))
-         (antimed-p (antimed-p lon-max lon-min)))
-    (make-box :north (min 90 (+ lat-max lat-margin))
-              :south (max -90 (- lat-min lat-margin))
-              :west (if antimed-p (+ lon-min lon-margin) (- lon-min lon-margin))
-              :east (if antimed-p (- lon-max lon-margin) (+ lon-max lon-margin))
-              :antimed-p antimed-p)))
+(defun make-routing-box (start dest &key (lat-margin nil lat-margin-p) (lon-margin nil lon-margin-p))
+  "Bound the short great-circle arc, padded by route length with a minimum margin.
+Longitude padding uses the arc's representative latitude. Explicit margins are
+degrees, preserving the old keyword interface. Near-antipodal routes are unbounded."
+  (let* ((lat0 (rad (latlng-lat start))) (lat1 (rad (latlng-lat dest)))
+         (lon0 (latlng-lng start))
+         (dlon (normalize-angle (- (latlng-lng dest) lon0)))
+         (dot (max -1d0 (min 1d0 (+ (* (sin lat0) (sin lat1))
+                                    (* (cos lat0) (cos lat1) (cos (rad dlon)))))))
+         (omega (acos dot))
+         (south (min (latlng-lat start) (latlng-lat dest)))
+         (north (max (latlng-lat start) (latlng-lat dest))))
+    (when (< (- pi omega) 1d-8)
+      (return-from make-routing-box (make-box :north 90d0 :south -90d0 :west -180d0 :east 180d0 :all-longitudes t)))
+    ;; Along the arc, z(t) = sin(lat0)*cos(t) + tangent-z*sin(t).
+    ;; Its two stationary points give exact interior latitude extrema.
+    (when (> omega 1d-8)
+      (let* ((tangent-z (/ (- (sin lat1) (* (sin lat0) dot)) (sin omega)))
+             (peak (mod (atan tangent-z (sin lat0)) (* 2d0 pi))))
+        (dolist (at (list peak (mod (+ peak pi) (* 2d0 pi))))
+          (when (<= 0d0 at omega)
+            (let ((latitude (deg (asin (max -1d0 (min 1d0 (+ (* (sin lat0) (cos at))
+                                                                            (* tangent-z (sin at)))))))))
+              (setf south (min south latitude) north (max north latitude)))))))
+    (let* ((padding (max *search-box-min-margin* (* *search-box-margin-factor* (deg omega))))
+           (dy (if lat-margin-p lat-margin padding))
+           (dx (if lon-margin-p lon-margin
+                   (/ padding (max 0.01d0 (abs (cos (rad (/ (+ south north) 2d0))))))))
+           (low (- (min lon0 (+ lon0 dlon)) dx))
+           (high (+ (max lon0 (+ lon0 dlon)) dx))
+           (all (or (>= (- high low) 360d0)
+                    (and (not lon-margin-p) (or (>= (+ north dy) 90d0) (<= (- south dy) -90d0)))))
+           (west (normalize-angle low)) (east (normalize-angle high)))
+      (make-box :north (min 90d0 (+ north dy)) :south (max -90d0 (- south dy))
+                :west west :east east :antimed-p (> west east) :all-longitudes all))))
 
-;;; Identify longitude pairs separated by more than 180 degrees in the supplied representation.
 (defun antimed-p (lon0 lon1)
+  "Identify longitude pairs separated by more than 180 degrees in their representation."
   (> (abs (- lon0 lon1)) 180d0))
 
-;;; Test latitude and wrapped longitude against a routing box.
 (defun in-latlng-box (box pos)
-  (and (<= (box-south box) (latlng-lat pos) (box-north box))
-       (if (box-antimed-p box)
-           (or
-            (longitude-between (box-west box) (latlng-lng pos) (box-east box)))
-           (longitude-between (box-east box) (latlng-lng pos) (box-west box)))))
+  "NIL disables geographic clipping; otherwise test inclusive, wrapped bounds."
+  ;; Allow only floating-point roundoff at an edge (less than 0.02 mm).
+  (or (null box)
+      (let ((lat (latlng-lat pos)) (lon (latlng-lng pos)) (epsilon 1d-10))
+        (and (<= (- (box-south box) epsilon) lat (+ (box-north box) epsilon))
+             (or (box-all-longitudes box)
+                 (if (<= (box-west box) (box-east box))
+                     (<= (- (box-west box) epsilon) lon (+ (box-east box) epsilon))
+                     (or (>= lon (- (box-west box) epsilon))
+                         (<= lon (+ (box-east box) epsilon)))))))))
 
 ;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
 ;;; engine.

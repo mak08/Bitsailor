@@ -397,7 +397,7 @@ turn at the intersection and sail the remaining time toward that target."
                           ;; Steering/fan geometry follows the actual crossing origin.
                           ;; Buckets and radial history use the common artificial
                           ;; origin. It is not a sailed position or a steering origin.
-                          (routing-box leg) (make-routing-box origin target))
+                          (routing-box leg) (when (routing-use-box leg) (make-routing-box origin target)))
                     (let ((bearing (gate-course-angle origin target)))
                       (incf points (expand-routepoint leg (gate-state-point state)
                                      (mod (- bearing (routing-fan leg)) 360d0)

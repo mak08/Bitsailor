@@ -131,6 +131,7 @@
                                               |polarsId|
                                               (|useWaves| nil)
                                               (|fine_tune| nil)
+                                              (|search_box| nil)
                                               (|currents| nil)
                                               (|forecast_model| nil)
                                               (|secondary_forecast_model| nil)
@@ -172,6 +173,7 @@
              (get-routing-presets :polars-id (decode-uri-component |polarsId|)
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
                                   :fine-tune (string-equal (read-arg |fine_tune|) "true")
+                                  :use-box (not (string-equal (read-arg |search_box|) "false"))
                                   :currents currents
                                   :forecast-model forecast-model
                                   :secondary-forecast-model (parse-secondary-model |secondary_forecast_model| |forecast_switch_hours|)
@@ -529,6 +531,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
                               (polars-id)
                               (use-waves nil)
                               (fine-tune nil)
+                              (use-box t)
                               (currents nil)
                               (forecast-model 'cl-weather:noaa-gfs-wind)
                               (secondary-forecast-model nil)
@@ -555,7 +558,8 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :fan *max-angle*
      :start start
      :dest dest 
-     :box (make-routing-box start dest)
+     :use-box use-box
+     :box (when use-box (make-routing-box start dest))
      :starttime starttime
      :stepmax (min (* *max-route-hours* 3600) stepmax)
      :stepper stepper

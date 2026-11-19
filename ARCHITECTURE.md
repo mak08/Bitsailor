@@ -197,7 +197,7 @@ Best upwind and downwind VMG are also precomputed by wind-speed increment. For e
 
 ## Route Search
 
-`get-routing-presets` in [http-api.cl](http-api.cl) constructs a `routing` record containing endpoints, a padded search box, polars, time limit, fan, options, and model flags. The HTTP endpoint defaults the maximum duration to `*max-route-hours*` (12 days); presets invoked directly default to one day. Start and destination are validated for land and equality. The search box adds roughly 10 degrees of latitude and longitude around the endpoints and handles antimeridian-crossing routes.
+`get-routing-presets` in [http-api.cl](http-api.cl) constructs a `routing` record containing endpoints, a padded search box, polars, time limit, fan, options, and model flags. The HTTP endpoint defaults the maximum duration to `*max-route-hours*` (12 days); presets invoked directly default to one day. Start and destination are validated for land and equality. The search box encloses the minor great-circle arc, including interior latitude extrema, then pads each side by 20% of the arc length with a minimum of 10 angular degrees. Longitude padding is divided by the cosine of the arc’s representative latitude to give a comparable physical margin. This avoids narrow bounds for similar endpoint coordinates without forcing a square box. Wrapped longitudes handle the antimeridian; pole-reaching bounds allow all longitudes, and near-antipodal routes use world bounds. Settings → Search box is enabled by default; `search_box=false` disables geographic clipping for every leg while retaining fan, bucket and land filtering. Margin defaults are `*search-box-margin-factor*` and `*search-box-min-margin*`. Waves are unchecked by default.
 
 The route search in [simulation.cl](simulation.cl) proceeds as follows:
 
@@ -370,7 +370,7 @@ and zero trial integrations, retaining schedule/segment metadata.
 ### Prepared vector land cache
 
 CL-MAP now uses exact cached prepared polygons for coastal predicates. The
-1000 MiB global accounting budget is lazy and shared across maps; its conservative
+2000 MiB global accounting budget is lazy and shared across maps; its conservative
 charge is 16 times WKB payload plus 4096 bytes per feature, rather than a measured
 native RSS limit. A bounded 0.25° feature-ID index avoids repeated shapefile
 queries. The existing 0.1° coarse presence shortcut remains, using a compact

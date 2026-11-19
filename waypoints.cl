@@ -184,7 +184,7 @@ Return NIL if no approach succeeds and no existing gate arrival is supplied."
                   (routing-dest leg) target
                   (routing-starttime leg) time
                   (routing-stepmax leg) remaining
-                  (routing-box leg) (make-routing-box pos target)
+                  (routing-box leg) (when (routing-use-box leg) (make-routing-box pos target))
                   (routing-%dist leg) nil
                   (routing-gate leg) gate
                   (routing-waypoints leg) nil)

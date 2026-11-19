@@ -52,7 +52,7 @@ label { font-size: 90%; }
 .drawer-left .sliding-panel { left: 0; transform: translateX(-100%); }
 .drawer-right .sliding-panel { right: 0; transform: translateX(100%); }
 .drawer-races .sliding-panel, .drawer-twa .sliding-panel { top: auto; height: 33.333%; }
-.drawer-settings .sliding-panel { bottom: auto; height: min(230px, 33.333%); transform: translateY(-100%); }
+.drawer-settings .sliding-panel { bottom: auto; height: max-content; max-height: 100%; transform: translateY(-100%); }
 .drawer-depth .sliding-panel { top: auto; height: min(440px, 66.667%); }
 .drawer-open .sliding-panel { transform: translate(0); visibility: visible; transition: transform 220ms ease, visibility 0s; }
 .drawer-tab { position: absolute; z-index: 2; margin: 0; padding: 10px 6px; writing-mode: vertical-rl;

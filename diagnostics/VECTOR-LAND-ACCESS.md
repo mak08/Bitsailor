@@ -169,8 +169,8 @@ The corpus stays outside Git. These tools are diagnostics, not enabled backends.
 
 ## Production implementation (19 November)
 
-The prepared cache is now in CL-MAP, enabled by default with a **1000 MiB global
-estimated-native accounting budget** (increased from the initial 500 MiB). It adds bounded feature/cell LRUs, exact
+The prepared cache is now in CL-MAP, enabled by default with a **2000 MiB global
+estimated-native accounting budget** (increased from the initial 500 MiB, via 1000 MiB). It adds bounded feature/cell LRUs, exact
 fallbacks for oversized inputs, per-map ownership, synchronized reload/close,
 exception-safe cleanup and Status counters. The memory charge is conservative
 (16 × WKB + 4096 per entry), not measured RSS; see `cl-map/README.md`.

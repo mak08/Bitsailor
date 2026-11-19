@@ -125,3 +125,10 @@ assert.deepEqual(order, []);
 assert.throws(() => success({best: [], isochrones: []}), /Invalid route response/);
 assert.deepEqual(order, []);
 console.log('Route drawer controls, focus, field placement and completion/error behaviour passed.');
+
+// Defaults and shared grid keep the Waves checkbox aligned with the current selector.
+const controlsHtml = fs.readFileSync('web/router-fw.html', 'utf8');
+assert.match(controlsHtml, /id="cb_search_box"[^>]*checked/);
+assert.match(controlsHtml, /id="cb_displaycurrents"[^>]*>Display currents/);
+assert.match(controlsHtml, /<div class="form-row"><label for="cb_waves">Waves<\/label><input id="cb_waves"[^>]*><\/div>/);
+assert.doesNotMatch(controlsHtml.match(/<input id="cb_waves"[^>]*>/)[0], /checked/);

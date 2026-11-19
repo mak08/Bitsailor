@@ -147,7 +147,7 @@ For each simulation timestamp the engine obtains forecast parameters with `cl-we
 
 At a route point, `cl-weather:interpolate-uv` returns four values in order: direction, speed, U component, and V component. In [cl-weather/interpolation-uv.cl](../cl-weather/interpolation-uv.cl), it:
 
-1. Finds the surrounding grid coordinates from the GRIB increments and normalizes latitude/longitude for indexing.
+1. Finds the surrounding nodes relative to the GRIB's actual first node, dimensions, increments and scan directions. Regional grids crossing Greenwich or the antimeridian retain finite coverage; global grids interpolate across the longitude seam. Boundary nodes repeat their edge index instead of accessing a nonexistent neighbour.
 2. Bilinearly interpolates U and V at the point independently in each of the two forecast fields. It also bilinearly interpolates the magnitudes in each field.
 3. Linearly interpolates U, V, and magnitude between forecast times using the parameter fraction.
 4. Computes direction from the time-interpolated U/V pair and returns direction, speed, U, and V.

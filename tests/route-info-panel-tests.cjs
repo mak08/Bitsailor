@@ -78,7 +78,7 @@ const placement = {
                       'bt_position', 'cb_startdelayed', 'tb_starttime', 'sel_duration', 'cb_hires_stepper',
                       'sel_forecast_model', 'sel_secondary_forecast_model', 'sel_currents', 'cb_waves'],
     'races-panel': ['sel_race', 'bt_setcourse', 'bt_removerace', 'tb_nmeahost', 'tb_nmeaport', 'bt_nmeaupdate'],
-    'settings-panel': ['ir_wind_opacity', 'wind_opacity_value', 'cb_displaycurrents', 'cb_displaytracks', 'cb_muted_map'],
+    'settings-panel': ['ir_wind_opacity', 'wind_opacity_value', 'cb_displaycurrents', 'cb_displaytracks', 'cb_muted_map', 'cb_fine_tune'],
     'twa-panel': ['lb_twa', 'lb_twa_heading'],
     'depth-panel': ['depth-draft', 'depth-margin']
 };
@@ -86,6 +86,7 @@ for (const [panel, ids] of Object.entries(placement)) for (const id of ids) {
     assert.ok(content(panel).includes(`id="${id}"`), `${id} must live in ${panel}`);
     assert.equal(html.split(`id="${id}"`).length - 1, 1, `${id} must remain unique`);
 }
+assert.ok(!/<input[^>]*id="cb_fine_tune"[^>]*\bchecked\b/.test(html));
 assert.equal(html.includes('id="controls"'), false);
 const ordered = ['bt_getroute', 'pg_getroute', 'sel_polars', 'tb_position', 'tb_starttime', 'cb_reverse',
     'sel_duration', 'sel_forecast_model', 'sel_secondary_forecast_model', 'sel_currents', 'cb_waves'];

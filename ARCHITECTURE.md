@@ -239,7 +239,7 @@ Expansion costs O(B × A) per time step for B buckets and A signed TWA samples. 
 
 ## TWA Fine-Tuning
 
-After the full route search, `get-route` calls `fine-tune-route` in [fine-tune.cl](fine-tune.cl). It fits up to three explicitly typed integer TWA/compass-heading segments in short anchored windows by solving durations, re-sailing them in the forecast with polar, current and wave effects. A–B–A correction patterns can cancel a smoothed prefix’s error in following segments before rejoining the original anchor. Trial steps default to one minute; heading replay always checks at least every minute and at each command endpoint. Target order, land clearance and the original tack/gybe sequence are checked. Computed anchors may advance away from the original route start with at most 500 m lateral deviation; backward movement retains the 500 m distance bound. Manoeuvre times stay within five minutes. Requested point waypoints remain fixed. Completed routes retain their endpoint and cannot arrive later; a closed-anchor incumbent protects earlier improvements. Duration-limited routes instead maximize origin distance at the identical final timestamp, preserving their originally passed target prefix. Only a completed route’s last window can shorten its duration. Failed fits retain original controls, and failed final validation restores the original route.
+Fine-tuning is off by default. With `fine_tune=true` selected in Settings, after the full route search `get-route` enables `fine-tune-route` in [fine-tune.cl](fine-tune.cl). It fits up to three explicitly typed integer TWA/compass-heading segments in short anchored windows by solving durations, re-sailing them in the forecast with polar, current and wave effects. A–B–A correction patterns can cancel a smoothed prefix’s error in following segments before rejoining the original anchor. Trial steps default to one minute; heading replay always checks at least every minute and at each command endpoint. Target order, land clearance and the original tack/gybe sequence are checked. Computed anchors may advance away from the original route start with at most 500 m lateral deviation; backward movement retains the 500 m distance bound. Manoeuvre times stay within five minutes. Requested point waypoints remain fixed. Completed routes retain their endpoint and cannot arrive later; a closed-anchor incumbent protects earlier improvements. Duration-limited routes instead maximize origin distance at the identical final timestamp, preserving their originally passed target prefix. Only a completed route’s last window can shorten its duration. Failed fits retain original controls, and failed final validation restores the original route.
 
 Fine-tuning command changes must occur on full UTC minutes. Continuous shooting
 only seeds neighboring minute-grid switch times; those schedules are re-sailed
@@ -355,3 +355,32 @@ Following another browser cutoff with gzip, route XHR uses `responseType: arrayb
 
 
 The cutoff also occurred with identity encoding, so gzip is excluded as the sole cause. A delayed-response test with a slow reader received the complete body. PolarCL now checks the count returned by the body writer and logs completed large-body writes separately from serialization. Socket errors include the accepted offset and expected total. Route JSON requests retry the identical URL once only when the decoded byte count fails integrity validation. A second incomplete response is reported normally. Application errors and other HTTP/transport failures do not trigger this retry. The underlying intermittent cutoff remains unconfirmed.
+
+### Optional route fine-tuning
+
+`fine_tune=true` opts a routing request into steering post-processing; omitted
+or false disables it. The unchecked **Settings → Fine-tuning** control sends
+this selection on each Execute. `routing-fine-tune` is preserved in copies for
+waypoint/gate legs and reverse search. `get-route` binds the tuning enable flag
+per request, so concurrent requests cannot affect each other's selection.
+The server's `*fine-tune-enabled*` capability flag can still disable tuning
+globally. Disabled requests return a fine-tuning report with reason `disabled`
+and zero trial integrations, retaining schedule/segment metadata.
+
+### Prepared vector land cache
+
+CL-MAP now uses exact cached prepared polygons for coastal predicates. The
+1000 MiB global accounting budget is lazy and shared across maps; its conservative
+charge is 16 times WKB payload plus 4096 bytes per feature, rather than a measured
+native RSS limit. A bounded 0.25° feature-ID index avoids repeated shapefile
+queries. The existing 0.1° coarse presence shortcut remains, using a compact
+map-owned two-bit cache. Exact indexed predicates handle oversized features,
+large query boxes and unsupported prepared access. Reload/close/clear release
+native handles under the shared map mutex. Antimeridian segments are split
+before exact checks; the existing endpoint-tile shortcut remains an approximation.
+
+Status displays prepared-cache estimated usage/budget and counters separately
+from Lisp heap memory, and lists `cl-map:*prepared-cache-*` configuration knobs.
+Rebuild the Lisp image when deploying: older compiled callers can contain the
+previous inlined land predicates. CL-MAP's README documents the public cleanup
+and statistics APIs and the cache-accounting limits.

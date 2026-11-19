@@ -280,7 +280,9 @@ An explicit CYCLE with FALLBACK NIL reopens the recorded forward weather."
 ;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
 ;;; engine.
 (defun get-route (routing)
-  (let ((*routing-wave-state* (make-hash-table :test #'equal)))
+  (let ((*routing-wave-state* (make-hash-table :test #'equal))
+        (*fine-tune-enabled* (and *fine-tune-enabled* (routing-fine-tune routing))))
+    ;; The tuning binding is request-local, including waypoint legs and reverse routing.
     (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
     (unless (routing-stepper-starttime routing)
       (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))

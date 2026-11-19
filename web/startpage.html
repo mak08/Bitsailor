@@ -7,7 +7,7 @@
     <meta name="description" content="Web UI">
     <meta name="author" content="Michael Kappert">
     <link rel="stylesheet" href="css/startpage.css?v=news-reverse-20261113">
-    <script type="module" src="js/startpage.js?v=status-grid-resolution-20261115"></script>
+    <script type="module" src="js/startpage.js?v=prepared-land-cache-20261119"></script>
     <script type="module" src="js/polars-viewer.js?v=xhr-retry-20261115"></script>
     
   </head>
@@ -53,11 +53,17 @@
               <div class="welcome">
                 <h2>Bitsailor is back!</h2>
                 <p><b>Please join us on <a href="https://discord.gg/JU5ZKk2XYe">Discord</a></b></p>
-                <p><b>Please find the <a href="router-fw.html?v=shared-grib-cache-20261118">Router</a> page</b> <a href="router-fw.html?v=shared-grib-cache-20261118" target=_blank><b>here</b></a></p>
+                <p><b>Please find the <a href="router-fw.html?v=optional-fine-tuning-20261119">Router</a> page</b> <a href="router-fw.html?v=optional-fine-tuning-20261119" target=_blank><b>here</b></a></p>
               </div>
               <div class="content-pane"  id="area_news" style="font-size:90%">
                 <h3>News</h3>
                 <ul>
+                  <li><b>2026-11-19 &ndash; Faster land checks</b><br>
+                    Cached coastline geometries make coastal routing substantially faster while preserving exact land checks. Cache usage is shown on the Status tab.
+                  </li>
+                  <li><b>2026-11-19 &ndash; Optional fine-tuning</b><br>
+                    Fine-tuning is now off by default for faster results. Enable it in Settings to simplify steering commands without a later ETA.
+                  </li>
                   <li><b>2026-11-18 &ndash; AROME wind display fixed</b><br>
                     GRIB bitmap support restores AROME wind display, including forecasts with missing grid points.
                   </li>
@@ -136,7 +142,7 @@
                 <li>Click <b>Execute</b>. Enable <b>Display tracks</b> in <b>Settings</b> for alternative paths.</li>
               </ol>
 
-              <p><b>Route fine-tuning:</b> After routing, the optimizer tries whole-degree TWA and fixed-heading segments to reduce unnecessary commands. Command changes occur on full UTC minutes; arrival times may include seconds. Rolling fits try overlapping windows of up to four hours and may deviate by up to 5 nm laterally; required marks remain exact. Heading segments are checked against changing wind every minute. Tack and gybe order is preserved, and the final ETA cannot increase. Duration-limited routes instead seek greater distance from the start at the same final time. If no valid improvement is found, the original route is retained. Check <b>Fine-tuning</b> below the route statistics and hover over the result for details.</p>
+              <p><b>Route fine-tuning:</b> Enable <b>Settings &rarr; Fine-tuning</b> before executing a route to refine steering commands. It is <b>off by default</b> and adds calculation time. After routing, the optimizer tries whole-degree TWA and fixed-heading segments to reduce unnecessary commands. Command changes occur on full UTC minutes; arrival times may include seconds. Rolling fits try overlapping windows of up to four hours and may deviate by up to 5 nm laterally; required marks remain exact. Heading segments are checked against changing wind every minute. Tack and gybe order is preserved, and the final ETA cannot increase. Duration-limited routes instead seek greater distance from the start at the same final time. If no valid improvement is found, the original route is retained. Check <b>Fine-tuning</b> below the route statistics and hover over the result for details.</p>
 
               <h3>Waypoints, gates and races</h3>
               <ul>
@@ -225,10 +231,12 @@
               <section class="status-card">
                 <h3>Caches</h3>
                 <dl><dt>Decoded forecast arrays</dt><dd id="status-forecast-bytes">—</dd>
+                  <dt>Prepared land cache (estimate)</dt><dd id="status-land-cache">—</dd>
+                  <dt>Land cache activity</dt><dd id="status-land-cache-counts">—</dd>
                   <dt>Forecast entries</dt><dd id="tb_fc_cache">—</dd>
                   <dt>Raw / combined polars</dt><dd id="status-polars-cache">—</dd>
                   <dt>Race records</dt><dd id="status-races-cache">—</dd></dl>
-                <p class="status-note">Forecast bytes count unique decoded arrays, excluding object headers and cache metadata. This is part of the Lisp heap.</p>
+                <p class="status-note">Forecast bytes count unique decoded arrays, excluding object headers and cache metadata. This is part of the Lisp heap. Land-cache memory is a conservative estimate, not measured RSS; native geometries are outside the Lisp heap.</p>
               </section>
             </div>
             <section class="status-section">

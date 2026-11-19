@@ -1399,6 +1399,7 @@ function getRoute() {
     // the server's source-specific current cycle and availability fallback.
     const { cycle: ignoredCycle, ...routingSettings } = settings;
     // Merge control values before serialization so every parameter occurs once.
+    routingSettings.fine_tune = document.getElementById('cb_fine_tune')?.checked ? 'true' : 'false';
     routingSettings.stepper = document.getElementById('cb_hires_stepper')?.checked ? 'hires' : 'standard';
     routingSettings.forecast_model = document.getElementById('sel_forecast_model')?.value || settings.forecast_model;
     routingSettings.secondary_forecast_model = document.getElementById('sel_secondary_forecast_model')?.value || settings.secondary_forecast_model;

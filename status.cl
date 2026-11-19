@@ -3,7 +3,8 @@
 
 (defstruct statusparameter group name value)
 (defstruct forecastcachegroup source date run resolution entries bytes)
-(defstruct memorystatus heap-used heap-limit forecast-bytes forecast-entries groups)
+(defstruct memorystatus heap-used heap-limit forecast-bytes forecast-entries groups land-cache)
+(defstruct landcachestatus enabled limit-bytes estimated-bytes payload-bytes entries tiles hits misses evictions fallbacks)
 (defstruct cachestatus polars combined-polars races)
 
 (defun status-grid-resolution (info)
@@ -62,7 +63,7 @@
 
 ;;; Return the current values of operational configuration knobs, including local overrides.
 ;;; The explicit inventory excludes mutable working state, locks, account data and credentials.
-(defun get-status-parameters ()
+(defun get-router-status-parameters ()
   (loop :for (group name unit) :in
     '(("Routing" "*max-angle*" "degrees either side of target bearing")
       ("Routing" "*max-iso-points*" "points per stage")
@@ -74,7 +75,7 @@
       ("Gates" "*gate-origin-distance-factor*" "gate widths behind midpoint; minimum two")
       ("Gates" "*gate-coverage-bins*" "intervals per gate")
       ("Gates" "*gate-retirement-coverage*" "fraction of intervals required")
-      ("Fine tuning" "*fine-tune-enabled*" "TWA post-processing enabled")
+      ("Fine tuning" "*fine-tune-enabled*" "Permit requested TWA post-processing (requests default off)")
       ("Fine tuning" "*fine-tune-outward-enabled*" "outward anchors and max_duration progress objective")
       ("Fine tuning" "*fine-tune-approximation-enabled*" "broader same-tack approximation pass")
       ("Fine tuning" "*fine-tune-approximation-limit*" "approximation lateral corridor, metres")
@@ -124,6 +125,24 @@
                                       (t value))) unit)
                           "Unavailable"))))
 
+(defun get-status-parameters ()
+  "Include CL-MAP cache controls alongside the router's operational settings."
+  (append (get-router-status-parameters)
+    (loop for name in '("*PREPARED-CACHE-ENABLED*" "*PREPARED-CACHE-MAX-BYTES*"
+                       "*PREPARED-CACHE-MAX-ENTRIES*" "*PREPARED-CACHE-CELL-SIZE*"
+                       "*PREPARED-CACHE-TILE-BYTES*" "*PREPARED-CACHE-MAX-TILES*"
+                       "*PREPARED-CACHE-MAX-QUERY-TILES*")
+          collect (make-statusparameter :group "Land cache" :name (format nil "cl-map:~(~a~)" name)
+                    :value (format nil "~a" (symbol-value (find-symbol name :cl-map)))))))
+
+(defun get-land-cache-status ()
+  "Snapshot the shared native-cache budget without traversing geometries or holding forecast locks."
+  (let ((s (cl-map:prepared-cache-statistics)))
+    (make-landcachestatus :enabled (getf s :enabled) :limit-bytes (getf s :limit-bytes)
+      :estimated-bytes (getf s :estimated-bytes) :payload-bytes (getf s :payload-bytes)
+      :entries (getf s :entries) :tiles (getf s :tiles) :hits (getf s :hits) :misses (getf s :misses)
+      :evictions (getf s :evictions) :fallbacks (getf s :fallbacks))))
+
 ;;; Count unique decoded forecast-array payloads under the cache lock, grouped by source/cycle.
 ;;; Heap usage is an instantaneous SBCL measurement and can include reclaimable garbage;
 ;;; polling this endpoint never forces a collection. Native allocations are excluded.
@@ -160,7 +179,7 @@
        cl-weather::*forecast-ht*))
     (make-memorystatus :heap-used #+sbcl (sb-kernel:dynamic-usage) #-sbcl nil
                       :heap-limit #+sbcl (sb-ext:dynamic-space-size) #-sbcl nil
-                      :forecast-bytes bytes :forecast-entries entries
+                      :forecast-bytes bytes :forecast-entries entries :land-cache (get-land-cache-status)
                       :groups (loop :for group :being :the :hash-values :of groups :collect group))))
 
 ;;; Count raw polar IDs, combined option-specific polar tables and loaded race records.

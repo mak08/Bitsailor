@@ -130,6 +130,7 @@
                                               (|options| nil)
                                               |polarsId|
                                               (|useWaves| nil)
+                                              (|fine_tune| nil)
                                               (|currents| nil)
                                               (|forecast_model| nil)
                                               (|secondary_forecast_model| nil)
@@ -170,6 +171,7 @@
            (routing
              (get-routing-presets :polars-id (decode-uri-component |polarsId|)
                                   :use-waves (string-equal (read-arg |useWaves|) "true")
+                                  :fine-tune (string-equal (read-arg |fine_tune|) "true")
                                   :currents currents
                                   :forecast-model forecast-model
                                   :secondary-forecast-model (parse-secondary-model |secondary_forecast_model| |forecast_switch_hours|)
@@ -526,6 +528,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
 (defun get-routing-presets (&key
                               (polars-id)
                               (use-waves nil)
+                              (fine-tune nil)
                               (currents nil)
                               (forecast-model 'cl-weather:noaa-gfs-wind)
                               (secondary-forecast-model nil)
@@ -561,6 +564,7 @@ Returns two values, present and total; returns NIL on errors. Missing files coun
      :options options
      :polars cpolars
      :use-waves use-waves
+     :fine-tune fine-tune
      :currents currents
      :forecast-model forecast-model
      :secondary-forecast-model secondary-forecast-model

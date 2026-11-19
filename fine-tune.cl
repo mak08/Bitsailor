@@ -2,7 +2,6 @@
 ;;; integer TWA or explicitly tagged compass heading, plus elapsed seconds.
 (in-package :bitsailor)
 
-(defparameter *fine-tune-enabled* t "Apply bounded steering post-processing to reached/max_duration routes.")
 (defparameter *fine-tune-outward-enabled* t "Allow computed anchors to advance within a bounded lateral corridor.")
 (defparameter *fine-tune-rolling-enabled* t "Try overlapping windows while retaining validated improvements.")
 (defparameter *fine-tune-rolling-horizons* '(14400d0 7200d0 3600d0 1800d0) "Rolling window horizons, seconds.")

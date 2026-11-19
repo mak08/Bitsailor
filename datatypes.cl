@@ -38,6 +38,8 @@ continues to after the gate; it is used to choose between several crossings."
   (stepper :standard)
   ;; NIL disables the reverse pass. Zero requests equal passage time.
   reverse-percent
+  ;; Steering post-processing is opt-in for each request.
+  (fine-tune nil)
   ;; Original departure survives copies for later point-waypoint legs.
   stepper-starttime
   (fan *max-angle*)

@@ -106,6 +106,11 @@
         bar.hidden = percent === null;
         bar.value = Math.min(100, Math.max(0, percent ?? 0));
         text('status-forecast-bytes', formatBytes(memory['forecast-bytes']));
+        const land = memory['land-cache'];
+        text('status-land-cache', !land ? 'Unavailable' : land.enabled === false ? 'Disabled'
+            : `${formatBytes(land['estimated-bytes'])} / ${formatBytes(land['limit-bytes'])}`);
+        text('status-land-cache-counts', !land ? '—'
+            : `${number(land.entries)} features; ${number(land.tiles)} cells; ${number(land.hits)} hits / ${number(land.misses)} misses; ${number(land.evictions)} evictions; ${number(land.fallbacks)} fallbacks`);
         text('tb_fc_cache', number(status['fc-cache-size']));
         text('status-polars-cache', `${number(status.caches?.polars)} / ${number(status.caches?.['combined-polars'])}`);
         text('status-races-cache', number(status.caches?.races));

@@ -14,6 +14,8 @@
           (gethash '(0 "test-wave" 0 "20261031" "0p50") cl-weather::*forecast-ht*)
           (cl-weather::make-gribmessage :data wave))
     (let ((memory (get-memory-status)))
+      (assert (= cl-map:*prepared-cache-max-bytes*
+                 (landcachestatus-limit-bytes (memorystatus-land-cache memory))))
       (assert (= 120 (memorystatus-forecast-bytes memory)))
       (assert (= 3 (memorystatus-forecast-entries memory)))
       (assert (= 2 (length (memorystatus-groups memory))))

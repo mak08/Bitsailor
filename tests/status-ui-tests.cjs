@@ -25,7 +25,7 @@ const context = vm.createContext({
 const tick = () => new Promise(resolve => setImmediate(resolve));
 (async () => {
   payload = { 'server-start': '2026-10-31T13:00:00Z', requestcount: 7, 'fc-cache-size': 3,
-    memory: { 'heap-used': 1024 ** 3, 'heap-limit': 2 * 1024 ** 3, 'forecast-bytes': 512 * 1024 ** 2,
+    memory: { 'land-cache': {enabled:true,'estimated-bytes':64*1024**2,'limit-bytes':500*1024**2,entries:120,tiles:8,hits:90,misses:4,evictions:2,fallbacks:1}, 'heap-used': 1024 ** 3, 'heap-limit': 2 * 1024 ** 3, 'forecast-bytes': 512 * 1024 ** 2,
       groups: [{ source: 'GFS', date: '20261031', run: 6, resolution: '0p25', entries: 3, bytes: 512 * 1024 ** 2 }] },
     parameters: [{ group: 'Gates', name: '*gate-retirement-coverage*', value: '1/2 (50.0%)' }],
     caches: { polars: 20, 'combined-polars': 2, races: 0 },
@@ -37,6 +37,8 @@ const tick = () => new Promise(resolve => setImmediate(resolve));
   assert.match(get('status-heap').textContent, /1.0 GiB \/ 2.0 GiB \(50.0%\)/);
   assert.equal(get('status-heap-bar').value, 50);
   assert.equal(get('status-forecast-bytes').textContent, '512.0 MiB');
+  assert.equal(get('status-land-cache').textContent, '64.0 MiB / 500.0 MiB');
+  assert.match(get('status-land-cache-counts').textContent, /120 features; 8 cells/);
   assert.equal(get('#status-cache-groups tbody').children[0].cells[1].textContent, '0.25°');
   assert.equal(get('#status-cache-groups tbody').children[0].cells[2].textContent, '20261031 06Z');
   const downloads = get('#tb_downloads tbody').children;

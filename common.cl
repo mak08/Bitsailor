@@ -23,6 +23,9 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Parameters and configuration
 
+(defvar *fine-tune-enabled* t
+  "Permit opt-in steering post-processing; requests default to disabled.")
+
 (defparameter *disable-nmea*  nil)
 (defparameter *max-angle* 120)
 (defparameter *max-iso-points* 1500)

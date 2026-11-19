@@ -8,10 +8,10 @@
 	<meta name="description" content="Web UI">
 	<meta name="author" content="Michael Kappert">
 
-	<link rel="stylesheet" href="css/router.css?v=shared-grib-cache-20261118">
+	<link rel="stylesheet" href="css/router.css?v=optional-fine-tuning-20261119">
 	<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-	<script type="module" src="js/router-main.js?v=shared-grib-cache-20261118"></script>
+	<script type="module" src="js/router-main.js?v=optional-fine-tuning-20261119"></script>
 
 </head>
 
@@ -145,6 +145,7 @@
 <div class="wind-opacity-control"><label for="ir_wind_opacity">Wind</label><input id="ir_wind_opacity" type="range" min="0" max="100" step="10" value="50" aria-label="Wind opacity" aria-valuetext="50%" title="Wind opacity; 0% hides the arrows"><output id="wind_opacity_value" for="ir_wind_opacity" aria-hidden="true">50%</output></div>
 <label class="check-label" title="Show arrows for the current source selected in Routing"><input id="cb_displaycurrents" type="checkbox" checked>Currents</label>
 <label class="check-label"><input id="cb_displaytracks" name="displaytracks" type="checkbox">Display tracks</label>
+<label class="check-label" title="Smooth steering commands after routing; adds calculation time"><input id="cb_fine_tune" type="checkbox">Fine-tuning</label>
 <label class="check-label" title="Reduce base-map colour and contrast to emphasise weather and routes"><input id="cb_muted_map" type="checkbox">Muted map</label></div>
     </aside>
 </div>

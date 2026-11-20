@@ -306,21 +306,22 @@ degrees, preserving the old keyword interface. Near-antipodal routes are unbound
 ;;; Record the request under a lock and dispatch to waypoint/gate routing or the single-leg
 ;;; engine.
 (defun get-route (routing)
-  (let ((*routing-wave-state* (make-hash-table :test #'equal))
-        (*fine-tune-enabled* (and *fine-tune-enabled* (routing-fine-tune routing))))
-    ;; The tuning binding is request-local, including waypoint legs and reverse routing.
-    (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
-    (unless (routing-stepper-starttime routing)
-      (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
-    (bordeaux-threads:with-lock-held (+last-request-lock+)
-      (setf *last-request*
-            (push (list (local-time:now) 'get-route) *last-request*)))
-    (if (routing-reverse-percent routing)
-        (route-with-reverse-search routing)
-        (fine-tune-route routing
-          (if (routing-waypoints routing)
-              (get-route-via-waypoints routing)
-              (get-route-leg routing))))))
+  (cl-weather:with-forecast-access-context ()
+    (let ((*routing-wave-state* (make-hash-table :test #'equal))
+          (*fine-tune-enabled* (and *fine-tune-enabled* (routing-fine-tune routing))))
+      ;; The tuning binding is request-local, including waypoint legs and reverse routing.
+      (setf (routing-starttime routing) (routing-minute-ceiling (parse-datetime-local (routing-starttime routing))))
+      (unless (routing-stepper-starttime routing)
+        (setf (routing-stepper-starttime routing) (parse-datetime-local (routing-starttime routing))))
+      (bordeaux-threads:with-lock-held (+last-request-lock+)
+        (setf *last-request*
+              (push (list (local-time:now) 'get-route) *last-request*)))
+      (if (routing-reverse-percent routing)
+          (route-with-reverse-search routing)
+          (fine-tune-route routing
+            (if (routing-waypoints routing)
+                (get-route-via-waypoints routing)
+                (get-route-leg routing)))))))
 
 (defun get-route-leg (routing &optional observe-step exact-arrival)
   "Route from the start to the destination of ROUTING. Returns the ROUTEINFO and

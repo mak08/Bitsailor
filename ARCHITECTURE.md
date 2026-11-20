@@ -145,6 +145,17 @@ Unchanged modules and third-party assets are not automatically assigned the page
 
 For each simulation timestamp the engine obtains forecast parameters with `cl-weather:get-params` for the selected forecast model. The result contains two adjacent forecast fields (`fc0`, `fc1`) and a time fraction. The `cl-weather` implementation selects forecast steps bracketing the requested timestamp, loads or reuses the GRIB data, and falls back to a previous cycle if a requested forecast is missing.
 
+`get-route` wraps the whole operation, including waypoint/gate legs, fine-tuning,
+exact finishes and reverse routing, in `cl-weather:with-forecast-access-context`.
+This dynamically scoped context remembers confirmed missing files by absolute
+physical file path. Subsequent accesses in that request signal `missing-forecast`
+without retrying file opens or repeating the warning. The missing-file check
+precedes the shared positive cache, so another request downloading/loading the
+file cannot change this request's decision. A fresh request can use the new file
+immediately. Successful fields remain globally cached; corruption and other
+errors on existing files are not remembered. The context is discarded on normal
+completion or an error, and `cl-weather` has no dependency on routing concepts.
+
 At a route point, `cl-weather:interpolate-uv` returns four values in order: direction, speed, U component, and V component. In [cl-weather/interpolation-uv.cl](../cl-weather/interpolation-uv.cl), it:
 
 1. Finds the surrounding nodes relative to the GRIB's actual first node, dimensions, increments and scan directions. Regional grids crossing Greenwich or the antimeridian retain finite coverage; global grids interpolate across the longitude seam. Boundary nodes repeat their edge index instead of accessing a nonexistent neighbour.
